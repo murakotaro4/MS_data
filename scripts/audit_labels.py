@@ -15,6 +15,9 @@ from typing import Dict, Iterable, List
 
 from scripts.label_utils import FIELD_MAP, clean_text
 
+# 監査から除外する normalized ラベル（データ項目ではないもの）
+EXCLUDE_LABELS = {"汎用", "強襲", "支援"}
+
 
 def load_jsonl(path: Path) -> Iterable[Dict]:
     with path.open("r", encoding="utf-8") as f:
@@ -47,6 +50,9 @@ def analyze(records: Iterable[Dict]) -> Stats:
             raw[clean_text(str(s))] += 1
         for s in rec.get("normalized_labels", []) or []:
             ss = clean_text(str(s))
+            if ss in EXCLUDE_LABELS:
+                # 集計から除外
+                continue
             norm[ss] += 1
             if ss not in FIELD_MAP:
                 unknown[ss] += 1
