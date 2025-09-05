@@ -9,3 +9,4 @@ msData.pretty.json
 .DS_Store
 .idea/
 .vscode/
+cache/
