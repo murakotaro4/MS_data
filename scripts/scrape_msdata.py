@@ -249,7 +249,91 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
         for lv in levels:
             per_level[lv]["属性"] = attr
 
-    return per_level
+    # 強化リスト情報（fullst）を抽出
+    def parse_fullst(s: BeautifulSoup) -> List[Dict[str, Any]]:
+        # 見出し「強化リスト情報」を探す
+        header = None
+        for hx in s.find_all(["h2", "h3"]):
+            if "強化リスト情報" in clean_text(hx.get_text(" ")):
+                header = hx
+                break
+        if not header:
+            return []
+        table = header.find_next("table")
+        if not table:
+            return []
+        items: List[Tuple[str, int]] = []
+        current_name: Optional[str] = None
+        for tr in table.find_all("tr"):
+            ths = tr.find_all("th")
+            if not ths:
+                continue
+            # リスト名候補（背景色付きthや先頭thが多い）
+            cand_names: List[str] = []
+            for th in ths:
+                txt = clean_text(th.get_text(" "))
+                if not txt:
+                    continue
+                if any(x in txt for x in ("強化リスト", "上限開放", "リスト名", "MSレベル毎必要強化値", "効果")):
+                    continue
+                if re.fullmatch(r"LV\d+|Lv\d+|Lv", txt, re.IGNORECASE):
+                    continue
+                cand_names.append(txt)
+            if cand_names:
+                current_name = cand_names[0]
+
+            # レベル指定（Lv1, Lv2, Lv3, Lv4, ...）
+            lvl: Optional[int] = None
+            for th in ths:
+                txt = clean_text(th.get_text(" "))
+                m = re.fullmatch(r"Lv(\d+)", txt, re.IGNORECASE)
+                if m:
+                    lvl = int(m.group(1))
+                    break
+            if current_name and isinstance(lvl, int):
+                items.append((current_name, lvl))
+
+        # 各リスト名について 最小Lv と 最大Lv のみを採用（例: Lv1 と Lv4）
+        levels_by_name: Dict[str, List[int]] = {}
+        for nm, lv in items:
+            levels_by_name.setdefault(nm, []).append(lv)
+        out: List[Dict[str, Any]] = []
+        for nm, lvs in levels_by_name.items():
+            uniq = sorted(set(lvs))
+            if not uniq:
+                continue
+            # 最低Lv（通常の強化）
+            out.append({"name": nm, "level": uniq[0]})
+            # 最高Lv（上限開放があればそれ）
+            if len(uniq) > 1 and uniq[-1] != uniq[0]:
+                out.append({"name": nm, "level": uniq[-1]})
+        # ポリシー: Lv1 と Lv4+ のみに限定（Lv2/Lv3は省略）
+        out = [e for e in out if e["level"] == 1 or e["level"] >= 4]
+        return out
+
+    fullst = parse_fullst(soup)
+    if fullst:
+        for lv in levels:
+            per_level[lv]["fullst"] = fullst
+
+    # 必須キーが揃っていないLVは除外（スキーマに準拠するため）
+    REQUIRED = {
+        "HP",
+        "スピード",
+        "スラスター",
+        "高速移動",
+        "射撃補正",
+        "格闘補正",
+        "耐ビーム補正",
+        "耐実弾補正",
+        "耐格闘補正",
+        "近スロット",
+        "中スロット",
+        "遠スロット",
+        "旋回_地上_通常時",
+    }
+    filtered = {lv: rec for lv, rec in per_level.items() if REQUIRED.issubset(rec.keys())}
+    return filtered
 
 
 # ===============
@@ -365,4 +449,3 @@ def main(argv: List[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
