@@ -1,0 +1,31 @@
+[project]
+name = "ms-data-repo"
+version = "0.1.0"
+description = "Data management for msData.json with Python tooling"
+readme = "AGENTS.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.uv]
+dev-dependencies = [
+  "black~=24.0",
+  "ruff~=0.6",
+  "pytest~=8.0",
+  "jsonschema~=4.22",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+skip-string-normalization = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+select = ["E", "F", "I", "W"]
+ignore = []
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
