@@ -32,6 +32,62 @@
 - 連続実行: `uv run python scripts/scrape_msdata.py all --out cache/details.jsonl`
 - 取り込み: `jq -s '.' cache/details.jsonl > cache/details.json && uv run python scripts/update_msdata.py -i cache/details.json`
 
+## ラベル正規化と監査（2025-09）
+- 目的: 各機体ページの行見出し（項目名）の揺らぎを収集・正規化し、最終パラメータへ安全に変換。
+- 共通ユーティリティ: `scripts/label_utils.py`
+  - 行見出しの軽正規化: 空白圧縮、半角()注記除去（全角（）は保持）
+  - FIELD_MAP: 行見出し → 正規キー（変形/変身や山括弧の順序違いも吸収）
+  - KEY_ALIASES: 出力JSONの誤記キー → 正規キー（射撃補則/射撃補生 など）
+- 監査ツール: `scripts/audit_labels.py`
+  - 出力: `reports/label_audit_YYYYMMDD.md`（unknown=0 を目標）
+  - 除外: 属性（汎用/強襲/支援）は監査集計から除外
+- 取得コマンド（キャッシュ対応）
+  - 一覧: `make scrape-index TTL=7d`
+  - 行見出し収集: `make labels LIMIT=0`（または小規模 `LIMIT=30`）
+  - 集計: `make audit-labels`
+
+## スキーマ拡張と補正ルール（要点）
+- 追加キー（任意）
+  - 速度系: `スピード_変形時`, `高速移動_変形時`
+  - 旋回系: `旋回_地上_変形時`, `旋回_宇宙_変形時`, `旋回_変形時`
+  - 補正系: `射撃補正_変形時`, `射撃補正_変身時`, `格闘補正_変形時`, `格闘補正_変身時`
+  - 購入系: `レアリティ`, `必要階級`, `必要DP`, `必要リサイクルチケット`
+  - 出撃可否: `出撃_地上可`, `出撃_宇宙可`
+  - 環境適正: `環境適正_地上`, `環境適正_宇宙`, `環境適正_水中`
+- 必須条件（緩和）
+  - 旋回は anyOf（地上 or 宇宙のどちらか必須）。宇宙専用機を許容。
+- 抽出ロジックの主な規則
+  - 旋回値: `78（盾装備時：75.7）` → 先頭整数（78）を採用。
+  - 出撃可否・環境適正: atwiki 固有ID（`label_sortie_*`, `label_env_*`）を最優先で解析。フォールバックで文言/表記号を解釈。
+  - 不明時の推定: 旋回項目の有無から `出撃_地上可/出撃_宇宙可` を補完。
+  - 補正（重要）: 宇宙専用/地上専用で単一見出しが逆側に入っている場合、適切な側へ回転値を寄せる（例: 宇宙専用+地上旋回のみ → 宇宙旋回へ移す）。
+
+## キャッシュ運用（atwiki）
+- 仕組み: `scripts/cache_http.py`（TTL=7日, If-None-Match/If-Modified-Since 対応）
+- オプション: `--ttl 7d` / `--no-network` / `--force`
+- 保存先: `cache/html/<slug>.html` + `*.meta.json`（ETag/Last-Modified/sha256）
+
+## 実行スニペット（更新フロー）
+- 全件詳細→取り込み→検証
+  - `make scrape-details TTL=7d RATE=1.0 LIMIT=0`
+  - `make import-details`
+  - `make validate`（厳格: `make validate-strict`）
+- 差分要約はコマンド出力（`records: A -> B | +X -Y ~Z`）で確認
+
+## データ品質（2025-09-05 時点の要約）
+- レコード: 1516
+- 出撃: 両方可=1087, 地上のみ=415, 宇宙のみ=14, 不明=0（推定/補正で解消）
+- 環境適正（True件数）: 地上=491, 宇宙=665, 水中=84
+- 既知の残課題: `MS名` パターン不一致 1件（例: プロトΖガンダム［X1型］）
+
+## 最終的な msData.json 作成計画（合意済み）
+1) 監査を回す: `make labels LIMIT=0 && make audit-labels`（unknown=0確認）
+2) 全件詳細取得: `make scrape-details TTL=7d RATE=1.0 LIMIT=0`
+3) 取り込み: `make import-details`（回転/出撃の補正・推定を含む）
+4) 検証: `make validate-strict`（スキーマ/重複/別名チェック）
+5) 差分確認: `git diff -- msData.json`（件数/キー変更）
+6) コミット/PR: 来歴・統計・補正ルールを記載（このAGENTS.mdを参照）
+
 ## 抽出・正規化ポリシー（更新）
 - 行ラベル正規化: 半角カッコの注記（例: `( +25 )`）のみ除去。全角カッコ（例: `旋回（地上）/（宇宙）`）は保持。
 - 旋回値の抽出: `81（盾装備時：78.6）` の表記は先頭の整数（`81`）を採用。
