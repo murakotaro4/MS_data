@@ -26,6 +26,12 @@
 - 検証: `make validate`（厳格: `make validate-strict`）
 - 品質チェック: `make format && make lint && make test` または `make ci`
 
+## スクレイピング手順（atwiki）
+- 一覧取得: `uv run python scripts/scrape_msdata.py index --url https://w.atwiki.jp/battle-operation2/pages/377.html --out cache/index.json`
+- 詳細取得: `uv run python scripts/scrape_msdata.py details --in cache/index.json --out cache/details.jsonl --rate 1.0`
+- 連続実行: `uv run python scripts/scrape_msdata.py all --out cache/details.jsonl`
+- 取り込み: `jq -s '.' cache/details.jsonl > cache/details.json && uv run python scripts/update_msdata.py -i cache/details.json`
+
 ## コーディング規約・命名
 - JSON: 2スペース、UTF-8、LF、キーは `snake_case`。
 - Python: インデント4スペース、型ヒント必須、関数は純粋/再利用可能に。

@@ -3,7 +3,7 @@ SHELL := bash
 
 MSDATA := msData.json
 
-.PHONY: help setup format lint test validate validate-strict update normalize ci
+.PHONY: help setup format lint test validate validate-strict update normalize ci scrape-index scrape-details scrape-all import-details
 
 help:
 	@echo "Available targets:"
@@ -16,6 +16,10 @@ help:
 	@echo "  update            Normalize/merge msData.json; INPUT=<json> optional"
 	@echo "  normalize         Normalize existing msData.json in-place"
 	@echo "  ci                Lint + test + validate-strict"
+	@echo "  scrape-index      Fetch index (MS一覧) to cache/index.json"
+	@echo "  scrape-details    Fetch details -> cache/details.jsonl (from cache/index.json)"
+	@echo "  scrape-all        Index+details in one shot"
+	@echo "  import-details    JSONL -> JSON array -> msData.json update"
 
 setup:
 	uv venv
@@ -48,3 +52,15 @@ normalize:
 
 ci: lint test validate-strict
 
+scrape-index:
+	uv run python scripts/scrape_msdata.py index --url https://w.atwiki.jp/battle-operation2/pages/377.html --out cache/index.json
+
+scrape-details:
+	uv run python scripts/scrape_msdata.py details --in cache/index.json --out cache/details.jsonl --rate 1.0
+
+scrape-all:
+	uv run python scripts/scrape_msdata.py all --out cache/details.jsonl --rate 1.0
+
+import-details:
+	jq -s '.' cache/details.jsonl > cache/details.json
+	uv run python scripts/update_msdata.py -i cache/details.json
