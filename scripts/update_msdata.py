@@ -105,6 +105,20 @@ def normalize_record(rec: Dict[str, Any]) -> Dict[str, Any]:
     for k in list(rec.keys()):
         if k in INT_KEYS and rec.get(k) is None:
             rec.pop(k, None)
+
+    # 出撃可否のフォールバック推定（両方未設定の場合のみ）
+    if "出撃_地上可" not in rec and "出撃_宇宙可" not in rec:
+        has_g = "旋回_地上_通常時" in rec
+        has_s = "旋回_宇宙_通常時" in rec
+        if has_g and has_s:
+            rec["出撃_地上可"] = True
+            rec["出撃_宇宙可"] = True
+        elif has_g and not has_s:
+            rec["出撃_地上可"] = True
+            rec["出撃_宇宙可"] = False
+        elif has_s and not has_g:
+            rec["出撃_地上可"] = False
+            rec["出撃_宇宙可"] = True
     return rec
 
 

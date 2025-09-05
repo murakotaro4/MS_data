@@ -460,6 +460,21 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
     for lv in levels:
         per_level[lv].update(env)
 
+    # 出撃可否の最終フォールバック: 旋回項目の有無から推定
+    for lv in levels:
+        if "出撃_地上可" not in per_level[lv] and "出撃_宇宙可" not in per_level[lv]:
+            has_g = "旋回_地上_通常時" in per_level[lv]
+            has_s = "旋回_宇宙_通常時" in per_level[lv]
+            if has_g and has_s:
+                per_level[lv]["出撃_地上可"] = True
+                per_level[lv]["出撃_宇宙可"] = True
+            elif has_g and not has_s:
+                per_level[lv]["出撃_地上可"] = True
+                per_level[lv]["出撃_宇宙可"] = False
+            elif has_s and not has_g:
+                per_level[lv]["出撃_地上可"] = False
+                per_level[lv]["出撃_宇宙可"] = True
+
     # 強化リスト情報（fullst）を抽出：各MSレベルごとに必要強化値で昇順ソートし、points を付与
     def parse_fullst_by_ms_level(
         s: BeautifulSoup, ms_levels: List[int]
