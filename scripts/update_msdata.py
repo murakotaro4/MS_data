@@ -119,6 +119,20 @@ def normalize_record(rec: Dict[str, Any]) -> Dict[str, Any]:
         elif has_s and not has_g:
             rec["出撃_地上可"] = False
             rec["出撃_宇宙可"] = True
+
+    # 回転値の補正: 宇宙専用/地上専用で片側のみ存在する場合、適切な側へ寄せる
+    g = rec.get("出撃_地上可")
+    s = rec.get("出撃_宇宙可")
+    if g is False and s is True:
+        if "旋回_宇宙_通常時" not in rec and "旋回_地上_通常時" in rec:
+            rec["旋回_宇宙_通常時"] = rec.pop("旋回_地上_通常時")
+        if "旋回_宇宙_変形時" not in rec and "旋回_地上_変形時" in rec:
+            rec["旋回_宇宙_変形時"] = rec.pop("旋回_地上_変形時")
+    if g is True and s is False:
+        if "旋回_地上_通常時" not in rec and "旋回_宇宙_通常時" in rec:
+            rec["旋回_地上_通常時"] = rec.pop("旋回_宇宙_通常時")
+        if "旋回_地上_変形時" not in rec and "旋回_宇宙_変形時" in rec:
+            rec["旋回_地上_変形時"] = rec.pop("旋回_宇宙_変形時")
     return rec
 
 

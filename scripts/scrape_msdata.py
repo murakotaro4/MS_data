@@ -475,6 +475,24 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
                 per_level[lv]["出撃_地上可"] = False
                 per_level[lv]["出撃_宇宙可"] = True
 
+    # 回転値の補正: 宇宙専用/地上専用なのに単一見出しが地上/宇宙側に寄っている場合、適切な側へ移す
+    for lv in levels:
+        rec = per_level[lv]
+        g = rec.get("出撃_地上可")
+        s = rec.get("出撃_宇宙可")
+        if g is False and s is True:
+            # 宇宙専用: 地上→宇宙へ寄せる
+            if "旋回_宇宙_通常時" not in rec and "旋回_地上_通常時" in rec:
+                rec["旋回_宇宙_通常時"] = rec.pop("旋回_地上_通常時")
+            if "旋回_宇宙_変形時" not in rec and "旋回_地上_変形時" in rec:
+                rec["旋回_宇宙_変形時"] = rec.pop("旋回_地上_変形時")
+        if g is True and s is False:
+            # 地上専用: 宇宙→地上へ寄せる（保険）
+            if "旋回_地上_通常時" not in rec and "旋回_宇宙_通常時" in rec:
+                rec["旋回_地上_通常時"] = rec.pop("旋回_宇宙_通常時")
+            if "旋回_地上_変形時" not in rec and "旋回_宇宙_変形時" in rec:
+                rec["旋回_地上_変形時"] = rec.pop("旋回_宇宙_変形時")
+
     # 強化リスト情報（fullst）を抽出：各MSレベルごとに必要強化値で昇順ソートし、points を付与
     def parse_fullst_by_ms_level(
         s: BeautifulSoup, ms_levels: List[int]
