@@ -689,6 +689,10 @@ def cmd_details(args: argparse.Namespace) -> int:
             t_last = time.time()
             try:
                 text, _meta = cache.get(url)
+                # 変更がなければスキップ（オプション）
+                if getattr(args, "changed_only", False):
+                    if not _meta.get("semantic_changed", False):
+                        continue
                 per_level = parse_details(text)
                 # 補足情報（index由来）を併合
                 for lv, rec in per_level.items():
@@ -755,6 +759,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_det.add_argument("--ttl", default="7d", help="キャッシュTTL")
     p_det.add_argument("--no-network", action="store_true")
     p_det.add_argument("--force", action="store_true")
+    p_det.add_argument(
+        "--changed-only",
+        action="store_true",
+        help="セマンティック変化がないページをスキップ（コメント等の更新は無視）",
+    )
     p_det.set_defaults(func=cmd_details)
 
     p_all = sub.add_parser("all", help="index→details を連続実行")

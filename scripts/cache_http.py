@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, List
 import datetime as dt
 import hashlib
 import json
@@ -21,6 +21,7 @@ import re
 import urllib.parse
 
 import httpx
+from bs4 import BeautifulSoup, Comment
 
 
 @dataclass
@@ -88,6 +89,7 @@ class CacheHTTP:
           - url, fetched_at (ISO8601 UTC), http_status
           - etag, last_modified (あれば)
           - content_sha256, size
+          - semantic_sha256, last_semantic_change_at, semantic_changed（追加）
         """
         html_path, meta_path = self._paths(url)
         meta = self._read_meta(meta_path)
@@ -108,7 +110,18 @@ class CacheHTTP:
             text = html_path.read_text(encoding="utf-8")
             if not meta.get("content_sha256"):
                 meta["content_sha256"] = self._sha256_text(text)
-            # 軽くメタ更新（アクセス時刻更新までは不要）
+            # セマンティックハッシュを計算してメタに反映（コメント等を無視した本体の変化検出）
+            prev_sem = meta.get("semantic_sha256")
+            cur_sem = _semantic_sha256(text)
+            meta["semantic_sha256"] = cur_sem
+            # TTL内では取得していないため、変化フラグは False（初回は prev_sem が無くても False にする）
+            meta["semantic_changed"] = bool(prev_sem) and (prev_sem != cur_sem)
+            # last_semantic_change_at は TTL内では更新しない（読み取りのみ）
+            # ただし初回で semantic_sha256 が欠落していた場合は書き戻しておく
+            try:
+                self._write_meta(meta_path, meta)
+            except Exception:
+                pass
             return text, meta
 
         if self.cfg.no_network and not html_path.exists():
@@ -126,6 +139,9 @@ class CacheHTTP:
         if r.status_code == 304 and html_path.exists():
             # HTMLは既存を使う
             text = html_path.read_text(encoding="utf-8")
+            prev_sem = meta.get("semantic_sha256")
+            cur_sem = _semantic_sha256(text)
+            semantic_changed = (prev_sem != cur_sem)
             meta.update(
                 {
                     "url": url,
@@ -133,6 +149,11 @@ class CacheHTTP:
                     "http_status": 304,
                     "content_sha256": self._sha256_text(text),
                     "size": len(text.encode("utf-8")),
+                    "semantic_sha256": cur_sem,
+                    "semantic_changed": semantic_changed,
+                    "last_semantic_change_at": (
+                        now.isoformat() if semantic_changed else meta.get("last_semantic_change_at")
+                    ),
                 }
             )
             self._write_meta(meta_path, meta)
@@ -140,6 +161,10 @@ class CacheHTTP:
 
         r.raise_for_status()
         text = r.text
+        # 200: 新規または内容変更
+        cur_sem = _semantic_sha256(text)
+        prev_sem = meta.get("semantic_sha256")
+        semantic_changed = (prev_sem != cur_sem)
         meta_new = {
             "url": url,
             "fetched_at": now.isoformat(),
@@ -148,7 +173,124 @@ class CacheHTTP:
             "last_modified": r.headers.get("Last-Modified"),
             "content_sha256": self._sha256_text(text),
             "size": len(text.encode("utf-8")),
+            "semantic_sha256": cur_sem,
+            "semantic_changed": semantic_changed,
+            "last_semantic_change_at": (
+                now.isoformat() if semantic_changed else meta.get("last_semantic_change_at")
+            ),
         }
         html_path.write_text(text, encoding="utf-8")
         self._write_meta(meta_path, meta_new)
         return text, meta_new
+
+
+# ==========================
+# セマンティック抽出・ハッシュ
+# ==========================
+
+_ID_RE_TABLE = re.compile(r"^table_(kyoushu|hanyou|sien)$")
+_RE_LV = re.compile(r"LV\d+", re.IGNORECASE)
+_RE_SORTIE = re.compile(r"^label_sortie_([GSn])_([GSn])$")
+_RE_ENV = re.compile(r"^label_env_([Gn])_([Sn])(?:_([Wn]))?$")
+
+
+def _extract_semantic_text(html: str) -> str:
+    """ステータス本体のみを抽出し、空白を正規化したテキストを返す。
+
+    - コメント/掲示板/スクリプト等は除去
+    - ステータステーブル、パーツスロット、強化リスト、出撃/環境適正のIDを含める
+    """
+    soup = BeautifulSoup(html, "lxml")
+
+    # 1) ノイズの除去: script/style/コメントノード
+    for tag in soup(["script", "style"]):
+        tag.decompose()
+    for c in soup.find_all(string=lambda s: isinstance(s, Comment)):
+        c.extract()
+
+    # 2) コメント/掲示板ブロックの除去（見出し以降など）
+    def decompose_if_noise(tag) -> None:
+        txt = ""
+        try:
+            txt = tag.get_text(" ")
+        except Exception:
+            pass
+        ident = ((tag.get("id") or "") + " " + " ".join(tag.get("class", []))).lower()
+        if (
+            (txt and ("コメント" in txt or "掲示板" in txt))
+            or re.search(r"comment|plugin[_-]?comment|bbs|lastmod|recent|counter|sns|social|tweet|footer|foot", ident)
+        ):
+            tag.decompose()
+
+    for h in soup.find_all(["h2", "h3", "h4"]):
+        t = (h.get_text(" ") or "").strip()
+        if "コメント" in t or "掲示板" in t:
+            # 次の同格見出し手前までを除去
+            cur = h
+            while True:
+                nxt = cur.find_next_sibling()
+                if not nxt or (getattr(nxt, "name", "").startswith("h")):
+                    break
+                decompose_if_noise(nxt)
+                cur = nxt
+            # 見出し自身も除去
+            h.decompose()
+
+    for tag in list(soup.find_all(True)):
+        decompose_if_noise(tag)
+
+    parts: List[str] = []
+
+    # タイトル
+    if soup.title and soup.title.get_text():
+        parts.append(soup.title.get_text(" ").strip())
+
+    # ステータステーブル（優先: div#table_* 配下）
+    table = None
+    tbl_div = soup.find(id=_ID_RE_TABLE)
+    if tbl_div:
+        table = tbl_div.find("table")
+    if not table:
+        for t in soup.find_all("table"):
+            if t.find(string=_RE_LV):
+                table = t
+                break
+    if table:
+        parts.append(table.get_text(" ", strip=True))
+
+    # パーツスロット表
+    for h3 in soup.find_all("h3"):
+        if "パーツスロット" in (h3.get_text(" ") or ""):
+            t = h3.find_next_sibling("table")
+            if t:
+                parts.append(t.get_text(" ", strip=True))
+            break
+
+    # 強化リスト情報表
+    header = None
+    for hx in soup.find_all(["h2", "h3"]):
+        if "強化リスト情報" in (hx.get_text(" ") or ""):
+            header = hx
+            break
+    if header:
+        t = header.find_next("table")
+        if t:
+            parts.append(t.get_text(" ", strip=True))
+
+    # 出撃/環境適正の固定ID（ID自体が情報を持つためID文字列を含める）
+    lab_sortie = soup.find(id=_RE_SORTIE)
+    if lab_sortie and lab_sortie.get("id"):
+        parts.append(lab_sortie.get("id"))
+    lab_env = soup.find(id=_RE_ENV)
+    if lab_env and lab_env.get("id"):
+        parts.append(lab_env.get("id"))
+
+    # 連結して空白を正規化
+    text = " \n ".join([p for p in parts if p])
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def _semantic_sha256(html: str) -> str:
+    text = _extract_semantic_text(html)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()

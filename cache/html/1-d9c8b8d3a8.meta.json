@@ -1,0 +1,12 @@
+{
+  "url": "https://example.test/ms/1",
+  "fetched_at": "2025-09-05T09:15:57.981224+00:00",
+  "http_status": 200,
+  "etag": "C",
+  "last_modified": null,
+  "content_sha256": "ae2bceb27669e12c5de7f87e8dc5bbb6214f62e3fe159193c58a3bc0fcb91533",
+  "size": 324,
+  "semantic_sha256": "d5f134be1f3c9db138ba1e6443faa3ee8f02f8536b4b63ab75bed361d04bedfb",
+  "semantic_changed": true,
+  "last_semantic_change_at": "2025-09-05T09:15:57.981224+00:00"
+}
