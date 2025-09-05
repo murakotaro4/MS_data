@@ -290,7 +290,17 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
                 if m:
                     lvl = int(m.group(1))
                     break
-            if current_name and isinstance(lvl, int):
+            # 「MSレベル毎必要強化値」列に具体数値が存在するかを確認
+            has_numeric = False
+            tds = tr.find_all("td")
+            if tds:
+                tds_eval = tds[:-1] if len(tds) >= 2 else tds  # 末尾は効果列の可能性が高い
+                for td in tds_eval:
+                    val = to_int(clean_text(td.get_text(" ")))
+                    if val is not None:
+                        has_numeric = True
+                        break
+            if current_name and isinstance(lvl, int) and has_numeric:
                 items.append((current_name, lvl))
 
         # 各リスト名について 最小Lv と 最大Lv のみを採用（例: Lv1 と Lv4）
