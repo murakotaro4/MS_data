@@ -1,0 +1,800 @@
+[
+  {
+    "name": "リガズィード",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/5036.html",
+    "cost": 600,
+    "属性": "支援"
+  },
+  {
+    "name": "νガンダム",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/3357.html",
+    "cost": 700,
+    "属性": "汎用"
+  },
+  {
+    "name": "トーリス・リッター",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/2818.html",
+    "cost": 650,
+    "属性": "汎用"
+  },
+  {
+    "name": "ガンダムデルタアンス",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/6471.html",
+    "cost": 600,
+    "属性": "汎用"
+  },
+  {
+    "name": "ガンダムMk-Ⅱ［メガラニカ所属］",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/6376.html",
+    "cost": 550,
+    "属性": "汎用"
+  },
+  {
+    "name": "ジム・NS［宇宙戦仕様］（V）",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/3219.html",
+    "cost": 500,
+    "属性": "強襲"
+  },
+  {
+    "name": "ジム・キャノン［空間突撃仕様］",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1692.html",
+    "cost": 250,
+    "属性": "支援"
+  },
+  {
+    "name": "ガンダムMk-Ⅱ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1874.html",
+    "cost": 500,
+    "属性": "汎用"
+  },
+  {
+    "name": "ペイルライダーDⅡ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/3928.html",
+    "cost": 450,
+    "属性": "支援"
+  },
+  {
+    "name": "ダギ・イルス",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/6856.html",
+    "cost": 700,
+    "属性": "汎用"
+  },
+  {
+    "name": "高機動型ゲルググ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/858.html",
+    "cost": 450,
+    "属性": "汎用"
+  },
+  {
+    "name": "ガンダム試作3号機ステイメン",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1515.html",
+    "cost": 550,
+    "属性": "汎用"
+  },
+  {
+    "name": "メッサーF01型",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/5702.html",
+    "cost": 650,
+    "属性": "汎用"
+  },
+  {
+    "name": "ジェガン",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/3060.html",
+    "cost": 500,
+    "属性": "汎用"
+  },
+  {
+    "name": "ヘイズル改",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/3750.html",
+    "cost": 500,
+    "属性": "汎用"
+  },
+  {
+    "name": "ナイチンゲール",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/5073.html",
+    "cost": 700,
+    "属性": "強襲"
+  },
+  {
+    "name": "ガルバルディα",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1166.html",
+    "cost": 400,
+    "属性": "汎用"
+  },
+  {
+    "name": "ゲム・カモフ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1374.html",
+    "cost": 200,
+    "属性": "汎用"
+  },
+  {
+    "name": "ペイルライダー［空間戦仕様］",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1615.html",
+    "cost": 400,
+    "属性": "汎用"
+  },
+  {
+    "name": "ジェガン［エコーズ仕様］",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/3960.html",
+    "cost": 550,
+    "属性": "汎用"
+  },
+  {
+    "name": "ジーライン・アサルトアーマー",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1595.html",
+    "cost": 400,
+    "属性": "強襲"
+  },
+  {
+    "name": "ジム・コマンド宇宙戦仕様",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/698.html",
+    "cost": 250,
+    "属性": "汎用"
+  },
+  {
+    "name": "ナラティブガンダム［C装備］",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/5403.html",
+    "cost": 650,
+    "属性": "強襲"
+  },
+  {
+    "name": "エンゲージガンダム［BST装備］",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/5726.html",
+    "cost": 550,
+    "属性": "強襲"
+  },
+  {
+    "name": "バーザム改",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/3565.html",
+    "cost": 500,
+    "属性": "汎用"
+  },
+  {
+    "name": "ペイルライダー・キャバルリー",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1709.html",
+    "cost": 350,
+    "属性": "汎用"
+  },
+  {
+    "name": "ジム・キャノン",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/347.html",
+    "cost": 100,
+    "属性": "支援"
+  },
+  {
+    "name": "ドラッツェ改［重装備型］",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/2802.html",
+    "cost": 300,
+    "属性": "支援"
+  },
+  {
+    "name": "Hi-νガンダム",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/5071.html",
+    "cost": 700,
+    "属性": "汎用"
+  },
+  {
+    "name": "アレックス",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/955.html",
+    "cost": 450,
+    "属性": "汎用"
+  },
+  {
+    "name": "ドラッツェ改",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1557.html",
+    "cost": 250,
+    "属性": "汎用"
+  },
+  {
+    "name": "リ・ガズィ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/3343.html",
+    "cost": 550,
+    "属性": "強襲"
+  },
+  {
+    "name": "ジムⅢ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/150.html",
+    "cost": 400,
+    "属性": "汎用"
+  },
+  {
+    "name": "ガンダムMk-Ⅲ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/2241.html",
+    "cost": 550,
+    "属性": "汎用"
+  },
+  {
+    "name": "エンゲージゼロ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/5523.html",
+    "cost": 450,
+    "属性": "汎用"
+  },
+  {
+    "name": "Ζガンダム",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/2077.html",
+    "cost": 600,
+    "属性": "汎用"
+  },
+  {
+    "name": "パーフェクト・ガンダム【TB】",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/5596.html",
+    "cost": 550,
+    "属性": "汎用"
+  },
+  {
+    "name": "ペイルライダー・デュラハン",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/2652.html",
+    "cost": 400,
+    "属性": "強襲"
+  },
+  {
+    "name": "ゲルググ・V・キュアノス",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/4349.html",
+    "cost": 600,
+    "属性": "汎用"
+  },
+  {
+    "name": "ヘビーガンダム（I0）",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/5770.html",
+    "cost": 600,
+    "属性": "強襲"
+  },
+  {
+    "name": "ブルーディスティニー2号機",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1003.html",
+    "cost": 400,
+    "属性": "強襲"
+  },
+  {
+    "name": "Ζガンダム3号機P2型",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/6455.html",
+    "cost": 650,
+    "属性": "強襲"
+  },
+  {
+    "name": "ジム・スナイパーⅡ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/149.html",
+    "cost": 400,
+    "属性": "支援"
+  },
+  {
+    "name": "ガンダムMk-Ⅴ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/2860.html",
+    "cost": 650,
+    "属性": "強襲"
+  },
+  {
+    "name": "リ・ガズィ・カスタム",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/3439.html",
+    "cost": 600,
+    "属性": "汎用"
+  },
+  {
+    "name": "ジム",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/341.html",
+    "cost": 100,
+    "属性": "汎用"
+  },
+  {
+    "name": "Ζガンダム［ザク頭］",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/4472.html",
+    "cost": 550,
+    "属性": "汎用"
+  },
+  {
+    "name": "ジーライン・ライトアーマー",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1425.html",
+    "cost": 400,
+    "属性": "強襲"
+  },
+  {
+    "name": "サザビー",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/3359.html",
+    "cost": 700,
+    "属性": "汎用"
+  },
+  {
+    "name": "ガンダム4号機",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1228.html",
+    "cost": 450,
+    "属性": "汎用"
+  },
+  {
+    "name": "ジムⅢパワード",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/3500.html",
+    "cost": 450,
+    "属性": "汎用"
+  },
+  {
+    "name": "ジム・クゥエル",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1949.html",
+    "cost": 400,
+    "属性": "強襲"
+  },
+  {
+    "name": "白いガンダム",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/6806.html",
+    "cost": 450,
+    "属性": "汎用"
+  },
+  {
+    "name": "リゼルC型［DbU装備］",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/4664.html",
+    "cost": 650,
+    "属性": "支援"
+  },
+  {
+    "name": "ネモ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1806.html",
+    "cost": 400,
+    "属性": "汎用"
+  },
+  {
+    "name": "ブグ（RR）【GTO】",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/5700.html",
+    "cost": 250,
+    "属性": "汎用"
+  },
+  {
+    "name": "ギャン・エーオース",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1267.html",
+    "cost": 400,
+    "属性": "汎用"
+  },
+  {
+    "name": "赤いガンダム",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/6657.html",
+    "cost": 500,
+    "属性": "強襲"
+  },
+  {
+    "name": "ゲルググ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/567.html",
+    "cost": 350,
+    "属性": "汎用"
+  },
+  {
+    "name": "ジム・レイド",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/5077.html",
+    "cost": 350,
+    "属性": "汎用"
+  },
+  {
+    "name": "ジム・コマンドLA",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/3995.html",
+    "cost": 300,
+    "属性": "強襲"
+  },
+  {
+    "name": "ゲルググM",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1357.html",
+    "cost": 400,
+    "属性": "強襲"
+  },
+  {
+    "name": "ジムⅡ・ウェポンテスター",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/6885.html",
+    "cost": 400,
+    "属性": "汎用"
+  },
+  {
+    "name": "ネティクス",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/6077.html",
+    "cost": 500,
+    "属性": "支援"
+  },
+  {
+    "name": "Ζガンダム［HML］",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/3015.html",
+    "cost": 650,
+    "属性": "支援"
+  },
+  {
+    "name": "リゼルC型［DaU装備］",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/6320.html",
+    "cost": 650,
+    "属性": "強襲"
+  },
+  {
+    "name": "シナンジュ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/4189.html",
+    "cost": 700,
+    "属性": "汎用"
+  },
+  {
+    "name": "高機動型ゲルググ（JR）",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/6858.html",
+    "cost": 450,
+    "属性": "強襲"
+  },
+  {
+    "name": "ハイザック",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1830.html",
+    "cost": 400,
+    "属性": "汎用"
+  },
+  {
+    "name": "Gキャノン",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/6794.html",
+    "cost": 600,
+    "属性": "支援"
+  },
+  {
+    "name": "リック・ディジェ改",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/4025.html",
+    "cost": 600,
+    "属性": "強襲"
+  },
+  {
+    "name": "ガンダム5号機",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1260.html",
+    "cost": 450,
+    "属性": "強襲"
+  },
+  {
+    "name": "シャア専用ゲルググ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/4195.html",
+    "cost": 450,
+    "属性": "強襲"
+  },
+  {
+    "name": "デルタプラス",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/4097.html",
+    "cost": 650,
+    "属性": "強襲"
+  },
+  {
+    "name": "ジムⅡ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1853.html",
+    "cost": 300,
+    "属性": "汎用"
+  },
+  {
+    "name": "ゲルググ［シュトゥッツァー］",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/4497.html",
+    "cost": 450,
+    "属性": "汎用"
+  },
+  {
+    "name": "Ζガンダム3号機B型",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/5876.html",
+    "cost": 650,
+    "属性": "支援"
+  },
+  {
+    "name": "マドロック",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1019.html",
+    "cost": 450,
+    "属性": "支援"
+  },
+  {
+    "name": "ジム・ドミナンス",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/3199.html",
+    "cost": 400,
+    "属性": "汎用"
+  },
+  {
+    "name": "ガンダムデルタカイ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/4404.html",
+    "cost": 650,
+    "属性": "汎用"
+  },
+  {
+    "name": "ジム・ガードカスタム",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1265.html",
+    "cost": 300,
+    "属性": "強襲"
+  },
+  {
+    "name": "ガルバルディβ（FS）",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/3239.html",
+    "cost": 500,
+    "属性": "汎用"
+  },
+  {
+    "name": "ゲルググM指揮官機",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1535.html",
+    "cost": 450,
+    "属性": "汎用"
+  },
+  {
+    "name": "ゲルググL",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/6638.html",
+    "cost": 400,
+    "属性": "汎用"
+  },
+  {
+    "name": "ヘイズル改［イカロス・U装備］",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/6048.html",
+    "cost": 550,
+    "属性": "強襲"
+  },
+  {
+    "name": "ジェガンD型",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/3714.html",
+    "cost": 500,
+    "属性": "汎用"
+  },
+  {
+    "name": "高機動型ゲルググ（UL）",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1723.html",
+    "cost": 450,
+    "属性": "汎用"
+  },
+  {
+    "name": "パワード・ジム",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/335.html",
+    "cost": 350,
+    "属性": "汎用"
+  },
+  {
+    "name": "ジム・キャノンⅡ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1576.html",
+    "cost": 400,
+    "属性": "支援"
+  },
+  {
+    "name": "先行量産型ゲルググ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/151.html",
+    "cost": 400,
+    "属性": "汎用"
+  },
+  {
+    "name": "ネモ・カノン",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/4993.html",
+    "cost": 450,
+    "属性": "支援"
+  },
+  {
+    "name": "デルタガンダム",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/4239.html",
+    "cost": 600,
+    "属性": "支援"
+  },
+  {
+    "name": "ガルバルディβ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1917.html",
+    "cost": 450,
+    "属性": "汎用"
+  },
+  {
+    "name": "エンゲージゼロ［追加BST装備型］",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/5525.html",
+    "cost": 500,
+    "属性": "強襲"
+  },
+  {
+    "name": "バウ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/2598.html",
+    "cost": 550,
+    "属性": "強襲"
+  },
+  {
+    "name": "Ζガンダム3号機A型",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/5620.html",
+    "cost": 650,
+    "属性": "汎用"
+  },
+  {
+    "name": "RX-93ff νガンダム",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/5014.html",
+    "cost": 700,
+    "属性": "強襲"
+  },
+  {
+    "name": "ヘビーガン",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/6622.html",
+    "cost": 600,
+    "属性": "汎用"
+  },
+  {
+    "name": "フルアーマーガンダム7号機",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/2194.html",
+    "cost": 550,
+    "属性": "支援"
+  },
+  {
+    "name": "ガンダム試作2号機［MLRS］",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1660.html",
+    "cost": 550,
+    "属性": "支援"
+  },
+  {
+    "name": "トリスタン",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/2560.html",
+    "cost": 600,
+    "属性": "汎用"
+  },
+  {
+    "name": "ガンダムMk-Ⅳ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/4998.html",
+    "cost": 600,
+    "属性": "汎用"
+  },
+  {
+    "name": "ガンダム試作4号機",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1741.html",
+    "cost": 550,
+    "属性": "支援"
+  },
+  {
+    "name": "ヘイズル2号機",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/3853.html",
+    "cost": 500,
+    "属性": "強襲"
+  },
+  {
+    "name": "メッサーF02型",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/5904.html",
+    "cost": 650,
+    "属性": "強襲"
+  },
+  {
+    "name": "ジム改",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/148.html",
+    "cost": 200,
+    "属性": "汎用"
+  },
+  {
+    "name": "リバウ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/4050.html",
+    "cost": 650,
+    "属性": "汎用"
+  },
+  {
+    "name": "ドラッツェ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/837.html",
+    "cost": 200,
+    "属性": "強襲"
+  },
+  {
+    "name": "ガンダム（CD）",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/6834.html",
+    "cost": 450,
+    "属性": "汎用"
+  },
+  {
+    "name": "ジムSPⅢ［中距離支援ユニット］",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/4511.html",
+    "cost": 400,
+    "属性": "支援"
+  },
+  {
+    "name": "ガブスレイβ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/6902.html",
+    "cost": 600,
+    "属性": "支援"
+  },
+  {
+    "name": "ガンダムMk-Ⅴ［MP装備］",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/6216.html",
+    "cost": 650,
+    "属性": "汎用"
+  },
+  {
+    "name": "GQuuuuuuX（ジークアクス）",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/6810.html",
+    "cost": 500,
+    "属性": "汎用"
+  },
+  {
+    "name": "ギラ・ズール（アンジェロ機）",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/4066.html",
+    "cost": 600,
+    "属性": "支援"
+  },
+  {
+    "name": "ガンダム",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/353.html",
+    "cost": 400,
+    "属性": "汎用"
+  },
+  {
+    "name": "ガンダム7号機",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/5512.html",
+    "cost": 500,
+    "属性": "汎用"
+  },
+  {
+    "name": "G-3ガンダム",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/152.html",
+    "cost": 450,
+    "属性": "強襲"
+  },
+  {
+    "name": "ブルーディスティニー3号機",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1005.html",
+    "cost": 400,
+    "属性": "汎用"
+  },
+  {
+    "name": "ユニコーンガンダム",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/4271.html",
+    "cost": 700,
+    "属性": "汎用"
+  },
+  {
+    "name": "F90",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/6533.html",
+    "cost": 700,
+    "属性": "汎用"
+  },
+  {
+    "name": "ザクⅠ指揮官仕様",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/895.html",
+    "cost": 200,
+    "属性": "支援"
+  },
+  {
+    "name": "ガンダム試作2号機［BB仕様］",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1481.html",
+    "cost": 550,
+    "属性": "強襲"
+  },
+  {
+    "name": "ガンダム試作1号機Fb",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1574.html",
+    "cost": 550,
+    "属性": "汎用"
+  },
+  {
+    "name": "高機動型ゲルググ（VG）",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1323.html",
+    "cost": 450,
+    "属性": "汎用"
+  },
+  {
+    "name": "ジム・カスタム",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1477.html",
+    "cost": 400,
+    "属性": "汎用"
+  },
+  {
+    "name": "ジェダ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/3451.html",
+    "cost": 450,
+    "属性": "汎用"
+  },
+  {
+    "name": "アイザック",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/2615.html",
+    "cost": 400,
+    "属性": "支援"
+  },
+  {
+    "name": "ジム・ストライカー改",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1627.html",
+    "cost": 350,
+    "属性": "強襲"
+  },
+  {
+    "name": "ガルバルディβ高機動型［T仕様］",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/4397.html",
+    "cost": 500,
+    "属性": "支援"
+  },
+  {
+    "name": "ゲルググ・ウェルテクス",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/3212.html",
+    "cost": 600,
+    "属性": "強襲"
+  },
+  {
+    "name": "ジーライン・スタンダードアーマー",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/1469.html",
+    "cost": 400,
+    "属性": "汎用"
+  },
+  {
+    "name": "ヘイズル・アウスラ",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/4959.html",
+    "cost": 550,
+    "属性": "汎用"
+  },
+  {
+    "name": "ギラ・ズール",
+    "url": "https://w.atwiki.jp/battle-operation2/pages/3787.html",
+    "cost": 550,
+    "属性": "汎用"
+  }
+]

@@ -95,6 +95,177 @@ def to_int(text: str) -> Optional[int]:
     return int(m.group(0)) if m else None
 
 
+def symbol_to_bool(s: str) -> Optional[bool]:
+    t = clean_text(s)
+    # 記号/語を可否にマップ
+    true_syms = {"◎", "◯", "○", "〇", "△", "可", "可能", "yes", "可○"}
+    false_syms = {"×", "不可", "不可能", "no"}
+    if t in true_syms:
+        return True
+    if t in false_syms:
+        return False
+    # テキスト内に含まれる場合
+    if any(x in t for x in ["不可", "×"]):
+        return False
+    if any(x in t for x in ["可", "可能", "◯", "○", "〇", "◎", "△"]):
+        return True
+    return None
+
+
+def parse_deployment(soup: BeautifulSoup) -> Dict[str, Optional[bool]]:
+    """出撃可否（地上/宇宙）を推定して返す。
+
+    - 優先: 「〜出撃のみ」系の明示文
+    - 次点: 記号/語（◯/×/可/不可/△）の行や表
+    - 何も見つからなければ None
+    """
+
+    def section_text(h: Tag) -> str:
+        parts: List[str] = []
+        # 近傍の数要素を収集
+        cur = h
+        for _ in range(6):
+            cur = cur.find_next_sibling()
+            if not cur or getattr(cur, "name", "").startswith("h"):
+                break
+            parts.append(cur.get_text(" ") if hasattr(cur, "get_text") else str(cur))
+        return clean_text(" \n ".join(parts))
+
+    def scan_tables(h: Tag) -> Tuple[Optional[bool], Optional[bool]]:
+        gz = None
+        uz = None
+        # 近傍の最初のtableを数個まで探索
+        seen = 0
+        cur = h
+        while seen < 3 and cur:
+            cur = cur.find_next_sibling()
+            if not cur:
+                break
+            if cur.name == "table":
+                seen += 1
+                for tr in cur.find_all("tr"):
+                    cells = [
+                        clean_text(x.get_text(" "))
+                        for x in tr.find_all(["th", "td"])
+                        if clean_text(x.get_text(" "))
+                    ]
+                    if not cells:
+                        continue
+                    # 形式1: 地上 | ◯    宇宙 | ×
+                    for i, c in enumerate(cells):
+                        if "地上" in c and i + 1 < len(cells):
+                            v = symbol_to_bool(cells[i + 1])
+                            if v is not None:
+                                gz = v if gz is None else gz
+                        if "宇宙" in c and i + 1 < len(cells):
+                            v = symbol_to_bool(cells[i + 1])
+                            if v is not None:
+                                uz = v if uz is None else uz
+        return gz, uz
+
+    result: Dict[str, Optional[bool]] = {"出撃_地上可": None, "出撃_宇宙可": None}
+    # 0) atwiki 固有のIDにエンコードされているケース: label_sortie_{G|n}_{S|n}
+    lab = soup.find(id=re.compile(r"^label_sortie_([GSn])_([GSn])$"))
+    if lab and hasattr(lab, 'get'):
+        m = re.match(r"label_sortie_([GSn])_([GSn])", lab.get('id', ''))
+        if m:
+            g, s = m.group(1), m.group(2)
+            result["出撃_地上可"] = True if g == 'G' else (False if g == 'n' else None)
+            result["出撃_宇宙可"] = True if s == 'S' else (False if s == 'n' else None)
+            return result
+    # 対象となる見出しを探す
+    headers: List[Tag] = []
+    for hx in soup.find_all(["h2", "h3", "h4"]):
+        txt = clean_text(hx.get_text(" "))
+        if any(k in txt for k in ("出撃", "環境適正", "機体属性・出撃制限・環境適正")):
+            headers.append(hx)
+    # 1) 明示文（のみ）
+    for h in headers:
+        txt = section_text(h)
+        t = txt.replace("：", ":")
+        # 地上のみ/宇宙のみ
+        if "地上" in t and "のみ" in t:
+            result["出撃_地上可"], result["出撃_宇宙可"] = True, False
+            return result
+        if "宇宙" in t and "のみ" in t:
+            result["出撃_地上可"], result["出撃_宇宙可"] = False, True
+            return result
+    # 2) 記号表記
+    for h in headers:
+        txt = section_text(h)
+        # パターン: 地上:◯ 宇宙:×
+        m1 = re.search(r"地上\s*[:：]\s*([◎◯○〇△×不可可])", txt)
+        m2 = re.search(r"宇宙\s*[:：]\s*([◎◯○〇△×不可可])", txt)
+        gz = symbol_to_bool(m1.group(1)) if m1 else None
+        uz = symbol_to_bool(m2.group(1)) if m2 else None
+        if gz is not None or uz is not None:
+            result["出撃_地上可"], result["出撃_宇宙可"] = gz, uz
+            return result
+        # テーブル走査
+        tgz, tuz = scan_tables(h)
+        if tgz is not None or tuz is not None:
+            result["出撃_地上可"], result["出撃_宇宙可"] = tgz, tuz
+            return result
+    return result
+
+
+def parse_env_suitability(soup: BeautifulSoup) -> Dict[str, bool]:
+    """環境適正（地上/宇宙/水中）を抽出。見つからないものは False。
+
+    優先: atwiki 固有ID label_env_{G|n}_{S|n}(_{W|n})
+    フォールバック: 文言/表からの記号解釈（簡易）
+    """
+    result = {"環境適正_地上": False, "環境適正_宇宙": False, "環境適正_水中": False}
+    # 1) 固有ID
+    lab = soup.find(id=re.compile(r"^label_env_([Gn])_([Sn])(?:_([Wn]))?$"))
+    if lab and hasattr(lab, "get"):
+        m = re.match(r"label_env_([Gn])_([Sn])(?:_([Wn]))?", lab.get("id", ""))
+        if m:
+            g, s, w = m.group(1), m.group(2), m.group(3)
+            result["環境適正_地上"] = g == "G"
+            result["環境適正_宇宙"] = s == "S"
+            result["環境適正_水中"] = (w == "W") if w is not None else False
+            return result
+
+    # 2) テキスト/表（簡易フォールバック）
+    def section_text(h: Tag) -> str:
+        parts: List[str] = []
+        cur = h
+        for _ in range(6):
+            cur = cur.find_next_sibling()
+            if not cur or getattr(cur, "name", "").startswith("h"):
+                break
+            parts.append(cur.get_text(" ") if hasattr(cur, "get_text") else str(cur))
+        return clean_text(" \n ".join(parts))
+
+    headers: List[Tag] = []
+    for hx in soup.find_all(["h2", "h3", "h4"]):
+        txt = clean_text(hx.get_text(" "))
+        if "環境適正" in txt or "機体属性・出撃制限・環境適正" in txt:
+            headers.append(hx)
+    for h in headers:
+        txt = section_text(h)
+
+        def find_bool(label: str) -> Optional[bool]:
+            m = re.search(label + r"\s*[:：]\s*([^\s]+)", txt)
+            if m:
+                return symbol_to_bool(m.group(1))
+            return None
+
+        gz = find_bool("地上")
+        uz = find_bool("宇宙")
+        wz = find_bool("水中")
+        if gz is not None:
+            result["環境適正_地上"] = bool(gz)
+        if uz is not None:
+            result["環境適正_宇宙"] = bool(uz)
+        if wz is not None:
+            result["環境適正_水中"] = bool(wz)
+        if gz is not None or uz is not None or wz is not None:
+            break
+    return result
+
+
 # ===============
 # Index parsing
 # ===============
@@ -227,7 +398,9 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
             if key in ("格闘判定力", "カウンター", "レアリティ", "必要階級"):
                 per_level[lv][key] = clean_text(val)
             elif key in ("再出撃時間", "必要DP", "必要リサイクルチケット"):
-                per_level[lv][key] = to_int(val)
+                iv = to_int(val)
+                if iv is not None:
+                    per_level[lv][key] = iv
             else:
                 iv = to_int(val)
                 if iv is not None:
@@ -273,6 +446,19 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
     if attr:
         for lv in levels:
             per_level[lv]["属性"] = attr
+
+    # 出撃可否（地上/宇宙）
+    dep = parse_deployment(soup)
+    if dep:
+        for lv in levels:
+            for k, v in dep.items():
+                if v is not None:
+                    per_level[lv][k] = v
+
+    # 環境適正（地上/宇宙/水中）
+    env = parse_env_suitability(soup)
+    for lv in levels:
+        per_level[lv].update(env)
 
     # 強化リスト情報（fullst）を抽出：各MSレベルごとに必要強化値で昇順ソートし、points を付与
     def parse_fullst_by_ms_level(

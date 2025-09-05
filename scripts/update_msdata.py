@@ -24,6 +24,11 @@ from scripts.label_utils import apply_key_aliases
 CANONICAL_ORDER = (
     "MS名",
     "属性",
+    "出撃_地上可",
+    "出撃_宇宙可",
+    "環境適正_地上",
+    "環境適正_宇宙",
+    "環境適正_水中",
     "コスト",
     "HP",
     "スピード",
@@ -33,8 +38,10 @@ CANONICAL_ORDER = (
     "高速移動_変形時",
     "射撃補正",
     "射撃補正_変形時",
+    "射撃補正_変身時",
     "格闘補正",
     "格闘補正_変形時",
+    "格闘補正_変身時",
     "耐ビーム補正",
     "耐実弾補正",
     "耐格闘補正",
@@ -42,6 +49,7 @@ CANONICAL_ORDER = (
     "中スロット",
     "遠スロット",
     "旋回_地上_通常時",
+    "旋回_変形時",
     "旋回_地上_変形時",
     "旋回_宇宙_通常時",
     "旋回_宇宙_変形時",
@@ -63,7 +71,41 @@ def load_json(path: Path) -> Any:
 
 def normalize_record(rec: Dict[str, Any]) -> Dict[str, Any]:
     # 別名キーを正規キーへ移し替え（既存が無い場合のみ）
-    return apply_key_aliases(rec)
+    rec = apply_key_aliases(rec)
+    # 数値項目で None は削除（schema適合のため）。
+    INT_KEYS = {
+        "コスト",
+        "HP",
+        "スピード",
+        "スピード_変形時",
+        "スラスター",
+        "高速移動",
+        "高速移動_変形時",
+        "射撃補正",
+        "射撃補正_変形時",
+        "射撃補正_変身時",
+        "格闘補正",
+        "格闘補正_変形時",
+        "格闘補正_変身時",
+        "耐ビーム補正",
+        "耐実弾補正",
+        "耐格闘補正",
+        "近スロット",
+        "中スロット",
+        "遠スロット",
+        "旋回_地上_通常時",
+        "旋回_地上_変形時",
+        "旋回_宇宙_通常時",
+        "旋回_宇宙_変形時",
+        "旋回_変形時",
+        "再出撃時間",
+        "必要DP",
+        "必要リサイクルチケット",
+    }
+    for k in list(rec.keys()):
+        if k in INT_KEYS and rec.get(k) is None:
+            rec.pop(k, None)
+    return rec
 
 
 def iter_records_from_files(paths: Iterable[Path]) -> Iterable[Dict[str, Any]]:
