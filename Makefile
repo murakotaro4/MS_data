@@ -37,20 +37,20 @@ test:
 	uv run pytest -q
 
 validate:
-	uv run python scripts/validate_msdata.py $(MSDATA)
+	uv run python -m scripts.validate_msdata $(MSDATA)
 
 validate-strict:
-	uv run python scripts/validate_msdata.py $(MSDATA) --fail-on-typo
+	uv run python -m scripts.validate_msdata $(MSDATA) --fail-on-typo
 
 update:
 	@if [ -n "$(INPUT)" ]; then \
-		uv run python scripts/update_msdata.py -i "$(INPUT)"; \
+		uv run python -m scripts.update_msdata -i "$(INPUT)"; \
 	else \
-		uv run python scripts/update_msdata.py -i; \
+		uv run python -m scripts.update_msdata -i; \
 	fi
 
 normalize:
-	uv run python scripts/update_msdata.py -i
+	uv run python -m scripts.update_msdata -i
 
 ci: lint test validate-strict
 
@@ -61,20 +61,20 @@ NO_NET ?=
 FORCE ?=
 
 scrape-index:
-	uv run python scripts/scrape_msdata.py index --url https://w.atwiki.jp/battle-operation2/pages/377.html --out cache/index.json --ttl $(TTL) $(if $(NO_NET),--no-network,) $(if $(FORCE),--force,)
+	uv run python -m scripts.scrape_msdata index --url https://w.atwiki.jp/battle-operation2/pages/377.html --out cache/index.json --ttl $(TTL) $(if $(NO_NET),--no-network,) $(if $(FORCE),--force,)
 
 scrape-details:
-	uv run python scripts/scrape_msdata.py details --in cache/index.json --out cache/details.jsonl --rate $(RATE) --limit $(LIMIT) --ttl $(TTL) $(if $(NO_NET),--no-network,) $(if $(FORCE),--force,)
+	uv run python -m scripts.scrape_msdata details --in cache/index.json --out cache/details.jsonl --rate $(RATE) --limit $(LIMIT) --ttl $(TTL) $(if $(NO_NET),--no-network,) $(if $(FORCE),--force,)
 
 scrape-all:
-	uv run python scripts/scrape_msdata.py all --out cache/details.jsonl --rate $(RATE)
+	uv run python -m scripts.scrape_msdata all --out cache/details.jsonl --rate $(RATE)
 
 import-details:
 	jq -s '.' cache/details.jsonl > cache/details.json
-	uv run python scripts/update_msdata.py -i cache/details.json
+	uv run python -m scripts.update_msdata -i cache/details.json
 
 labels:
-	uv run python scripts/scrape_msdata.py labels --in cache/index.json --out cache/labels_raw.jsonl --rate $(RATE) --limit $(LIMIT) --ttl $(TTL) $(if $(NO_NET),--no-network,) $(if $(FORCE),--force,)
+	uv run python -m scripts.scrape_msdata labels --in cache/index.json --out cache/labels_raw.jsonl --rate $(RATE) --limit $(LIMIT) --ttl $(TTL) $(if $(NO_NET),--no-network,) $(if $(FORCE),--force,)
 
 audit-labels:
-	uv run python scripts/audit_labels.py --in cache/labels_raw.jsonl --out reports/label_audit_$(shell date +%Y%m%d).md
+	uv run python -m scripts.audit_labels --in cache/labels_raw.jsonl --out reports/label_audit_$(shell date +%Y%m%d).md

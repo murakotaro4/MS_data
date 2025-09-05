@@ -224,9 +224,9 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
         for lv, val in zip(levels, values):
             if val is None:
                 continue
-            if key in ("格闘判定力", "カウンター"):
+            if key in ("格闘判定力", "カウンター", "レアリティ", "必要階級"):
                 per_level[lv][key] = clean_text(val)
-            elif key == "再出撃時間":
+            elif key in ("再出撃時間", "必要DP", "必要リサイクルチケット"):
                 per_level[lv][key] = to_int(val)
             else:
                 iv = to_int(val)
