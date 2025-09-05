@@ -18,6 +18,7 @@ import json
 import sys
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
+from scripts.label_utils import apply_key_aliases
 
 
 CANONICAL_ORDER = (
@@ -44,15 +45,6 @@ CANONICAL_ORDER = (
     "fullst",
 )
 
-# 表記揺れ → 正規キー
-KEY_ALIASES = {
-    "射撃補則": "射撃補正",
-    "射撃補生": "射撃補正",
-    "格闘補定": "格闘補正",
-    "旋回_通常時_地上": "旋回_地上_通常時",
-    "旋回_通常時_宇宙": "旋回_宇宙_通常時",
-}
-
 
 def load_json(path: Path) -> Any:
     with path.open("r", encoding="utf-8") as f:
@@ -61,12 +53,7 @@ def load_json(path: Path) -> Any:
 
 def normalize_record(rec: Dict[str, Any]) -> Dict[str, Any]:
     # 別名キーを正規キーへ移し替え（既存が無い場合のみ）
-    for alias, target in KEY_ALIASES.items():
-        if alias in rec and target not in rec:
-            rec[target] = rec.pop(alias)
-        elif alias in rec:
-            rec.pop(alias)
-    return rec
+    return apply_key_aliases(rec)
 
 
 def iter_records_from_files(paths: Iterable[Path]) -> Iterable[Dict[str, Any]]:
@@ -128,9 +115,7 @@ def diff_summary(old: Dict[str, Dict[str, Any]], new: Dict[str, Dict[str, Any]])
         if json.dumps(old[k], sort_keys=True, ensure_ascii=False)
         != json.dumps(new[k], sort_keys=True, ensure_ascii=False)
     }
-    return (
-        f"records: {len(old_keys)} -> {len(new_keys)} | +{len(added)} -{len(removed)} ~{len(changed)}"
-    )
+    return f"records: {len(old_keys)} -> {len(new_keys)} | +{len(added)} -{len(removed)} ~{len(changed)}"
 
 
 def main(argv: List[str] | None = None) -> int:
@@ -160,7 +145,9 @@ def main(argv: List[str] | None = None) -> int:
         try:
             base = load_json(out_path)
             if isinstance(base, list):
-                base_records = [normalize_record(dict(e)) for e in base if isinstance(e, dict)]
+                base_records = [
+                    normalize_record(dict(e)) for e in base if isinstance(e, dict)
+                ]
         except Exception:
             pass
 
@@ -188,4 +175,3 @@ def main(argv: List[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

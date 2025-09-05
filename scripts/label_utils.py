@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""
+ラベル/キーの正規化ユーティリティ。
+
+提供機能
+- 行見出しの軽正規化（余白圧縮、半角カッコ内注記の除去）
+- 出力JSONのキー表記揺れ（別名）→ 正規キーのマッピング
+- atwiki 行見出し → 正規キーのマッピング（FIELD_MAP）
+
+このモジュールをスクリプト間で共有して、表記揺れの定義を一元化する。
+"""
+from __future__ import annotations
+
+from typing import Any, Dict
+import re
+
+
+def clean_text(s: str) -> str:
+    """連続する空白を1つに圧縮し、前後空白を除去する。"""
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def normalize_row_label(s: str) -> str:
+    """行見出しの軽正規化。
+
+    - 注記用の半角カッコ内（例: ( +25 )）のみ除去。
+    - 全角カッコ（例: 旋回（地上）/（宇宙））は保持。
+    - 余白は1つへ圧縮。
+    """
+    s = re.sub(r"\(.*?\)", "", s)
+    return clean_text(s)
+
+
+# 出力JSONのキー表記揺れ → 正規キー
+KEY_ALIASES: Dict[str, str] = {
+    "射撃補則": "射撃補正",
+    "射撃補生": "射撃補正",
+    "格闘補定": "格闘補正",
+    "旋回_通常時_地上": "旋回_地上_通常時",
+    "旋回_通常時_宇宙": "旋回_宇宙_通常時",
+}
+
+
+def apply_key_aliases(rec: Dict[str, Any]) -> Dict[str, Any]:
+    """レコード内の別名キーを正規キーへ移し替える（既存優先）。"""
+    for alias, target in KEY_ALIASES.items():
+        if alias in rec and target not in rec:
+            rec[target] = rec.pop(alias)
+        elif alias in rec:
+            rec.pop(alias)
+    return rec
+
+
+# atwiki の行見出し → 正規キー
+# 注意: まずは `clean_text` 後の原文を優先し、見つからなければ `normalize_row_label` 後で再照会する想定。
+FIELD_MAP: Dict[str, str] = {
+    # 基本ステータス
+    "Cost": "コスト",
+    "機体HP": "HP",
+    "耐実弾補正": "耐実弾補正",
+    "耐ビーム補正": "耐ビーム補正",
+    "耐格闘補正": "耐格闘補正",
+    "射撃補正": "射撃補正",
+    "格闘補正": "格闘補正",
+    "スピード": "スピード",
+    "高速移動": "高速移動",
+    "スラスター": "スラスター",
+    # 旋回
+    "旋回（地上）[度/秒]": "旋回_地上_通常時",
+    "旋回（宇宙）[度/秒]": "旋回_宇宙_通常時",
+    # 旧ページ互換（単一表記）
+    "旋回[度/秒]": "旋回_地上_通常時",
+    # その他
+    "格闘判定力": "格闘判定力",
+    "カウンター": "カウンター",
+    "再出撃時間": "再出撃時間",
+}

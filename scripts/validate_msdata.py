@@ -16,22 +16,15 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, List
+from scripts.label_utils import KEY_ALIASES
 
 from jsonschema import Draft7Validator
 
 
 SCHEMA_PATH = Path("schema/msData.schema.json")
-
-KEY_ALIASES = {
-    "射撃補則": "射撃補正",
-    "射撃補生": "射撃補正",
-    "格闘補定": "格闘補正",
-    "旋回_通常時_地上": "旋回_地上_通常時",
-    "旋回_通常時_宇宙": "旋回_宇宙_通常時",
-}
 
 
 def load_json(path: Path) -> Any:
@@ -93,7 +86,7 @@ def main(argv: List[str] | None = None) -> int:
         print("Alias keys (typos) found:", file=sys.stderr)
         for alias, count in sorted(typo_counts.items(), key=lambda x: (-x[1], x[0])):
             print(f"  - {alias} -> {KEY_ALIASES[alias]}: {count}", file=sys.stderr)
-        if args.fail-on-typo:
+        if args.fail_on_typo:
             status = 1
 
     if status == 0:
@@ -103,4 +96,3 @@ def main(argv: List[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

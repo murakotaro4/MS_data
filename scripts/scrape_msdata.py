@@ -31,6 +31,12 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import httpx
 from bs4 import BeautifulSoup, Tag
+from scripts.label_utils import (
+    clean_text,
+    normalize_row_label,
+    FIELD_MAP,
+)
+from scripts.cache_http import CacheHTTP, CacheConfig
 
 
 ATWIKI_BASE = "https://w.atwiki.jp"
@@ -48,14 +54,29 @@ def absolute_url(href: str) -> str:
 
 
 def get_client(timeout: float = 30.0) -> httpx.Client:
-    headers = {
-        "User-Agent": "msdata-scraper/0.1 (+https://github.com/; contact=local)"
-    }
+    headers = {"User-Agent": "msdata-scraper/0.1 (+https://github.com/; contact=local)"}
     return httpx.Client(headers=headers, timeout=timeout, follow_redirects=True)
 
 
-def clean_text(s: str) -> str:
-    return re.sub(r"\s+", " ", s).strip()
+def parse_ttl(s: str) -> int:
+    """ "7d", "72h", "3600s" などを秒に変換。単位なしは秒と解釈。"""
+    s = str(s).strip().lower()
+    if not s:
+        return 7 * 24 * 3600
+    m = re.fullmatch(r"(\d+)([smhd]?)", s)
+    if not m:
+        return int(float(s))
+    val = int(m.group(1))
+    unit = m.group(2) or "s"
+    if unit == "s":
+        return val
+    if unit == "m":
+        return val * 60
+    if unit == "h":
+        return val * 3600
+    if unit == "d":
+        return val * 86400
+    return val
 
 
 def to_int(text: str) -> Optional[int]:
@@ -101,37 +122,20 @@ def parse_index(html: str) -> List[Dict[str, Any]]:
             for a in ul.select("li > a[href]"):
                 name = clean_text(a.get_text(" "))
                 href = absolute_url(a["href"])
-                results.append({
-                    "name": name,
-                    "url": href,
-                    "cost": cost,
-                    "属性": attr,
-                })
+                results.append(
+                    {
+                        "name": name,
+                        "url": href,
+                        "cost": cost,
+                        "属性": attr,
+                    }
+                )
     return results
 
 
 # ===============
 # Detail parsing
 # ===============
-
-FIELD_MAP = {
-    "Cost": "コスト",
-    "機体HP": "HP",
-    "耐実弾補正": "耐実弾補正",
-    "耐ビーム補正": "耐ビーム補正",
-    "耐格闘補正": "耐格闘補正",
-    "射撃補正": "射撃補正",
-    "格闘補正": "格闘補正",
-    "スピード": "スピード",
-    "高速移動": "高速移動",
-    "スラスター": "スラスター",
-    "旋回（地上）[度/秒]": "旋回_地上_通常時",
-    "旋回（宇宙）[度/秒]": "旋回_宇宙_通常時",
-    "旋回[度/秒]": "旋回_地上_通常時",  # 旧ページ互換
-    "格闘判定力": "格闘判定力",
-    "カウンター": "カウンター",
-    "再出撃時間": "再出撃時間",
-}
 
 
 def extract_title(soup: BeautifulSoup) -> str:
@@ -199,7 +203,9 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
     if not levels:
         raise ValueError("LV 見出しが検出できませんでした")
 
-    per_level: Dict[int, Dict[str, Any]] = {lv: {"MS名": f"{name}_LV{lv}"} for lv in levels}
+    per_level: Dict[int, Dict[str, Any]] = {
+        lv: {"MS名": f"{name}_LV{lv}"} for lv in levels
+    }
 
     for tr in table.find_all("tr"):
         th = tr.find("th")
@@ -237,7 +243,11 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
             break
     if parts_table:
         # 行: 近距離/中距離/遠距離
-        row_name_map = {"近距離": "近スロット", "中距離": "中スロット", "遠距離": "遠スロット"}
+        row_name_map = {
+            "近距離": "近スロット",
+            "中距離": "中スロット",
+            "遠距離": "遠スロット",
+        }
         for tr in parts_table.find_all("tr"):
             th = tr.find("th")
             if not th:
@@ -265,7 +275,9 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
             per_level[lv]["属性"] = attr
 
     # 強化リスト情報（fullst）を抽出：各MSレベルごとに必要強化値で昇順ソートし、points を付与
-    def parse_fullst_by_ms_level(s: BeautifulSoup, ms_levels: List[int]) -> Dict[int, List[Dict[str, Any]]]:
+    def parse_fullst_by_ms_level(
+        s: BeautifulSoup, ms_levels: List[int]
+    ) -> Dict[int, List[Dict[str, Any]]]:
         # 見出し「強化リスト情報」を探す
         header = None
         for hx in s.find_all(["h2", "h3"]):
@@ -293,7 +305,16 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
                 txt = clean_text(th.get_text(" "))
                 if not txt:
                     continue
-                if any(x in txt for x in ("強化リスト", "上限開放", "リスト名", "MSレベル毎必要強化値", "効果")):
+                if any(
+                    x in txt
+                    for x in (
+                        "強化リスト",
+                        "上限開放",
+                        "リスト名",
+                        "MSレベル毎必要強化値",
+                        "効果",
+                    )
+                ):
                     continue
                 if re.fullmatch(r"LV\d+|Lv\d+|Lv", txt, re.IGNORECASE):
                     continue
@@ -368,7 +389,11 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
                 base_lv = seen_lower[-1]
                 base_list = fullst_by_lv.get(base_lv) or []
                 if base_list:
-                    copied = [{"name": e.get("name"), "level": e.get("level"), "points": None} for e in base_list if isinstance(e, dict)]
+                    copied = [
+                        {"name": e.get("name"), "level": e.get("level"), "points": None}
+                        for e in base_list
+                        if isinstance(e, dict)
+                    ]
                     per_level[lv]["fullst"] = copied
 
     # 必須キーが揃っていないLVは除外（スキーマに準拠するため）
@@ -387,7 +412,9 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
         "遠スロット",
         "旋回_地上_通常時",
     }
-    filtered = {lv: rec for lv, rec in per_level.items() if REQUIRED.issubset(rec.keys())}
+    filtered = {
+        lv: rec for lv, rec in per_level.items() if REQUIRED.issubset(rec.keys())
+    }
     return filtered
 
 
@@ -399,9 +426,12 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
 def cmd_index(args: argparse.Namespace) -> int:
     url = args.url or INDEX_URL
     client = get_client()
-    r = client.get(url)
-    r.raise_for_status()
-    items = parse_index(r.text)
+    cfg = CacheConfig(
+        ttl_seconds=parse_ttl(args.ttl), no_network=args.no_network, force=args.force
+    )
+    cache = CacheHTTP(client, cfg)
+    text, _meta = cache.get(url)
+    items = parse_index(text)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     with out.open("w", encoding="utf-8") as f:
@@ -421,6 +451,10 @@ def cmd_details(args: argparse.Namespace) -> int:
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     client = get_client()
+    cfg = CacheConfig(
+        ttl_seconds=parse_ttl(args.ttl), no_network=args.no_network, force=args.force
+    )
+    cache = CacheHTTP(client, cfg)
     t_last = 0.0
     written = 0
     with out.open("w", encoding="utf-8") as f:
@@ -435,9 +469,8 @@ def cmd_details(args: argparse.Namespace) -> int:
                 time.sleep(wait)
             t_last = time.time()
             try:
-                r = client.get(url)
-                r.raise_for_status()
-                per_level = parse_details(r.text)
+                text, _meta = cache.get(url)
+                per_level = parse_details(text)
                 # 補足情報（index由来）を併合
                 for lv, rec in per_level.items():
                     base = {
@@ -465,9 +498,13 @@ def cmd_all(args: argparse.Namespace) -> int:
     r = client.get(INDEX_URL)
     r.raise_for_status()
     items = parse_index(r.text)
-    tmp_index.write_text(json.dumps(items, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    tmp_index.write_text(
+        json.dumps(items, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     # details
-    dargs = argparse.Namespace(input=str(tmp_index), out=args.out, rate=args.rate, limit=args.limit)
+    dargs = argparse.Namespace(
+        input=str(tmp_index), out=args.out, rate=args.rate, limit=args.limit
+    )
     return cmd_details(dargs)
 
 
@@ -475,16 +512,30 @@ def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    p_idx = sub.add_parser("index", help="一覧ページから機体URLを抽出")
+    p_idx = sub.add_parser(
+        "index", help="一覧ページから機体URLを抽出（キャッシュ対応）"
+    )
     p_idx.add_argument("--url", default=INDEX_URL)
     p_idx.add_argument("--out", default="cache/index.json")
+    p_idx.add_argument(
+        "--ttl", default="7d", help="キャッシュTTL（例: 7d, 72h, 3600s）"
+    )
+    p_idx.add_argument("--no-network", action="store_true")
+    p_idx.add_argument("--force", action="store_true")
     p_idx.set_defaults(func=cmd_index)
 
-    p_det = sub.add_parser("details", help="詳細ページからステータスを抽出しJSONL出力")
+    p_det = sub.add_parser(
+        "details", help="詳細ページからステータスを抽出しJSONL出力（キャッシュ対応）"
+    )
     p_det.add_argument("--in", dest="input", required=True)
     p_det.add_argument("--out", default="cache/details.jsonl")
     p_det.add_argument("--rate", type=float, default=1.0, help="req/sec")
-    p_det.add_argument("--limit", type=int, default=0, help="最大レコード数（0=制限なし）")
+    p_det.add_argument(
+        "--limit", type=int, default=0, help="最大レコード数（0=制限なし）"
+    )
+    p_det.add_argument("--ttl", default="7d", help="キャッシュTTL")
+    p_det.add_argument("--no-network", action="store_true")
+    p_det.add_argument("--force", action="store_true")
     p_det.set_defaults(func=cmd_details)
 
     p_all = sub.add_parser("all", help="index→details を連続実行")
@@ -493,6 +544,92 @@ def build_parser() -> argparse.ArgumentParser:
     p_all.add_argument("--limit", type=int, default=0)
     p_all.set_defaults(func=cmd_all)
 
+    # ラベル監査用: 行見出し（raw / normalized）のみ抽出
+    def cmd_labels(args: argparse.Namespace) -> int:
+        src = Path(args.input)
+        data = json.loads(src.read_text(encoding="utf-8"))
+        if not isinstance(data, list):
+            print("ERROR: input must be a JSON array", file=sys.stderr)
+            return 2
+        client = get_client()
+        cfg = CacheConfig(
+            ttl_seconds=parse_ttl(args.ttl),
+            no_network=args.no_network,
+            force=args.force,
+        )
+        cache = CacheHTTP(client, cfg)
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        t_last = 0.0
+        written = 0
+        with out.open("w", encoding="utf-8") as f:
+            for i, item in enumerate(data, 1):
+                url = item.get("url")
+                if not url:
+                    continue
+                now = time.time()
+                wait = max(0.0, (t_last + 1.0 / max(args.rate, 0.1)) - now)
+                if wait:
+                    time.sleep(wait)
+                t_last = time.time()
+                try:
+                    text, meta = cache.get(url)
+                    soup = BeautifulSoup(text, "lxml")
+                    # ステータス表の検出ロジックは parse_details と同じ方針
+                    tbl_div = soup.find(id=re.compile(r"^table_(kyoushu|hanyou|sien)$"))
+                    table = tbl_div.find("table") if tbl_div else None
+                    if not table:
+                        for t in soup.find_all("table"):
+                            if t.find(string=re.compile(r"LV\d+")):
+                                table = t
+                                break
+                    raw_labels: List[str] = []
+                    normalized_labels: List[str] = []
+                    if table:
+                        seen_raw = set()
+                        seen_norm = set()
+                        for tr in table.find_all("tr"):
+                            th = tr.find("th")
+                            if not th:
+                                continue
+                            rname = clean_text(th.get_text(" "))
+                            nname = normalize_row_label(rname)
+                            if rname and rname not in seen_raw:
+                                raw_labels.append(rname)
+                                seen_raw.add(rname)
+                            if nname and nname not in seen_norm:
+                                normalized_labels.append(nname)
+                                seen_norm.add(nname)
+                    row = {
+                        "url": url,
+                        "title": soup.title.get_text(" ") if soup.title else "",
+                        "attr": item.get("属性"),
+                        "raw_labels": raw_labels,
+                        "normalized_labels": normalized_labels,
+                        "content_sha256": meta.get("content_sha256"),
+                    }
+                    f.write(json.dumps(row, ensure_ascii=False))
+                    f.write("\n")
+                    written += 1
+                except Exception as e:
+                    print(f"WARN: labels failed {url}: {e}", file=sys.stderr)
+                if args.limit and written >= args.limit:
+                    break
+        print(f"labels: wrote {written} pages -> {out}")
+        return 0
+
+    p_lbl = sub.add_parser(
+        "labels", help="行見出しの揺らぎ監査用データを抽出（キャッシュ対応）"
+    )
+    p_lbl.add_argument("--in", dest="input", required=True)
+    p_lbl.add_argument("--out", default="cache/labels_raw.jsonl")
+    p_lbl.add_argument("--rate", type=float, default=1.0, help="req/sec")
+    p_lbl.add_argument("--limit", type=int, default=0)
+    p_lbl.add_argument("--ttl", default="7d")
+    p_lbl.add_argument("--no-network", action="store_true")
+    p_lbl.add_argument("--force", action="store_true")
+    p_lbl.set_defaults(func=cmd_labels)
+
     return ap
 
 
@@ -500,10 +637,6 @@ def main(argv: List[str] | None = None) -> int:
     ap = build_parser()
     args = ap.parse_args(argv)
     return args.func(args)
-def normalize_row_label(s: str) -> str:
-    # 注記用の半角カッコ内（例: ( +25 )）のみ除去。全角カッコ（例: （地上）/（宇宙））は保持。
-    s = re.sub(r"\(.*?\)", "", s)
-    return clean_text(s)
 
 
 if __name__ == "__main__":
