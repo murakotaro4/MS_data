@@ -127,6 +127,7 @@ FIELD_MAP = {
     "スラスター": "スラスター",
     "旋回（地上）[度/秒]": "旋回_地上_通常時",
     "旋回（宇宙）[度/秒]": "旋回_宇宙_通常時",
+    "旋回[度/秒]": "旋回_地上_通常時",  # 旧ページ互換
     "格闘判定力": "格闘判定力",
     "カウンター": "カウンター",
     "再出撃時間": "再出撃時間",
@@ -140,14 +141,24 @@ def extract_title(soup: BeautifulSoup) -> str:
 
 
 def levels_from_table(table: Tag) -> List[int]:
+    # 1) thead優先
     thead = table.find("thead")
-    if not thead:
-        return []
-    ths = [clean_text(th.get_text(" ")) for th in thead.find_all("th")]
-    # 先頭列は属性名（強襲/汎用/支援）や空白列
-    lv = []
-    for t in ths[1:]:
-        m = re.search(r"LV(\d+)", t)
+    headers = []
+    if thead:
+        headers = [clean_text(th.get_text(" ")) for th in thead.find_all("th")]
+    # 2) thead が無い/空なら、最初に LV を含む行の th 群を使う
+    if not headers:
+        for tr in table.find_all("tr"):
+            ths = tr.find_all("th")
+            if not ths:
+                continue
+            texts = [clean_text(th.get_text(" ")) for th in ths]
+            if any(re.search(r"LV\d+", t) for t in texts):
+                headers = texts
+                break
+    lv: List[int] = []
+    for t in headers[1:]:  # 先頭列は項目名 or 属性名
+        m = re.search(r"LV(\d+)", t, re.IGNORECASE)
         if m:
             lv.append(int(m.group(1)))
     return lv
@@ -195,9 +206,13 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
         if not th:
             continue
         row_name = clean_text(th.get_text(" "))
-        if row_name not in FIELD_MAP:
+        key_name = FIELD_MAP.get(row_name)
+        if key_name is None:
+            row_name2 = normalize_row_label(row_name)
+            key_name = FIELD_MAP.get(row_name2)
+        if key_name is None:
             continue
-        key = FIELD_MAP[row_name]
+        key = key_name
         tds = tr.find_all("td")
         values = expand_cells(tds, len(levels))
         for lv, val in zip(levels, values):
@@ -249,8 +264,8 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
         for lv in levels:
             per_level[lv]["属性"] = attr
 
-    # 強化リスト情報（fullst）を抽出
-    def parse_fullst(s: BeautifulSoup) -> List[Dict[str, Any]]:
+    # 強化リスト情報（fullst）を抽出：各MSレベルごとに必要強化値で昇順ソートし、points を付与
+    def parse_fullst_by_ms_level(s: BeautifulSoup, ms_levels: List[int]) -> Dict[int, List[Dict[str, Any]]]:
         # 見出し「強化リスト情報」を探す
         header = None
         for hx in s.find_all(["h2", "h3"]):
@@ -258,17 +273,21 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
                 header = hx
                 break
         if not header:
-            return []
+            return {}
         table = header.find_next("table")
         if not table:
-            return []
-        items: List[Tuple[str, int]] = []
+            return {}
+
+        # 列構造は行の td 数に依存させる（末尾は効果列が入るため原則1つ除外）
+
+        # 収集: (name, list_level, {ms_lv -> points})
+        rows: List[Tuple[str, int, Dict[int, int]]] = []
         current_name: Optional[str] = None
         for tr in table.find_all("tr"):
             ths = tr.find_all("th")
             if not ths:
                 continue
-            # リスト名候補（背景色付きthや先頭thが多い）
+            # リスト名候補
             cand_names: List[str] = []
             for th in ths:
                 txt = clean_text(th.get_text(" "))
@@ -282,49 +301,75 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
             if cand_names:
                 current_name = cand_names[0]
 
-            # レベル指定（Lv1, Lv2, Lv3, Lv4, ...）
-            lvl: Optional[int] = None
+            # フルリストのLv（例: Lv1, Lv2, Lv4 など）
+            fullst_lv: Optional[int] = None
             for th in ths:
                 txt = clean_text(th.get_text(" "))
                 m = re.fullmatch(r"Lv(\d+)", txt, re.IGNORECASE)
                 if m:
-                    lvl = int(m.group(1))
+                    fullst_lv = int(m.group(1))
                     break
-            # 「MSレベル毎必要強化値」列に具体数値が存在するかを確認
-            has_numeric = False
+
+            # 数値セルを収集（行末の効果セルを除外）
             tds = tr.find_all("td")
-            if tds:
-                tds_eval = tds[:-1] if len(tds) >= 2 else tds  # 末尾は効果列の可能性が高い
-                for td in tds_eval:
-                    val = to_int(clean_text(td.get_text(" ")))
-                    if val is not None:
-                        has_numeric = True
-                        break
-            if current_name and isinstance(lvl, int) and has_numeric:
-                items.append((current_name, lvl))
-
-        # 各リスト名について 最小Lv と 最大Lv のみを採用（例: Lv1 と Lv4）
-        levels_by_name: Dict[str, List[int]] = {}
-        for nm, lv in items:
-            levels_by_name.setdefault(nm, []).append(lv)
-        out: List[Dict[str, Any]] = []
-        for nm, lvs in levels_by_name.items():
-            uniq = sorted(set(lvs))
-            if not uniq:
+            if not tds or current_name is None or fullst_lv is None:
                 continue
-            # 最低Lv（通常の強化）
-            out.append({"name": nm, "level": uniq[0]})
-            # 最高Lv（上限開放があればそれ）
-            if len(uniq) > 1 and uniq[-1] != uniq[0]:
-                out.append({"name": nm, "level": uniq[-1]})
-        # ポリシー: Lv1 と Lv4+ のみに限定（Lv2/Lv3は省略）
-        out = [e for e in out if e["level"] == 1 or e["level"] >= 4]
-        return out
+            # 末尾（効果列）を除外する。安全側で1つだけ除去。
+            numeric_cells = tds[:-1] if len(tds) >= 1 else tds
 
-    fullst = parse_fullst(soup)
-    if fullst:
-        for lv in levels:
-            per_level[lv]["fullst"] = fullst
+            # MSレベルに対応する列位置は 1始まりで左から順に対応させる
+            points_by_ms: Dict[int, int] = {}
+            for ms_lv in ms_levels:
+                idx = ms_lv - 1
+                if 0 <= idx < len(numeric_cells):
+                    val = to_int(clean_text(numeric_cells[idx].get_text(" ")))
+                    if val is not None:
+                        points_by_ms[ms_lv] = val
+
+            # 少なくともどこかのMSレベルで数値があるときのみ採用
+            if points_by_ms:
+                rows.append((current_name, fullst_lv, points_by_ms))
+
+        # 各MSレベルごとに、同一リスト名については「数値が存在するLvの中で最小と最大のみ」を採用し、points昇順で並べる
+        by_ms_level: Dict[int, List[Dict[str, Any]]] = {lv: [] for lv in ms_levels}
+        for ms_lv in ms_levels:
+            # name -> list of (list_level, points)
+            by_name: Dict[str, List[Tuple[int, int]]] = {}
+            for nm, flv, pmap in rows:
+                if ms_lv in pmap:
+                    by_name.setdefault(nm, []).append((flv, pmap[ms_lv]))
+            items: List[Dict[str, Any]] = []
+            for nm, lst in by_name.items():
+                # 数値がある level を採用（Lvの最小/最大）
+                lst_sorted = sorted(lst, key=lambda x: x[0])
+                keep = []
+                if lst_sorted:
+                    keep.append(lst_sorted[0])
+                if len(lst_sorted) > 1 and lst_sorted[-1] != lst_sorted[0]:
+                    keep.append(lst_sorted[-1])
+                for flv, pts in keep:
+                    items.append({"name": nm, "level": flv, "points": pts})
+            # points 昇順で整列
+            items.sort(key=lambda d: d.get("points", 0))
+            if items:
+                by_ms_level[ms_lv] = items
+        # 空のMSレベルは削除
+        return {k: v for k, v in by_ms_level.items() if v}
+
+    fullst_by_lv = parse_fullst_by_ms_level(soup, levels)
+    # フォールバック: 強化リストが未掲載のMSレベルには直前のレベルのfullstを採用（pointsは未知なのでNone）
+    seen_lower: List[int] = []
+    for lv in sorted(levels):
+        if lv in fullst_by_lv and fullst_by_lv[lv]:
+            per_level[lv]["fullst"] = fullst_by_lv[lv]
+            seen_lower.append(lv)
+        else:
+            if seen_lower:
+                base_lv = seen_lower[-1]
+                base_list = fullst_by_lv.get(base_lv) or []
+                if base_list:
+                    copied = [{"name": e.get("name"), "level": e.get("level"), "points": None} for e in base_list if isinstance(e, dict)]
+                    per_level[lv]["fullst"] = copied
 
     # 必須キーが揃っていないLVは除外（スキーマに準拠するため）
     REQUIRED = {
@@ -455,6 +500,10 @@ def main(argv: List[str] | None = None) -> int:
     ap = build_parser()
     args = ap.parse_args(argv)
     return args.func(args)
+def normalize_row_label(s: str) -> str:
+    # 注記用の半角カッコ内（例: ( +25 )）のみ除去。全角カッコ（例: （地上）/（宇宙））は保持。
+    s = re.sub(r"\(.*?\)", "", s)
+    return clean_text(s)
 
 
 if __name__ == "__main__":

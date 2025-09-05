@@ -31,7 +31,8 @@
           "type": "object",
           "properties": {
             "name": { "type": "string" },
-            "level": { "type": "integer", "minimum": 0 }
+            "level": { "type": "integer", "minimum": 0 },
+            "points": { "type": ["integer", "null"] }
           },
           "required": ["name", "level"],
           "additionalProperties": false
@@ -59,4 +60,3 @@
     "additionalProperties": true
   }
 }
-

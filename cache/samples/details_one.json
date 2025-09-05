@@ -22,52 +22,34 @@
     "属性": "強襲",
     "fullst": [
       {
-        "name": "MSレベル毎必要強化値",
-        "level": 1
-      },
-      {
         "name": "耐格闘装甲補強",
-        "level": 1
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 2
+        "level": 1,
+        "points": 660
       },
       {
         "name": "AD-PA",
-        "level": 1
-      },
-      {
-        "name": "AD-PA",
-        "level": 2
+        "level": 1,
+        "points": 1330
       },
       {
         "name": "冷却補助システム",
-        "level": 1
-      },
-      {
-        "name": "冷却補助システム",
-        "level": 2
+        "level": 1,
+        "points": 2000
       },
       {
         "name": "複合拡張パーツスロット",
-        "level": 1
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 2
-      },
-      {
-        "name": "効果",
-        "level": 1
+        "level": 1,
+        "points": 2670
       },
       {
         "name": "耐格闘装甲補強",
-        "level": 4
+        "level": 4,
+        "points": 5340
       },
       {
         "name": "AD-PA",
-        "level": 4
+        "level": 4,
+        "points": 8010
       }
     ]
   },
@@ -94,52 +76,34 @@
     "属性": "強襲",
     "fullst": [
       {
-        "name": "MSレベル毎必要強化値",
-        "level": 1
-      },
-      {
         "name": "耐格闘装甲補強",
-        "level": 1
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 2
+        "level": 1,
+        "points": 770
       },
       {
         "name": "AD-PA",
-        "level": 1
-      },
-      {
-        "name": "AD-PA",
-        "level": 2
+        "level": 1,
+        "points": 1540
       },
       {
         "name": "冷却補助システム",
-        "level": 1
-      },
-      {
-        "name": "冷却補助システム",
-        "level": 2
+        "level": 1,
+        "points": 2310
       },
       {
         "name": "複合拡張パーツスロット",
-        "level": 1
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 2
-      },
-      {
-        "name": "効果",
-        "level": 1
+        "level": 1,
+        "points": 3080
       },
       {
         "name": "耐格闘装甲補強",
-        "level": 4
+        "level": 4,
+        "points": 6160
       },
       {
         "name": "AD-PA",
-        "level": 4
+        "level": 4,
+        "points": 9240
       }
     ]
   }
