@@ -268,10 +268,27 @@ def extract_skills_from_html(html: str) -> Dict[str, Any]:
             awaken.append(skills.pop(k))
     if nt and awaken:
         nt["phases"] = awaken
-    # レベル配列のノイズ除去（内容が全て None の行を除外）
+    # レベル配列のノイズ除去＋重複統合（同一 level は代表1件に絞る）
+    def score_level(lv: Dict[str, Any], idx: int) -> Tuple[int, int]:
+        eff = lv.get("effects") or {}
+        score = 0
+        score += len(eff.keys())
+        if (lv.get("activation") or {}).get("type"):
+            score += 1
+        if lv.get("duration_sec") is not None:
+            score += 1
+        if lv.get("hp_drain_per_sec") is not None:
+            score += 1
+        if lv.get("hp_heal") is not None or lv.get("hp_heal_team") is not None:
+            score += 1
+        # idxで早い方を優先（tie-breaker: 小さいidxが先）
+        return (score, -idx)
+
     for v in skills.values():
-        filtered: List[Dict[str, Any]] = []
-        for lv in v.get("levels", []):
+        levels = v.get("levels", [])
+        # まず空（すべてNone/空）を除去
+        nonempty: List[Dict[str, Any]] = []
+        for lv in levels:
             if any(
                 [
                     lv.get("effects"),
@@ -282,8 +299,17 @@ def extract_skills_from_html(html: str) -> Dict[str, Any]:
                     lv.get("duration_sec") is not None,
                 ]
             ):
-                filtered.append(lv)
-        v["levels"] = filtered
+                nonempty.append(lv)
+        # levelごとにベストを選ぶ
+        best_by_level: Dict[int, Tuple[Tuple[int, int], Dict[str, Any]]] = {}
+        for idx, lv in enumerate(nonempty):
+            lvl = int(lv.get("level") or 0)
+            sc = score_level(lv, idx)
+            prev = best_by_level.get(lvl)
+            if not prev or sc > prev[0]:
+                best_by_level[lvl] = (sc, lv)
+        # 復元（level順）
+        v["levels"] = [best_by_level[k][1] for k in sorted(best_by_level.keys())]
 
     # 並べ替え（名前昇順）
     for k in sorted(skills.keys()):
@@ -331,6 +357,12 @@ def extract_skill_owners_from_html(soup: BeautifulSoup) -> List[Dict[str, Any]]:
         owners: List[str] = []
         # 次のアンカー行（または表終端）まで前進
         stop_tr = anchors[idx + 1][2] if idx + 1 < len(anchors) else None
+        # まず見出し行自身の td を走査
+        for td in tr.find_all("td"):
+            for a in td.find_all("a"):
+                t = _norm(a.get_text(" "))
+                if t and not re.fullmatch(r"[\W_]+", t):
+                    owners.append(t)
         cur = tr
         while True:
             cur = cur.find_next_sibling("tr")

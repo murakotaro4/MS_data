@@ -114,3 +114,47 @@ def test_extract_skill_owners_from_html_min():
     assert ("能力UP「EXAM」", 1) in d
     assert "イフリート改" in d[("能力UP「EXAM」", 1)]
     assert any("ブルーディスティニー3号機" in x for x in d[("能力UP「EXAM」", 1)])
+
+
+def test_dedupe_levels_keeps_best():
+    # 2つのLV1があり、一方は効果キー数が多い → それが採用される
+    html = """
+    <table>
+      <tr>
+        <th>能力UP「簡易バイオセンサー」</th>
+        <td>LV1</td>
+        <td>機体HPが25%以下になった際、自動で発動して攻撃力、防御力、機動力が上昇する。</td>
+        <td>
+          発動中は<br/>
+          ・射撃補正＋5<br/>
+          ・格闘補正＋10<br/>
+          ・スピード＋5<br/>
+          ・高速移動＋5<br/>
+          ・スラスター消費－20%<br/>
+          ・旋回性能＋15<br/>
+        </td>
+      </tr>
+      <tr>
+        <th>能力UP「簡易バイオセンサー」</th>
+        <td>LV1</td>
+        <td>機体HPが25%以下になった際、自動で発動して攻撃力、防御力、機動力が上昇する。</td>
+        <td>
+          発動中は<br/>
+          ・射撃補正＋5<br/>
+          ・格闘補正＋50<br/>
+          ・スピード＋5<br/>
+          ・高速移動＋5<br/>
+        </td>
+      </tr>
+    </table>
+    """
+    data = extract_skills_from_html(html)
+    skills = data["skills"]
+    s = next((x for x in skills if x["name"].startswith("能力UP「簡易バイオセンサー")), None)
+    assert s is not None
+    levels = s["levels"]
+    # 重複は1つに絞られる
+    assert [lv["level"] for lv in levels] == [1]
+    eff = levels[0]["effects"]
+    # 効果キー数が多い方（6キーある方）が残る（格闘補正＋10の方）
+    assert eff.get("格闘補正", {}).get("value") == 10
