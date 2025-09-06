@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/schema/skills.schema.json",
+  "type": "object",
+  "required": ["source", "skills"],
+  "properties": {
+    "source": {"type": "string"},
+    "fetched_at": {"type": ["string", "null"]},
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "levels"],
+        "properties": {
+          "name": {"type": "string"},
+          "levels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "level"],
+              "properties": {
+                "name": {"type": "string"},
+                "level": {"type": "integer"},
+                "activation": {"type": ["object", "null"]},
+                "duration_sec": {"type": ["integer", "null"]},
+                "effects": {"type": ["object", "null"]}
+              }
+            }
+          },
+          "phases": {"type": ["array", "null"]}
+        }
+      }
+    }
+  }
+}
+

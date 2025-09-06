@@ -3,7 +3,7 @@ SHELL := bash
 
 MSDATA := msData.json
 
-.PHONY: help setup format lint test validate validate-strict update normalize ci scrape-index scrape-details scrape-all import-details labels audit-labels
+.PHONY: help setup format lint test validate validate-strict update normalize ci scrape-index scrape-details scrape-all import-details labels audit-labels skills
 
 help:
 	@echo "Available targets:"
@@ -22,6 +22,7 @@ help:
 	@echo "  import-details    JSONL -> JSON array -> msData.json update"
 	@echo "  labels            Extract raw/normalized row labels (cache-aware)"
 	@echo "  audit-labels      Aggregate labels_raw.jsonl into Markdown report"
+	@echo "  skills            Extract core system skills -> cache/skills.json"
 
 setup:
 	uv venv
@@ -78,3 +79,6 @@ labels:
 
 audit-labels:
 	uv run python -m scripts.audit_labels --in cache/labels_raw.jsonl --out reports/label_audit_$(shell date +%Y%m%d).md
+
+skills:
+	uv run python -m scripts.extract_skills all --out cache/skills.json --ttl $(TTL) $(if $(NO_NET),--no-network,) $(if $(FORCE),--force,)

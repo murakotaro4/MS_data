@@ -38,6 +38,8 @@ uv sync --dev
   - 一覧: `make scrape-index TTL=7d`
   - 収集: `make labels LIMIT=0`（小規模は LIMIT=30 など）
   - 集計: `make audit-labels`
+- スキル（たたき台: EXAM/HADES/バイオセンサー/NT-D 等）
+  - 抽出: `make skills TTL=7d` → `cache/skills.json`
 - 全件更新（推奨フロー）
   - 詳細取得: `make scrape-details TTL=7d RATE=1.0 LIMIT=0`
   - 取り込み: `make import-details`

@@ -210,12 +210,21 @@ def _extract_semantic_text(html: str) -> str:
 
     # 2) コメント/掲示板ブロックの除去（見出し以降など）
     def decompose_if_noise(tag) -> None:
+        if tag is None or not hasattr(tag, "get_text") or not hasattr(tag, "get"):
+            return
         txt = ""
         try:
             txt = tag.get_text(" ")
         except Exception:
             pass
-        ident = ((tag.get("id") or "") + " " + " ".join(tag.get("class", []))).lower()
+        try:
+            cls = tag.get("class", []) or []
+        except Exception:
+            cls = []
+        try:
+            ident = ((tag.get("id") or "") + " " + " ".join(cls)).lower()
+        except Exception:
+            ident = ""
         if (
             (txt and ("コメント" in txt or "掲示板" in txt))
             or re.search(r"comment|plugin[_-]?comment|bbs|lastmod|recent|counter|sns|social|tweet|footer|foot", ident)
