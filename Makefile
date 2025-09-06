@@ -3,7 +3,7 @@ SHELL := bash
 
 MSDATA := msData.json
 
-.PHONY: help setup format lint test validate validate-strict update normalize ci scrape-index scrape-details scrape-all import-details labels audit-labels skills skills-table build-skills build-param-skills audit-skills
+.PHONY: help setup format lint test validate validate-strict update normalize ci scrape-index scrape-details scrape-all import-details labels audit-labels skills skills-table owners-table build-skills build-param-skills audit-skills
 
 help:
 	@echo "Available targets:"
@@ -24,6 +24,7 @@ help:
 	@echo "  audit-labels      Aggregate labels_raw.jsonl into Markdown report"
 	@echo "  skills            Extract core system skills -> cache/skills.json"
 	@echo "  skills-table      Extract strict table rows -> cache/skills_table.json"
+	@echo "  owners-table      Extract owners reverse-index table rows -> cache/owners_table.json"
 	@echo "  build-skills      Build data/skills_catalog.json & data/skill_owners.json"
 	@echo "  build-param-skills Build data/skills_params.json (parameter-only)"
 	@echo "  audit-skills      Audit owners vs msData.json -> reports/skill_owners_audit_*.md"
@@ -89,6 +90,9 @@ skills:
 
 skills-table:
 	uv run python -m scripts.extract_skills table --out cache/skills_table.json --ttl $(TTL) $(if $(NO_NET),--no-network,) $(if $(FORCE),--force,)
+
+owners-table:
+	uv run python -m scripts.extract_skills owners-table --out cache/owners_table.json --ttl $(TTL) $(if $(NO_NET),--no-network,) $(if $(FORCE),--force,)
 
 build-skills:
 	uv run python -m scripts.build_skills --in cache/skills.json --out-catalog data/skills_catalog.json --out-owners data/skill_owners.json

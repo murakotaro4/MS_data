@@ -385,6 +385,176 @@ def extract_skill_owners_from_html(soup: BeautifulSoup) -> List[Dict[str, Any]]:
     return results
 
 
+# ==========================
+# テーブル形式での厳格抽出（Row化）
+# ==========================
+
+
+def _select_main_skill_table(soup: BeautifulSoup) -> Optional[Tag]:
+    """ページ内のうち、スキル一覧の“本体テーブル”と推定される table を返す。
+
+    ヒューリスティック:
+    - 各 table を走査して "LV\d+" を含む行数をスコア化
+    - th（スキル名）+ td（LV）構成の行が多いテーブルを採用
+    - 最大スコアのテーブルを返す
+    """
+    best = None
+    best_score = -1
+    for tbl in soup.find_all("table"):
+        score = 0
+        rows = tbl.find_all("tr")
+        for tr in rows:
+            th = tr.find("th")
+            tds = tr.find_all("td")
+            if th and tds:
+                lv_txt = _norm(tds[0].get_text(" ")) if tds else ""
+                if re.search(r"\bLV\s*\d+\b", lv_txt, flags=re.IGNORECASE):
+                    score += 1
+        # 候補の中から最大スコアを採用
+        if score > best_score and score >= 5:  # 閾値は暫定
+            best = tbl
+            best_score = score
+    return best
+
+
+def extract_skill_rows_table(html: str) -> Dict[str, Any]:
+    """スキル一覧テーブルを“行”として抽出（スキル名/レベル/効果説明/詳細）。
+
+    出力: { source, rows: [ {skill, level, desc, details_text, details_html} ] }
+    注意: 解析のみ（正規化/集約は行わない）。rowspan により th/desc が欠落する行は直前の値を継承する。
+    """
+    soup = BeautifulSoup(html, "lxml")
+    tbl = _select_main_skill_table(soup)
+    if not tbl:
+        return {"source": SKILL_URL, "rows": []}
+
+    rows_out: List[Dict[str, Any]] = []
+    cur_skill = None
+    cur_desc = None
+    for tr in tbl.find_all("tr"):
+        th = tr.find("th")
+        if th and th.get_text(" "):
+            cur_skill = _norm(th.get_text(" "))
+        tds = tr.find_all("td")
+        if not tds:
+            continue
+        # LV は最初の td を想定
+        lv_txt = _norm(tds[0].get_text(" ")) if len(tds) >= 1 else ""
+        m_lv = re.search(r"LV\s*(\d+)", lv_txt, flags=re.IGNORECASE)
+        if not m_lv:
+            # LVが無い行はスキップ
+            continue
+        level = int(m_lv.group(1))
+
+        # desc / details は 2列目・3列目（rowspanの都合で欠けることがある）
+        if len(tds) >= 2:
+            # 判別: 2列しかない場合は details の可能性が高い
+            if len(tds) == 2:
+                # details のみ
+                details_html = tds[1].decode_contents()
+                details_text = _norm(BeautifulSoup(details_html, "lxml").get_text(" "))
+                desc_text = cur_desc
+            else:
+                # 3列めまである場合: [LV, desc, details]
+                desc_text = _norm(tds[1].get_text(" "))
+                cur_desc = desc_text or cur_desc
+                details_html = tds[2].decode_contents()
+                details_text = _norm(BeautifulSoup(details_html, "lxml").get_text(" "))
+        else:
+            # 想定外
+            desc_text = cur_desc
+            details_html = ""
+            details_text = ""
+
+        rows_out.append(
+            {
+                "skill": cur_skill,
+                "level": level,
+                "desc": desc_text,
+                "details_text": details_text,
+                "details_html": details_html,
+            }
+        )
+
+    return {"source": SKILL_URL, "rows": rows_out}
+
+
+# ==========================
+# 所持機体 逆引き（表）を厳格抽出
+# ==========================
+
+
+def extract_skill_owners_rows_table(html: str) -> Dict[str, Any]:
+    """ページ下部の『所持機体 逆引き一覧』を、行として厳格抽出する。
+
+    出力: { source, rows: [ {skill, level, role, owners: [{name, href}], block_index} ] }
+    - block_index: ページ内の並び順インデックス（デバッグ/監査用）
+    - role: "強襲"/"汎用"/"支援" のいずれか
+    """
+    soup = BeautifulSoup(html, "lxml")
+    rows_out: List[Dict[str, Any]] = []
+
+    # アンカー見出し（スキルLV）を起点に、次アンカー直前までの role 行を収集
+    anchors: List[Tuple[str, int, Tag]] = []
+    for a in soup.find_all("a"):
+        aid = (a.get("id") or "").strip()
+        if not aid:
+            continue
+        m = _RE_ANCHOR.match(aid)
+        if not m:
+            continue
+        name = m.group(1)
+        level = int(m.group(2))
+        th = a.find_parent("th")
+        if not th:
+            continue
+        tr = th.find_parent("tr")
+        if not tr:
+            continue
+        anchors.append((name, level, tr))
+
+    # anchors は DOM 出現順に並んでいる前提
+    for idx, (name, level, tr) in enumerate(anchors):
+        stop_tr = anchors[idx + 1][2] if idx + 1 < len(anchors) else None
+        cur = tr
+        while True:
+            cur = cur.find_next_sibling("tr")
+            if not cur:
+                break
+            if stop_tr and cur is stop_tr:
+                break
+            # role th を検出
+            th_role = cur.find("th")
+            role_txt = _norm(th_role.get_text(" ")) if th_role else ""
+            role = None
+            if "強" in role_txt:
+                role = "強襲"
+            elif "汎" in role_txt:
+                role = "汎用"
+            elif "支" in role_txt:
+                role = "支援"
+            if not role:
+                # 別行（空/見出しなど）はスキップ
+                continue
+            owners: List[Dict[str, str]] = []
+            for td in cur.find_all("td"):
+                for a in td.find_all("a"):
+                    t = _norm(a.get_text(" "))
+                    href = a.get("href") or ""
+                    if t:
+                        owners.append({"name": t, "href": href})
+            rows_out.append(
+                {
+                    "skill": name,
+                    "level": level,
+                    "role": role,
+                    "owners": owners,
+                    "block_index": idx,
+                }
+            )
+
+    return {"source": SKILL_URL, "rows": rows_out}
+
 # ===============
 # CLI
 # ===============
@@ -426,6 +596,20 @@ def cmd_all(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_table(args: argparse.Namespace) -> int:
+    ttl_sec = parse_ttl(args.ttl)
+    client = get_client()
+    cache = CacheHTTP(client, CacheConfig(ttl_seconds=ttl_sec, no_network=args.no_network, force=args.force))
+    html, meta = cache.get(args.url)
+    data = extract_skill_rows_table(html)
+    data["fetched_at"] = meta.get("fetched_at")
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"skills-table: wrote -> {out}")
+    return 0
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="Extract core system skills from atwiki skills list (prototype)")
     sub = ap.add_subparsers(dest="cmd")
@@ -449,6 +633,34 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_all.add_argument("--force", action="store_true")
     p_all.add_argument("--out", dest="out", default="cache/skills.json")
     p_all.set_defaults(func=cmd_all)
+
+    p_tbl = sub.add_parser("table", help="Extract strict table rows (skill, level, desc, details)")
+    p_tbl.add_argument("--url", default=SKILL_URL)
+    p_tbl.add_argument("--ttl", default="7d")
+    p_tbl.add_argument("--no-network", action="store_true")
+    p_tbl.add_argument("--force", action="store_true")
+    p_tbl.add_argument("--out", dest="out", default="cache/skills_table.json")
+    p_tbl.set_defaults(func=cmd_table)
+
+    p_otbl = sub.add_parser("owners-table", help="Extract 'owners reverse index' table rows")
+    p_otbl.add_argument("--url", default=SKILL_URL)
+    p_otbl.add_argument("--ttl", default="7d")
+    p_otbl.add_argument("--no-network", action="store_true")
+    p_otbl.add_argument("--force", action="store_true")
+    p_otbl.add_argument("--out", dest="out", default="cache/owners_table.json")
+    def _cmd_otbl(args):
+        ttl_sec = parse_ttl(args.ttl)
+        client = get_client()
+        cache = CacheHTTP(client, CacheConfig(ttl_seconds=ttl_sec, no_network=args.no_network, force=args.force))
+        html, meta = cache.get(args.url)
+        data = extract_skill_owners_rows_table(html)
+        data["fetched_at"] = meta.get("fetched_at")
+        out = Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print(f"owners-table: wrote -> {out}")
+        return 0
+    p_otbl.set_defaults(func=_cmd_otbl)
 
     args = ap.parse_args(argv)
     if not getattr(args, "cmd", None):
