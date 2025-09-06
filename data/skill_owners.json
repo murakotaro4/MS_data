@@ -1,0 +1,4599 @@
+{
+  "owners": [
+    {
+      "series": "EWACジェガン",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "Ex-Sガンダム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "Ex-Sガンダム(変形)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "Ex-Sガンダム(通/変)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "FAZZ",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "FAガンダムMk-Ⅱ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "FAガンダムMk-Ⅲ",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "FA・ストライカー・カスタム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "zeus",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "G-3ガンダム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "Hi-νガンダム",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "MSN-04FF サザビー",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "R・ジャジャ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "Sガンダム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ΖΖガンダム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ΖⅡ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "Ζガンダム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "Ζガンダム(変形)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "Ζガンダム(通/変)",
+      "base": [
+        {
+          "id": "biosensor",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "Ζガンダム(通常)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "Ζガンダム［HML］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "Ζガンダム［ザク頭］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ΖプラスA1型",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ΖプラスA1型(変形)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ΖプラスA1型(通/変)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ΖプラスA1型(通常)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ΖプラスC1型",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ΖプラスC1型(変形)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ΖプラスC1型(通/変)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ΖプラスC1型(通常)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "νガンダム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "アイザック",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "アクア・ジム",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "アクト・ザク",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "アクト・ザク［指揮官仕様］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "アッガイ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "アッグガイ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "アッグジン",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "アッグ［ML装備］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "アッシマー",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "アッシマー(変形)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "アッシマー(通/変)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "アッシマー(通常)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "アトラスガンダム【TB】",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "アドバンスド・ヘイズル",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "アルス・ジャジャ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "アレックス",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "アレックス［C・A装備］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "アンクシャ",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "イフリート",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "イフリート(DS)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "イフリート・イェーガー",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "イフリート・シュナイド",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "イフリート・ナハト",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "イフリート改",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "exam",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "エンゲージゼロ",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "エンゲージゼロ［追加BST装備型］",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "カプール",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガザC",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガザC(変形)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガザC(通/変)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガザC(通常)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガザD",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガザE",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガズアル",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガズエル",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガズエル・グラウ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガッシャ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガブスレイ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガブスレイ(変形)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガブスレイ(通/変)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガブスレイ(通常)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガルスJ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガルバルディα",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガルバルディβ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンキャノン",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンキャノンⅡ",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンキャノン・アクア【TB】",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンキャノン・ディテクター",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンキャノン重装型タイプD",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンキャノン［SML装備］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンタンク",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンタンクⅡ",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダム4号機",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダム4号機Bst",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダム5号機",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダム5号機Bst",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダムEz8",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダムEz8［WR装備］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダムMk-Ⅱ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダムMk-Ⅲ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダムMk-Ⅴ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダムデルタカイ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダムピクシー",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダムピクシー(LA)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダム試作0号機",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダム試作1号機",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダム試作1号機Fb",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダム試作1号機［アクア装備］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダム試作2号機［BB仕様］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダム試作2号機［MLRS］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダム試作3号機ステイメン",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンダム試作4号機",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガンナーガンダム",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガ・ゾウム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガ・ゾウム［ガンナータイプ］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ガーベラ・テトラ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "キュベレイ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "キュベレイMk-Ⅱ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ギガン",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ギャプラン",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ギャプラン(変形)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ギャプラン(通/変)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ギャプラン(通常)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ギャプランTR-5",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ギャン",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ギャン・エーオース",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ギラ・ズール",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ギラ・ズール(EH)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ギラ・ドーガ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "クシャトリヤ",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "グスタフ・カール",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "グフ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "グフ(VD)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "グフ・カスタム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "グフ・フライトタイプ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "グフ重装型",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "グフ飛行試験型",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "グフ［Fユニット装備］【TB】",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ケンプファー",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゲム・カモフ",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゲルググ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゲルググG",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゲルググJ",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゲルググM",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゲルググM指揮官機",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゲルググキャノン(JN)",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゲルググ・V・キュアノス",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゲルググ・V・クサントス",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゲルググ・ウェルテクス",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゲルググ・キャノン",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゲルググ［シュトゥッツァー］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゲーマルク",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゴッグ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "サイコミュ高機動試験機",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "サイコ・ザク マークⅡ【TB】",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "サイコ・ザク【TB】",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "サザビー",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザクⅠ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザクⅠ(GS)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザクⅠ・スナイパータイプ",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザクⅠ指揮官仕様",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザクⅡ",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザクⅡ(KG)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザクⅡFS型",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザクⅡFS型(SM)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザクⅡS型",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザクⅡ後期型",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザクⅡ改",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザクⅡ改［フリッツヘルム仕様］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザクⅡ［重装備仕様］",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザクⅢ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザクⅢ改",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_m",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザクⅣ(IP)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザクダイバー",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザク・キャノン",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザク・キャノン［ラビットタイプ］",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザク・タンク［砲撃仕様］",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザク・デザートタイプ",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザク・デザートタイプ［DA仕様］",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザク・ハーフキャノン",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザク・ハーフキャノン(MB)",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザク・フリッパー",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザク・マインレイヤー",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザク・マリナー",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザク・マリンタイプ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザク強行偵察型",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ザメル",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "シスクード",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "zeus",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "シナンジュ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "シナンジュ・スタイン(ZA)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "シャア専用ゲルググ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "シュツルム・ガルス",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "シュツルム・ディアス［NZ仕様］",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "シルバー・ヘイズ改",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "シルヴァ・バレト",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジェガン",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジェガン(CH)",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジェガンD型",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジェガン重装型",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジェガン［エコーズ仕様］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジェスタ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジェスタ・キャノン",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジェスタ［シェザール隊仕様A］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジェスタ［シェザール隊仕様B］",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジェダ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジオング",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジムSPⅢ［中距離支援ユニット］",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジムⅡ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジムⅡ・セミストライカー",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジムⅢ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジムⅢパワード",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジムⅢパワードFA",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジムⅢ［近接戦仕様］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・NS［宇宙戦仕様］(V)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・インターセプトカスタムFB",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・カスタム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・ガードカスタム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・キャノン",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・キャノンⅡ",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・キャノン［空間突撃仕様］",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・クゥエル",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・コマンド",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・コマンドLA",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・コマンド宇宙戦仕様",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・ストライカー",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・ストライカー改",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・スナイパー",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・スナイパーⅡ",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・スナイパーⅡ［WD隊仕様］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・スナイパーカスタム",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・スパルタン(RG)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・スパルタン［BD隊仕様］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・トレーナー",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・ドミナンス",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・ナイトシーカー",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・ナイトシーカー(V)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・ナイトシーカーⅡ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム・ライトアーマー",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム寒冷地仕様",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム改",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム改陸戦型［CB装備］【TB】",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム［WD隊仕様］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジム［ギャザーロード隊仕様］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジャムル・フィン",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジュアッグ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジ・O",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジーライン・アサルトアーマー",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジーライン・スタンダードアーマー",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジーライン・フルカスタム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ジーライン・ライトアーマー",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "スタークジェガン",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ストライカー・カスタム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "hades_e",
+          "level": 1
+        },
+        {
+          "id": "zeus",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "スレイヴ・レイス",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "スーパーガンダム",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ズゴック",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ズゴックE",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ズサ",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゼク・アイン［第1種兵装］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゼク・アイン［第2種兵装］",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゼク・アイン［第3種兵装］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゼク・ツヴァイ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゼー・ズール",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゾゴック",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ゾック",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ダグ・ドール",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ヅダ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ヅダF",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ティターニア",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ディジェ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ディジェ(CA)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ディジェSE-R",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ディジェ・トラバーシア",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "デザート・ゲルググ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "デザート・ザク(DR)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "デザート・ジム",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "デルタガンダム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "デルタプラス",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "トリスタン",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "トーリス・リッター",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "hades",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ドム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ドム・キャノン［単砲仕様］",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ドム・キャノン［複砲仕様］",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ドム・トロピカルテストタイプ",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ドム・トローペン",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ドム・ノーミーデス",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ドム・バラッジ",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ドム高速実験型",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ドライセン",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ドラッツェ",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ドラッツェ改",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ドラッツェ改［重装備型］",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ドワス改",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ドワッジ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ドワッジ改",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ドーベン・ウルフ",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ナイチンゲール",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ナラティブガンダム［B装備］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ネモ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ネモⅢ",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ネロ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ネロ・トレーナー",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ハイゴッグ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ハイザック",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ハイザック・カスタム",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ハイゼンスレイ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ハイブースト・ジム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ハンブラビ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ハンブラビ(変形)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ハンブラビ(通/変)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ハンブラビ(通常)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ハンマ・ハンマ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "バイアラン",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "バイアラン・イゾルデ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "バイアラン・カスタム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "バウ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "バウンド・ドック",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "バルギル",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "バンシィ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "バーザム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "バーザム改",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "パラス・アテネ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "パワード・ジム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "パーフェクト・ガンダム【TB】",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ヒルドルブ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ヒルドルブ(変形)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ヒルドルブ(通/変)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ヒルドルブ(通常)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ビショップ",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "フェネクス【NT】",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "フルアーマーガンダム",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "フルアーマーガンダム7号機",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "フルアーマーガンダム陸戦タイプ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "フルアーマーガンダム［タイプB］",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "フルアーマー・ガンダム【TB】",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "フルアーマー・スレイヴ・レイス",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "フルアーマー百式改",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ブラックライダー",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "zeus",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ブルーディスティニー1号機",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "exam",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ブルーディスティニー2号機",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "exam",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ブルーディスティニー3号機",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "exam",
+          "level": 2
+        }
+      ]
+    },
+    {
+      "series": "プロトタイプガンダム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ヘイズル2号機",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ヘイズル改",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ヘイズル改［高機動仕様］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ヘビーガンダム",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ペイルライダー(VG)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "hades",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ペイルライダーDⅡ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ペイルライダー・キャバルリー",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "hades_e",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ペイルライダー・デュラハン",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ペイルライダー［空間戦仕様］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "hades",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ペイルライダー［陸戦重装備仕様］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "hades",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ペズン・ドワッジ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ホワイトライダー",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        },
+        {
+          "id": "zeus",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ボリノーク・サマーン",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "マドロック",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "マラサイ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ムーンガンダム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "メタス改",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "メタス［重装備仕様］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "メタス［重装備仕様］(変形)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "メタス［重装備仕様］(通/変)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "メッサーラ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "メッサーラ(通常)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ヤクト・ドーガ(GG)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ユニコーンガンダム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "ラムズゴック",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "リゲルグ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "リゼル",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "リゼルC型［DbU装備］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "リック・ディアス",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "リック・ディアスⅡ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "リック・ディジェ",
+      "base": [
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "リック・ディジェ改",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "リック・ドム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "リック・ドムⅡ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "リック・ドムⅡ(GH)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "リック・ドム［シュトゥッツァー］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "リバウ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "リ・ガズィ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "リ・ガズィ・カスタム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "リ・ガズィ・カスタム(通常)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "レッドライダー",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "先行量産型ゲルググ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "強化型ΖΖガンダム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor",
+          "level": 2
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "水中型ガンダム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "百式",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "百式改",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "装甲強化型ジム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "量産型ガンキャノン",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "量産型ガンタンク",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "量産型百式改",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "陸戦型ガンダム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "陸戦型ガンダム［WR装備］",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "陸戦型ゲルググ",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "陸戦型ゲルググ(VD)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "陸戦型ジム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "陸戦強襲型ガンタンク",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "陸戦強襲型ガンタンク(変形)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "陸戦強襲型ガンタンク(通/変)",
+      "base": [
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "陸戦強襲型ガンタンク(通常)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "陸戦用ジム",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "陸戦高機動型ザク",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "陸戦高機動型ザク(AS)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "零式",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "零式弐型(AR)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "高機動型ガルバルディα",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "高機動型ゲルググ",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "高機動型ゲルググ(GK)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_simple",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "高機動型ゲルググ(UL)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        },
+        {
+          "id": "biosensor_p",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "高機動型ゲルググ(VG)",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "series": "高機動型ザク後期型",
+      "base": [
+        {
+          "id": "alice",
+          "level": 1
+        }
+      ]
+    }
+  ]
+}

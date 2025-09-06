@@ -3,7 +3,7 @@ SHELL := bash
 
 MSDATA := msData.json
 
-.PHONY: help setup format lint test validate validate-strict update normalize ci scrape-index scrape-details scrape-all import-details labels audit-labels skills skills-table owners-table build-skills build-param-skills audit-skills
+.PHONY: help setup format lint test validate validate-strict update normalize ci scrape-index scrape-details scrape-all import-details labels audit-labels skills skills-table owners-table build-skills build-param-skills build-owners-flat audit-skills preview-params
 
 help:
 	@echo "Available targets:"
@@ -27,6 +27,8 @@ help:
 	@echo "  owners-table      Extract owners reverse-index table rows -> cache/owners_table.json"
 	@echo "  build-skills      Build data/skills_catalog.json & data/skill_owners.json"
 	@echo "  build-param-skills Build data/skills_params.json (parameter-only)"
+	@echo "  build-owners-flat Build data/skill_owners_flat.json (skill/series/ms_level)"
+	@echo "  preview-params    Derive parameter-only preview per MS -> derived/ms_params_preview.json"
 	@echo "  audit-skills      Audit owners vs msData.json -> reports/skill_owners_audit_*.md"
 
 setup:
@@ -102,3 +104,9 @@ audit-skills:
 
 build-param-skills:
 	uv run python -m scripts.build_param_skills --in cache/skills_table.json --out data/skills_params.json --policy data/skills_policy.json --audit-out reports/skills_params_audit.json
+
+build-owners-flat:
+	uv run python -m scripts.build_owners_flat --in cache/owners_table.json --msdata $(MSDATA) --policy data/skills_policy.json --out data/skill_owners_flat.json --audit-out reports/owners_flat_audit.json
+
+preview-params:
+	uv run python -m scripts.preview_params --msdata $(MSDATA) --owners data/skill_owners_flat.json --params data/skills_params.json --out derived/ms_params_preview.json

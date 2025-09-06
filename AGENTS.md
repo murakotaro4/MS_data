@@ -139,6 +139,59 @@
 - 更新頻度: 公式アップデートごと。バランス調整時は速やかに反映。
 - 監査: 重要指標（補正・耐性・コスト）の差分は PR 説明に数値で記載。
 
+## スキル抽出/所有逆引き（2025-09 セッション要約）
+- 方針（合意）
+  - msData.json は恒常値のみとし、スキルは別ファイルで管理（アプリ側で合成）。
+  - 定義（param）と所有（owners）を分離し、レビュー/保守性を優先。
+- 追加コマンド（Make）
+  - `make skills-table` … atwiki「スキル一覧表」の“表の行”を厳格抽出（rowspan継承含む）→ `cache/skills_table.json`
+  - `make owners-table` … 「所持機体 逆引き一覧」の“表の行”を厳格抽出（アンカー境界停止・rowspan対応）→ `cache/owners_table.json`
+  - `make build-param-skills` … パラメータ変化スキルのみを抽出（ホワイトリスト）→ `data/skills_params.json`
+  - `make build-owners-flat` … シリーズ×機体Lv展開（msData から存在LvをJOIN）→ `data/skill_owners_flat.json`
+  - `make preview-params` … parameter-only の合成プレビュー（MS単位）→ `derived/ms_params_preview.json`
+- 抽出ポリシー
+  - 対象パラメータ: スピード/高速移動/射撃補正/格闘補正/旋回/各耐性（3耐展開）/スラスター消費（係数）/被ダメージ（係数）
+  - ホワイトリスト: 能力UP系（EXAM/HADES/HADES-E/ALICE/ZEUS/THEMIS/n_i_t_r_o/各種バイオセンサー/覚醒 など）
+  - 逆引きテーブル: アンカー行自身の所有機体も取り込み、次のアンカー<th>が出現したらブロック終了。
+  - シリーズ名の軽正規化: 半角()[]→全角（）［］、空白圧縮。JOIN 安定化。
+- 代表例（現行抽出）
+  - HADES LV1 所有: トーリス・リッター / ペイルライダー［空間戦仕様］/［陸戦重装備仕様］/（VG）
+  - n_i_t_r_o 所有: ガンダムデルタカイのみ
+  - 簡易バイオセンサー: 耐ビ+20 / 耐実+10 / 耐格+10（個別耐性値をそのまま採用）
+- 設計判断
+  - msData へプレビュー値は埋め込まない（アプリ側で合成）。必要に応じて `derived/ms_params_preview.json` を生成してレビュー。
+  - owners/params の SSOT 化（`data/skills_params.json`, `data/skill_owners_flat.json`）。
+
+### 今後の課題/ToDo
+- シリーズ名の正規化強化（例: （通常）/（変形）注記の扱い、別名テーブル）。unknown=0の維持。
+- 例外ルール: 同シリーズ内でも Lv によりスキル Lv が変わる場合の rules（range指定）導入。
+- パラメータ抽出の拡張/安定化
+  - ラベル近傍抽出のチューニング（誤検知/取りこぼしの監査をレポート化）。
+  - 被ダメ/スラスター以外の係数系が判明した場合の追加。
+- 二段階/フェイズ系（NT-D→覚醒など）の扱い整理（適用順序と排他条件）。
+- スキルIDの正規ID体系（英小文字スネーク）を併記し、JOINを安定化。
+- CI 連携: `build-*` と監査（unknown検出）を optional チェックに追加。
+
+### データ/ファイル運用
+- 配布本体: `msData.json`（恒常値のみ）
+- 定義/所有: `data/skills_params.json`, `data/skill_owners_flat.json`（SSOT）
+- レビュー用: `derived/ms_params_preview.json`（任意生成）
+- キャッシュ/HTMLは `.gitignore` 済み。不要な一時HTMLはコミットしない（必要なら `cache/` のみ保存）。
+
+### 監査記録（この時点）
+- owners 監査（reports/owners_flat_audit.json）
+  - unknown_series_count: 0（シリーズ名正規化で解消済み）
+  - owners_count: 75（能力UP系の所持シリーズ×Lv 展開）
+- params 監査（reports/skills_params_audit.json）
+  - ホワイトリスト外だが数値を含む行を「excluded_param_rows」に記録（例: 空中制御プログラム/EXブースト/シールド・ブースター制御機構 等）。
+  - 本リポジトリでは能力UP系のみを対象にし、その他は除外（将来の拡張時に再検討）。
+
+#### 参考: 過去の差分サマリ（2025-09-05 レポートより）
+- レコード数: 546 → 1515（+970 / -1 / ~545）
+- 追加キー（例）: スピード_変形時/射撃補正_変身時/格闘補正_変身時/出撃_地上可・宇宙可/環境適正_* など
+- 誤記キーの整理: 射撃補則/射撃補生/格闘補定、旋回_通常時_* を正規キーへ統一
+- 初回の owners 監査では unknown が多数（括弧注記や（通/変/通常）表記の揺れ）。シリーズ名の軽正規化で unknown=0 に解消。
+
 ## コミット・プルリクエスト
 - コミットメッセージは日本語で記載してください（言語ポリシー順守）。
 - Conventional Commits を採用: `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`, `data:`（データのみ変更）。

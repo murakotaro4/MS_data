@@ -1,0 +1,454 @@
+{
+  "owners": [
+    {
+      "skill": "能力UP「ALICE」",
+      "skill_level": 1,
+      "series": "Sガンダム",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「ALICE」",
+      "skill_level": 1,
+      "series": "Sガンダム",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「ALICE」",
+      "skill_level": 1,
+      "series": "Ex-Sガンダム",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「ALICE」",
+      "skill_level": 1,
+      "series": "Ex-Sガンダム",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「ALICE」",
+      "skill_level": 1,
+      "series": "Ex-Sガンダム",
+      "ms_level": 3
+    },
+    {
+      "skill": "能力UP「ZEUS」",
+      "skill_level": 1,
+      "series": "レッドライダー",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「ZEUS」",
+      "skill_level": 1,
+      "series": "レッドライダー",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「ZEUS」",
+      "skill_level": 1,
+      "series": "レッドライダー",
+      "ms_level": 3
+    },
+    {
+      "skill": "能力UP「ZEUS」",
+      "skill_level": 1,
+      "series": "レッドライダー",
+      "ms_level": 4
+    },
+    {
+      "skill": "能力UP「n_i_t_r_o」",
+      "skill_level": 1,
+      "series": "ガンダムデルタカイ",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「n_i_t_r_o」",
+      "skill_level": 1,
+      "series": "ガンダムデルタカイ",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「n_i_t_r_o」",
+      "skill_level": 1,
+      "series": "ガンダムデルタカイ",
+      "ms_level": 3
+    },
+    {
+      "skill": "能力UP「EXAM」",
+      "skill_level": 1,
+      "series": "イフリート改",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「EXAM」",
+      "skill_level": 1,
+      "series": "イフリート改",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「EXAM」",
+      "skill_level": 1,
+      "series": "イフリート改",
+      "ms_level": 3
+    },
+    {
+      "skill": "能力UP「EXAM」",
+      "skill_level": 1,
+      "series": "イフリート改",
+      "ms_level": 4
+    },
+    {
+      "skill": "能力UP「EXAM」",
+      "skill_level": 1,
+      "series": "ブルーディスティニー1号機",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「EXAM」",
+      "skill_level": 1,
+      "series": "ブルーディスティニー1号機",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「EXAM」",
+      "skill_level": 1,
+      "series": "ブルーディスティニー1号機",
+      "ms_level": 3
+    },
+    {
+      "skill": "能力UP「EXAM」",
+      "skill_level": 1,
+      "series": "ブルーディスティニー1号機",
+      "ms_level": 4
+    },
+    {
+      "skill": "能力UP「EXAM」",
+      "skill_level": 1,
+      "series": "ブルーディスティニー2号機",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「EXAM」",
+      "skill_level": 1,
+      "series": "ブルーディスティニー2号機",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「EXAM」",
+      "skill_level": 1,
+      "series": "ブルーディスティニー2号機",
+      "ms_level": 3
+    },
+    {
+      "skill": "能力UP「EXAM」",
+      "skill_level": 1,
+      "series": "ブルーディスティニー2号機",
+      "ms_level": 4
+    },
+    {
+      "skill": "能力UP「EXAM」",
+      "skill_level": 2,
+      "series": "ブルーディスティニー3号機",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「EXAM」",
+      "skill_level": 2,
+      "series": "ブルーディスティニー3号機",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「EXAM」",
+      "skill_level": 2,
+      "series": "ブルーディスティニー3号機",
+      "ms_level": 3
+    },
+    {
+      "skill": "能力UP「EXAM」",
+      "skill_level": 2,
+      "series": "ブルーディスティニー3号機",
+      "ms_level": 4
+    },
+    {
+      "skill": "能力UP「HADES」",
+      "skill_level": 1,
+      "series": "トーリス・リッター",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「HADES」",
+      "skill_level": 1,
+      "series": "トーリス・リッター",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「HADES」",
+      "skill_level": 1,
+      "series": "トーリス・リッター",
+      "ms_level": 3
+    },
+    {
+      "skill": "能力UP「HADES」",
+      "skill_level": 1,
+      "series": "ペイルライダー［空間戦仕様］",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「HADES」",
+      "skill_level": 1,
+      "series": "ペイルライダー［空間戦仕様］",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「HADES」",
+      "skill_level": 1,
+      "series": "ペイルライダー［空間戦仕様］",
+      "ms_level": 3
+    },
+    {
+      "skill": "能力UP「HADES」",
+      "skill_level": 1,
+      "series": "ペイルライダー［空間戦仕様］",
+      "ms_level": 4
+    },
+    {
+      "skill": "能力UP「HADES」",
+      "skill_level": 1,
+      "series": "ペイルライダー［陸戦重装備仕様］",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「HADES」",
+      "skill_level": 1,
+      "series": "ペイルライダー［陸戦重装備仕様］",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「HADES」",
+      "skill_level": 1,
+      "series": "ペイルライダー［陸戦重装備仕様］",
+      "ms_level": 3
+    },
+    {
+      "skill": "能力UP「HADES」",
+      "skill_level": 1,
+      "series": "ペイルライダー［陸戦重装備仕様］",
+      "ms_level": 4
+    },
+    {
+      "skill": "能力UP「HADES」",
+      "skill_level": 1,
+      "series": "ペイルライダー（VG）",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「HADES」",
+      "skill_level": 1,
+      "series": "ペイルライダー（VG）",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「HADES-E」",
+      "skill_level": 1,
+      "series": "ペイルライダー・キャバルリー",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「HADES-E」",
+      "skill_level": 1,
+      "series": "ペイルライダー・キャバルリー",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「HADES-E」",
+      "skill_level": 1,
+      "series": "ペイルライダー・キャバルリー",
+      "ms_level": 3
+    },
+    {
+      "skill": "能力UP「HADES-E」",
+      "skill_level": 1,
+      "series": "ペイルライダー・キャバルリー",
+      "ms_level": 4
+    },
+    {
+      "skill": "能力UP「ZEUS」",
+      "skill_level": 1,
+      "series": "ホワイトライダー",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「ZEUS」",
+      "skill_level": 1,
+      "series": "ホワイトライダー",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「ZEUS」",
+      "skill_level": 1,
+      "series": "ホワイトライダー",
+      "ms_level": 3
+    },
+    {
+      "skill": "能力UP「ZEUS」",
+      "skill_level": 1,
+      "series": "ホワイトライダー",
+      "ms_level": 4
+    },
+    {
+      "skill": "能力UP「バイオセンサー」",
+      "skill_level": 1,
+      "series": "Ζガンダム",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「バイオセンサー」",
+      "skill_level": 1,
+      "series": "Ζガンダム",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「バイオセンサー」",
+      "skill_level": 1,
+      "series": "Ζガンダム",
+      "ms_level": 3
+    },
+    {
+      "skill": "能力UP「バイオセンサー」",
+      "skill_level": 1,
+      "series": "Ζガンダム",
+      "ms_level": 4
+    },
+    {
+      "skill": "能力UP「バイオセンサー」",
+      "skill_level": 1,
+      "series": "ΖΖガンダム",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「バイオセンサー」",
+      "skill_level": 1,
+      "series": "ΖΖガンダム",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「バイオセンサー」",
+      "skill_level": 1,
+      "series": "ΖΖガンダム",
+      "ms_level": 3
+    },
+    {
+      "skill": "能力UP「バイオセンサー」",
+      "skill_level": 1,
+      "series": "Ζガンダム［HML］",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「バイオセンサー」",
+      "skill_level": 1,
+      "series": "Ζガンダム［HML］",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「バイオセンサー」",
+      "skill_level": 1,
+      "series": "Ζガンダム［HML］",
+      "ms_level": 3
+    },
+    {
+      "skill": "能力UP「バイオセンサー」",
+      "skill_level": 2,
+      "series": "強化型ΖΖガンダム",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「バイオセンサーP」",
+      "skill_level": 1,
+      "series": "ジ・O",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「バイオセンサーP」",
+      "skill_level": 1,
+      "series": "ジ・O",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「バイオセンサーP」",
+      "skill_level": 1,
+      "series": "ジ・O",
+      "ms_level": 3
+    },
+    {
+      "skill": "能力UP「バイオセンサーM」",
+      "skill_level": 1,
+      "series": "ザクⅢ改",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「バイオセンサーM」",
+      "skill_level": 1,
+      "series": "ザクⅢ改",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「バイオセンサーM」",
+      "skill_level": 1,
+      "series": "ザクⅢ改",
+      "ms_level": 3
+    },
+    {
+      "skill": "能力UP「簡易バイオセンサー」",
+      "skill_level": 1,
+      "series": "ディジェ（CA）",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「簡易バイオセンサー」",
+      "skill_level": 1,
+      "series": "ディジェ（CA）",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「簡易バイオセンサー」",
+      "skill_level": 1,
+      "series": "リ・ガズィ",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「簡易バイオセンサー」",
+      "skill_level": 1,
+      "series": "リ・ガズィ",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「簡易バイオセンサー」",
+      "skill_level": 1,
+      "series": "リ・ガズィ",
+      "ms_level": 3
+    },
+    {
+      "skill": "能力UP「簡易バイオセンサー」",
+      "skill_level": 1,
+      "series": "リ・ガズィ",
+      "ms_level": 4
+    },
+    {
+      "skill": "能力UP「簡易バイオセンサー」",
+      "skill_level": 1,
+      "series": "リ・ガズィ・カスタム",
+      "ms_level": 1
+    },
+    {
+      "skill": "能力UP「簡易バイオセンサー」",
+      "skill_level": 1,
+      "series": "リ・ガズィ・カスタム",
+      "ms_level": 2
+    },
+    {
+      "skill": "能力UP「簡易バイオセンサー」",
+      "skill_level": 1,
+      "series": "リ・ガズィ・カスタム",
+      "ms_level": 3
+    }
+  ]
+}
