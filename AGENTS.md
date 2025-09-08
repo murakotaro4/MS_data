@@ -32,6 +32,10 @@
 - 連続実行: `uv run python scripts/scrape_msdata.py all --out cache/details.jsonl`
 - 取り込み: `jq -s '.' cache/details.jsonl > cache/details.json && uv run python scripts/update_msdata.py -i cache/details.json`
 
+注意（SSOT）
+- 本リポジトリでは index（`cache/index.json`）の `name` を真実のソース（SSOT）とし、詳細抽出の `MS名` も index の表記で固定します（LVは `_LVn` で付与）。
+- 既存/新規データの読み込み時に `update_msdata.py` 側でも名称を index 準拠へ正規化します。
+
 ## ラベル正規化と監査（2025-09）
 - 目的: 各機体ページの行見出し（項目名）の揺らぎを収集・正規化し、最終パラメータへ安全に変換。
 - 共通ユーティリティ: `scripts/label_utils.py`
@@ -56,6 +60,7 @@
   - 環境適正: `環境適正_地上`, `環境適正_宇宙`, `環境適正_水中`
 - 必須条件（緩和）
   - 旋回は anyOf（地上 or 宇宙のどちらか必須）。宇宙専用機を許容。
+  - 実装状態: `scripts/scrape_msdata.py` の最終フィルタを anyOf に修正済み（宇宙専用でも除外されない）。
 - 抽出ロジックの主な規則
   - 旋回値: `78（盾装備時：75.7）` → 先頭整数（78）を採用。
   - 出撃可否・環境適正: atwiki 固有ID（`label_sortie_*`, `label_env_*`）を最優先で解析。フォールバックで文言/表記号を解釈。
@@ -73,6 +78,7 @@
   - `make import-details`
   - `make validate`（厳格: `make validate-strict`）
 - 差分要約はコマンド出力（`records: A -> B | +X -Y ~Z`）で確認
+ - 監査（index vs msData）: `uv run python -m scripts.audit_index_vs_msdata --index cache/index.json --ms msData.json --out reports/index_ms_audit_YYYYMMDD.md`
 
 ## データ品質（2025-09-05 時点の要約）
 - レコード: 1516
@@ -97,6 +103,18 @@
   - 高Lvが未掲載の場合は直前Lvで補完（`points: null`）。
 - 再出撃時間: 秒を整数で抽出。
 - 余白統一: 連続する空白は1つへ圧縮（全角空白も半角空白に集約）。
+
+MS名の正規化（index準拠）
+- 目的: `msData.json` の基底名を `cache/index.json` の `name` と一致させ、JOIN 安定化と重複解消を図る。
+- 適用タイミング: 詳細抽出の書き出し時（scrape）／読み込み・マージ時（update）。
+- 変換ルール（限定的な文脈置換を含む）
+  - 半角→全角括弧: `[]` → `［］`
+  - ローマ数字: `II/III` → `Ⅱ/Ⅲ`
+  - Ζ表記: `Z/ZZ` → `Ζ/ΖΖ`（「ガンダム/ガンダム3号機」の直前のみ）
+  - 全角V: `Ｖ` → `V`
+
+備考
+- PC版のみの機体（index未収載）が `msData.json` に存在する場合は例外として維持します（監査では msData のみ=3 件として残る想定）。
 
 ## コーディング規約・命名
 - JSON: 2スペース、UTF-8、LF、キーは `snake_case`。
@@ -185,6 +203,17 @@
 - params 監査（reports/skills_params_audit.json）
   - ホワイトリスト外だが数値を含む行を「excluded_param_rows」に記録（例: 空中制御プログラム/EXブースト/シールド・ブースター制御機構 等）。
   - 本リポジトリでは能力UP系のみを対象にし、その他は除外（将来の拡張時に再検討）。
+
+#### index vs msData 監査（2025-09-08 反映）
+- SSOT=index 準拠の名称統一後の結果
+  - index（一覧）: 527
+  - msData（基底名）: 530
+  - indexのみ: 0
+  - msDataのみ: 3（PC版: ウイングガンダムゼロ/ゴッドガンダム/フリーダムガンダム）
+  - 属性/コスト不一致: 0
+
+ツール
+- `scripts/audit_index_vs_msdata.py` … 名称差分（正規化ポイント）、属性/コスト不一致、収載差（indexのみ/msのみ）をMarkdownで出力。
 
 #### 参考: 過去の差分サマリ（2025-09-05 レポートより）
 - レコード数: 546 → 1515（+970 / -1 / ~545）
