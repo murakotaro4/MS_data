@@ -615,8 +615,9 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
                     ]
                     per_level[lv]["fullst"] = copied
 
-    # 必須キーが揃っていないLVは除外（スキーマに準拠するため）
-    REQUIRED = {
+    # 必須キーが揃っていないLVは除外（スキーマに準拠）。
+    # ポイント: 旋回は anyOf（地上 or 宇宙のどちらか必須）
+    BASE_REQUIRED = {
         "HP",
         "スピード",
         "スラスター",
@@ -629,10 +630,15 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
         "近スロット",
         "中スロット",
         "遠スロット",
-        "旋回_地上_通常時",
     }
+
+    def has_turn_value(rec: Dict[str, Any]) -> bool:
+        return ("旋回_地上_通常時" in rec) or ("旋回_宇宙_通常時" in rec)
+
     filtered = {
-        lv: rec for lv, rec in per_level.items() if REQUIRED.issubset(rec.keys())
+        lv: rec
+        for lv, rec in per_level.items()
+        if BASE_REQUIRED.issubset(rec.keys()) and has_turn_value(rec)
     }
     return filtered
 
