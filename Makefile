@@ -3,7 +3,7 @@ SHELL := bash
 
 MSDATA := msData.json
 
-.PHONY: help setup format lint test validate validate-strict update normalize ci scrape-index scrape-details scrape-all import-details labels audit-labels skills skills-table owners-table build-skills build-param-skills build-owners-flat audit-skills preview-params
+.PHONY: help setup format lint test validate validate-strict update normalize ci scrape-index scrape-details scrape-all import-details labels audit-labels audit-index skills skills-table owners-table build-skills build-param-skills build-owners-flat audit-skills preview-params
 
 help:
 	@echo "Available targets:"
@@ -22,6 +22,7 @@ help:
 	@echo "  import-details    JSONL -> JSON array -> msData.json update"
 	@echo "  labels            Extract raw/normalized row labels (cache-aware)"
 	@echo "  audit-labels      Aggregate labels_raw.jsonl into Markdown report"
+	@echo "  audit-index       Compare index.json vs msData.json (names/attr/cost)"
 	@echo "  skills            Extract core system skills -> cache/skills.json"
 	@echo "  skills-table      Extract strict table rows -> cache/skills_table.json"
 	@echo "  owners-table      Extract owners reverse-index table rows -> cache/owners_table.json"
@@ -86,6 +87,10 @@ labels:
 
 audit-labels:
 	uv run python -m scripts.audit_labels --in cache/labels_raw.jsonl --out reports/label_audit_$(shell date +%Y%m%d).md
+
+# Index vs msData audit (names, presence, attr/cost)
+audit-index:
+	uv run python -m scripts.audit_index_vs_msdata --index cache/index.json --ms $(MSDATA) --out reports/index_ms_audit_$(shell date +%Y%m%d).md
 
 skills:
 	uv run python -m scripts.extract_skills all --out cache/skills.json --ttl $(TTL) $(if $(NO_NET),--no-network,) $(if $(FORCE),--force,)
