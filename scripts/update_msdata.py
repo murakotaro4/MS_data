@@ -19,6 +19,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 from scripts.label_utils import apply_key_aliases
+import re
 
 
 CANONICAL_ORDER = (
@@ -70,6 +71,29 @@ def load_json(path: Path) -> Any:
 
 
 def normalize_record(rec: Dict[str, Any]) -> Dict[str, Any]:
+    # MS名（基底名）の正規化（index.json 準拠の表記に寄せる）
+    def normalize_ms_base(name: str) -> str:
+        m = re.match(r"^(.*)_LV(\d+)$", name)
+        if not m:
+            return name
+        base, lv = m.group(1), m.group(2)
+        out = base
+        # [] → ［］
+        out = out.replace("[", "［").replace("]", "］")
+        # ローマ数字 II/III → Ⅱ/Ⅲ（順序に注意）
+        out = out.replace("III", "Ⅲ").replace("II", "Ⅱ")
+        # 文脈Z → Ζ（ギリシャ）: ガンダム/ガンダム3号機の直前のみ
+        out = re.sub(r"ZZ(?=ガンダム)", "ΖΖ", out)
+        out = re.sub(r"Z(?=ガンダム3号機)", "Ζ", out)
+        out = re.sub(r"Z(?=ガンダム)", "Ζ", out)
+        # 全角Ｖ → 半角V（例: ゲルググ・Ｖ・キュアノス）
+        out = out.replace("Ｖ", "V")
+        return f"{out}_LV{lv}"
+
+    # まず MS名を正規化
+    name = rec.get("MS名")
+    if isinstance(name, str):
+        rec["MS名"] = normalize_ms_base(name)
     # 別名キーを正規キーへ移し替え（既存が無い場合のみ）
     rec = apply_key_aliases(rec)
     # 数値項目で None は削除（schema適合のため）。

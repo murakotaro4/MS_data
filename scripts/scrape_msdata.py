@@ -702,8 +702,15 @@ def cmd_details(args: argparse.Namespace) -> int:
                 per_level = parse_details(text)
                 # 補足情報（index由来）を併合
                 for lv, rec in per_level.items():
+                    # MS名は index の name を基底とし、LVを維持（SSOT=index）
+                    msn = rec.get("MS名") or ""
+                    m = re.match(r"^(.*)_LV(\d+)$", msn)
+                    lvno = m.group(2) if m else None
+                    idx_name = item.get("name") or (m.group(1) if m else msn)
+                    ms_name_index = f"{idx_name}_LV{lvno}" if lvno else (msn or idx_name)
+
                     base = {
-                        "MS名": rec.get("MS名"),
+                        "MS名": ms_name_index,
                         "コスト": rec.get("コスト") or item.get("cost"),
                         "属性": rec.get("属性") or item.get("属性"),
                     }
