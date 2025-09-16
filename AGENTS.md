@@ -152,6 +152,21 @@ MS名の正規化（index準拠）
 6) コミット: `data: update msData.json (YYYY-MM-DD; +N/-M records)`
 7) PR: 変更概要・データ来歴・統計（件数/キー変更）を記載。
 
+### 週次データ更新（実例: 2025-09-17）
+- index/details を強制再取得: `make scrape-index FORCE=1 TTL=1d` → `make scrape-details FORCE=1 TTL=1d RATE=1.0 LIMIT=0`（タイムアウト時は `NO_NET=1` に切り替えてキャッシュ再利用）
+- JSONL を配列にまとめる（`jq` 未導入時は Python ワンライナーで代替）:
+  ```bash
+  uv run python - <<'PY'
+  import json
+  from pathlib import Path
+  records = [json.loads(line) for line in Path('cache/details.jsonl').read_text().splitlines() if line.strip()]
+  Path('cache/details.json').write_text(json.dumps(records, ensure_ascii=False, indent=2))
+  PY
+  ```
+- 取り込み・検証: `uv run python -m scripts.update_msdata -i cache/details.json` → 出力の `records: A -> B | +X -Y ~Z` を控え、`make validate-strict`
+- 監査とレポート: `make audit-index` を実行し `reports/index_ms_audit_YYYYMMDD.md` を生成。差分概要は `reports/msdata_update_YYYYMMDD.md` にまとめ（新規機体/既存更新/検証結果/実行コマンドを記載）
+- レビュー観点: 新規追加・既存調整のキー（ショップ条件/補正/スロット/強化リスト）を抜粋し、`git diff -- msData.json` と突き合わせて確認する
+
 ## 取得元と更新頻度（推奨）
 - 取得元: 公式リリースノート/ゲーム内ステータス/信頼できる Wiki。
 - 更新頻度: 公式アップデートごと。バランス調整時は速やかに反映。
