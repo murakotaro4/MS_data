@@ -24,6 +24,7 @@ import re
 
 CANONICAL_ORDER = (
     "MS名",
+    "wiki_url",
     "属性",
     "出撃_地上可",
     "出撃_宇宙可",
@@ -32,28 +33,28 @@ CANONICAL_ORDER = (
     "環境適正_水中",
     "コスト",
     "HP",
-    "スピード",
-    "スピード_変形時",
-    "スラスター",
-    "高速移動",
-    "高速移動_変形時",
+    "耐実弾補正",
+    "耐ビーム補正",
+    "耐格闘補正",
     "射撃補正",
     "射撃補正_変形時",
     "射撃補正_変身時",
     "格闘補正",
     "格闘補正_変形時",
     "格闘補正_変身時",
-    "耐ビーム補正",
-    "耐実弾補正",
-    "耐格闘補正",
+    "スピード",
+    "スピード_変形時",
+    "高速移動",
+    "高速移動_変形時",
+    "スラスター",
+    "旋回_地上_通常時",
+    "旋回_宇宙_通常時",
+    "旋回_変形時",
+    "旋回_地上_変形時",
+    "旋回_宇宙_変形時",
     "近スロット",
     "中スロット",
     "遠スロット",
-    "旋回_地上_通常時",
-    "旋回_変形時",
-    "旋回_地上_変形時",
-    "旋回_宇宙_通常時",
-    "旋回_宇宙_変形時",
     "カウンター",
     "再出撃時間",
     "格闘判定力",
@@ -64,36 +65,76 @@ CANONICAL_ORDER = (
     "fullst",
 )
 
+MS_NAME_WITH_LEVEL = re.compile(r"^(.*)_LV(\d+)$")
+
+
+def normalize_ms_base_name(name: str) -> str:
+    out = name
+    out = out.replace("[", "［").replace("]", "］")
+    out = out.replace("III", "Ⅲ").replace("II", "Ⅱ")
+    out = re.sub(r"ZZ(?=ガンダム)", "ΖΖ", out)
+    out = re.sub(r"Z(?=ガンダム3号機)", "Ζ", out)
+    out = re.sub(r"Z(?=ガンダム)", "Ζ", out)
+    out = out.replace("Ｖ", "V")
+    return out
+
+
+def normalize_ms_name(name: str) -> str:
+    m = MS_NAME_WITH_LEVEL.match(name)
+    if not m:
+        return name
+    base, lv = m.groups()
+    return f"{normalize_ms_base_name(base)}_LV{lv}"
+
+
+def extract_ms_base_name(name: str) -> str | None:
+    m = MS_NAME_WITH_LEVEL.match(name)
+    if not m:
+        return None
+    return normalize_ms_base_name(m.group(1))
+
 
 def load_json(path: Path) -> Any:
     with path.open("r", encoding="utf-8") as f:
         return json.load(f)
 
 
-def normalize_record(rec: Dict[str, Any]) -> Dict[str, Any]:
-    # MS名（基底名）の正規化（index.json 準拠の表記に寄せる）
-    def normalize_ms_base(name: str) -> str:
-        m = re.match(r"^(.*)_LV(\d+)$", name)
-        if not m:
-            return name
-        base, lv = m.group(1), m.group(2)
-        out = base
-        # [] → ［］
-        out = out.replace("[", "［").replace("]", "］")
-        # ローマ数字 II/III → Ⅱ/Ⅲ（順序に注意）
-        out = out.replace("III", "Ⅲ").replace("II", "Ⅱ")
-        # 文脈Z → Ζ（ギリシャ）: ガンダム/ガンダム3号機の直前のみ
-        out = re.sub(r"ZZ(?=ガンダム)", "ΖΖ", out)
-        out = re.sub(r"Z(?=ガンダム3号機)", "Ζ", out)
-        out = re.sub(r"Z(?=ガンダム)", "Ζ", out)
-        # 全角Ｖ → 半角V（例: ゲルググ・Ｖ・キュアノス）
-        out = out.replace("Ｖ", "V")
-        return f"{out}_LV{lv}"
+def load_index_url_map(path: Path) -> Dict[str, str]:
+    if not path.exists():
+        return {}
+    try:
+        data = load_json(path)
+    except Exception:
+        return {}
+    if not isinstance(data, list):
+        return {}
+    urls: Dict[str, str] = {}
+    for entry in data:
+        if not isinstance(entry, dict):
+            continue
+        name = entry.get("name")
+        url = entry.get("url")
+        if not isinstance(name, str) or not isinstance(url, str):
+            continue
+        urls[normalize_ms_base_name(name)] = url
+    return urls
 
-    # まず MS名を正規化
+
+INDEX_URL_MAP = load_index_url_map(Path("cache/index.json"))
+
+
+def normalize_record(rec: Dict[str, Any]) -> Dict[str, Any]:
     name = rec.get("MS名")
     if isinstance(name, str):
-        rec["MS名"] = normalize_ms_base(name)
+        normalized_name = normalize_ms_name(name)
+        rec["MS名"] = normalized_name
+        base_name = extract_ms_base_name(normalized_name)
+        if (
+            base_name
+            and base_name in INDEX_URL_MAP
+            and "wiki_url" not in rec
+        ):
+            rec["wiki_url"] = INDEX_URL_MAP[base_name]
     # 別名キーを正規キーへ移し替え（既存が無い場合のみ）
     rec = apply_key_aliases(rec)
     # 数値項目で None は削除（schema適合のため）。
