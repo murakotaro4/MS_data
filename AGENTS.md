@@ -28,9 +28,9 @@
 
 ## スクレイピング手順（atwiki）
 - 一覧取得: `uv run python scripts/scrape_msdata.py index --url https://w.atwiki.jp/battle-operation2/pages/377.html --out cache/index.json`
-- 詳細取得: `uv run python scripts/scrape_msdata.py details --in cache/index.json --out cache/details.jsonl --rate 1.0`
+- 詳細取得: `uv run python scripts/scrape_msdata.py details --in cache/index.json --out cache/details.jsonl --rate 2.0`
 - 連続実行: `uv run python scripts/scrape_msdata.py all --out cache/details.jsonl`
-- 取り込み: `jq -s '.' cache/details.jsonl > cache/details.json && uv run python scripts/update_msdata.py -i cache/details.json`
+- 取り込み: `make import-details`（`scripts/jsonl_to_json.py` を使用、`jq` 非依存）
 
 注意（SSOT）
 - 本リポジトリでは index（`cache/index.json`）の `name` を真実のソース（SSOT）とし、詳細抽出の `MS名` も index の表記で固定します（LVは `_LVn` で付与）。
@@ -72,9 +72,17 @@
 - オプション: `--ttl 7d` / `--no-network` / `--force`
 - 保存先: `cache/html/<slug>.html` + `*.meta.json`（ETag/Last-Modified/sha256）
 
+## レート制限とスクレイピング高速化
+- デフォルトレート: 2.0 req/sec（Makefileの`RATE`変数で設定）
+  - 処理時間: 538件で約4.5分（1.0 req/secの約半分）
+  - atwikiへの負荷を考慮し、過度な緩和は避ける
+- レート調整: `make scrape-details RATE=3.0` のように指定可能
+- キャッシュ活用: 2回目以降は `NO_NET=1` でキャッシュのみ使用可能（数秒で完了）
+- JSONL→JSON変換: `scripts/jsonl_to_json.py` を使用（`jq` 非依存）
+
 ## 実行スニペット（更新フロー）
 - 全件詳細→取り込み→検証
-  - `make scrape-details TTL=7d RATE=1.0 LIMIT=0`
+  - `make scrape-details TTL=7d RATE=2.0 LIMIT=0`（デフォルトRATE=2.0、必要に応じて調整可能）
   - `make import-details`
   - `make validate`（厳格: `make validate-strict`）
 - 差分要約はコマンド出力（`records: A -> B | +X -Y ~Z`）で確認
@@ -88,7 +96,7 @@
 
 ## 最終的な msData.json 作成計画（合意済み）
 1) 監査を回す: `make labels LIMIT=0 && make audit-labels`（unknown=0確認）
-2) 全件詳細取得: `make scrape-details TTL=7d RATE=1.0 LIMIT=0`
+2) 全件詳細取得: `make scrape-details TTL=7d RATE=2.0 LIMIT=0`（デフォルトRATE=2.0）
 3) 取り込み: `make import-details`（回転/出撃の補正・推定を含む）
 4) 検証: `make validate-strict`（スキーマ/重複/別名チェック）
 5) 差分確認: `git diff -- msData.json`（件数/キー変更）
@@ -153,18 +161,14 @@ MS名の正規化（index準拠）
 7) PR: 変更概要・データ来歴・統計（件数/キー変更）を記載。
 
 ### 週次データ更新（実例: 2025-09-17）
-- index/details を強制再取得: `make scrape-index FORCE=1 TTL=1d` → `make scrape-details FORCE=1 TTL=1d RATE=1.0 LIMIT=0`（タイムアウト時は `NO_NET=1` に切り替えてキャッシュ再利用）
-- JSONL を配列にまとめる（`jq` 未導入時は Python ワンライナーで代替）:
-  ```bash
-  uv run python - <<'PY'
-  import json
-  from pathlib import Path
-  records = [json.loads(line) for line in Path('cache/details.jsonl').read_text().splitlines() if line.strip()]
-  Path('cache/details.json').write_text(json.dumps(records, ensure_ascii=False, indent=2))
-  PY
-  ```
+- index/details を強制再取得: `make scrape-index FORCE=1 TTL=1d` → `make scrape-details FORCE=1 TTL=1d RATE=2.0 LIMIT=0`（デフォルトRATE=2.0、タイムアウト時は `NO_NET=1` に切り替えてキャッシュ再利用）
+- JSONL を配列にまとめる: `make import-details`（`scripts/jsonl_to_json.py` を使用、`jq` 非依存）
 - 取り込み・検証: `uv run python -m scripts.update_msdata -i cache/details.json` → 出力の `records: A -> B | +X -Y ~Z` を控え、`make validate-strict`
-- 監査とレポート: `make audit-index` を実行し `reports/index_ms_audit_YYYYMMDD.md` を生成。差分概要は `reports/msdata_update_YYYYMMDD.md` にまとめ（新規機体/既存更新/検証結果/実行コマンドを記載）
+- 監査とレポート: `make audit-index` を実行し `reports/index_ms_audit_YYYYMMDD.md` を生成。差分概要は `reports/msdata_update_YYYYMMDD.md` にまとめる
+  - **レポート作成時は `reports/msdata_update_template.md` を参照し、その内容に沿って作成する**
+  - 新規追加機体は主要パラメータを網羅的に記載
+  - 既存更新は変更前後の値を明記
+  - 実行手順、差分ファイル、備考セクションは記載しない
 - レビュー観点: 新規追加・既存調整のキー（ショップ条件/補正/スロット/強化リスト）を抜粋し、`git diff -- msData.json` と突き合わせて確認する
 
 ## 取得元と更新頻度（推奨）

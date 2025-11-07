@@ -64,7 +64,7 @@ normalize:
 ci: lint test validate-strict
 
 TTL ?= 7d
-RATE ?= 1.0
+RATE ?= 2.0
 LIMIT ?= 0
 NO_NET ?=
 FORCE ?=
@@ -79,7 +79,7 @@ scrape-all:
 	uv run python -m scripts.scrape_msdata all --out cache/details.jsonl --rate $(RATE)
 
 import-details:
-	jq -s '.' cache/details.jsonl > cache/details.json
+	uv run python -m scripts.jsonl_to_json cache/details.jsonl cache/details.json
 	uv run python -m scripts.update_msdata -i cache/details.json
 
 labels:
