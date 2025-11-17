@@ -23271,32 +23271,32 @@
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 350
       },
       {
         "name": "耐実弾装甲補強",
         "level": 1,
-        "points": null
+        "points": 700
       },
       {
         "name": "耐格闘装甲補強",
         "level": 1,
-        "points": null
+        "points": 1050
       },
       {
         "name": "AD-FCS",
         "level": 1,
-        "points": null
+        "points": 1410
       },
       {
         "name": "耐実弾装甲補強",
         "level": 3,
-        "points": null
+        "points": 2820
       },
       {
         "name": "AD-FCS",
         "level": 3,
-        "points": null
+        "points": 4230
       }
     ]
   },
@@ -29024,7 +29024,7 @@
     "レアリティ": "☆☆",
     "必要階級": "二等兵01",
     "必要DP": 8300,
-    "必要リサイクルチケット": 95,
+    "必要リサイクルチケット": 30,
     "fullst": [
       {
         "name": "複合拡張パーツスロット",
@@ -30426,33 +30426,33 @@
     "fullst": [
       {
         "name": "フレーム補強",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 380
       },
       {
         "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 770
       },
       {
         "name": "AD-FCS",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 930
       },
       {
         "name": "耐実弾装甲補強",
         "level": 1,
-        "points": null
+        "points": 1100
       },
       {
         "name": "耐格闘装甲補強",
         "level": 3,
-        "points": null
+        "points": 2200
       },
       {
         "name": "AD-FCS",
         "level": 3,
-        "points": null
+        "points": 3300
       }
     ]
   },
@@ -33387,33 +33387,33 @@
     "fullst": [
       {
         "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 270
       },
       {
         "name": "耐実弾装甲補強",
         "level": 1,
-        "points": null
+        "points": 550
       },
       {
         "name": "耐格闘装甲補強",
         "level": 1,
-        "points": null
+        "points": 820
       },
       {
         "name": "AD-FCS",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 1100
       },
       {
         "name": "耐実弾装甲補強",
         "level": 3,
-        "points": null
+        "points": 2200
       },
       {
         "name": "AD-FCS",
         "level": 3,
-        "points": null
+        "points": 3300
       }
     ]
   },
@@ -42213,33 +42213,33 @@
     "fullst": [
       {
         "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 390
       },
       {
         "name": "AD-FCS",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 780
       },
       {
         "name": "耐実弾装甲補強",
         "level": 1,
-        "points": null
+        "points": 1040
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 1300
       },
       {
         "name": "支援砲撃耐性",
         "level": 1,
-        "points": null
+        "points": 2600
       },
       {
         "name": "強化セキュリティ",
         "level": 1,
-        "points": null
+        "points": 3900
       }
     ]
   },
@@ -52239,33 +52239,33 @@
     "fullst": [
       {
         "name": "フレーム補強",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 270
       },
       {
         "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 550
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 830
       },
       {
         "name": "AD-FCS",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 1390
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 3,
-        "points": null
+        "points": 2780
       },
       {
         "name": "AD-FCS",
         "level": 3,
-        "points": null
+        "points": 4170
       }
     ]
   },
@@ -61728,6 +61728,68 @@
     ]
   },
   {
+    "MS名": "赤いガンダム_LV2",
+    "wiki_url": "https://w.atwiki.jp/battle-operation2/pages/6657.html",
+    "属性": "強襲",
+    "出撃_地上可": true,
+    "出撃_宇宙可": true,
+    "環境適正_地上": false,
+    "環境適正_宇宙": true,
+    "環境適正_水中": false,
+    "コスト": 550,
+    "HP": 20000,
+    "耐実弾補正": 15,
+    "耐ビーム補正": 17,
+    "耐格闘補正": 19,
+    "射撃補正": 30,
+    "格闘補正": 27,
+    "スピード": 130,
+    "高速移動": 210,
+    "スラスター": 65,
+    "旋回_地上_通常時": 66,
+    "旋回_宇宙_通常時": 75,
+    "近スロット": 19,
+    "中スロット": 13,
+    "遠スロット": 8,
+    "カウンター": "蹴り飛ばし",
+    "再出撃時間": 14,
+    "格闘判定力": "強",
+    "レアリティ": "☆☆☆",
+    "必要階級": "",
+    "fullst": [
+      {
+        "name": "耐格闘装甲補強",
+        "level": 1,
+        "points": null
+      },
+      {
+        "name": "AD-FCS",
+        "level": 1,
+        "points": null
+      },
+      {
+        "name": "シールド構造強化",
+        "level": 1,
+        "points": null
+      },
+      {
+        "name": "複合拡張パーツスロット",
+        "level": 1,
+        "points": null
+      },
+      {
+        "name": "耐格闘装甲補強",
+        "level": 4,
+        "points": null
+      },
+      {
+        "name": "AD-FCS",
+        "level": 4,
+        "points": null
+      }
+    ]
+  },
+  {
     "MS名": "量産型Ζガンダム_LV1",
     "wiki_url": "https://w.atwiki.jp/battle-operation2/pages/6090.html",
     "属性": "汎用",
@@ -69799,6 +69861,7 @@
     "格闘判定力": "強",
     "レアリティ": "☆☆☆",
     "必要階級": "",
+    "必要リサイクルチケット": 480,
     "fullst": [
       {
         "name": "AD-PA",
@@ -75341,6 +75404,7 @@
     "格闘判定力": "中",
     "レアリティ": "☆☆☆",
     "必要階級": "",
+    "必要リサイクルチケット": 230,
     "fullst": [
       {
         "name": "耐ビーム装甲補強",
@@ -77139,6 +77203,7 @@
     "格闘判定力": "中",
     "レアリティ": "☆☆☆",
     "必要階級": "",
+    "必要リサイクルチケット": 335,
     "fullst": [
       {
         "name": "耐ビーム装甲補強",
@@ -78109,32 +78174,32 @@
       {
         "name": "AD-PA",
         "level": 1,
-        "points": null
+        "points": 390
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 790
       },
       {
         "name": "プロペラントタンク",
         "level": 1,
-        "points": null
+        "points": 1450
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 2650
       },
       {
         "name": "プロペラントタンク",
         "level": 3,
-        "points": null
+        "points": 5300
       },
       {
         "name": "AD-PA",
         "level": 4,
-        "points": null
+        "points": 7950
       }
     ]
   },
@@ -81025,6 +81090,7 @@
     "格闘判定力": "強",
     "レアリティ": "☆☆☆",
     "必要階級": "",
+    "必要リサイクルチケット": 565,
     "fullst": [
       {
         "name": "AD-PA",
@@ -86076,6 +86142,7 @@
     "格闘判定力": "中",
     "レアリティ": "☆☆☆",
     "必要階級": "",
+    "必要リサイクルチケット": 265,
     "fullst": [
       {
         "name": "耐ビーム装甲補強",
@@ -87342,33 +87409,33 @@
     "fullst": [
       {
         "name": "AD-FCS",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 700
       },
       {
         "name": "プロペラントタンク",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 1400
       },
       {
         "name": "フレーム補強",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 2100
       },
       {
         "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 2800
       },
       {
         "name": "フレーム補強",
         "level": 4,
-        "points": null
+        "points": 5600
       },
       {
         "name": "AD-FCS",
         "level": 4,
-        "points": null
+        "points": 8400
       }
     ]
   },
@@ -95232,6 +95299,68 @@
         "name": "緊急射撃防御機構",
         "level": 1,
         "points": null
+      }
+    ]
+  },
+  {
+    "MS名": "クラスターガンダム_LV1",
+    "wiki_url": "https://w.atwiki.jp/battle-operation2/pages/7169.html",
+    "属性": "強襲",
+    "出撃_地上可": true,
+    "出撃_宇宙可": true,
+    "環境適正_地上": false,
+    "環境適正_宇宙": true,
+    "環境適正_水中": false,
+    "コスト": 750,
+    "HP": 23000,
+    "耐実弾補正": 25,
+    "耐ビーム補正": 30,
+    "耐格闘補正": 29,
+    "射撃補正": 39,
+    "格闘補正": 36,
+    "スピード": 145,
+    "高速移動": 230,
+    "スラスター": 75,
+    "旋回_地上_通常時": 81,
+    "旋回_宇宙_通常時": 90,
+    "近スロット": 22,
+    "中スロット": 22,
+    "遠スロット": 12,
+    "カウンター": "蹴り飛ばし",
+    "再出撃時間": 16,
+    "格闘判定力": "強",
+    "レアリティ": "☆☆☆",
+    "必要階級": "",
+    "fullst": [
+      {
+        "name": "耐ビーム装甲補強",
+        "level": 1,
+        "points": 710
+      },
+      {
+        "name": "AD-FCS",
+        "level": 1,
+        "points": 1430
+      },
+      {
+        "name": "冷却補助システム",
+        "level": 1,
+        "points": 2140
+      },
+      {
+        "name": "複合拡張パーツスロット",
+        "level": 1,
+        "points": 2860
+      },
+      {
+        "name": "耐ビーム装甲補強",
+        "level": 4,
+        "points": 5720
+      },
+      {
+        "name": "AD-FCS",
+        "level": 4,
+        "points": 8580
       }
     ]
   },
