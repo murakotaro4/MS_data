@@ -21,7 +21,9 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import functools
 import json
+import os
 import re
 import sys
 import time
@@ -55,6 +57,17 @@ def absolute_url(href: str) -> str:
 
 def get_client(timeout: float = 30.0) -> httpx.Client:
     headers = {"User-Agent": "msdata-scraper/0.1 (+https://github.com/; contact=local)"}
+    # Cloudflare対策: cloudscraper が利用可能な場合は優先して使う。
+    if os.getenv("MSDATA_HTTP_CLIENT", "cloudscraper").lower() == "cloudscraper":
+        try:
+            import cloudscraper
+
+            scraper = cloudscraper.create_scraper()
+            scraper.headers.update(headers)
+            scraper.request = functools.partial(scraper.request, timeout=timeout)
+            return scraper
+        except Exception as exc:  # cloudscraperが使えない場合は httpx へフォールバック
+            print(f"[warn] cloudscraper unavailable, fallback to httpx: {exc}", file=sys.stderr)
     return httpx.Client(headers=headers, timeout=timeout, follow_redirects=True)
 
 
