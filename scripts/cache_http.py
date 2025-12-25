@@ -105,8 +105,8 @@ class CacheHTTP:
             except Exception:
                 ttl_ok = False
 
-        # オフライン or TTL内: キャッシュ優先
-        if (self.cfg.no_network or ttl_ok) and html_path.exists():
+        # オフライン or TTL内: キャッシュ優先（force は TTL 判定を無視）
+        if (self.cfg.no_network or (ttl_ok and not self.cfg.force)) and html_path.exists():
             text = html_path.read_text(encoding="utf-8")
             if not meta.get("content_sha256"):
                 meta["content_sha256"] = self._sha256_text(text)
