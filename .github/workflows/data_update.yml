@@ -1,0 +1,89 @@
+name: data update
+
+on:
+  schedule:
+    - cron: "0 9 * * 2,4" # JST 18:00 (Tue/Thu)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Tokyo
+      TTL: 7d
+      RATE: 1.0
+      LIMIT: 0
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install deps
+        run: uv sync --dev
+
+      - name: Prepare
+        run: echo "REPORT_DATE=$(date +%Y%m%d)" >> "$GITHUB_ENV"
+
+      - name: Fetch and import
+        run: |
+          cp msData.json msData.before.json
+          make scrape-index TTL="${TTL}"
+          make scrape-details TTL="${TTL}" RATE="${RATE}" LIMIT="${LIMIT}"
+          make import-details
+          make validate-strict
+          uv run python -m scripts.report_msdata_diff \
+            --old msData.before.json \
+            --new msData.json \
+            --out "reports/diff_msdata_${REPORT_DATE}.md" \
+            --print-summary | tee reports/diff_summary.txt
+          rm -f msData.before.json
+
+      - id: summary
+        name: Read summary
+        run: |
+          echo "summary=$(cat reports/diff_summary.txt)" >> "$GITHUB_OUTPUT"
+
+      - id: changes
+        name: Check changes
+        run: |
+          if [ -n "$(git diff --name-only -- msData.json reports)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Send report mail
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GMAIL_TO: ${{ secrets.GMAIL_TO }}
+        run: |
+          uv run python -m scripts.send_gmail \
+            --subject "msData 更新レポート (${REPORT_DATE})" \
+            --body "reports/diff_msdata_${REPORT_DATE}.md"
+
+      - name: Create pull request
+        if: steps.changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "data: msData.json を更新（${{ env.REPORT_DATE }}; ${{ steps.summary.outputs.summary }}）"
+          title: "data: msData.json を更新（${{ env.REPORT_DATE }}）"
+          body: |
+            自動更新（取得→取り込み→検証）。
+            - 差分: ${{ steps.summary.outputs.summary }}
+            - レポート: reports/diff_msdata_${{ env.REPORT_DATE }}.md
+          branch: "data/auto-update-${{ env.REPORT_DATE }}"
+          add-paths: |
+            msData.json
+            reports/*.md

@@ -3,7 +3,7 @@ SHELL := bash
 
 MSDATA := msData.json
 
-.PHONY: help setup format lint test validate validate-strict update normalize ci scrape-index scrape-details scrape-all import-details labels audit-labels audit-index skills skills-table owners-table build-skills build-param-skills build-owners-flat audit-skills preview-params
+.PHONY: help setup format lint test validate validate-strict update normalize ci scrape-index scrape-details scrape-all import-details labels audit-labels report-diff audit-index skills skills-table owners-table build-skills build-param-skills build-owners-flat audit-skills preview-params
 
 help:
 	@echo "Available targets:"
@@ -22,6 +22,7 @@ help:
 	@echo "  import-details    JSONL -> JSON array -> msData.json update"
 	@echo "  labels            Extract raw/normalized row labels (cache-aware)"
 	@echo "  audit-labels      Aggregate labels_raw.jsonl into Markdown report"
+	@echo "  report-diff       Generate diff report between two msData.json files"
 	@echo "  audit-index       Compare index.json vs msData.json (names/attr/cost)"
 	@echo "  skills            Extract core system skills -> cache/skills.json"
 	@echo "  skills-table      Extract strict table rows -> cache/skills_table.json"
@@ -87,6 +88,9 @@ labels:
 
 audit-labels:
 	uv run python -m scripts.audit_labels --in cache/labels_raw.jsonl --out reports/label_audit_$(shell date +%Y%m%d).md
+
+report-diff:
+	uv run python -m scripts.report_msdata_diff --old $(OLD) --new $(NEW) --out $(OUT)
 
 # Index vs msData audit (names, presence, attr/cost)
 audit-index:
