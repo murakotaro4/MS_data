@@ -37,6 +37,7 @@ jobs:
       - name: Fetch and import
         run: |
           cp msData.json msData.before.json
+          mkdir -p reports
           make scrape-index TTL="${TTL}"
           make scrape-details TTL="${TTL}" RATE="${RATE}" LIMIT="${LIMIT}"
           make import-details
