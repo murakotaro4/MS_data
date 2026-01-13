@@ -9,9 +9,18 @@
 - all     : index → details まで一気通貫で実行
 
 使い方例
-- 一覧のみ:                   uv run python scripts/scrape_msdata.py index --url https://w.atwiki.jp/battle-operation2/pages/377.html --out cache/index.json
-- 詳細スクレイプ:             uv run python scripts/scrape_msdata.py details --in cache/index.json --out cache/details.jsonl --rate 1.0
-- 一気通貫（出力JSONL）:     uv run python scripts/scrape_msdata.py all --out cache/details.jsonl
+- 一覧のみ:
+  uv run python scripts/scrape_msdata.py index \
+      --url https://w.atwiki.jp/battle-operation2/pages/377.html \
+      --out cache/index.json
+- 詳細スクレイプ:
+  uv run python scripts/scrape_msdata.py details \
+      --in cache/index.json \
+      --out cache/details.jsonl \
+      --rate 1.0
+- 一気通貫（出力JSONL）:
+  uv run python scripts/scrape_msdata.py all \
+      --out cache/details.jsonl
 
 注意
 - レート制限を守ってください（既定: 1 req/sec）。
@@ -27,19 +36,18 @@ import os
 import re
 import sys
 import time
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 from bs4 import BeautifulSoup, Tag
+
+from scripts.cache_http import CacheConfig, CacheHTTP
 from scripts.label_utils import (
+    FIELD_MAP,
     clean_text,
     normalize_row_label,
-    FIELD_MAP,
 )
-from scripts.cache_http import CacheHTTP, CacheConfig
-
 
 ATWIKI_BASE = "https://w.atwiki.jp"
 INDEX_URL = "https://w.atwiki.jp/battle-operation2/pages/377.html"
@@ -488,7 +496,8 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
                 per_level[lv]["出撃_地上可"] = False
                 per_level[lv]["出撃_宇宙可"] = True
 
-    # 回転値の補正: 宇宙専用/地上専用なのに単一見出しが地上/宇宙側に寄っている場合、適切な側へ移す
+    # 回転値の補正: 宇宙専用/地上専用なのに単一見出しが
+    # 地上/宇宙側に寄っている場合は適切な側へ移す
     for lv in levels:
         rec = per_level[lv]
         g = rec.get("出撃_地上可")
@@ -506,7 +515,8 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
             if "旋回_地上_変形時" not in rec and "旋回_宇宙_変形時" in rec:
                 rec["旋回_地上_変形時"] = rec.pop("旋回_宇宙_変形時")
 
-    # 強化リスト情報（fullst）を抽出：各MSレベルごとに必要強化値で昇順ソートし、points を付与
+    # 強化リスト情報（fullst）を抽出
+    # 各MSレベルごとに必要強化値で昇順ソートし、points を付与
     def parse_fullst_by_ms_level(
         s: BeautifulSoup, ms_levels: List[int]
     ) -> Dict[int, List[Dict[str, Any]]]:
@@ -579,21 +589,22 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
                     if val is not None:
                         points_by_ms[ms_lv] = val
 
-            # 少なくともどこかのMSレベルで数値があるときのみ採用
-            if points_by_ms:
-                rows.append((current_name, fullst_lv, points_by_ms))
+            # 空でも rows に追加（全MSレベルで数値がない場合も採用）
+            rows.append((current_name, fullst_lv, points_by_ms))
 
-        # 各MSレベルごとに、同一リスト名については「数値が存在するLvの中で最小と最大のみ」を採用し、points昇順で並べる
+        # 各MSレベルごとに、同一リスト名については
+        # 「数値が存在するLvの最小と最大のみ」を採用し、points 昇順で並べる
         by_ms_level: Dict[int, List[Dict[str, Any]]] = {lv: [] for lv in ms_levels}
         for ms_lv in ms_levels:
-            # name -> list of (list_level, points)
-            by_name: Dict[str, List[Tuple[int, int]]] = {}
+            # name -> list of (list_level, points or None)
+            by_name: Dict[str, List[Tuple[int, Optional[int]]]] = {}
             for nm, flv, pmap in rows:
-                if ms_lv in pmap:
-                    by_name.setdefault(nm, []).append((flv, pmap[ms_lv]))
+                # 空の pmap も考慮（全MSレベルで数値がない場合は None）
+                pts = pmap.get(ms_lv)
+                by_name.setdefault(nm, []).append((flv, pts))
             items: List[Dict[str, Any]] = []
             for nm, lst in by_name.items():
-                # 数値がある level を採用（Lvの最小/最大）
+                # level でソート
                 lst_sorted = sorted(lst, key=lambda x: x[0])
                 keep = []
                 if lst_sorted:
@@ -602,15 +613,16 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
                     keep.append(lst_sorted[-1])
                 for flv, pts in keep:
                     items.append({"name": nm, "level": flv, "points": pts})
-            # points 昇順で整列
-            items.sort(key=lambda d: d.get("points", 0))
+            # points 昇順で整列（None を先頭に）
+            items.sort(key=lambda d: (d.get("points") is not None, d.get("points") or 0))
             if items:
                 by_ms_level[ms_lv] = items
         # 空のMSレベルは削除
         return {k: v for k, v in by_ms_level.items() if v}
 
     fullst_by_lv = parse_fullst_by_ms_level(soup, levels)
-    # フォールバック: 強化リストが未掲載のMSレベルには直前のレベルのfullstを採用（pointsは未知なのでNone）
+    # フォールバック: 強化リストが未掲載のMSレベルには直前レベルの
+    # fullst を採用（points は未知なので None）
     seen_lower: List[int] = []
     for lv in sorted(levels):
         if lv in fullst_by_lv and fullst_by_lv[lv]:
