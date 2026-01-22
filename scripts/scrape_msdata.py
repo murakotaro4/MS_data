@@ -589,7 +589,9 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
                     if val is not None:
                         points_by_ms[ms_lv] = val
 
-            # 空でも rows に追加（全MSレベルで数値がない場合も採用）
+            # 数値がない行はスキップ（強行出撃のみ例外で採用）
+            if not points_by_ms and "強行出撃" not in current_name:
+                continue
             rows.append((current_name, fullst_lv, points_by_ms))
 
         # 各MSレベルごとに、同一リスト名については
@@ -599,8 +601,9 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
             # name -> list of (list_level, points or None)
             by_name: Dict[str, List[Tuple[int, Optional[int]]]] = {}
             for nm, flv, pmap in rows:
-                # 空の pmap も考慮（全MSレベルで数値がない場合は None）
                 pts = pmap.get(ms_lv)
+                if pts is None and "強行出撃" not in nm:
+                    continue
                 by_name.setdefault(nm, []).append((flv, pts))
             items: List[Dict[str, Any]] = []
             for nm, lst in by_name.items():
