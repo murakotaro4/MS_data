@@ -11,3 +11,11 @@ msData.pretty.json
 .vscode/
 cache/
 derived/
+
+# Claude Code / Harness
+.claude/
+.claude-code-harness-version
+.claude-code-harness.config.yaml
+
+# Serena
+.serena/
