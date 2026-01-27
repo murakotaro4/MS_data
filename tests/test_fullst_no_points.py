@@ -73,12 +73,25 @@ def test_fullst_with_numeric_points():
     assert rec["fullst"][0]["points"] == 2580
 
 
-def test_fullst_with_hyphen():
-    """ハイフン（-）が入っている場合 → points: None
+def test_fullst_with_hyphen_strong_sortie():
+    """強行出撃のみ、ハイフン（-）は points: None で採用される。"""
+    html = _make_html_with_fullst("""
+        <tr><th>強行出撃</th><th>Lv1</th><td>-</td><td>効果:+500</td></tr>
+    """)
+    per_level = sm.parse_details(html)
 
-    to_int("-") が None を返すが、その行も fullst に追加される。
-    points: None として記録される。
-    """
+    assert 1 in per_level
+    rec = per_level[1]
+    # 強行出撃のみ points: None を許可
+    fullst = rec.get("fullst", [])
+    assert len(fullst) == 1
+    assert fullst[0]["name"] == "強行出撃"
+    assert fullst[0]["level"] == 1
+    assert fullst[0]["points"] is None
+
+
+def test_fullst_with_hyphen_non_special():
+    """ハイフン（-）は強行出撃以外では fullst に含めない。"""
     html = _make_html_with_fullst("""
         <tr><th>HP強化</th><th>Lv1</th><td>-</td><td>効果:+500</td></tr>
     """)
@@ -86,20 +99,11 @@ def test_fullst_with_hyphen():
 
     assert 1 in per_level
     rec = per_level[1]
-    # ハイフンの場合、points: None で fullst に追加される
-    fullst = rec.get("fullst", [])
-    assert len(fullst) == 1
-    assert fullst[0]["name"] == "HP強化"
-    assert fullst[0]["level"] == 1
-    assert fullst[0]["points"] is None
+    assert "fullst" not in rec
 
 
 def test_fullst_with_empty_cell():
-    """空セルの場合 → points: None
-
-    空セルも to_int が None を返すが、その行も fullst に追加される。
-    points: None として記録される。
-    """
+    """空セルは（強行出撃以外） fullst に含めない。"""
     html = _make_html_with_fullst("""
         <tr><th>スピード強化</th><th>Lv1</th><td></td><td>効果:+2</td></tr>
     """)
@@ -107,24 +111,19 @@ def test_fullst_with_empty_cell():
 
     assert 1 in per_level
     rec = per_level[1]
-    # 空セルの場合、points: None で fullst に追加される
-    fullst = rec.get("fullst", [])
-    assert len(fullst) == 1
-    assert fullst[0]["name"] == "スピード強化"
-    assert fullst[0]["level"] == 1
-    assert fullst[0]["points"] is None
+    assert "fullst" not in rec
 
 
 def test_fullst_sort_none_first():
     """None と数値が混在する場合のソート確認。
 
     実装では points: None を先頭に、その後数値を昇順でソートする。
-    ハイフンや空セルがある行は points: None として追加される。
+    points: None は強行出撃のみ許可される。
     """
-    # 数値あり・ハイフン・数値あり の混在
+    # 数値あり・強行出撃（ハイフン）・数値あり の混在
     html = _make_html_with_fullst("""
         <tr><th>HP強化</th><th>Lv1</th><td>3000</td><td>効果:+500</td></tr>
-        <tr><th>スピード強化</th><th>Lv1</th><td>-</td><td>効果:+2</td></tr>
+        <tr><th>強行出撃</th><th>Lv1</th><td>-</td><td>効果:+2</td></tr>
         <tr><th>スラスター強化</th><th>Lv1</th><td>1000</td><td>効果:+5</td></tr>
     """)
     per_level = sm.parse_details(html)
@@ -138,9 +137,9 @@ def test_fullst_sort_none_first():
     points_list = [e["points"] for e in rec["fullst"]]
     assert points_list == [None, 1000, 3000]
 
-    # 名前も確認（None が先頭なのでスピード強化が最初）
+    # 名前も確認（None が先頭なので強行出撃が最初）
     names = [e["name"] for e in rec["fullst"]]
-    assert names == ["スピード強化", "スラスター強化", "HP強化"]
+    assert names == ["強行出撃", "スラスター強化", "HP強化"]
 
 
 def test_fullst_fallback_with_none_points():
@@ -217,3 +216,61 @@ def test_fullst_fallback_with_none_points():
     # 名前とレベルは保持
     assert lv2_fullst[0]["name"] == "HP強化"
     assert lv2_fullst[1]["name"] == "HP強化"
+
+
+def test_fullst_skip_missing_points_per_level():
+    """同じリストでも該当LVのpointsが無い場合は採用しない（強行出撃を除く）。"""
+    html = """
+    <html><head><title>テスト機体</title></head>
+    <body>
+      <div id="table_hanyou">
+        <table>
+          <thead>
+            <tr><th></th><th>LV1</th><th>LV2</th></tr>
+          </thead>
+          <tbody>
+            <tr><th>機体HP</th><td>10000</td><td>11000</td></tr>
+            <tr><th>スピード</th><td>120</td><td>120</td></tr>
+            <tr><th>スラスター</th><td>60</td><td>62</td></tr>
+            <tr><th>高速移動</th><td>180</td><td>182</td></tr>
+            <tr><th>射撃補正</th><td>15</td><td>17</td></tr>
+            <tr><th>格闘補正</th><td>10</td><td>12</td></tr>
+            <tr><th>耐ビーム補正</th><td>8</td><td>9</td></tr>
+            <tr><th>耐実弾補正</th><td>10</td><td>11</td></tr>
+            <tr><th>耐格闘補正</th><td>6</td><td>7</td></tr>
+            <tr><th>旋回（地上）[度/秒]</th><td>75</td><td>76</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>パーツスロット</h3>
+      <table>
+        <tr><th>近距離</th><td>8</td><td>9</td></tr>
+        <tr><th>中距離</th><td>6</td><td>7</td></tr>
+        <tr><th>遠距離</th><td>4</td><td>5</td></tr>
+      </table>
+
+      <h2>強化リスト情報</h2>
+      <table>
+        <tr>
+          <th>強化リスト名</th>
+          <th>リストLv</th>
+          <th>LV1</th>
+          <th>LV2</th>
+          <th>効果</th>
+        </tr>
+        <tr><th>HP強化</th><th>Lv1</th><td>2000</td><td>-</td><td>効果:+500</td></tr>
+        <tr><th>AD-FCS</th><th>Lv1</th><td>1000</td><td>1100</td><td>効果:+5</td></tr>
+      </table>
+
+      <div id="label_sortie_G_S"></div>
+      <div id="label_env_G_S"></div>
+    </body></html>
+    """
+    per_level = sm.parse_details(html)
+
+    assert 2 in per_level
+    fullst = per_level[2].get("fullst", [])
+    # LV2 では points がある行のみ採用
+    assert len(fullst) == 1
+    assert fullst[0]["name"] == "AD-FCS"
+    assert fullst[0]["points"] == 1100
