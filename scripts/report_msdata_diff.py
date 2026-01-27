@@ -86,6 +86,96 @@ def format_list(items: Iterable[str], limit: int) -> Tuple[List[str], bool]:
     return ([f"  - {x}" for x in head], truncated)
 
 
+class _Sentinel:
+    """キー削除を表すセンチネル。None と区別するために使用。"""
+    pass
+
+
+_DELETED = _Sentinel()
+
+
+def get_changed_records_detail(
+    old: Dict[str, Dict[str, Any]], new: Dict[str, Dict[str, Any]]
+) -> List[Tuple[str, List[Tuple[str, str, Any, Any]]]]:
+    """変更レコードの詳細を取得。
+
+    戻り値: [(機体名, [(操作種別, 項目名, 旧値, 新値), ...]), ...]
+    操作種別: "added" | "removed" | "changed"
+    """
+    result: List[Tuple[str, List[Tuple[str, str, Any, Any]]]] = []
+    common = set(old.keys()) & set(new.keys())
+
+    for name in common:
+        o = old[name]
+        n = new[name]
+        changes: List[Tuple[str, str, Any, Any]] = []
+
+        o_keys = set(o.keys())
+        n_keys = set(n.keys())
+
+        # 追加された項目
+        for k in sorted(n_keys - o_keys):
+            changes.append(("added", k, _DELETED, n[k]))
+
+        # 削除された項目
+        for k in sorted(o_keys - n_keys):
+            changes.append(("removed", k, o[k], _DELETED))
+
+        # 変更された項目
+        for k in sorted(o_keys & n_keys):
+            if o.get(k) != n.get(k):
+                changes.append(("changed", k, o[k], n[k]))
+
+        if changes:
+            result.append((name, changes))
+
+    return result
+
+
+def format_value(value: Any) -> str:
+    """値を表示用にフォーマット。
+
+    特殊文字（改行、引用符、バックスラッシュ等）をエスケープし、
+    Markdownの崩れを防ぐ。
+    """
+    if isinstance(value, _Sentinel):
+        # センチネルは通常 format_change_inline で直接処理されるが、
+        # 万一呼ばれた場合の表示
+        return "削除"
+    if value is None:
+        return "null"
+    if isinstance(value, str):
+        # 文字列も json.dumps でエスケープ（引用符を除去）
+        return json.dumps(value, ensure_ascii=False)[1:-1]
+    if isinstance(value, (list, dict)):
+        return json.dumps(value, ensure_ascii=False)
+    # 数値・bool など
+    return str(value)
+
+
+def format_change_inline(
+    name: str, changes: List[Tuple[str, str, Any, Any]], max_items: int = 5
+) -> str:
+    """変更内容をインライン形式でフォーマット。
+
+    形式: '機体名: 項目 (旧 → 新), ...'
+    max_items: 表示する項目数の上限（超過分は省略表示）
+    """
+    parts: List[str] = []
+    for op, field, old_val, new_val in changes[:max_items]:
+        old_str = format_value(old_val)
+        new_str = format_value(new_val)
+        if op == "removed":
+            parts.append(f"{field} ({old_str} → 削除)")
+        elif op == "added":
+            parts.append(f"{field} (追加: {new_str})")
+        else:
+            parts.append(f"{field} ({old_str} → {new_str})")
+    if len(changes) > max_items:
+        parts.append(f"他{len(changes) - max_items}件")
+    return f"{name}: {', '.join(parts)}"
+
+
 def main(argv: List[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--old", type=Path, required=True)
@@ -115,6 +205,7 @@ def main(argv: List[str] | None = None) -> int:
 
     added_records = sorted(set(new_index.keys()) - set(old_index.keys()))
     removed_records = sorted(set(old_index.keys()) - set(new_index.keys()))
+    changed_records_detail = get_changed_records_detail(old_index, new_index)
 
     now = datetime.now()
     out_date = now.strftime("%Y%m%d")
@@ -168,6 +259,16 @@ def main(argv: List[str] | None = None) -> int:
     lines.extend(del_list)
     if del_truncated:
         lines.append(f"  - ...（残り {len(removed_records) - args.list_limit} 件）")
+    lines.append("")
+    lines.append("## 変更レコード一覧")
+    lines.append(f"- 件数: {len(changed_records_detail)}")
+    sorted_changed = sorted(changed_records_detail)
+    for name, changes in sorted_changed[: args.list_limit]:
+        lines.append(f"  - {format_change_inline(name, changes)}")
+    if len(sorted_changed) > args.list_limit:
+        lines.append(
+            f"  - ...（残り {len(sorted_changed) - args.list_limit} 件）"
+        )
     lines.append("")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
