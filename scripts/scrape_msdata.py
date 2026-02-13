@@ -596,6 +596,13 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
 
         # 各MSレベルごとに、同一リスト名については
         # 「数値が存在するLvの最小と最大のみ」を採用し、points 昇順で並べる
+        def is_only_strong_sortie_without_points(items: List[Dict[str, Any]]) -> bool:
+            """強行出撃（points=None）しか無いLVは未掲載扱いにする。"""
+            return bool(items) and all(
+                item.get("name") == "強行出撃" and item.get("points") is None
+                for item in items
+            )
+
         by_ms_level: Dict[int, List[Dict[str, Any]]] = {lv: [] for lv in ms_levels}
         for ms_lv in ms_levels:
             # name -> list of (list_level, points or None)
@@ -618,6 +625,10 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
                     items.append({"name": nm, "level": flv, "points": pts})
             # points 昇順で整列（None を先頭に）
             items.sort(key=lambda d: (d.get("points") is not None, d.get("points") or 0))
+            # 強行出撃のみ（かつポイント無し）のLVは、実質未掲載として扱う。
+            # こうすることで、直前LVからのフォールバック補完を有効化する。
+            if is_only_strong_sortie_without_points(items):
+                continue
             if items:
                 by_ms_level[ms_lv] = items
         # 空のMSレベルは削除

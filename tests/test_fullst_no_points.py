@@ -73,8 +73,8 @@ def test_fullst_with_numeric_points():
     assert rec["fullst"][0]["points"] == 2580
 
 
-def test_fullst_with_hyphen_strong_sortie():
-    """強行出撃のみ、ハイフン（-）は points: None で採用される。"""
+def test_fullst_with_hyphen_strong_sortie_only():
+    """強行出撃しかない場合は fullst を作らない（ガザCZ相当）。"""
     html = _make_html_with_fullst("""
         <tr><th>強行出撃</th><th>Lv1</th><td>-</td><td>効果:+500</td></tr>
     """)
@@ -82,12 +82,25 @@ def test_fullst_with_hyphen_strong_sortie():
 
     assert 1 in per_level
     rec = per_level[1]
-    # 強行出撃のみ points: None を許可
+    assert "fullst" not in rec
+
+
+def test_fullst_with_hyphen_strong_sortie_when_other_points_exist():
+    """他の数値付き強化がある場合、強行出撃は points: None で保持される。"""
+    html = _make_html_with_fullst("""
+        <tr><th>強行出撃</th><th>Lv1</th><td>-</td><td>効果:+500</td></tr>
+        <tr><th>HP強化</th><th>Lv1</th><td>2580</td><td>効果:+500</td></tr>
+    """)
+    per_level = sm.parse_details(html)
+
+    assert 1 in per_level
+    rec = per_level[1]
     fullst = rec.get("fullst", [])
-    assert len(fullst) == 1
+    assert len(fullst) == 2
     assert fullst[0]["name"] == "強行出撃"
-    assert fullst[0]["level"] == 1
     assert fullst[0]["points"] is None
+    assert fullst[1]["name"] == "HP強化"
+    assert fullst[1]["points"] == 2580
 
 
 def test_fullst_with_hyphen_non_special():
@@ -216,6 +229,64 @@ def test_fullst_fallback_with_none_points():
     # 名前とレベルは保持
     assert lv2_fullst[0]["name"] == "HP強化"
     assert lv2_fullst[1]["name"] == "HP強化"
+
+
+def test_fullst_fallback_when_upper_level_is_only_strong_sortie():
+    """上位LVが強行出撃のみなら未掲載扱いにして直前LVから補完する。"""
+    html = """
+    <html><head><title>テスト機体</title></head>
+    <body>
+      <div id="table_hanyou">
+        <table>
+          <thead>
+            <tr><th></th><th>LV1</th><th>LV2</th></tr>
+          </thead>
+          <tbody>
+            <tr><th>機体HP</th><td>10000</td><td>11000</td></tr>
+            <tr><th>スピード</th><td>120</td><td>120</td></tr>
+            <tr><th>スラスター</th><td>60</td><td>62</td></tr>
+            <tr><th>高速移動</th><td>180</td><td>182</td></tr>
+            <tr><th>射撃補正</th><td>15</td><td>17</td></tr>
+            <tr><th>格闘補正</th><td>10</td><td>12</td></tr>
+            <tr><th>耐ビーム補正</th><td>8</td><td>9</td></tr>
+            <tr><th>耐実弾補正</th><td>10</td><td>11</td></tr>
+            <tr><th>耐格闘補正</th><td>6</td><td>7</td></tr>
+            <tr><th>旋回（地上）[度/秒]</th><td>75</td><td>76</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>パーツスロット</h3>
+      <table>
+        <tr><th>近距離</th><td>8</td><td>9</td></tr>
+        <tr><th>中距離</th><td>6</td><td>7</td></tr>
+        <tr><th>遠距離</th><td>4</td><td>5</td></tr>
+      </table>
+
+      <h2>強化リスト情報</h2>
+      <table>
+        <tr>
+          <th>強化リスト名</th>
+          <th>リストLv</th>
+          <th>LV1</th>
+          <th>LV2</th>
+          <th>効果</th>
+        </tr>
+        <tr><th>強行出撃</th><th>Lv1</th><td>-</td><td>-</td><td>効果:+500</td></tr>
+        <tr><th>HP強化</th><th>Lv1</th><td>2000</td><td>-</td><td>効果:+500</td></tr>
+        <tr><th>AD-FCS</th><th>Lv1</th><td>1000</td><td>-</td><td>効果:+5</td></tr>
+      </table>
+
+      <div id="label_sortie_G_S"></div>
+      <div id="label_env_G_S"></div>
+    </body></html>
+    """
+    per_level = sm.parse_details(html)
+
+    assert 2 in per_level
+    fullst = per_level[2].get("fullst", [])
+    assert len(fullst) == 3
+    assert [e["name"] for e in fullst] == ["強行出撃", "AD-FCS", "HP強化"]
+    assert all(e["points"] is None for e in fullst)
 
 
 def test_fullst_skip_missing_points_per_level():

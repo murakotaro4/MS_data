@@ -18528,14 +18528,7 @@
     "再出撃時間": 9,
     "格闘判定力": "弱",
     "レアリティ": "☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "強行出撃",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ガザC_LV1",
@@ -87067,9 +87060,34 @@
     "必要階級": "",
     "fullst": [
       {
-        "name": "強行出撃",
+        "name": "AD-PA",
         "level": 1,
-        "points": null
+        "points": 890
+      },
+      {
+        "name": "耐格闘装甲補強",
+        "level": 1,
+        "points": 1790
+      },
+      {
+        "name": "プロペラントタンク",
+        "level": 1,
+        "points": 2180
+      },
+      {
+        "name": "複合拡張パーツスロット",
+        "level": 1,
+        "points": 2570
+      },
+      {
+        "name": "プロペラントタンク",
+        "level": 3,
+        "points": 5140
+      },
+      {
+        "name": "AD-PA",
+        "level": 4,
+        "points": 7710
       }
     ]
   },
@@ -97031,6 +97049,31 @@
         "name": "強行出撃",
         "level": 1,
         "points": null
+      },
+      {
+        "name": "AD-PA",
+        "level": 1,
+        "points": null
+      },
+      {
+        "name": "冷却補助システム",
+        "level": 1,
+        "points": null
+      },
+      {
+        "name": "複合拡張パーツスロット",
+        "level": 1,
+        "points": null
+      },
+      {
+        "name": "AD-PA",
+        "level": 4,
+        "points": null
+      },
+      {
+        "name": "緊急格闘防御機構",
+        "level": 1,
+        "points": null
       }
     ]
   },
@@ -100173,6 +100216,31 @@
     "fullst": [
       {
         "name": "強行出撃",
+        "level": 1,
+        "points": null
+      },
+      {
+        "name": "AD-FCS",
+        "level": 1,
+        "points": null
+      },
+      {
+        "name": "フレーム補強",
+        "level": 1,
+        "points": null
+      },
+      {
+        "name": "複合拡張パーツスロット",
+        "level": 1,
+        "points": null
+      },
+      {
+        "name": "AD-FCS",
+        "level": 4,
+        "points": null
+      },
+      {
+        "name": "緊急射撃防御機構",
         "level": 1,
         "points": null
       }
