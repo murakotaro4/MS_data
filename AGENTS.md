@@ -161,6 +161,12 @@ MS名の正規化（index準拠）
 6) コミット: `data: update msData.json (YYYY-MM-DD; +N/-M records)`
 7) PR: 変更概要・データ来歴・統計（件数/キー変更）を記載。
 
+### GitHub Actions運用（2026-02 更新）
+- 定期実行: `data update` は毎週 火/木 18:00 JST（`cron: 0 9 * * 2,4`）で実行し、差分があれば `data/auto-update-YYYYMMDD` のPRを作成します。
+- 通知タイミング: メール送信はPR作成時ではなく、`data/auto-update-*` が `main` にマージされた後に `post merge notify` で実行します。
+- メール内容: 本文は `reports/diff_msdata_YYYYMMDD.md`、添付は `msData.json` を使用します（`scripts/send_gmail.py --attach`）。
+- 宛先運用: `GMAIL_TO` はカンマ区切りで複数宛先を指定できます（例: `a@example.com,b@example.com`）。値の参照は不可のため、変更時は最終文字列で上書き更新します。
+
 ### 週次データ更新（実例: 2025-09-17）
 - index/details を強制再取得: `make scrape-index FORCE=1 TTL=1d` → `make scrape-details FORCE=1 TTL=1d RATE=2.0 LIMIT=0`（デフォルトRATE=2.0、タイムアウト時は `NO_NET=1` に切り替えてキャッシュ再利用）
 - JSONL を配列にまとめる: `make import-details`（`scripts/jsonl_to_json.py` を使用、`jq` 非依存）
