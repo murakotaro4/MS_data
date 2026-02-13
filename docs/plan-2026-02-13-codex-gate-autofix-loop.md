@@ -1,4 +1,4 @@
-# Codexレビュー起点の自動修正・マージゲート運用計画（v1）
+# Codexレビュー起点の自動修正・マージゲート運用計画（v2）
 
 最終更新: 2026-02-13
 対象リポジトリ: `murakotaro4/MS_data`
@@ -21,8 +21,10 @@
 4. P1/P2ありなら `codex-gate` チェックを失敗させる（マージ不可）
 5. `codex_autofix.yml` が `@codex address that feedback` を投稿
 6. Codexが修正コミットを提案・反映
-7. 再度 `codex_gate.yml` 判定
-8. P1/P2解消で `codex-gate` 成功、マージ可能
+7. `codex_gate.yml` は判定結果を `gate_result.json` として成果物化
+8. `codex_autofix.yml` が成果物を参照し、`findings` のみ自動修正を実行
+9. 再度 `codex_gate.yml` 判定
+10. P1/P2解消で `codex-gate` 成功、マージ可能
 
 ## 3. 追加ワークフロー
 
@@ -33,7 +35,6 @@
 - `pull_request`: `opened`, `reopened`, `synchronize`, `ready_for_review`
 - `pull_request_review`
 - `pull_request_review_comment`
-- `issue_comment`
 
 #### 対象フィルタ
 
@@ -50,13 +51,21 @@
 - 投稿者が `chatgpt-codex-connector` 系のコメントのみ対象
 - 本文中の `P1` または `P2` を高優先度指摘としてカウント
 - 本文正規化後に SHA256 を計算し重複除外
-- `high_count > 0` ならジョブ失敗
+- 判定結果を `result_kind` に分類
+  - `clean`: 高優先度指摘なし
+  - `findings`: 高優先度指摘あり
+  - `infra_error`: API取得失敗などで判定不能
+- `result_kind != clean` のときジョブ失敗
 
 #### 出力
 
 - ジョブ出力
+  - `result_kind`
   - `high_count`
   - `findings_json`
+- 成果物（artifact）
+  - `gate_result.json`
+  - 例: `{"result_kind":"findings","high_count":2,"pr":14,"head_sha":"...","dedup_count":2}`
 - PR要約コメント（upsert）
   - `<!-- codex-gate-summary -->` を固定マーカー化
 
@@ -69,17 +78,23 @@
 #### 実行条件
 
 - 対象PRが `data/auto-update-*`
+- 起動元 run の artifact `gate_result.json` を取得できる
+- `result_kind == findings`
 - `high_count > 0`
 - 自動修正サイクルが 2 未満
 
 #### 処理
 
+- 起動元 run から `gate_result.json` を取得し、失敗理由を再判定
 - PRコメント履歴から `<!-- codex-autofix-cycle:N -->` を抽出
 - `N < 2` の場合
   - `@codex address that feedback` を投稿
   - 次サイクル番号をコメントに埋め込む
 - `N == 2` の場合
   - 以降は自動投稿せず、手動対応エスカレーションを投稿
+- `result_kind == infra_error` の場合
+  - `@codex address` は投稿しない
+  - 「ゲート判定エラーのため手動確認が必要」の通知のみ投稿
 
 ## 4. ブランチ保護
 
@@ -99,20 +114,22 @@
 
 ## 6. 失敗時の扱い
 
-- API取得失敗時は `codex-gate` を失敗にして保守的運用
+- API取得失敗時は `codex-gate` を `infra_error` として失敗
+- `infra_error` 時は `codex_autofix` をスキップし、手動確認通知のみ投稿
 - `codex_autofix` の投稿失敗はPRへ失敗通知コメントを残す
 
 ## 7. 既知リスク
 
 - Codexのコメント形式が変わると `P1/P2` 抽出が外れる
 - `GITHUB_TOKEN` 投稿で `@codex` が反応しない場合がある
-- `workflow_run` 連鎖で過剰起動する可能性がある
+- artifact受け渡しに失敗すると自動修正が停止する
 
 ## 8. 軽減策
 
 - 優先度抽出は正規表現を関数化し、テストを用意
 - 将来のトークン切替用に `CODEX_REVIEW_TOKEN` 分岐を残す
 - `concurrency` でPR単位の同時実行を防止
+- `workflow_run` 側で `result_kind == findings` を必須条件化
 
 ## 9. 検証ケース
 
@@ -121,6 +138,7 @@
 3. 修正後にP1/P2が0件: `codex-gate` 成功
 4. 2サイクル後も未解決: 自動修正停止・手動対応通知
 5. auto-update以外PR: ワークフローはスキップ
+6. API障害で `infra_error`: autofixを起動せず手動通知のみ
 
 ## 10. 段階導入
 
@@ -134,10 +152,16 @@
 
 ### Cycle 1
 
-- 状態: 未実施
+- 状態: 完了
 - 指摘サマリ:
+  - P1: `issue_comment` トリガーと autofix コメント投稿が連鎖し、サイクル消費が先行する
+  - P1: `workflow_run` 失敗だけでは `high_count > 0` を保証できない
 - 対応:
+  - `codex_gate` から `issue_comment` トリガーを除外
+  - `result_kind` を導入し、`gate_result.json` artifactで `codex_autofix` に受け渡し
+  - `infra_error` 分岐を追加し、`@codex address` 誤起動を防止
 - 未解決:
+  - v2に対する再レビュー待ち
 
 ### Cycle 2
 
