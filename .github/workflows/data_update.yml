@@ -63,17 +63,6 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Send report mail
-        if: steps.changes.outputs.changed == 'true'
-        env:
-          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          GMAIL_TO: ${{ secrets.GMAIL_TO }}
-        run: |
-          uv run python -m scripts.send_gmail \
-            --subject "msData 更新レポート (${REPORT_DATE})" \
-            --body "reports/diff_msdata_${REPORT_DATE}.md"
-
       - name: Create pull request
         if: steps.changes.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v6

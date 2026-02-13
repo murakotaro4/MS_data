@@ -1,0 +1,76 @@
+name: post merge notify
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    if: >
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main' &&
+      startsWith(github.event.pull_request.head.ref, 'data/auto-update-')
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Tokyo
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install deps
+        run: uv sync --dev
+
+      - id: report
+        name: Resolve report file
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          head_ref="${{ github.event.pull_request.head.ref }}"
+          report=""
+
+          if [[ "$head_ref" =~ ^data/auto-update-([0-9]{8})$ ]]; then
+            report="reports/diff_msdata_${BASH_REMATCH[1]}.md"
+          fi
+
+          if [[ -z "$report" || ! -f "$report" ]]; then
+            report="$(ls -1 reports/diff_msdata_*.md 2>/dev/null | sort | tail -n 1 || true)"
+          fi
+
+          if [[ -z "$report" || ! -f "$report" ]]; then
+            echo "差分レポートが見つかりません。" >&2
+            exit 1
+          fi
+
+          report_base="$(basename "$report")"
+          if [[ "$report_base" =~ ^diff_msdata_([0-9]{8})\.md$ ]]; then
+            report_date="${BASH_REMATCH[1]}"
+          else
+            report_date="$(date +%Y%m%d)"
+          fi
+
+          echo "report_path=$report" >> "$GITHUB_OUTPUT"
+          echo "report_date=$report_date" >> "$GITHUB_OUTPUT"
+
+      - name: Send merged msData mail
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GMAIL_TO: ${{ secrets.GMAIL_TO }}
+        run: |
+          uv run python -m scripts.send_gmail \
+            --subject "msData 更新反映通知 (${{ steps.report.outputs.report_date }})" \
+            --body "${{ steps.report.outputs.report_path }}" \
+            --attach "msData.json"
