@@ -9,6 +9,7 @@ on:
       - ready_for_review
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
   issues: write
@@ -151,19 +152,49 @@ jobs:
             -f body="Codex のファイル指摘が ${FINDINGS} 件あるため、自動マージを停止しました。"
           exit 1
 
-      - name: Merge pull request
+      - id: merge
+        name: Merge pull request
         if: steps.gate.outputs.merge_ok == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ steps.prepare.outputs.repo }}
           PR_NUMBER: ${{ steps.prepare.outputs.pr }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
         shell: bash
         run: |
           set -euo pipefail
           state="$(gh pr view "${PR_NUMBER}" --repo "${REPO}" --json state --jq '.state')"
           if [[ "${state}" != "OPEN" ]]; then
             echo "PR state is ${state}. Skip merge."
+            echo "merged=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           gh pr merge "${PR_NUMBER}" --repo "${REPO}" --merge --delete-branch
+
+          merged_state="$(gh pr view "${PR_NUMBER}" --repo "${REPO}" --json state --jq '.state')"
+          if [[ "${merged_state}" != "MERGED" ]]; then
+            echo "PR state after merge attempt is ${merged_state}."
+            echo "merged=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+          merge_commit_sha="$(gh pr view "${PR_NUMBER}" --repo "${REPO}" --json mergeCommit --jq '.mergeCommit.oid')"
+          echo "merged=true" >> "$GITHUB_OUTPUT"
+          echo "merge_commit_sha=${merge_commit_sha}" >> "$GITHUB_OUTPUT"
+          echo "head_ref=${HEAD_REF}" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger post merge notify workflow
+        if: steps.gate.outputs.merge_ok == 'true' && steps.merge.outputs.merged == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ steps.prepare.outputs.repo }}
+          MERGE_COMMIT_SHA: ${{ steps.merge.outputs.merge_commit_sha }}
+          HEAD_REF: ${{ steps.merge.outputs.head_ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run post_merge_notify.yml \
+            --repo "${REPO}" \
+            -f merge_commit_sha="${MERGE_COMMIT_SHA}" \
+            -f head_ref="${HEAD_REF}"

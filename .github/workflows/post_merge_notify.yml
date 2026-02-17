@@ -3,6 +3,16 @@ name: post merge notify
 on:
   pull_request:
     types: [closed]
+  workflow_dispatch:
+    inputs:
+      merge_commit_sha:
+        description: "Merged commit SHA"
+        required: true
+        type: string
+      head_ref:
+        description: "PR head ref"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -10,16 +20,25 @@ permissions:
 jobs:
   notify:
     if: >
-      github.event.pull_request.merged == true &&
-      github.event.pull_request.base.ref == 'main' &&
-      startsWith(github.event.pull_request.head.ref, 'data/auto-update-')
+      (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.merged == true &&
+        github.event.pull_request.base.ref == 'main' &&
+        startsWith(github.event.pull_request.head.ref, 'data/auto-update-')
+      ) ||
+      (
+        github.event_name == 'workflow_dispatch' &&
+        startsWith(github.event.inputs.head_ref, 'data/auto-update-')
+      )
     runs-on: ubuntu-latest
     env:
       TZ: Asia/Tokyo
+      HEAD_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.head_ref || github.event.pull_request.head.ref }}
+      MERGE_COMMIT_SHA: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.merge_commit_sha || github.event.pull_request.merge_commit_sha }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          ref: ${{ env.MERGE_COMMIT_SHA }}
 
       - uses: actions/setup-python@v5
         with:
@@ -38,7 +57,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          head_ref="${{ github.event.pull_request.head.ref }}"
+          head_ref="${HEAD_REF}"
           report=""
 
           if [[ "$head_ref" =~ ^data/auto-update-([0-9]{8})$ ]]; then
