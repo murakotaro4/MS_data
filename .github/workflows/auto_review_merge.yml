@@ -49,15 +49,20 @@ jobs:
 
           if [[ -z "${existing_id}" ]]; then
             comment_body=$'@codex review\n\n'"${marker}"
-            created_id="$(gh api -X POST "repos/${REPO}/issues/${PR_NUMBER}/comments" \
+            trigger_comment_id="$(gh api -X POST "repos/${REPO}/issues/${PR_NUMBER}/comments" \
               -f body="${comment_body}" \
               --jq '.id')"
-            echo "trigger_comment_id=${created_id}" >> "$GITHUB_OUTPUT"
-            echo "created_new=true" >> "$GITHUB_OUTPUT"
+            created_new=true
           else
-            echo "trigger_comment_id=${existing_id}" >> "$GITHUB_OUTPUT"
-            echo "created_new=false" >> "$GITHUB_OUTPUT"
+            trigger_comment_id="${existing_id}"
+            created_new=false
           fi
+
+          trigger_created_at="$(gh api "repos/${REPO}/issues/comments/${trigger_comment_id}" --jq '.created_at')"
+
+          echo "trigger_comment_id=${trigger_comment_id}" >> "$GITHUB_OUTPUT"
+          echo "trigger_created_at=${trigger_created_at}" >> "$GITHUB_OUTPUT"
+          echo "created_new=${created_new}" >> "$GITHUB_OUTPUT"
 
       - id: wait
         name: Wait for Codex response (max 20m)
@@ -67,6 +72,7 @@ jobs:
           PR_NUMBER: ${{ steps.prepare.outputs.pr }}
           HEAD_SHA: ${{ steps.prepare.outputs.head_sha }}
           TRIGGER_COMMENT_ID: ${{ steps.trigger.outputs.trigger_comment_id }}
+          TRIGGER_COMMENT_CREATED_AT: ${{ steps.trigger.outputs.trigger_created_at }}
         shell: bash
         run: |
           set -euo pipefail
@@ -88,7 +94,11 @@ jobs:
               -H "Accept: application/vnd.github+json" \
               | jq -r '[.[] | select((.user.login=="chatgpt-codex-connector[bot]" or .user.login=="chatgpt-codex-connector") and .content=="+1")] | length')"
 
-            if (( review_count + file_comment_count + reaction_count > 0 )); then
+            issue_comment_count="$(gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate | \
+              jq -r --arg since "${TRIGGER_COMMENT_CREATED_AT}" \
+              '[.[] | select((.user.login=="chatgpt-codex-connector[bot]" or .user.login=="chatgpt-codex-connector") and .created_at >= $since)] | length')"
+
+            if (( review_count + file_comment_count + reaction_count + issue_comment_count > 0 )); then
               responded=true
               break
             fi
