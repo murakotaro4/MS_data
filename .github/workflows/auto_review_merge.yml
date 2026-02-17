@@ -1,0 +1,159 @@
+name: auto review merge
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  review-and-merge:
+    concurrency:
+      group: auto-review-merge-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    if: >
+      github.event.pull_request.draft == false &&
+      startsWith(github.event.pull_request.head.ref, 'data/auto-update-') &&
+      github.event.pull_request.user.login == 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - id: prepare
+        name: Prepare variables
+        run: |
+          echo "repo=${GITHUB_REPOSITORY}" >> "$GITHUB_OUTPUT"
+          echo "pr=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+          echo "head_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+
+      - id: trigger
+        name: Trigger Codex review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ steps.prepare.outputs.repo }}
+          PR_NUMBER: ${{ steps.prepare.outputs.pr }}
+          HEAD_SHA: ${{ steps.prepare.outputs.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          marker="<!-- auto-review head_sha:${HEAD_SHA} -->"
+          existing_id="$(gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate | \
+            jq -r --arg marker "${marker}" \
+            '[.[] | select(.user.login=="github-actions[bot]" and (.body | contains($marker)))] | sort_by(.created_at) | last | .id // empty')"
+
+          if [[ -z "${existing_id}" ]]; then
+            comment_body=$'@codex review\n\n'"${marker}"
+            created_id="$(gh api -X POST "repos/${REPO}/issues/${PR_NUMBER}/comments" \
+              -f body="${comment_body}" \
+              --jq '.id')"
+            echo "trigger_comment_id=${created_id}" >> "$GITHUB_OUTPUT"
+            echo "created_new=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "trigger_comment_id=${existing_id}" >> "$GITHUB_OUTPUT"
+            echo "created_new=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - id: wait
+        name: Wait for Codex response (max 20m)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ steps.prepare.outputs.repo }}
+          PR_NUMBER: ${{ steps.prepare.outputs.pr }}
+          HEAD_SHA: ${{ steps.prepare.outputs.head_sha }}
+          TRIGGER_COMMENT_ID: ${{ steps.trigger.outputs.trigger_comment_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          deadline=$((SECONDS + 1200))
+          responded=false
+
+          while (( SECONDS < deadline )); do
+            review_count="$(gh api "repos/${REPO}/pulls/${PR_NUMBER}/reviews" --paginate | \
+              jq -r --arg sha "${HEAD_SHA}" \
+              '[.[] | select((.user.login=="chatgpt-codex-connector[bot]" or .user.login=="chatgpt-codex-connector") and .commit_id==$sha)] | length')"
+
+            file_comment_count="$(gh api "repos/${REPO}/pulls/${PR_NUMBER}/comments" --paginate | \
+              jq -r --arg sha "${HEAD_SHA}" \
+              '[.[] | select((.user.login=="chatgpt-codex-connector[bot]" or .user.login=="chatgpt-codex-connector") and .commit_id==$sha)] | length')"
+
+            reaction_count="$(gh api "repos/${REPO}/issues/comments/${TRIGGER_COMMENT_ID}/reactions" \
+              --paginate \
+              -H "Accept: application/vnd.github+json" \
+              | jq -r '[.[] | select((.user.login=="chatgpt-codex-connector[bot]" or .user.login=="chatgpt-codex-connector") and .content=="+1")] | length')"
+
+            if (( review_count + file_comment_count + reaction_count > 0 )); then
+              responded=true
+              break
+            fi
+
+            sleep 30
+          done
+
+          echo "responded=${responded}" >> "$GITHUB_OUTPUT"
+
+          if [[ "${responded}" != "true" ]]; then
+            gh api -X POST "repos/${REPO}/issues/${PR_NUMBER}/comments" \
+              -f body=$'Codex の応答を20分待機しましたが確認できなかったため、自動マージを停止しました。手動で確認してください。'
+            exit 1
+          fi
+
+      - id: gate
+        name: Check Codex findings
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ steps.prepare.outputs.repo }}
+          PR_NUMBER: ${{ steps.prepare.outputs.pr }}
+          HEAD_SHA: ${{ steps.prepare.outputs.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          findings="$(gh api "repos/${REPO}/pulls/${PR_NUMBER}/comments" --paginate | \
+            jq -r --arg sha "${HEAD_SHA}" \
+            '[.[] | select((.user.login=="chatgpt-codex-connector[bot]" or .user.login=="chatgpt-codex-connector") and .commit_id==$sha)] | length')"
+
+          echo "findings=${findings}" >> "$GITHUB_OUTPUT"
+
+          if [[ "${findings}" -eq 0 ]]; then
+            echo "merge_ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "merge_ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Stop on Codex findings
+        if: steps.gate.outputs.merge_ok != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ steps.prepare.outputs.repo }}
+          PR_NUMBER: ${{ steps.prepare.outputs.pr }}
+          FINDINGS: ${{ steps.gate.outputs.findings }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api -X POST "repos/${REPO}/issues/${PR_NUMBER}/comments" \
+            -f body="Codex のファイル指摘が ${FINDINGS} 件あるため、自動マージを停止しました。"
+          exit 1
+
+      - name: Merge pull request
+        if: steps.gate.outputs.merge_ok == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ steps.prepare.outputs.repo }}
+          PR_NUMBER: ${{ steps.prepare.outputs.pr }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          state="$(gh pr view "${PR_NUMBER}" --repo "${REPO}" --json state --jq '.state')"
+          if [[ "${state}" != "OPEN" ]]; then
+            echo "PR state is ${state}. Skip merge."
+            exit 0
+          fi
+
+          gh pr merge "${PR_NUMBER}" --repo "${REPO}" --merge --delete-branch
