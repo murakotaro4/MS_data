@@ -1,12 +1,11 @@
 name: auto review merge
 
 on:
-  pull_request:
+  workflow_run:
+    workflows:
+      - data update
     types:
-      - opened
-      - reopened
-      - synchronize
-      - ready_for_review
+      - completed
 
 permissions:
   actions: write
@@ -17,28 +16,91 @@ permissions:
 jobs:
   review-and-merge:
     concurrency:
-      group: auto-review-merge-${{ github.event.pull_request.number }}
+      group: auto-review-merge-${{ github.event.workflow_run.id }}
       cancel-in-progress: true
     if: >
-      github.event.pull_request.draft == false &&
-      startsWith(github.event.pull_request.head.ref, 'data/auto-update-') &&
-      github.event.pull_request.user.login == 'github-actions[bot]'
+      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - id: prepare
         name: Prepare variables
         run: |
           echo "repo=${GITHUB_REPOSITORY}" >> "$GITHUB_OUTPUT"
-          echo "pr=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
-          echo "head_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          echo "run_id=${{ github.event.workflow_run.id }}" >> "$GITHUB_OUTPUT"
+          echo "run_created_at=${{ github.event.workflow_run.created_at }}" >> "$GITHUB_OUTPUT"
 
-      - id: trigger
-        name: Trigger Codex review
+      - id: resolve
+        name: Resolve target PR
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ steps.prepare.outputs.repo }}
-          PR_NUMBER: ${{ steps.prepare.outputs.pr }}
-          HEAD_SHA: ${{ steps.prepare.outputs.head_sha }}
+          RUN_CREATED_AT: ${{ steps.prepare.outputs.run_created_at }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          report_date="$(TZ=Asia/Tokyo date -d "${RUN_CREATED_AT}" +%Y%m%d)"
+          expected_head_ref="data/auto-update-${report_date}"
+          echo "expected_head_ref=${expected_head_ref}"
+
+          pulls_json="$(gh api "repos/${REPO}/pulls?state=open&base=main&per_page=100")"
+
+          exact="$(jq -c --arg ref "${expected_head_ref}" \
+            '[.[] | select(.head.ref==$ref and .user.login=="github-actions[bot]")] | sort_by(.created_at) | last // empty' \
+            <<< "${pulls_json}")"
+
+          if [[ -n "${exact}" ]]; then
+            pr_number="$(jq -r '.number' <<< "${exact}")"
+            head_ref="$(jq -r '.head.ref' <<< "${exact}")"
+            head_sha="$(jq -r '.head.sha' <<< "${exact}")"
+            resolved_by="exact_branch"
+            skip="false"
+          else
+            fallback="$(jq -c \
+              '[.[] | select((.head.ref | startswith("data/auto-update-")) and .user.login=="github-actions[bot]")] | sort_by(.created_at) | last // empty' \
+              <<< "${pulls_json}")"
+
+            if [[ -n "${fallback}" ]]; then
+              pr_number="$(jq -r '.number' <<< "${fallback}")"
+              head_ref="$(jq -r '.head.ref' <<< "${fallback}")"
+              head_sha="$(jq -r '.head.sha' <<< "${fallback}")"
+              resolved_by="fallback_latest_open"
+              skip="false"
+            else
+              pr_number=""
+              head_ref=""
+              head_sha=""
+              resolved_by="not_found"
+              skip="true"
+            fi
+          fi
+
+          echo "report_date=${report_date}" >> "$GITHUB_OUTPUT"
+          echo "skip=${skip}" >> "$GITHUB_OUTPUT"
+          echo "pr=${pr_number}" >> "$GITHUB_OUTPUT"
+          echo "head_ref=${head_ref}" >> "$GITHUB_OUTPUT"
+          echo "head_sha=${head_sha}" >> "$GITHUB_OUTPUT"
+          echo "resolved_by=${resolved_by}" >> "$GITHUB_OUTPUT"
+
+          if [[ "${skip}" == "true" ]]; then
+            echo "No matching open PR found. Skip auto review merge."
+          else
+            echo "Resolved PR #${pr_number} (${head_ref} @ ${head_sha}) via ${resolved_by}."
+          fi
+
+      - name: No target PR found
+        if: steps.resolve.outputs.skip == 'true'
+        run: |
+          echo "Skip auto review merge: no open data/auto-update-* PR found for report_date=${{ steps.resolve.outputs.report_date }}."
+
+      - id: trigger
+        name: Trigger Codex review
+        if: steps.resolve.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ steps.prepare.outputs.repo }}
+          PR_NUMBER: ${{ steps.resolve.outputs.pr }}
+          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -67,13 +129,15 @@ jobs:
 
       - id: wait
         name: Wait for Codex response (max 20m)
+        if: steps.resolve.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ steps.prepare.outputs.repo }}
-          PR_NUMBER: ${{ steps.prepare.outputs.pr }}
-          HEAD_SHA: ${{ steps.prepare.outputs.head_sha }}
+          PR_NUMBER: ${{ steps.resolve.outputs.pr }}
+          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
           TRIGGER_COMMENT_ID: ${{ steps.trigger.outputs.trigger_comment_id }}
           TRIGGER_COMMENT_CREATED_AT: ${{ steps.trigger.outputs.trigger_created_at }}
+          RUN_ID: ${{ steps.prepare.outputs.run_id }}
         shell: bash
         run: |
           set -euo pipefail
@@ -111,17 +175,18 @@ jobs:
 
           if [[ "${responded}" != "true" ]]; then
             gh api -X POST "repos/${REPO}/issues/${PR_NUMBER}/comments" \
-              -f body=$'Codex の応答を20分待機しましたが確認できなかったため、自動マージを停止しました。手動で確認してください。'
+              -f body="Codex の応答を20分待機しましたが確認できなかったため、自動マージを停止しました。手動で確認してください。 (run_id: ${RUN_ID})"
             exit 1
           fi
 
       - id: gate
         name: Check Codex findings
+        if: steps.resolve.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ steps.prepare.outputs.repo }}
-          PR_NUMBER: ${{ steps.prepare.outputs.pr }}
-          HEAD_SHA: ${{ steps.prepare.outputs.head_sha }}
+          PR_NUMBER: ${{ steps.resolve.outputs.pr }}
+          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -139,27 +204,28 @@ jobs:
           fi
 
       - name: Stop on Codex findings
-        if: steps.gate.outputs.merge_ok != 'true'
+        if: steps.resolve.outputs.skip != 'true' && steps.gate.outputs.merge_ok != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ steps.prepare.outputs.repo }}
-          PR_NUMBER: ${{ steps.prepare.outputs.pr }}
+          PR_NUMBER: ${{ steps.resolve.outputs.pr }}
           FINDINGS: ${{ steps.gate.outputs.findings }}
+          RUN_ID: ${{ steps.prepare.outputs.run_id }}
         shell: bash
         run: |
           set -euo pipefail
           gh api -X POST "repos/${REPO}/issues/${PR_NUMBER}/comments" \
-            -f body="Codex のファイル指摘が ${FINDINGS} 件あるため、自動マージを停止しました。"
+            -f body="Codex のファイル指摘が ${FINDINGS} 件あるため、自動マージを停止しました。 (run_id: ${RUN_ID})"
           exit 1
 
       - id: merge
         name: Merge pull request
-        if: steps.gate.outputs.merge_ok == 'true'
+        if: steps.resolve.outputs.skip != 'true' && steps.gate.outputs.merge_ok == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ steps.prepare.outputs.repo }}
-          PR_NUMBER: ${{ steps.prepare.outputs.pr }}
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ steps.resolve.outputs.pr }}
+          HEAD_REF: ${{ steps.resolve.outputs.head_ref }}
         shell: bash
         run: |
           set -euo pipefail
@@ -185,7 +251,7 @@ jobs:
           echo "head_ref=${HEAD_REF}" >> "$GITHUB_OUTPUT"
 
       - name: Trigger post merge notify workflow
-        if: steps.gate.outputs.merge_ok == 'true' && steps.merge.outputs.merged == 'true'
+        if: steps.resolve.outputs.skip != 'true' && steps.gate.outputs.merge_ok == 'true' && steps.merge.outputs.merged == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ steps.prepare.outputs.repo }}
