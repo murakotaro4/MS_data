@@ -3,7 +3,7 @@ SHELL := bash
 
 MSDATA := msData.json
 
-.PHONY: help setup format lint test validate validate-strict update normalize ci scrape-index scrape-details scrape-all import-details labels audit-labels report-diff audit-index skills skills-table owners-table build-skills build-param-skills build-owners-flat audit-skills preview-params
+.PHONY: help setup format lint test validate validate-strict update normalize ci scrape-index scrape-details scrape-all import-details labels audit-labels report-diff audit-index skills skills-table owners-table build-skills build-param-skills build-owners-flat audit-skills preview-params provenance snapshot
 
 help:
 	@echo "Available targets:"
@@ -23,6 +23,8 @@ help:
 	@echo "  labels            Extract raw/normalized row labels (cache-aware)"
 	@echo "  audit-labels      Aggregate labels_raw.jsonl into Markdown report"
 	@echo "  report-diff       Generate diff report between two msData.json files"
+	@echo "  provenance        Generate reports/provenance_YYYYMMDD.json"
+	@echo "  snapshot          Create raw_snapshot_YYYYMMDD_runlocal.tar.xz"
 	@echo "  audit-index       Compare index.json vs msData.json (names/attr/cost)"
 	@echo "  skills            Extract core system skills -> cache/skills.json"
 	@echo "  skills-table      Extract strict table rows -> cache/skills_table.json"
@@ -69,6 +71,9 @@ RATE ?= 2.0
 LIMIT ?= 0
 NO_NET ?=
 FORCE ?=
+REPORT_DATE ?= $(shell date +%Y%m%d)
+PROVENANCE_OUT ?= reports/provenance_$(REPORT_DATE).json
+RAW_SNAPSHOT_FILE ?= raw_snapshot_$(REPORT_DATE)_runlocal.tar.xz
 
 scrape-index:
 	uv run python -m scripts.scrape_msdata index --url https://w.atwiki.jp/battle-operation2/pages/377.html --out cache/index.json --ttl $(TTL) $(if $(NO_NET),--no-network,) $(if $(FORCE),--force,)
@@ -91,6 +96,31 @@ audit-labels:
 
 report-diff:
 	uv run python -m scripts.report_msdata_diff --old $(OLD) --new $(NEW) --out $(OUT)
+
+provenance:
+	uv run python -m scripts.generate_provenance \
+		--date $(REPORT_DATE) \
+		--index cache/index.json \
+		--details-jsonl cache/details.jsonl \
+		--details-json cache/details.json \
+		--msdata $(MSDATA) \
+		--diff reports/diff_msdata_$(REPORT_DATE).md \
+		--html-dir cache/html \
+		--out $(PROVENANCE_OUT) \
+		--ttl $(TTL) \
+		--rate $(RATE) \
+		--limit $(LIMIT) \
+		--artifact-name raw-snapshot-$(REPORT_DATE)-run-local \
+		--artifact-retention-days 90
+
+snapshot: provenance
+	@set -euo pipefail; \
+	files="cache/html cache/index.json cache/details.jsonl cache/details.json $(PROVENANCE_OUT)"; \
+	if [ -f "reports/diff_msdata_$(REPORT_DATE).md" ]; then \
+		files="$$files reports/diff_msdata_$(REPORT_DATE).md"; \
+	fi; \
+	XZ_OPT=-9e tar -cJf "$(RAW_SNAPSHOT_FILE)" $$files; \
+	echo "snapshot created: $(RAW_SNAPSHOT_FILE)"
 
 # Index vs msData audit (names, presence, attr/cost)
 audit-index:

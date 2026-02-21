@@ -13,9 +13,14 @@ on:
         description: "PR head ref"
         required: true
         type: string
+      source_run_id:
+        description: "Source data update run id"
+        required: false
+        type: string
 
 permissions:
-  contents: read
+  actions: read
+  contents: write
 
 jobs:
   notify:
@@ -35,6 +40,8 @@ jobs:
       TZ: Asia/Tokyo
       HEAD_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.head_ref || github.event.pull_request.head.ref }}
       MERGE_COMMIT_SHA: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.merge_commit_sha || github.event.pull_request.merge_commit_sha }}
+      SOURCE_RUN_ID_INPUT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source_run_id || '' }}
+      PR_BODY: ${{ github.event_name == 'pull_request' && github.event.pull_request.body || '' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -80,8 +87,99 @@ jobs:
             report_date="$(date +%Y%m%d)"
           fi
 
+          source_run_id="${SOURCE_RUN_ID_INPUT}"
+          if [[ -z "${source_run_id}" ]]; then
+            source_run_id="$(printf '%s' "${PR_BODY:-}" \
+              | grep -Eo 'source_run_id[:=[:space:]]*[0-9]+' \
+              | head -n 1 \
+              | grep -Eo '[0-9]+' || true)"
+          fi
+
+          if [[ -z "${source_run_id}" ]]; then
+            echo "source_run_id を解決できませんでした。PR本文に source_run_id を含めるか、workflow_dispatch で指定してください。" >&2
+            exit 1
+          fi
+
+          artifact_name="raw-snapshot-${report_date}-run-${source_run_id}"
+          snapshot_file="raw_snapshot_${report_date}_run${source_run_id}.tar.xz"
+          release_tag="raw-snapshot-${report_date}-run${source_run_id}"
+          provenance_path="reports/provenance_${report_date}.json"
+
           echo "report_path=$report" >> "$GITHUB_OUTPUT"
           echo "report_date=$report_date" >> "$GITHUB_OUTPUT"
+          echo "source_run_id=$source_run_id" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=$artifact_name" >> "$GITHUB_OUTPUT"
+          echo "snapshot_file=$snapshot_file" >> "$GITHUB_OUTPUT"
+          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
+          echo "provenance_path=$provenance_path" >> "$GITHUB_OUTPUT"
+
+      - name: Download raw snapshot artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf release_assets
+          mkdir -p release_assets
+          gh run download "${{ steps.report.outputs.source_run_id }}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --name "${{ steps.report.outputs.artifact_name }}" \
+            --dir release_assets
+
+          if [[ ! -f "release_assets/${{ steps.report.outputs.snapshot_file }}" ]]; then
+            echo "スナップショットファイルが見つかりません: release_assets/${{ steps.report.outputs.snapshot_file }}" >&2
+            find release_assets -maxdepth 4 -type f -print || true
+            exit 1
+          fi
+
+      - id: release
+        name: Publish raw snapshot release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag="${{ steps.report.outputs.release_tag }}"
+          title="raw snapshot ${{ steps.report.outputs.report_date }} (run ${{ steps.report.outputs.source_run_id }})"
+          notes=$(
+            cat <<EOF
+          自動保存された生データスナップショットです。
+
+          - source_run_id: ${{ steps.report.outputs.source_run_id }}
+          - source_artifact: ${{ steps.report.outputs.artifact_name }}
+          - snapshot: ${{ steps.report.outputs.snapshot_file }}
+          EOF
+          )
+
+          if ! gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release create "${tag}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "${title}" \
+              --notes "${notes}"
+          fi
+
+          gh release upload "${tag}" \
+            "release_assets/${{ steps.report.outputs.snapshot_file }}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --clobber
+
+          if [[ -f "release_assets/${{ steps.report.outputs.provenance_path }}" ]]; then
+            gh release upload "${tag}" \
+              "release_assets/${{ steps.report.outputs.provenance_path }}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --clobber
+          fi
+
+          if [[ -f "release_assets/${{ steps.report.outputs.report_path }}" ]]; then
+            gh release upload "${tag}" \
+              "release_assets/${{ steps.report.outputs.report_path }}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --clobber
+          fi
+
+          release_url="$(gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" --json url --jq '.url')"
+          echo "release_url=${release_url}" >> "$GITHUB_OUTPUT"
 
       - name: Send merged msData mail
         env:

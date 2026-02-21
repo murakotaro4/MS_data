@@ -257,10 +257,12 @@ jobs:
           REPO: ${{ steps.prepare.outputs.repo }}
           MERGE_COMMIT_SHA: ${{ steps.merge.outputs.merge_commit_sha }}
           HEAD_REF: ${{ steps.merge.outputs.head_ref }}
+          SOURCE_RUN_ID: ${{ steps.prepare.outputs.run_id }}
         shell: bash
         run: |
           set -euo pipefail
           gh workflow run post_merge_notify.yml \
             --repo "${REPO}" \
             -f merge_commit_sha="${MERGE_COMMIT_SHA}" \
-            -f head_ref="${HEAD_REF}"
+            -f head_ref="${HEAD_REF}" \
+            -f source_run_id="${SOURCE_RUN_ID}"

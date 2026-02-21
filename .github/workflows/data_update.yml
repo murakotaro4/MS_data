@@ -17,6 +17,7 @@ jobs:
       TTL: 7d
       RATE: 1.0
       LIMIT: 0
+      ARTIFACT_RETENTION_DAYS: 90
     steps:
       - uses: actions/checkout@v4
 
@@ -32,7 +33,12 @@ jobs:
         run: uv sync --dev
 
       - name: Prepare
-        run: echo "REPORT_DATE=$(date +%Y%m%d)" >> "$GITHUB_ENV"
+        run: |
+          report_date="$(date +%Y%m%d)"
+          echo "REPORT_DATE=${report_date}" >> "$GITHUB_ENV"
+          echo "PROVENANCE_FILE=reports/provenance_${report_date}.json" >> "$GITHUB_ENV"
+          echo "RAW_ARTIFACT_NAME=raw-snapshot-${report_date}-run-${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
+          echo "RAW_SNAPSHOT_FILE=raw_snapshot_${report_date}_run${GITHUB_RUN_ID}.tar.xz" >> "$GITHUB_ENV"
 
       - name: Fetch and import
         run: |
@@ -47,6 +53,27 @@ jobs:
             --new msData.json \
             --out "reports/diff_msdata_${REPORT_DATE}.md" \
             --print-summary | tee reports/diff_summary.txt
+          uv run python -m scripts.generate_provenance \
+            --date "${REPORT_DATE}" \
+            --index cache/index.json \
+            --details-jsonl cache/details.jsonl \
+            --details-json cache/details.json \
+            --msdata msData.json \
+            --diff "reports/diff_msdata_${REPORT_DATE}.md" \
+            --html-dir cache/html \
+            --out "${PROVENANCE_FILE}" \
+            --ttl "${TTL}" \
+            --rate "${RATE}" \
+            --limit "${LIMIT}" \
+            --artifact-name "${RAW_ARTIFACT_NAME}" \
+            --artifact-retention-days "${ARTIFACT_RETENTION_DAYS}"
+          XZ_OPT=-9e tar -cJf "${RAW_SNAPSHOT_FILE}" \
+            cache/html \
+            cache/index.json \
+            cache/details.jsonl \
+            cache/details.json \
+            "reports/diff_msdata_${REPORT_DATE}.md" \
+            "${PROVENANCE_FILE}"
           rm -f msData.before.json
 
       - id: summary
@@ -63,6 +90,18 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Upload raw snapshot artifact
+        if: steps.changes.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.RAW_ARTIFACT_NAME }}
+          retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
+          if-no-files-found: error
+          path: |
+            ${{ env.RAW_SNAPSHOT_FILE }}
+            reports/diff_msdata_${{ env.REPORT_DATE }}.md
+            reports/provenance_${{ env.REPORT_DATE }}.json
+
       - name: Create pull request
         if: steps.changes.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v6
@@ -73,7 +112,12 @@ jobs:
             自動更新（取得→取り込み→検証）。
             - 差分: ${{ steps.summary.outputs.summary }}
             - レポート: reports/diff_msdata_${{ env.REPORT_DATE }}.md
+            - provenance: reports/provenance_${{ env.REPORT_DATE }}.json
+            - source_run_id: ${{ github.run_id }}
+            - source_artifact: ${{ env.RAW_ARTIFACT_NAME }}
+            <!-- source_run_id:${{ github.run_id }} -->
           branch: "data/auto-update-${{ env.REPORT_DATE }}"
           add-paths: |
             msData.json
             reports/*.md
+            reports/provenance_${{ env.REPORT_DATE }}.json
