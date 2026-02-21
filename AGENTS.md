@@ -163,7 +163,8 @@ MS名の正規化（index準拠）
 
 ### GitHub Actions運用（2026-02 更新）
 - 定期実行: `data update` は毎週 火/木 18:00 JST（`cron: 0 9 * * 2,4`）で実行し、差分があれば `data/auto-update-YYYYMMDD` のPRを作成します。
-- 自動レビュー/マージ: `data/auto-update-*` のPRは `auto review merge` で `@codex review` を自動実行し、Codexのファイル指摘が0件なら自動マージします（同一HEAD SHAでは重複依頼を抑止）。
+- 自動レビュー/マージ: `auto review merge` は `pull_request` ではなく `data update` 成功後の `workflow_run` で起動し、対象の `data/auto-update-*` PRに対して `@codex review` を自動実行します。Codexのファイル指摘が0件なら自動マージします（同一HEAD SHAでは重複依頼を抑止）。
+- 対象PRの解決: まず `data/auto-update-YYYYMMDD`（`workflow_run.created_at` のJST日付）を優先し、見つからない場合は open な `data/auto-update-*` の最新PRにフォールバックします。
 - 失敗時の挙動: Codexが20分以内に応答しない、またはファイル指摘が1件以上ある場合は自動マージせずPRを残して手動対応します。
 - 通知連携: 自動マージ時は `auto review merge` から `post merge notify` を `workflow_dispatch` で起動し、マージ後通知を確実に実行します。
 - 通知タイミング: メール送信はPR作成時ではなく、`data/auto-update-*` が `main` にマージされた後に `post merge notify` で実行します。
