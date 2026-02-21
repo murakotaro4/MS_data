@@ -624,24 +624,55 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
         return {k: v for k, v in by_ms_level.items() if v}
 
     fullst_by_lv = parse_fullst_by_ms_level(soup, levels)
+
+    def is_strong_sortie_only(items: List[Dict[str, Any]]) -> bool:
+        if not items:
+            return False
+        for e in items:
+            if not isinstance(e, dict):
+                return False
+            if "強行出撃" not in str(e.get("name", "")):
+                return False
+            if e.get("points") is not None:
+                return False
+        return True
+
+    def has_non_strong_sortie(items: List[Dict[str, Any]]) -> bool:
+        return any(
+            isinstance(e, dict) and "強行出撃" not in str(e.get("name", ""))
+            for e in items
+        )
+
     # フォールバック: 強化リストが未掲載のMSレベルには直前レベルの
-    # fullst を採用（points は未知なので None）
-    seen_lower: List[int] = []
+    # fullst を採用（points は未知なので None）。
+    # 追加: 当該LVが「強行出撃のみ」に縮退する場合も直前レベル構成を優先。
+    last_effective: List[Dict[str, Any]] = []
     for lv in sorted(levels):
-        if lv in fullst_by_lv and fullst_by_lv[lv]:
-            per_level[lv]["fullst"] = fullst_by_lv[lv]
-            seen_lower.append(lv)
-        else:
-            if seen_lower:
-                base_lv = seen_lower[-1]
-                base_list = fullst_by_lv.get(base_lv) or []
-                if base_list:
-                    copied = [
-                        {"name": e.get("name"), "level": e.get("level"), "points": None}
-                        for e in base_list
-                        if isinstance(e, dict)
-                    ]
-                    per_level[lv]["fullst"] = copied
+        current = fullst_by_lv.get(lv) or []
+        use_current = bool(current)
+
+        if (
+            use_current
+            and last_effective
+            and is_strong_sortie_only(current)
+            and has_non_strong_sortie(last_effective)
+        ):
+            use_current = False
+
+        if use_current:
+            per_level[lv]["fullst"] = current
+            last_effective = current
+            continue
+
+        if last_effective:
+            copied = [
+                {"name": e.get("name"), "level": e.get("level"), "points": None}
+                for e in last_effective
+                if isinstance(e, dict)
+            ]
+            if copied:
+                per_level[lv]["fullst"] = copied
+                last_effective = copied
 
     # 必須キーが揃っていないLVは除外（スキーマに準拠）。
     # ポイント: 旋回は anyOf（地上 or 宇宙のどちらか必須）
