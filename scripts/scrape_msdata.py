@@ -534,8 +534,8 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
 
         # 列構造は行の td 数に依存させる（末尾は効果列が入るため原則1つ除外）
 
-        # 収集: (name, list_level, {ms_lv -> points})
-        rows: List[Tuple[str, int, Dict[int, int]]] = []
+        # 収集: (name, list_level, {ms_lv -> points}, {ms_lv with cell present})
+        rows: List[Tuple[str, int, Dict[int, int], set[int]]] = []
         current_name: Optional[str] = None
         for tr in table.find_all("tr"):
             ths = tr.find_all("th")
@@ -582,9 +582,11 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
 
             # MSレベルに対応する列位置は 1始まりで左から順に対応させる
             points_by_ms: Dict[int, int] = {}
+            present_ms_levels: set[int] = set()
             for ms_lv in ms_levels:
                 idx = ms_lv - 1
                 if 0 <= idx < len(numeric_cells):
+                    present_ms_levels.add(ms_lv)
                     val = to_int(clean_text(numeric_cells[idx].get_text(" ")))
                     if val is not None:
                         points_by_ms[ms_lv] = val
@@ -592,7 +594,7 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
             # 数値がない行はスキップ（強行出撃のみ例外で採用）
             if not points_by_ms and "強行出撃" not in current_name:
                 continue
-            rows.append((current_name, fullst_lv, points_by_ms))
+            rows.append((current_name, fullst_lv, points_by_ms, present_ms_levels))
 
         # 各MSレベルごとに、同一リスト名については
         # 「数値が存在するLvの最小と最大のみ」を採用し、points 昇順で並べる
@@ -600,10 +602,12 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
         for ms_lv in ms_levels:
             # name -> list of (list_level, points or None)
             by_name: Dict[str, List[Tuple[int, Optional[int]]]] = {}
-            for nm, flv, pmap in rows:
+            for nm, flv, pmap, present_lvs in rows:
                 pts = pmap.get(ms_lv)
-                if pts is None and "強行出撃" not in nm:
-                    continue
+                if pts is None:
+                    # 強行出撃は points がなくても、当該MS LVのセルが存在する場合のみ採用。
+                    if "強行出撃" not in nm or ms_lv not in present_lvs:
+                        continue
                 by_name.setdefault(nm, []).append((flv, pts))
             items: List[Dict[str, Any]] = []
             for nm, lst in by_name.items():
@@ -624,24 +628,54 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
         return {k: v for k, v in by_ms_level.items() if v}
 
     fullst_by_lv = parse_fullst_by_ms_level(soup, levels)
+
+    def is_strong_sortie_only(items: List[Dict[str, Any]]) -> bool:
+        if not items:
+            return False
+        return all(
+            isinstance(e, dict)
+            and "強行出撃" in str(e.get("name", ""))
+            and e.get("points") is None
+            for e in items
+        )
+
+    def has_non_strong_sortie(items: List[Dict[str, Any]]) -> bool:
+        return any(
+            isinstance(e, dict) and "強行出撃" not in str(e.get("name", ""))
+            for e in items
+        )
+
     # フォールバック: 強化リストが未掲載のMSレベルには直前レベルの
-    # fullst を採用（points は未知なので None）
-    seen_lower: List[int] = []
+    # fullst を採用（points は未知なので None）。
+    # 追加: 当該LVが「強行出撃のみ」に縮退している場合は、
+    # 直前LVの構成（強行出撃以外を含む）で補完する。
+    last_effective: List[Dict[str, Any]] = []
     for lv in sorted(levels):
-        if lv in fullst_by_lv and fullst_by_lv[lv]:
-            per_level[lv]["fullst"] = fullst_by_lv[lv]
-            seen_lower.append(lv)
-        else:
-            if seen_lower:
-                base_lv = seen_lower[-1]
-                base_list = fullst_by_lv.get(base_lv) or []
-                if base_list:
-                    copied = [
-                        {"name": e.get("name"), "level": e.get("level"), "points": None}
-                        for e in base_list
-                        if isinstance(e, dict)
-                    ]
-                    per_level[lv]["fullst"] = copied
+        current = fullst_by_lv.get(lv) or []
+        use_current = bool(current)
+
+        if (
+            use_current
+            and last_effective
+            and is_strong_sortie_only(current)
+            and has_non_strong_sortie(last_effective)
+        ):
+            use_current = False
+
+        if use_current:
+            per_level[lv]["fullst"] = current
+            last_effective = current
+            continue
+
+        if last_effective:
+            copied = [
+                {"name": e.get("name"), "level": e.get("level"), "points": None}
+                for e in last_effective
+                if isinstance(e, dict)
+            ]
+            if copied:
+                per_level[lv]["fullst"] = copied
+                last_effective = copied
 
     # 必須キーが揃っていないLVは除外（スキーマに準拠）。
     # ポイント: 旋回は anyOf（地上 or 宇宙のどちらか必須）
