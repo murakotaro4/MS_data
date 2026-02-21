@@ -276,8 +276,8 @@ def test_fullst_skip_missing_points_per_level():
     assert fullst[0]["points"] == 1100
 
 
-def test_fullst_strong_sortie_only_should_fallback_from_prev_level():
-    """当該LVが強行出撃のみになった場合は直前LVの構成で補完する。"""
+def test_fullst_fallback_when_level_cells_are_missing():
+    """当該LV列セルが欠落している場合は直前LVの構成で補完する。"""
     html = """
     <html><head><title>テスト機体</title></head>
     <body>
@@ -316,9 +316,9 @@ def test_fullst_strong_sortie_only_should_fallback_from_prev_level():
           <th>LV2</th>
           <th>効果</th>
         </tr>
-        <tr><th>強行出撃</th><th>Lv1</th><td>-</td><td>-</td><td>効果:+500</td></tr>
-        <tr><th>AD-PA</th><th>Lv1</th><td>2780</td><td>-</td><td>効果:+3</td></tr>
-        <tr><th>冷却補助システム</th><th>Lv1</th><td>3640</td><td>-</td><td>効果:+5</td></tr>
+        <tr><th>強行出撃</th><th>Lv1</th><td>-</td><td>効果:+500</td></tr>
+        <tr><th>AD-PA</th><th>Lv1</th><td>2780</td><td>効果:+3</td></tr>
+        <tr><th>冷却補助システム</th><th>Lv1</th><td>3640</td><td>効果:+5</td></tr>
       </table>
 
       <div id="label_sortie_G_S"></div>
