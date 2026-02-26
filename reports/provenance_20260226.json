@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-02-26T09:30:12Z",
+  "report_date": "20260226",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "051f57412e0c83f4a935d980f75044ab3153f7f4"
+  },
+  "github": {
+    "run_id": "22435709676",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "7d",
+    "rate": "1",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "431e2146e76334cf9b49abca5925d731957c0ac17e289618baac56d41cdb30cb",
+      "size_bytes": 87669,
+      "record_count": 557
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "35af7f7ad5b4552106a4d1ca0da30f09ad61644531694d8a70a6ee3190204eba",
+      "size_bytes": 1766421,
+      "record_count": 1589
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "05a1307e466f155263c3752c3cba27441b3bc0a61f147a84f39e97505e5df646",
+      "size_bytes": 2336862,
+      "record_count": 1589
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "6c4606df8a63b4904352393bdb79f2896776ab358df87606ed041d0772537e4c",
+      "file_count": 1116,
+      "size_bytes": 171982027
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "936b7e621432ef97bcb42f0e02f8a7832d9a045c54305b4dd0227048d7b3952b",
+      "size_bytes": 2461820,
+      "record_count": 1597
+    },
+    "diff_report": {
+      "path": "reports/diff_msdata_20260226.md",
+      "sha256": "3d5ae3b93926268e3660b6173559f0056636b1206aaef63d92ea4a357d99fdfa",
+      "size_bytes": 2988
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260226-run-22435709676",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260226-run22435709676",
+    "asset_name": "raw_snapshot_20260226_run22435709676.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260226-run22435709676"
+  }
+}
