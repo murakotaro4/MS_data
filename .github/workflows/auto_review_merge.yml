@@ -34,6 +34,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ steps.prepare.outputs.repo }}
+          RUN_ID: ${{ steps.prepare.outputs.run_id }}
           RUN_CREATED_AT: ${{ steps.prepare.outputs.run_created_at }}
         shell: bash
         run: |
@@ -44,39 +45,44 @@ jobs:
           echo "expected_head_ref=${expected_head_ref}"
 
           pulls_json="$(gh api "repos/${REPO}/pulls?state=open&base=main&per_page=100")"
+          source_marker="source_run_id:${RUN_ID}"
 
-          exact="$(jq -c --arg ref "${expected_head_ref}" \
-            '[.[] | select(.head.ref==$ref and .user.login=="github-actions[bot]")] | sort_by(.created_at) | last // empty' \
+          by_run_id="$(jq -c --arg marker "${source_marker}" \
+            '[.[] | select(.user.login=="github-actions[bot]" and (.head.ref | startswith("data/auto-update-")) and ((.body // "") | contains($marker)))] | sort_by(.created_at) | last // empty' \
             <<< "${pulls_json}")"
 
-          if [[ -n "${exact}" ]]; then
-            pr_number="$(jq -r '.number' <<< "${exact}")"
-            head_ref="$(jq -r '.head.ref' <<< "${exact}")"
-            head_sha="$(jq -r '.head.sha' <<< "${exact}")"
-            resolved_by="exact_branch"
+          if [[ -n "${by_run_id}" ]]; then
+            pr_number="$(jq -r '.number' <<< "${by_run_id}")"
+            head_ref="$(jq -r '.head.ref' <<< "${by_run_id}")"
+            head_sha="$(jq -r '.head.sha' <<< "${by_run_id}")"
+            resolved_by="source_run_id_marker"
             skip="false"
+            skip_reason=""
           else
-            fallback="$(jq -c \
-              '[.[] | select((.head.ref | startswith("data/auto-update-")) and .user.login=="github-actions[bot]")] | sort_by(.created_at) | last // empty' \
+            exact_legacy="$(jq -c --arg ref "${expected_head_ref}" \
+              '[.[] | select(.head.ref==$ref and .user.login=="github-actions[bot]" and (((.body // "") | contains("source_run_id:")) | not))] | sort_by(.created_at) | last // empty' \
               <<< "${pulls_json}")"
 
-            if [[ -n "${fallback}" ]]; then
-              pr_number="$(jq -r '.number' <<< "${fallback}")"
-              head_ref="$(jq -r '.head.ref' <<< "${fallback}")"
-              head_sha="$(jq -r '.head.sha' <<< "${fallback}")"
-              resolved_by="fallback_latest_open"
+            if [[ -n "${exact_legacy}" ]]; then
+              pr_number="$(jq -r '.number' <<< "${exact_legacy}")"
+              head_ref="$(jq -r '.head.ref' <<< "${exact_legacy}")"
+              head_sha="$(jq -r '.head.sha' <<< "${exact_legacy}")"
+              resolved_by="exact_branch_legacy_no_marker"
               skip="false"
+              skip_reason=""
             else
               pr_number=""
               head_ref=""
               head_sha=""
               resolved_by="not_found"
               skip="true"
+              skip_reason="no_target_pr"
             fi
           fi
 
           echo "report_date=${report_date}" >> "$GITHUB_OUTPUT"
           echo "skip=${skip}" >> "$GITHUB_OUTPUT"
+          echo "skip_reason=${skip_reason}" >> "$GITHUB_OUTPUT"
           echo "pr=${pr_number}" >> "$GITHUB_OUTPUT"
           echo "head_ref=${head_ref}" >> "$GITHUB_OUTPUT"
           echo "head_sha=${head_sha}" >> "$GITHUB_OUTPUT"
@@ -91,7 +97,13 @@ jobs:
       - name: No target PR found
         if: steps.resolve.outputs.skip == 'true'
         run: |
-          echo "Skip auto review merge: no open data/auto-update-* PR found for report_date=${{ steps.resolve.outputs.report_date }}."
+          echo "Skip auto review merge: no target PR found for report_date=${{ steps.resolve.outputs.report_date }}."
+          {
+            echo "### Auto Review Merge"
+            echo "- status: skipped"
+            echo "- reason: ${{ steps.resolve.outputs.skip_reason }}"
+            echo "- report_date: ${{ steps.resolve.outputs.report_date }}"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - id: trigger
         name: Trigger Codex review
@@ -137,7 +149,6 @@ jobs:
           HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
           TRIGGER_COMMENT_ID: ${{ steps.trigger.outputs.trigger_comment_id }}
           TRIGGER_COMMENT_CREATED_AT: ${{ steps.trigger.outputs.trigger_created_at }}
-          RUN_ID: ${{ steps.prepare.outputs.run_id }}
         shell: bash
         run: |
           set -euo pipefail
@@ -173,12 +184,6 @@ jobs:
 
           echo "responded=${responded}" >> "$GITHUB_OUTPUT"
 
-          if [[ "${responded}" != "true" ]]; then
-            gh api -X POST "repos/${REPO}/issues/${PR_NUMBER}/comments" \
-              -f body="Codex の応答を20分待機しましたが確認できなかったため、自動マージを停止しました。手動で確認してください。 (run_id: ${RUN_ID})"
-            exit 1
-          fi
-
       - id: gate
         name: Check Codex findings
         if: steps.resolve.outputs.skip != 'true'
@@ -187,6 +192,7 @@ jobs:
           REPO: ${{ steps.prepare.outputs.repo }}
           PR_NUMBER: ${{ steps.resolve.outputs.pr }}
           HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
+          RESPONDED: ${{ steps.wait.outputs.responded }}
         shell: bash
         run: |
           set -euo pipefail
@@ -197,26 +203,63 @@ jobs:
 
           echo "findings=${findings}" >> "$GITHUB_OUTPUT"
 
-          if [[ "${findings}" -eq 0 ]]; then
+          if [[ "${RESPONDED}" != "true" ]]; then
+            echo "merge_ok=false" >> "$GITHUB_OUTPUT"
+            echo "stop_reason=no_response" >> "$GITHUB_OUTPUT"
+          elif [[ "${findings}" -eq 0 ]]; then
             echo "merge_ok=true" >> "$GITHUB_OUTPUT"
+            echo "stop_reason=none" >> "$GITHUB_OUTPUT"
           else
             echo "merge_ok=false" >> "$GITHUB_OUTPUT"
+            echo "stop_reason=findings" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Stop on Codex findings
+      - name: Record stop reason
         if: steps.resolve.outputs.skip != 'true' && steps.gate.outputs.merge_ok != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ steps.prepare.outputs.repo }}
           PR_NUMBER: ${{ steps.resolve.outputs.pr }}
+          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
           FINDINGS: ${{ steps.gate.outputs.findings }}
+          STOP_REASON: ${{ steps.gate.outputs.stop_reason }}
           RUN_ID: ${{ steps.prepare.outputs.run_id }}
         shell: bash
         run: |
           set -euo pipefail
-          gh api -X POST "repos/${REPO}/issues/${PR_NUMBER}/comments" \
-            -f body="Codex のファイル指摘が ${FINDINGS} 件あるため、自動マージを停止しました。 (run_id: ${RUN_ID})"
-          exit 1
+
+          if [[ "${STOP_REASON}" == "no_response" ]]; then
+            reason_label="codex_no_response"
+            message="Codex の応答を20分待機しましたが確認できなかったため、自動マージを停止しました。手動で確認してください。 (run_id: ${RUN_ID})"
+          else
+            reason_label="codex_findings"
+            message="Codex のファイル指摘が ${FINDINGS} 件あるため、自動マージを停止しました。手動で確認してください。 (run_id: ${RUN_ID})"
+          fi
+
+          marker="<!-- auto-review-stop reason:${reason_label} run_id:${RUN_ID} head_sha:${HEAD_SHA} -->"
+          existing_id="$(gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate | \
+            jq -r --arg marker "${marker}" \
+            '[.[] | select(.user.login=="github-actions[bot]" and ((.body // "") | contains($marker)))] | sort_by(.created_at) | last | .id // empty')"
+
+          if [[ -z "${existing_id}" ]]; then
+            gh api -X POST "repos/${REPO}/issues/${PR_NUMBER}/comments" \
+              -f body="${message}"$'\n\n'"${marker}" >/dev/null
+            posted="true"
+          else
+            posted="false"
+          fi
+
+          {
+            echo "### Auto Review Merge"
+            echo "- status: stopped"
+            echo "- reason: ${reason_label}"
+            echo "- pr: #${PR_NUMBER}"
+            echo "- head_sha: ${HEAD_SHA}"
+            if [[ "${STOP_REASON}" == "findings" ]]; then
+              echo "- findings: ${FINDINGS}"
+            fi
+            echo "- comment_posted: ${posted}"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - id: merge
         name: Merge pull request

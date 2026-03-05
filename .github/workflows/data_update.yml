@@ -109,7 +109,7 @@ jobs:
           commit-message: "data: msData.json を更新（${{ env.REPORT_DATE }}; ${{ steps.summary.outputs.summary }}）"
           title: "data: msData.json を更新（${{ env.REPORT_DATE }}）"
           body: |
-            自動更新（取得→取り込み→検証）。
+            自動更新（定期実行）により差分を作成しました。
             - 差分: ${{ steps.summary.outputs.summary }}
             - レポート: reports/diff_msdata_${{ env.REPORT_DATE }}.md
             - provenance: reports/provenance_${{ env.REPORT_DATE }}.json
