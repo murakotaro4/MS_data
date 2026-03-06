@@ -1,0 +1,10 @@
+paths:
+  .github/workflows/auto_review_merge.yml:
+    ignore:
+      - 'shellcheck reported issue in this script: SC2129:.+'
+  .github/workflows/data_update.yml:
+    ignore:
+      - 'shellcheck reported issue in this script: SC2129:.+'
+  .github/workflows/post_merge_notify.yml:
+    ignore:
+      - 'shellcheck reported issue in this script: SC2129:.+'
