@@ -15,16 +15,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterable, List
+
 from scripts.label_utils import KEY_ALIASES
 
 from jsonschema import Draft7Validator
 
 
 SCHEMA_PATH = Path("schema/msData.schema.json")
+MS_NAME_WITH_LEVEL = re.compile(r"^(?P<base>.+)_LV(?P<level>\d+)$")
 
 
 def load_json(path: Path) -> Any:
@@ -37,6 +40,11 @@ def validate_schema(data: Any, schema_path: Path) -> List[str]:
     v = Draft7Validator(schema)
     errors = [e.message for e in v.iter_errors(data)]
     return errors
+
+
+def load_allowed_keys(schema_path: Path) -> set[str]:
+    schema = load_json(schema_path)
+    return set(schema["items"]["properties"].keys())
 
 
 def find_typos(records: List[Dict[str, Any]]) -> Dict[str, int]:
@@ -53,6 +61,97 @@ def find_duplicate_names(records: List[Dict[str, Any]]) -> Dict[str, int]:
     return {k: v for k, v in c.items() if v > 1}
 
 
+def find_unknown_keys(
+    records: Iterable[Dict[str, Any]], allowed_keys: set[str]
+) -> Dict[str, int]:
+    counts: Counter[str] = Counter()
+    for record in records:
+        for key in record:
+            if key not in allowed_keys:
+                counts[key] += 1
+    return dict(counts)
+
+
+def extract_base_name(name: str) -> str | None:
+    match = MS_NAME_WITH_LEVEL.match(name)
+    if not match:
+        return None
+    return match.group("base")
+
+
+def _fullst_order_key(points: Any) -> int:
+    return -1 if points is None else int(points)
+
+
+def find_semantic_errors(records: Iterable[Dict[str, Any]]) -> List[str]:
+    errors: List[str] = []
+    base_attrs: dict[str, set[str]] = defaultdict(set)
+    base_urls: dict[str, set[str]] = defaultdict(set)
+
+    for record in records:
+        ms_name = record.get("MS名")
+        if isinstance(ms_name, str):
+            base_name = extract_base_name(ms_name)
+        else:
+            base_name = None
+
+        if base_name:
+            attr = record.get("属性")
+            if isinstance(attr, str):
+                base_attrs[base_name].add(attr)
+
+            wiki_url = record.get("wiki_url")
+            if isinstance(wiki_url, str) and wiki_url.strip():
+                base_urls[base_name].add(wiki_url.strip())
+
+        fullst = record.get("fullst")
+        if isinstance(fullst, list):
+            seen_entries: set[tuple[Any, Any, Any]] = set()
+            prev_order: int | None = None
+            for idx, item in enumerate(fullst):
+                if not isinstance(item, dict):
+                    continue
+                points = item.get("points")
+                order = _fullst_order_key(points)
+                if prev_order is not None and order < prev_order:
+                    errors.append(
+                        f"{ms_name}: fullst points must be sorted ascending (index={idx})"
+                    )
+                    break
+                prev_order = order
+
+                key = (item.get("name"), item.get("level"), item.get("points"))
+                if item.get("points") is not None:
+                    if key in seen_entries:
+                        errors.append(
+                            f"{ms_name}: duplicated fullst entry detected ({item.get('name')}, level={item.get('level')}, points={item.get('points')})"
+                        )
+                        break
+                    seen_entries.add(key)
+
+        ground_turn_keys = {"旋回_地上_通常時", "旋回_地上_変形時"}
+        space_turn_keys = {"旋回_宇宙_通常時", "旋回_宇宙_変形時"}
+        if record.get("出撃_地上可") is False and any(
+            key in record for key in ground_turn_keys
+        ):
+            errors.append(f"{ms_name}: ground sortie is false but ground turn values exist")
+        if record.get("出撃_宇宙可") is False and any(
+            key in record for key in space_turn_keys
+        ):
+            errors.append(f"{ms_name}: space sortie is false but space turn values exist")
+
+    for base_name, attrs in sorted(base_attrs.items()):
+        if len(attrs) > 1:
+            errors.append(
+                f"{base_name}: 属性 mismatch across levels ({', '.join(sorted(attrs))})"
+            )
+    for base_name, urls in sorted(base_urls.items()):
+        if len(urls) > 1:
+            errors.append(f"{base_name}: wiki_url mismatch across levels")
+
+    return errors
+
+
 def main(argv: List[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("path", type=Path, nargs="?", default=Path("msData.json"))
@@ -65,9 +164,13 @@ def main(argv: List[str] | None = None) -> int:
         print("ERROR: top-level must be an array", file=sys.stderr)
         return 2
 
+    dict_records = [r for r in data if isinstance(r, dict)]
     schema_errors = validate_schema(data, args.schema)
-    typo_counts = find_typos([r for r in data if isinstance(r, dict)])
-    duplicates = find_duplicate_names([r for r in data if isinstance(r, dict)])
+    allowed_keys = load_allowed_keys(args.schema)
+    typo_counts = find_typos(dict_records)
+    duplicates = find_duplicate_names(dict_records)
+    unknown_keys = find_unknown_keys(dict_records, allowed_keys)
+    semantic_errors = find_semantic_errors(dict_records)
 
     status = 0
     if schema_errors:
@@ -76,10 +179,22 @@ def main(argv: List[str] | None = None) -> int:
             print(f"  - {e}", file=sys.stderr)
         status = 1
 
+    if unknown_keys:
+        print("Unknown keys found:", file=sys.stderr)
+        for key, count in sorted(unknown_keys.items(), key=lambda x: (-x[1], x[0])):
+            print(f"  - {key}: {count}", file=sys.stderr)
+        status = 1
+
     if duplicates:
         print("Duplicate MS名 detected:", file=sys.stderr)
         for name, count in sorted(duplicates.items(), key=lambda x: (-x[1], x[0])):
             print(f"  - {name}: {count}", file=sys.stderr)
+        status = 1
+
+    if semantic_errors:
+        print("Semantic errors (first 20):", file=sys.stderr)
+        for error in semantic_errors[:20]:
+            print(f"  - {error}", file=sys.stderr)
         status = 1
 
     if typo_counts:

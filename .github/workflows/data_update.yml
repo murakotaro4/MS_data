@@ -44,51 +44,48 @@ jobs:
         run: |
           cp msData.json msData.before.json
           mkdir -p reports
-          make scrape-index TTL="${TTL}"
-          make scrape-details TTL="${TTL}" RATE="${RATE}" LIMIT="${LIMIT}"
-          make import-details
-          make validate-strict
+          TTL="${TTL}" uv run python -m scripts.tasks scrape-index
+          TTL="${TTL}" RATE="${RATE}" LIMIT="${LIMIT}" uv run python -m scripts.tasks scrape-details
+          uv run python -m scripts.tasks import-details
+          MSDATA=msData.json uv run python -m scripts.tasks validate-strict
+
+      - id: changes
+        name: Check msData changes
+        run: |
+          if git diff --quiet -- msData.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate reports and snapshot
+        if: steps.changes.outputs.changed == 'true'
+        run: |
           uv run python -m scripts.report_msdata_diff \
             --old msData.before.json \
             --new msData.json \
             --out "reports/diff_msdata_${REPORT_DATE}.md" \
             --print-summary | tee reports/diff_summary.txt
-          uv run python -m scripts.generate_provenance \
-            --date "${REPORT_DATE}" \
-            --index cache/index.json \
-            --details-jsonl cache/details.jsonl \
-            --details-json cache/details.json \
-            --msdata msData.json \
-            --diff "reports/diff_msdata_${REPORT_DATE}.md" \
-            --html-dir cache/html \
-            --out "${PROVENANCE_FILE}" \
-            --ttl "${TTL}" \
-            --rate "${RATE}" \
-            --limit "${LIMIT}" \
-            --artifact-name "${RAW_ARTIFACT_NAME}" \
-            --artifact-retention-days "${ARTIFACT_RETENTION_DAYS}"
-          XZ_OPT=-9e tar -cJf "${RAW_SNAPSHOT_FILE}" \
-            cache/html \
-            cache/index.json \
-            cache/details.jsonl \
-            cache/details.json \
-            "reports/diff_msdata_${REPORT_DATE}.md" \
-            "${PROVENANCE_FILE}"
-          rm -f msData.before.json
+          REPORT_DATE="${REPORT_DATE}" \
+          PROVENANCE_OUT="${PROVENANCE_FILE}" \
+          RAW_SNAPSHOT_FILE="${RAW_SNAPSHOT_FILE}" \
+          RAW_ARTIFACT_NAME="${RAW_ARTIFACT_NAME}" \
+          ARTIFACT_RETENTION_DAYS="${ARTIFACT_RETENTION_DAYS}" \
+          TTL="${TTL}" \
+          RATE="${RATE}" \
+          LIMIT="${LIMIT}" \
+          MSDATA=msData.json \
+          uv run python -m scripts.tasks snapshot
 
       - id: summary
+        if: steps.changes.outputs.changed == 'true'
         name: Read summary
         run: |
           echo "summary=$(cat reports/diff_summary.txt)" >> "$GITHUB_OUTPUT"
 
-      - id: changes
-        name: Check changes
-        run: |
-          if [ -n "$(git diff --name-only -- msData.json reports)" ]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          fi
+      - name: Cleanup temp files
+        if: always()
+        run: rm -f msData.before.json
 
       - name: Upload raw snapshot artifact
         if: steps.changes.outputs.changed == 'true'
@@ -119,5 +116,5 @@ jobs:
           branch: "data/auto-update-${{ env.REPORT_DATE }}"
           add-paths: |
             msData.json
-            reports/*.md
+            reports/diff_msdata_${{ env.REPORT_DATE }}.md
             reports/provenance_${{ env.REPORT_DATE }}.json

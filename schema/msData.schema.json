@@ -6,6 +6,7 @@
     "type": "object",
     "properties": {
       "MS名": { "type": "string", "pattern": ".+_LV\\d+$" },
+      "wiki_url": { "type": "string", "format": "uri" },
       "属性": { "type": "string", "enum": ["汎用", "強襲", "支援"] },
       "出撃_地上可": { "type": "boolean" },
       "出撃_宇宙可": { "type": "boolean" },
@@ -21,23 +22,21 @@
       "高速移動_変形時": { "type": "integer", "minimum": 0 },
       "射撃補正": { "type": "integer", "minimum": 0 },
       "射撃補正_変形時": { "type": "integer", "minimum": 0 },
+      "射撃補正_変身時": { "type": "integer", "minimum": 0 },
       "格闘補正": { "type": "integer", "minimum": 0 },
       "格闘補正_変形時": { "type": "integer", "minimum": 0 },
+      "格闘補正_変身時": { "type": "integer", "minimum": 0 },
       "耐ビーム補正": { "type": "integer", "minimum": 0 },
       "耐実弾補正": { "type": "integer", "minimum": 0 },
       "耐格闘補正": { "type": "integer", "minimum": 0 },
-      "射撃補正_変形時": { "type": "integer", "minimum": 0 },
-      "射撃補正_変身時": { "type": "integer", "minimum": 0 },
-      "格闘補正_変形時": { "type": "integer", "minimum": 0 },
-      "格闘補正_変身時": { "type": "integer", "minimum": 0 },
       "近スロット": { "type": "integer", "minimum": 0 },
       "中スロット": { "type": "integer", "minimum": 0 },
       "遠スロット": { "type": "integer", "minimum": 0 },
       "旋回_地上_通常時": { "type": "integer", "minimum": 0 },
-      "旋回_変形時": { "type": "integer", "minimum": 0 },
       "旋回_地上_変形時": { "type": "integer", "minimum": 0 },
       "旋回_宇宙_通常時": { "type": "integer", "minimum": 0 },
       "旋回_宇宙_変形時": { "type": "integer", "minimum": 0 },
+      "旋回_変形時": { "type": "integer", "minimum": 0 },
       "カウンター": { "type": "string" },
       "再出撃時間": { "type": "integer", "minimum": 0 },
       "格闘判定力": { "type": ["string", "null"] },
@@ -77,11 +76,13 @@
       "遠スロット"
     ],
     "allOf": [
-      { "anyOf": [
-        { "required": ["旋回_地上_通常時"] },
-        { "required": ["旋回_宇宙_通常時"] }
-      ]}
+      {
+        "anyOf": [
+          { "required": ["旋回_地上_通常時"] },
+          { "required": ["旋回_宇宙_通常時"] }
+        ]
+      }
     ],
-    "additionalProperties": true
+    "additionalProperties": false
   }
 }

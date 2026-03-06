@@ -65,26 +65,22 @@ jobs:
           set -euo pipefail
 
           head_ref="${HEAD_REF}"
-          report=""
-
-          if [[ "$head_ref" =~ ^data/auto-update-([0-9]{8})$ ]]; then
-            report="reports/diff_msdata_${BASH_REMATCH[1]}.md"
+          if [[ ! "$head_ref" =~ ^data/auto-update-([0-9]{8})$ ]]; then
+            echo "head_ref から report_date を解決できません: ${head_ref}" >&2
+            exit 1
           fi
+          report_date="${BASH_REMATCH[1]}"
+          report="reports/diff_msdata_${report_date}.md"
+          provenance_path="reports/provenance_${report_date}.json"
 
-          if [[ -z "$report" || ! -f "$report" ]]; then
-            report="$(ls -1 reports/diff_msdata_*.md 2>/dev/null | sort | tail -n 1 || true)"
-          fi
-
-          if [[ -z "$report" || ! -f "$report" ]]; then
-            echo "差分レポートが見つかりません。" >&2
+          if [[ ! -f "$report" ]]; then
+            echo "差分レポートが見つかりません: ${report}" >&2
             exit 1
           fi
 
-          report_base="$(basename "$report")"
-          if [[ "$report_base" =~ ^diff_msdata_([0-9]{8})\.md$ ]]; then
-            report_date="${BASH_REMATCH[1]}"
-          else
-            report_date="$(date +%Y%m%d)"
+          if [[ ! -f "$provenance_path" ]]; then
+            echo "provenance が見つかりません: ${provenance_path}" >&2
+            exit 1
           fi
 
           source_run_id="${SOURCE_RUN_ID_INPUT}"
@@ -103,7 +99,6 @@ jobs:
           artifact_name="raw-snapshot-${report_date}-run-${source_run_id}"
           snapshot_file="raw_snapshot_${report_date}_run${source_run_id}.tar.xz"
           release_tag="raw-snapshot-${report_date}-run${source_run_id}"
-          provenance_path="reports/provenance_${report_date}.json"
 
           echo "report_path=$report" >> "$GITHUB_OUTPUT"
           echo "report_date=$report_date" >> "$GITHUB_OUTPUT"

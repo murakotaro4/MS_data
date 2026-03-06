@@ -15,22 +15,32 @@
 ## ビルド・テスト・開発コマンド（uv）
 - 環境作成: `uv venv`（任意で `-p 3.11`）。実行は基本 `uv run <cmd>` を使用。
 - 依存追加: `uv add black ruff pytest jsonschema`（`pyproject.toml` に記録）。
+- 第一コマンド: `uv run python -m scripts.tasks <target>` を使用する。
 - JSON 構文チェック: `jq . msData.json > /dev/null` または `uv run python -m json.tool msData.json > /dev/null`
 - 整形・キーソート: `jq -S '.' msData.json > msData.pretty.json`
 - テスト: `uv run pytest -q`（`tests/` 配下）
-- フォーマット/リンタ: `uv run black . && uv run ruff .`
+- フォーマット/リンタ: `uv run black . && uv run ruff check .`
+- 統合チェック: `uv run python -m scripts.tasks ci`
 
-### Makefile（ショートカット）
+### 推奨ターゲット（scripts.tasks）
+- 初期化: `uv run python -m scripts.tasks setup`
+- 更新: `uv run python -m scripts.tasks update INPUT=path/to/new.json`
+- 検証: `uv run python -m scripts.tasks validate`（厳格: `uv run python -m scripts.tasks validate-strict`）
+- skills 系検証: `uv run python -m scripts.tasks validate-skills`
+- 品質チェック: `uv run python -m scripts.tasks ci`
+
+### Makefile（補助ショートカット）
+- `make` は Linux/macOS 向けの薄いラッパーとして残す。Windows では `scripts.tasks` を優先する。
 - 初期化: `make setup`
 - 更新: `make update INPUT=path/to/new.json`（入力なしで正規化のみ）
 - 検証: `make validate`（厳格: `make validate-strict`）
 - 品質チェック: `make format && make lint && make test` または `make ci`
 
 ## スクレイピング手順（atwiki）
-- 一覧取得: `uv run python scripts/scrape_msdata.py index --url https://w.atwiki.jp/battle-operation2/pages/377.html --out cache/index.json`
-- 詳細取得: `uv run python scripts/scrape_msdata.py details --in cache/index.json --out cache/details.jsonl --rate 2.0`
-- 連続実行: `uv run python scripts/scrape_msdata.py all --out cache/details.jsonl`
-- 取り込み: `make import-details`（`scripts/jsonl_to_json.py` を使用、`jq` 非依存）
+- 一覧取得: `uv run python -m scripts.tasks scrape-index TTL=7d`
+- 詳細取得: `uv run python -m scripts.tasks scrape-details TTL=7d RATE=2.0 LIMIT=0`
+- 連続実行: `uv run python -m scripts.tasks scrape-all RATE=2.0 LIMIT=0`
+- 取り込み: `uv run python -m scripts.tasks import-details`（`scripts/jsonl_to_json.py` を使用、`jq` 非依存）
 
 注意（SSOT）
 - 本リポジトリでは index（`cache/index.json`）の `name` を真実のソース（SSOT）とし、詳細抽出の `MS名` も index の表記で固定します（LVは `_LVn` で付与）。
@@ -46,9 +56,9 @@
   - 出力: `reports/label_audit_YYYYMMDD.md`（unknown=0 を目標）
   - 除外: 属性（汎用/強襲/支援）は監査集計から除外
 - 取得コマンド（キャッシュ対応）
-  - 一覧: `make scrape-index TTL=7d`
-  - 行見出し収集: `make labels LIMIT=0`（または小規模 `LIMIT=30`）
-  - 集計: `make audit-labels`
+  - 一覧: `uv run python -m scripts.tasks scrape-index TTL=7d`
+  - 行見出し収集: `uv run python -m scripts.tasks labels LIMIT=0`（または小規模 `LIMIT=30`）
+  - 集計: `uv run python -m scripts.tasks audit-labels`
 
 ## スキーマ拡張と補正ルール（要点）
 - 追加キー（任意）
@@ -76,15 +86,15 @@
 - デフォルトレート: 2.0 req/sec（Makefileの`RATE`変数で設定）
   - 処理時間: 538件で約4.5分（1.0 req/secの約半分）
   - atwikiへの負荷を考慮し、過度な緩和は避ける
-- レート調整: `make scrape-details RATE=3.0` のように指定可能
+- レート調整: `uv run python -m scripts.tasks scrape-details RATE=3.0` のように指定可能
 - キャッシュ活用: 2回目以降は `NO_NET=1` でキャッシュのみ使用可能（数秒で完了）
 - JSONL→JSON変換: `scripts/jsonl_to_json.py` を使用（`jq` 非依存）
 
 ## 実行スニペット（更新フロー）
 - 全件詳細→取り込み→検証
-  - `make scrape-details TTL=7d RATE=2.0 LIMIT=0`（デフォルトRATE=2.0、必要に応じて調整可能）
-  - `make import-details`
-  - `make validate`（厳格: `make validate-strict`）
+  - `uv run python -m scripts.tasks scrape-details TTL=7d RATE=2.0 LIMIT=0`（デフォルトRATE=2.0、必要に応じて調整可能）
+  - `uv run python -m scripts.tasks import-details`
+  - `uv run python -m scripts.tasks validate`（厳格: `uv run python -m scripts.tasks validate-strict`）
 - 差分要約はコマンド出力（`records: A -> B | +X -Y ~Z`）で確認
  - 監査（index vs msData）: `uv run python -m scripts.audit_index_vs_msdata --index cache/index.json --ms msData.json --out reports/index_ms_audit_YYYYMMDD.md`
 
@@ -95,10 +105,10 @@
 - 既知の残課題: `MS名` パターン不一致 1件（例: プロトΖガンダム［X1型］）
 
 ## 最終的な msData.json 作成計画（合意済み）
-1) 監査を回す: `make labels LIMIT=0 && make audit-labels`（unknown=0確認）
-2) 全件詳細取得: `make scrape-details TTL=7d RATE=2.0 LIMIT=0`（デフォルトRATE=2.0）
-3) 取り込み: `make import-details`（回転/出撃の補正・推定を含む）
-4) 検証: `make validate-strict`（スキーマ/重複/別名チェック）
+1) 監査を回す: `uv run python -m scripts.tasks labels LIMIT=0` → `uv run python -m scripts.tasks audit-labels`（unknown=0確認）
+2) 全件詳細取得: `uv run python -m scripts.tasks scrape-details TTL=7d RATE=2.0 LIMIT=0`（デフォルトRATE=2.0）
+3) 取り込み: `uv run python -m scripts.tasks import-details`（回転/出撃の補正・推定を含む）
+4) 検証: `uv run python -m scripts.tasks validate-strict`（スキーマ/重複/別名チェック）
 5) 差分確認: `git diff -- msData.json`（件数/キー変更）
 6) コミット/PR: 来歴・統計・補正ルールを記載（このAGENTS.mdを参照）
 
@@ -175,10 +185,10 @@ MS名の正規化（index準拠）
 - 生データアーカイブ（長期）: `post merge notify` で `source_run_id` のartifactを取得し、Release tag `raw-snapshot-YYYYMMDD-run<run_id>` に asset として恒久保存します。
 - 復元手順: 対象コミットの `reports/provenance_YYYYMMDD.json` から `release.tag` / `release.url` を取得し、Release asset を展開して `cache/` を再構成します。
 ### 週次データ更新（実例: 2025-09-17）
-- index/details を強制再取得: `make scrape-index FORCE=1 TTL=1d` → `make scrape-details FORCE=1 TTL=1d RATE=2.0 LIMIT=0`（デフォルトRATE=2.0、タイムアウト時は `NO_NET=1` に切り替えてキャッシュ再利用）
-- JSONL を配列にまとめる: `make import-details`（`scripts/jsonl_to_json.py` を使用、`jq` 非依存）
-- 取り込み・検証: `uv run python -m scripts.update_msdata -i cache/details.json` → 出力の `records: A -> B | +X -Y ~Z` を控え、`make validate-strict`
-- 監査とレポート: `make audit-index` を実行し `reports/index_ms_audit_YYYYMMDD.md` を生成。差分概要は `reports/msdata_update_YYYYMMDD.md` にまとめる
+- index/details を強制再取得: `uv run python -m scripts.tasks scrape-index FORCE=1 TTL=1d` → `uv run python -m scripts.tasks scrape-details FORCE=1 TTL=1d RATE=2.0 LIMIT=0`（デフォルトRATE=2.0、タイムアウト時は `NO_NET=1` に切り替えてキャッシュ再利用）
+- JSONL を配列にまとめる: `uv run python -m scripts.tasks import-details`（`scripts/jsonl_to_json.py` を使用、`jq` 非依存）
+- 取り込み・検証: `uv run python -m scripts.update_msdata -i cache/details.json` → 出力の `records: A -> B | +X -Y ~Z` を控え、`uv run python -m scripts.tasks validate-strict`
+- 監査とレポート: `uv run python -m scripts.tasks audit-index` を実行し `reports/index_ms_audit_YYYYMMDD.md` を生成。差分概要は `reports/msdata_update_YYYYMMDD.md` にまとめる
   - **レポート作成時は `reports/msdata_update_template.md` を参照し、その内容に沿って作成する**
   - 新規追加機体は主要パラメータを網羅的に記載
   - 既存更新は変更前後の値を明記
@@ -195,11 +205,11 @@ MS名の正規化（index準拠）
   - msData.json は恒常値のみとし、スキルは別ファイルで管理（アプリ側で合成）。
   - 定義（param）と所有（owners）を分離し、レビュー/保守性を優先。
 - 追加コマンド（Make）
-  - `make skills-table` … atwiki「スキル一覧表」の“表の行”を厳格抽出（rowspan継承含む）→ `cache/skills_table.json`
-  - `make owners-table` … 「所持機体 逆引き一覧」の“表の行”を厳格抽出（アンカー境界停止・rowspan対応）→ `cache/owners_table.json`
-  - `make build-param-skills` … パラメータ変化スキルのみを抽出（ホワイトリスト）→ `data/skills_params.json`
-  - `make build-owners-flat` … シリーズ×機体Lv展開（msData から存在LvをJOIN）→ `data/skill_owners_flat.json`
-  - `make preview-params` … parameter-only の合成プレビュー（MS単位）→ `derived/ms_params_preview.json`
+  - `uv run python -m scripts.tasks skills-table` … atwiki「スキル一覧表」の“表の行”を厳格抽出（rowspan継承含む）→ `cache/skills_table.json`
+  - `uv run python -m scripts.tasks owners-table` … 「所持機体 逆引き一覧」の“表の行”を厳格抽出（アンカー境界停止・rowspan対応）→ `cache/owners_table.json`
+  - `uv run python -m scripts.tasks build-param-skills` … パラメータ変化スキルのみを抽出（ホワイトリスト）→ `data/skills_params.json`
+  - `uv run python -m scripts.tasks build-owners-flat` … シリーズ×機体Lv展開（msData から存在LvをJOIN）→ `data/skill_owners_flat.json`
+  - `uv run python -m scripts.tasks preview-params` … parameter-only の合成プレビュー（MS単位）→ `derived/ms_params_preview.json`
 - 抽出ポリシー
   - 対象パラメータ: スピード/高速移動/射撃補正/格闘補正/旋回/各耐性（3耐展開）/スラスター消費（係数）/被ダメージ（係数）
   - ホワイトリスト: 能力UP系（EXAM/HADES/HADES-E/ALICE/ZEUS/THEMIS/n_i_t_r_o/各種バイオセンサー/覚醒 など）
@@ -299,7 +309,7 @@ MS名の正規化（index準拠）
 - データ来歴（必要に応じて）
   - 取得日・ソースURL・処理コマンド（Make/CLI）
 - 検証結果
-  - `make validate-strict` の結果
+  - `uv run python -m scripts.tasks validate-strict` の結果
   - 監査（labels）: unknown=0 の確認（必要時）
   - 差分統計: `records: A -> B | +X -Y ~Z`
 - 影響範囲/後方互換性
@@ -307,7 +317,7 @@ MS名の正規化（index準拠）
 - チェックリスト（例）
   - [ ] `uv run black .` / `uv run ruff check .` を通過
   - [ ] `uv run pytest -q` を通過（ある場合）
-  - [ ] `make validate-strict` を通過
+  - [ ] `uv run python -m scripts.tasks validate-strict` を通過
   - [ ] 監査（必要時）で unknown=0 を確認
   - [ ] 差分の件数/要点を PR に記載
   - [ ] 影響範囲と後方互換性を説明

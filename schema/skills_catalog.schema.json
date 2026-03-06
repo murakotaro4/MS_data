@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["skills"],
+  "properties": {
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "levels"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "levels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["level"],
+              "properties": {
+                "level": { "type": "integer", "minimum": 1 },
+                "activation": { "type": ["object", "null"] },
+                "duration_sec": { "type": ["integer", "null"], "minimum": 0 },
+                "effects": {
+                  "type": ["object", "null"],
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "op": { "type": "string", "enum": ["add", "mul"] },
+                      "value": { "type": "integer" },
+                      "factor": { "type": "number" }
+                    },
+                    "required": ["op"],
+                    "additionalProperties": false
+                  }
+                },
+                "tags": {
+                  "type": ["array", "null"],
+                  "items": { "type": "string" }
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "phases": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "name", "levels"],
+              "properties": {
+                "id": { "type": "string", "minLength": 1 },
+                "name": { "type": "string", "minLength": 1 },
+                "levels": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["level"],
+                    "properties": {
+                      "level": { "type": "integer", "minimum": 1 },
+                      "activation": { "type": ["object", "null"] },
+                      "duration_sec": { "type": ["integer", "null"], "minimum": 0 },
+                      "effects": {
+                        "type": ["object", "null"],
+                        "additionalProperties": {
+                          "type": "object",
+                          "properties": {
+                            "op": { "type": "string", "enum": ["add", "mul"] },
+                            "value": { "type": "integer" },
+                            "factor": { "type": "number" }
+                          },
+                          "required": ["op"],
+                          "additionalProperties": false
+                        }
+                      },
+                      "tags": {
+                        "type": ["array", "null"],
+                        "items": { "type": "string" }
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

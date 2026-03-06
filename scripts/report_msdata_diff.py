@@ -206,17 +206,15 @@ def format_change_inline(
     return f"{escaped_name}: {', '.join(parts)}"
 
 
-def main(argv: List[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--old", type=Path, required=True)
-    ap.add_argument("--new", type=Path, required=True)
-    ap.add_argument("--out", type=Path, required=True)
-    ap.add_argument("--list-limit", type=int, default=200)
-    ap.add_argument("--print-summary", action="store_true")
-    args = ap.parse_args(argv)
-
-    old_list = load_json(args.old)
-    new_list = load_json(args.new)
+def build_report_lines(
+    old_list: List[Any],
+    new_list: List[Any],
+    *,
+    list_limit: int = 200,
+    generated_at: datetime | None = None,
+    old_label: str = "old",
+    new_label: str = "new",
+) -> tuple[list[str], str]:
     if not isinstance(old_list, list) or not isinstance(new_list, list):
         raise ValueError("old/new は配列(JSON)である必要があります。")
 
@@ -238,9 +236,16 @@ def main(argv: List[str] | None = None) -> int:
     _warn_dupes("old", old_name_counts)
     _warn_dupes("new", new_name_counts)
     if old_invalid:
-        print(f"警告: old に不正レコード（非dict/MS名欠落/空）が {old_invalid} 件あります", file=sys.stderr)
+        print(
+            f"警告: old に不正レコード（非dict/MS名欠落/空）が {old_invalid} 件あります",
+            file=sys.stderr,
+        )
     if new_invalid:
-        print(f"警告: new に不正レコード（非dict/MS名欠落/空）が {new_invalid} 件あります", file=sys.stderr)
+        print(
+            f"警告: new に不正レコード（非dict/MS名欠落/空）が {new_invalid} 件あります",
+            file=sys.stderr,
+        )
+
     old_count, new_count, added_count, removed_count, changed_count = diff_summary(
         old_index, new_index
     )
@@ -251,25 +256,25 @@ def main(argv: List[str] | None = None) -> int:
     removed_keys = sorted(old_keys - new_keys)
 
     changed_fields, added_fields, removed_fields = diff_field_counts(old_index, new_index)
-
     added_records = sorted(set(new_index.keys()) - set(old_index.keys()))
     removed_records = sorted(set(old_index.keys()) - set(new_index.keys()))
     changed_records_detail = get_changed_records_detail(old_index, new_index)
 
-    now = datetime.now()
+    now = generated_at or datetime.now()
     out_date = now.strftime("%Y%m%d")
     out_dt = now.strftime("%Y-%m-%d %H:%M:%S")
+    summary = (
+        f"records: {old_count} -> {new_count} | +{added_count} -{removed_count} ~{changed_count}"
+    )
 
     lines: List[str] = []
     lines.append(f"# msData 差分レポート ({out_date})")
     lines.append("")
     lines.append(f"- 生成日時: {out_dt}")
-    lines.append(f"- 比較対象: `{args.old}` → `{args.new}`")
+    lines.append(f"- 比較対象: `{old_label}` → `{new_label}`")
     lines.append("")
     lines.append("## サマリ")
-    lines.append(
-        f"- レコード数: {old_count} → {new_count} | +{added_count} -{removed_count} ~{changed_count}"
-    )
+    lines.append(f"- レコード数: {old_count} → {new_count} | +{added_count} -{removed_count} ~{changed_count}")
     lines.append(
         f"- グローバル項目数: {len(old_keys)} → {len(new_keys)} | +{len(added_keys)} -{len(removed_keys)}"
     )
@@ -299,28 +304,47 @@ def main(argv: List[str] | None = None) -> int:
     lines.append("")
     lines.append("## 追加レコード一覧")
     lines.append(f"- 件数: {len(added_records)}")
-    add_list, add_truncated = format_list(added_records, args.list_limit)
+    add_list, add_truncated = format_list(added_records, list_limit)
     lines.extend(add_list)
     if add_truncated:
-        lines.append(f"  - ...（残り {len(added_records) - args.list_limit} 件）")
+        lines.append(f"  - ...（残り {len(added_records) - list_limit} 件）")
     lines.append("")
     lines.append("## 削除レコード一覧")
     lines.append(f"- 件数: {len(removed_records)}")
-    del_list, del_truncated = format_list(removed_records, args.list_limit)
+    del_list, del_truncated = format_list(removed_records, list_limit)
     lines.extend(del_list)
     if del_truncated:
-        lines.append(f"  - ...（残り {len(removed_records) - args.list_limit} 件）")
+        lines.append(f"  - ...（残り {len(removed_records) - list_limit} 件）")
     lines.append("")
     lines.append("## 変更レコード一覧")
     lines.append(f"- 件数: {len(changed_records_detail)}")
     sorted_changed = sorted(changed_records_detail)
-    for name, changes in sorted_changed[: args.list_limit]:
+    for name, changes in sorted_changed[:list_limit]:
         lines.append(f"  - {format_change_inline(name, changes)}")
-    if len(sorted_changed) > args.list_limit:
-        lines.append(
-            f"  - ...（残り {len(sorted_changed) - args.list_limit} 件）"
-        )
+    if len(sorted_changed) > list_limit:
+        lines.append(f"  - ...（残り {len(sorted_changed) - list_limit} 件）")
     lines.append("")
+    return lines, summary
+
+
+def main(argv: List[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--old", type=Path, required=True)
+    ap.add_argument("--new", type=Path, required=True)
+    ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--list-limit", type=int, default=200)
+    ap.add_argument("--print-summary", action="store_true")
+    args = ap.parse_args(argv)
+
+    old_list = load_json(args.old)
+    new_list = load_json(args.new)
+    lines, summary = build_report_lines(
+        old_list,
+        new_list,
+        list_limit=args.list_limit,
+        old_label=str(args.old),
+        new_label=str(args.new),
+    )
 
     try:
         args.out.parent.mkdir(parents=True, exist_ok=True)
@@ -330,9 +354,7 @@ def main(argv: List[str] | None = None) -> int:
         return 1
 
     if args.print_summary:
-        print(
-            f"records: {old_count} -> {new_count} | +{added_count} -{removed_count} ~{changed_count}"
-        )
+        print(summary)
     return 0
 
 

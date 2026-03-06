@@ -3,7 +3,7 @@ SHELL := bash
 
 MSDATA := msData.json
 
-.PHONY: help setup format lint test validate validate-strict update normalize ci scrape-index scrape-details scrape-all import-details labels audit-labels report-diff audit-index skills skills-table owners-table build-skills build-param-skills build-owners-flat audit-skills preview-params provenance snapshot
+.PHONY: help setup format lint test validate validate-strict validate-skills update normalize ci scrape-index scrape-details scrape-all import-details labels audit-labels report-diff audit-index skills skills-table owners-table build-skills build-param-skills build-owners-flat audit-skills preview-params provenance snapshot
 
 help:
 	@echo "Available targets:"
@@ -13,9 +13,10 @@ help:
 	@echo "  test              Run pytest"
 	@echo "  validate          Schema/typo/duplicate checks"
 	@echo "  validate-strict   Same as validate, fail on typos"
+	@echo "  validate-skills   Validate committed skills JSON files"
 	@echo "  update            Normalize/merge msData.json; INPUT=<json> optional"
 	@echo "  normalize         Normalize existing msData.json in-place"
-	@echo "  ci                Lint + test + validate-strict"
+	@echo "  ci                Lint + test + validate-strict + validate-skills"
 	@echo "  scrape-index      Fetch index (MS一覧) to cache/index.json"
 	@echo "  scrape-details    Fetch details -> cache/details.jsonl (from cache/index.json)"
 	@echo "  scrape-all        Index+details in one shot"
@@ -36,35 +37,34 @@ help:
 	@echo "  audit-skills      Audit owners vs msData.json -> reports/skill_owners_audit_*.md"
 
 setup:
-	uv venv
-	uv sync --dev
+	uv run python -m scripts.tasks setup
 
 format:
-	uv run black .
+	uv run python -m scripts.tasks format
 
 lint:
-	uv run ruff .
+	uv run python -m scripts.tasks lint
 
 test:
-	uv run pytest -q
+	uv run python -m scripts.tasks test
 
 validate:
-	uv run python -m scripts.validate_msdata $(MSDATA)
+	MSDATA="$(MSDATA)" uv run python -m scripts.tasks validate
 
 validate-strict:
-	uv run python -m scripts.validate_msdata $(MSDATA) --fail-on-typo
+	MSDATA="$(MSDATA)" uv run python -m scripts.tasks validate-strict
+
+validate-skills:
+	uv run python -m scripts.tasks validate-skills
 
 update:
-	@if [ -n "$(INPUT)" ]; then \
-		uv run python -m scripts.update_msdata -i "$(INPUT)"; \
-	else \
-		uv run python -m scripts.update_msdata -i; \
-	fi
+	INPUT="$(INPUT)" uv run python -m scripts.tasks update
 
 normalize:
-	uv run python -m scripts.update_msdata -i
+	uv run python -m scripts.tasks normalize
 
-ci: lint test validate-strict
+ci:
+	uv run python -m scripts.tasks ci
 
 TTL ?= 7d
 RATE ?= 2.0
@@ -76,76 +76,56 @@ PROVENANCE_OUT ?= reports/provenance_$(REPORT_DATE).json
 RAW_SNAPSHOT_FILE ?= raw_snapshot_$(REPORT_DATE)_runlocal.tar.xz
 
 scrape-index:
-	uv run python -m scripts.scrape_msdata index --url https://w.atwiki.jp/battle-operation2/pages/377.html --out cache/index.json --ttl $(TTL) $(if $(NO_NET),--no-network,) $(if $(FORCE),--force,)
+	TTL="$(TTL)" NO_NET="$(NO_NET)" FORCE="$(FORCE)" uv run python -m scripts.tasks scrape-index
 
 scrape-details:
-	uv run python -m scripts.scrape_msdata details --in cache/index.json --out cache/details.jsonl --rate $(RATE) --limit $(LIMIT) --ttl $(TTL) $(if $(NO_NET),--no-network,) $(if $(FORCE),--force,)
+	TTL="$(TTL)" RATE="$(RATE)" LIMIT="$(LIMIT)" NO_NET="$(NO_NET)" FORCE="$(FORCE)" uv run python -m scripts.tasks scrape-details
 
 scrape-all:
-	uv run python -m scripts.scrape_msdata all --out cache/details.jsonl --rate $(RATE)
+	RATE="$(RATE)" LIMIT="$(LIMIT)" uv run python -m scripts.tasks scrape-all
 
 import-details:
-	uv run python -m scripts.jsonl_to_json cache/details.jsonl cache/details.json
-	uv run python -m scripts.update_msdata -i cache/details.json
+	uv run python -m scripts.tasks import-details
 
 labels:
-	uv run python -m scripts.scrape_msdata labels --in cache/index.json --out cache/labels_raw.jsonl --rate $(RATE) --limit $(LIMIT) --ttl $(TTL) $(if $(NO_NET),--no-network,) $(if $(FORCE),--force,)
+	TTL="$(TTL)" RATE="$(RATE)" LIMIT="$(LIMIT)" NO_NET="$(NO_NET)" FORCE="$(FORCE)" uv run python -m scripts.tasks labels
 
 audit-labels:
-	uv run python -m scripts.audit_labels --in cache/labels_raw.jsonl --out reports/label_audit_$(shell date +%Y%m%d).md
+	REPORT_DATE="$(REPORT_DATE)" uv run python -m scripts.tasks audit-labels
 
 report-diff:
-	uv run python -m scripts.report_msdata_diff --old $(OLD) --new $(NEW) --out $(OUT)
+	OLD="$(OLD)" NEW="$(NEW)" OUT="$(OUT)" uv run python -m scripts.tasks report-diff
 
 provenance:
-	uv run python -m scripts.generate_provenance \
-		--date $(REPORT_DATE) \
-		--index cache/index.json \
-		--details-jsonl cache/details.jsonl \
-		--details-json cache/details.json \
-		--msdata $(MSDATA) \
-		--diff reports/diff_msdata_$(REPORT_DATE).md \
-		--html-dir cache/html \
-		--out $(PROVENANCE_OUT) \
-		--ttl $(TTL) \
-		--rate $(RATE) \
-		--limit $(LIMIT) \
-		--artifact-name raw-snapshot-$(REPORT_DATE)-run-local \
-		--artifact-retention-days 90
+	REPORT_DATE="$(REPORT_DATE)" PROVENANCE_OUT="$(PROVENANCE_OUT)" MSDATA="$(MSDATA)" TTL="$(TTL)" RATE="$(RATE)" LIMIT="$(LIMIT)" uv run python -m scripts.tasks provenance
 
-snapshot: provenance
-	@set -euo pipefail; \
-	files="cache/html cache/index.json cache/details.jsonl cache/details.json $(PROVENANCE_OUT)"; \
-	if [ -f "reports/diff_msdata_$(REPORT_DATE).md" ]; then \
-		files="$$files reports/diff_msdata_$(REPORT_DATE).md"; \
-	fi; \
-	XZ_OPT=-9e tar -cJf "$(RAW_SNAPSHOT_FILE)" $$files; \
-	echo "snapshot created: $(RAW_SNAPSHOT_FILE)"
+snapshot:
+	REPORT_DATE="$(REPORT_DATE)" PROVENANCE_OUT="$(PROVENANCE_OUT)" RAW_SNAPSHOT_FILE="$(RAW_SNAPSHOT_FILE)" MSDATA="$(MSDATA)" TTL="$(TTL)" RATE="$(RATE)" LIMIT="$(LIMIT)" uv run python -m scripts.tasks snapshot
 
 # Index vs msData audit (names, presence, attr/cost)
 audit-index:
-	uv run python -m scripts.audit_index_vs_msdata --index cache/index.json --ms $(MSDATA) --out reports/index_ms_audit_$(shell date +%Y%m%d).md
+	REPORT_DATE="$(REPORT_DATE)" MSDATA="$(MSDATA)" uv run python -m scripts.tasks audit-index
 
 skills:
-	uv run python -m scripts.extract_skills all --out cache/skills.json --ttl $(TTL) $(if $(NO_NET),--no-network,) $(if $(FORCE),--force,)
+	TTL="$(TTL)" NO_NET="$(NO_NET)" FORCE="$(FORCE)" uv run python -m scripts.tasks skills
 
 skills-table:
-	uv run python -m scripts.extract_skills table --out cache/skills_table.json --ttl $(TTL) $(if $(NO_NET),--no-network,) $(if $(FORCE),--force,)
+	TTL="$(TTL)" NO_NET="$(NO_NET)" FORCE="$(FORCE)" uv run python -m scripts.tasks skills-table
 
 owners-table:
-	uv run python -m scripts.extract_skills owners-table --out cache/owners_table.json --ttl $(TTL) $(if $(NO_NET),--no-network,) $(if $(FORCE),--force,)
+	TTL="$(TTL)" NO_NET="$(NO_NET)" FORCE="$(FORCE)" uv run python -m scripts.tasks owners-table
 
 build-skills:
-	uv run python -m scripts.build_skills --in cache/skills.json --out-catalog data/skills_catalog.json --out-owners data/skill_owners.json
+	uv run python -m scripts.tasks build-skills
 
 audit-skills:
-	uv run python -m scripts.audit_skills --owners data/skill_owners.json --msdata $(MSDATA)
+	MSDATA="$(MSDATA)" uv run python -m scripts.tasks audit-skills
 
 build-param-skills:
-	uv run python -m scripts.build_param_skills --in cache/skills_table.json --out data/skills_params.json --policy data/skills_policy.json --audit-out reports/skills_params_audit.json
+	uv run python -m scripts.tasks build-param-skills
 
 build-owners-flat:
-	uv run python -m scripts.build_owners_flat --in cache/owners_table.json --msdata $(MSDATA) --policy data/skills_policy.json --out data/skill_owners_flat.json --audit-out reports/owners_flat_audit.json
+	MSDATA="$(MSDATA)" uv run python -m scripts.tasks build-owners-flat
 
 preview-params:
-	uv run python -m scripts.preview_params --msdata $(MSDATA) --owners data/skill_owners_flat.json --params data/skills_params.json --out derived/ms_params_preview.json
+	MSDATA="$(MSDATA)" uv run python -m scripts.tasks preview-params

@@ -33,19 +33,21 @@ uv venv
 uv sync --dev
 ```
 
-## よく使うコマンド（Makefile）
-- 監査（ラベル語彙収集→集計）
-  - 一覧: `make scrape-index TTL=7d`
-  - 収集: `make labels LIMIT=0`（小規模は LIMIT=30 など）
-  - 集計: `make audit-labels`
-- スキル（たたき台: EXAM/HADES/バイオセンサー/NT-D 等）
-  - 抽出: `make skills TTL=7d` → `cache/skills.json`
-- 全件更新（推奨フロー）
-  - 詳細取得: `make scrape-details TTL=7d RATE=1.0 LIMIT=0`
-  - 取り込み: `make import-details`
-  - 検証: `make validate-strict`
-- 整形のみ（キー順統一/上書き）
-  - `make normalize`
+## よく使うコマンド（推奨）
+- 品質チェック: `uv run python -m scripts.tasks ci`
+- 検証: `uv run python -m scripts.tasks validate`
+- 厳格検証: `uv run python -m scripts.tasks validate-strict`
+- skills 系検証: `uv run python -m scripts.tasks validate-skills`
+- 一覧取得: `uv run python -m scripts.tasks scrape-index TTL=7d`
+- 詳細取得: `uv run python -m scripts.tasks scrape-details TTL=7d RATE=2.0 LIMIT=0`
+- 取り込み: `uv run python -m scripts.tasks import-details`
+- ラベル監査: `uv run python -m scripts.tasks labels LIMIT=0` → `uv run python -m scripts.tasks audit-labels`
+- スキル抽出: `uv run python -m scripts.tasks skills TTL=7d`
+- 整形のみ: `uv run python -m scripts.tasks normalize`
+
+## Makefile（補助）
+- `make` は Linux/macOS 向けの薄いラッパーです。Windows では `uv run python -m scripts.tasks <target>` を優先してください。
+- 例: `make ci`, `make validate-strict`, `make scrape-details RATE=2.0`
 
 TTL: 既定 7日（`TTL=7d`）。オフライン時は `NO_NET=1`、強制更新は `FORCE=1` を付与。
 
@@ -68,7 +70,7 @@ TTL: 既定 7日（`TTL=7d`）。オフライン時は `NO_NET=1`、強制更新
 - 誤記キー補正（KEY_ALIASES）: 例）射撃補則/射撃補生 → 射撃補正
 
 ## 取得時の注意
-- レート制限: 既定 1 req/sec（`--rate` で調整）
+- レート制限: 推奨 2 req/sec（`RATE=...` または `--rate` で調整）
 - キャッシュ: TTL=7日、304対応、`--no-network` でオフライン解析可
 - robots.txt/サイトの利用規約・礼節を守った取得を推奨
 
@@ -76,6 +78,7 @@ TTL: 既定 7日（`TTL=7d`）。オフライン時は `NO_NET=1`、強制更新
 - フォーマット: `uv run black .`
 - リント: `uv run ruff check .`
 - テスト: `uv run pytest -q`
+- 統合チェック: `uv run python -m scripts.tasks ci`
 - コミット規約: Conventional Commits（feat/fix/docs/chore/data…）
 - ブランチ運用: 大きめ変更時は `data/update-YYYYMMDD` 等を推奨（小変更は main 直でも可）
 

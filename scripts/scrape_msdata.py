@@ -29,7 +29,6 @@
 from __future__ import annotations
 
 import argparse
-import dataclasses
 import functools
 import json
 import os
@@ -374,27 +373,20 @@ def expand_cells(cells: List[Tag], n_levels: int) -> List[Optional[str]]:
     return vals
 
 
-def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
-    soup = BeautifulSoup(html, "lxml")
-    name = extract_title(soup)
-
-    # 機体テーブル（数値情報→機体）
-    # id="table_kyoushu|hanyou|sien" 直下のtableを優先
+def find_detail_table(soup: BeautifulSoup) -> tuple[Optional[Tag], Optional[Tag]]:
     tbl_div = soup.find(id=re.compile(r"^table_(kyoushu|hanyou|sien)$"))
     table = tbl_div.find("table") if tbl_div else None
     if not table:
-        # フォールバック：ページ内の最初の「LV1」を含むテーブル
-        for t in soup.find_all("table"):
-            if t.find(string=re.compile(r"LV\d+")):
-                table = t
+        for candidate in soup.find_all("table"):
+            if candidate.find(string=re.compile(r"LV\d+")):
+                table = candidate
                 break
-    if not table:
-        raise ValueError("機体テーブルが見つかりませんでした")
+    return tbl_div, table
 
-    levels = levels_from_table(table)
-    if not levels:
-        raise ValueError("LV 見出しが検出できませんでした")
 
+def build_base_records(
+    table: Tag, name: str, levels: List[int]
+) -> Dict[int, Dict[str, Any]]:
     per_level: Dict[int, Dict[str, Any]] = {
         lv: {"MS名": f"{name}_LV{lv}"} for lv in levels
     }
@@ -406,249 +398,243 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
         row_name = clean_text(th.get_text(" "))
         key_name = FIELD_MAP.get(row_name)
         if key_name is None:
-            row_name2 = normalize_row_label(row_name)
-            key_name = FIELD_MAP.get(row_name2)
+            key_name = FIELD_MAP.get(normalize_row_label(row_name))
         if key_name is None:
             continue
-        key = key_name
-        tds = tr.find_all("td")
-        values = expand_cells(tds, len(levels))
+
+        values = expand_cells(tr.find_all("td"), len(levels))
         for lv, val in zip(levels, values):
             if val is None:
                 continue
-            if key in ("格闘判定力", "カウンター", "レアリティ", "必要階級"):
-                per_level[lv][key] = clean_text(val)
-            elif key in ("再出撃時間", "必要DP", "必要リサイクルチケット"):
-                iv = to_int(val)
-                if iv is not None:
-                    per_level[lv][key] = iv
-            else:
-                iv = to_int(val)
-                if iv is not None:
-                    per_level[lv][key] = iv
+            if key_name in ("格闘判定力", "カウンター", "レアリティ", "必要階級"):
+                per_level[lv][key_name] = clean_text(val)
+                continue
 
-    # パーツスロット表
+            iv = to_int(val)
+            if iv is not None:
+                per_level[lv][key_name] = iv
+    return per_level
+
+
+def apply_parts_slots(
+    soup: BeautifulSoup, per_level: Dict[int, Dict[str, Any]], levels: List[int]
+) -> None:
     parts_table: Optional[Tag] = None
     for h3 in soup.find_all("h3"):
         if "パーツスロット" in h3.get_text():
-            nxt = h3.find_next_sibling("table")
-            if nxt:
-                parts_table = nxt
+            parts_table = h3.find_next_sibling("table")
             break
-    if parts_table:
-        # 行: 近距離/中距離/遠距離
-        row_name_map = {
-            "近距離": "近スロット",
-            "中距離": "中スロット",
-            "遠距離": "遠スロット",
-        }
-        for tr in parts_table.find_all("tr"):
-            th = tr.find("th")
-            if not th:
-                continue
-            rname = clean_text(th.get_text(" "))
-            dst_key = row_name_map.get(rname)
-            if not dst_key:
-                continue
-            tds = tr.find_all("td")
-            values = expand_cells(tds, len(levels))
-            for lv, val in zip(levels, values):
-                iv = to_int(val or "")
-                if iv is not None:
-                    per_level[lv][dst_key] = iv
 
-    # 属性（推定）: table_* のサフィックスから
-    attr = None
-    if tbl_div and isinstance(tbl_div, Tag):
-        m = re.search(r"table_(kyoushu|hanyou|sien)", tbl_div.get("id", ""))
-        if m:
-            attr_map = {"kyoushu": "強襲", "hanyou": "汎用", "sien": "支援"}
-            attr = attr_map.get(m.group(1))
-    if attr:
-        for lv in levels:
-            per_level[lv]["属性"] = attr
+    if not parts_table:
+        return
 
-    # 出撃可否（地上/宇宙）
+    row_name_map = {
+        "近距離": "近スロット",
+        "中距離": "中スロット",
+        "遠距離": "遠スロット",
+    }
+    for tr in parts_table.find_all("tr"):
+        th = tr.find("th")
+        if not th:
+            continue
+        dst_key = row_name_map.get(clean_text(th.get_text(" ")))
+        if not dst_key:
+            continue
+        values = expand_cells(tr.find_all("td"), len(levels))
+        for lv, val in zip(levels, values):
+            iv = to_int(val or "")
+            if iv is not None:
+                per_level[lv][dst_key] = iv
+
+
+def infer_attr_from_table_div(tbl_div: Optional[Tag]) -> Optional[str]:
+    if not tbl_div or not isinstance(tbl_div, Tag):
+        return None
+    match = re.search(r"table_(kyoushu|hanyou|sien)", tbl_div.get("id", ""))
+    if not match:
+        return None
+    attr_map = {"kyoushu": "強襲", "hanyou": "汎用", "sien": "支援"}
+    return attr_map.get(match.group(1))
+
+
+def apply_attr(
+    per_level: Dict[int, Dict[str, Any]], levels: List[int], attr: Optional[str]
+) -> None:
+    if not attr:
+        return
+    for lv in levels:
+        per_level[lv]["属性"] = attr
+
+
+def apply_deployment_and_env(
+    soup: BeautifulSoup, per_level: Dict[int, Dict[str, Any]], levels: List[int]
+) -> None:
     dep = parse_deployment(soup)
-    if dep:
-        for lv in levels:
-            for k, v in dep.items():
-                if v is not None:
-                    per_level[lv][k] = v
-
-    # 環境適正（地上/宇宙/水中）
     env = parse_env_suitability(soup)
     for lv in levels:
+        for key, value in dep.items():
+            if value is not None:
+                per_level[lv][key] = value
         per_level[lv].update(env)
 
-    # 出撃可否の最終フォールバック: 旋回項目の有無から推定
-    for lv in levels:
-        if "出撃_地上可" not in per_level[lv] and "出撃_宇宙可" not in per_level[lv]:
-            has_g = "旋回_地上_通常時" in per_level[lv]
-            has_s = "旋回_宇宙_通常時" in per_level[lv]
-            if has_g and has_s:
-                per_level[lv]["出撃_地上可"] = True
-                per_level[lv]["出撃_宇宙可"] = True
-            elif has_g and not has_s:
-                per_level[lv]["出撃_地上可"] = True
-                per_level[lv]["出撃_宇宙可"] = False
-            elif has_s and not has_g:
-                per_level[lv]["出撃_地上可"] = False
-                per_level[lv]["出撃_宇宙可"] = True
 
-    # 回転値の補正: 宇宙専用/地上専用なのに単一見出しが
-    # 地上/宇宙側に寄っている場合は適切な側へ移す
+def apply_deployment_fallbacks(
+    per_level: Dict[int, Dict[str, Any]], levels: List[int]
+) -> None:
     for lv in levels:
         rec = per_level[lv]
-        g = rec.get("出撃_地上可")
-        s = rec.get("出撃_宇宙可")
-        if g is False and s is True:
-            # 宇宙専用: 地上→宇宙へ寄せる
+        if "出撃_地上可" not in rec and "出撃_宇宙可" not in rec:
+            has_g = "旋回_地上_通常時" in rec
+            has_s = "旋回_宇宙_通常時" in rec
+            if has_g and has_s:
+                rec["出撃_地上可"] = True
+                rec["出撃_宇宙可"] = True
+            elif has_g and not has_s:
+                rec["出撃_地上可"] = True
+                rec["出撃_宇宙可"] = False
+            elif has_s and not has_g:
+                rec["出撃_地上可"] = False
+                rec["出撃_宇宙可"] = True
+
+
+def normalize_turn_values(
+    per_level: Dict[int, Dict[str, Any]], levels: List[int]
+) -> None:
+    for lv in levels:
+        rec = per_level[lv]
+        ground = rec.get("出撃_地上可")
+        space = rec.get("出撃_宇宙可")
+        if ground is False and space is True:
             if "旋回_宇宙_通常時" not in rec and "旋回_地上_通常時" in rec:
                 rec["旋回_宇宙_通常時"] = rec.pop("旋回_地上_通常時")
             if "旋回_宇宙_変形時" not in rec and "旋回_地上_変形時" in rec:
                 rec["旋回_宇宙_変形時"] = rec.pop("旋回_地上_変形時")
-        if g is True and s is False:
-            # 地上専用: 宇宙→地上へ寄せる（保険）
+        if ground is True and space is False:
             if "旋回_地上_通常時" not in rec and "旋回_宇宙_通常時" in rec:
                 rec["旋回_地上_通常時"] = rec.pop("旋回_宇宙_通常時")
             if "旋回_地上_変形時" not in rec and "旋回_宇宙_変形時" in rec:
                 rec["旋回_地上_変形時"] = rec.pop("旋回_宇宙_変形時")
 
-    # 強化リスト情報（fullst）を抽出
-    # 各MSレベルごとに必要強化値で昇順ソートし、points を付与
-    def parse_fullst_by_ms_level(
-        s: BeautifulSoup, ms_levels: List[int]
-    ) -> Dict[int, List[Dict[str, Any]]]:
-        # 見出し「強化リスト情報」を探す
-        header = None
-        for hx in s.find_all(["h2", "h3"]):
-            if "強化リスト情報" in clean_text(hx.get_text(" ")):
-                header = hx
+
+def parse_fullst_by_ms_level(
+    soup: BeautifulSoup, ms_levels: List[int]
+) -> Dict[int, List[Dict[str, Any]]]:
+    header = None
+    for hx in soup.find_all(["h2", "h3"]):
+        if "強化リスト情報" in clean_text(hx.get_text(" ")):
+            header = hx
+            break
+    if not header:
+        return {}
+
+    table = header.find_next("table")
+    if not table:
+        return {}
+
+    rows: List[Tuple[str, int, Dict[int, int], set[int]]] = []
+    current_name: Optional[str] = None
+    for tr in table.find_all("tr"):
+        ths = tr.find_all("th")
+        if not ths:
+            continue
+
+        cand_names: List[str] = []
+        for th in ths:
+            txt = clean_text(th.get_text(" "))
+            if not txt:
+                continue
+            if any(
+                x in txt
+                for x in (
+                    "強化リスト",
+                    "上限開放",
+                    "リスト名",
+                    "MSレベル毎必要強化値",
+                    "効果",
+                )
+            ):
+                continue
+            if re.fullmatch(r"LV\d+|Lv\d+|Lv", txt, re.IGNORECASE):
+                continue
+            cand_names.append(txt)
+        if cand_names:
+            current_name = cand_names[0]
+
+        fullst_lv: Optional[int] = None
+        for th in ths:
+            txt = clean_text(th.get_text(" "))
+            match = re.fullmatch(r"Lv(\d+)", txt, re.IGNORECASE)
+            if match:
+                fullst_lv = int(match.group(1))
                 break
-        if not header:
-            return {}
-        table = header.find_next("table")
-        if not table:
-            return {}
 
-        # 列構造は行の td 数に依存させる（末尾は効果列が入るため原則1つ除外）
+        tds = tr.find_all("td")
+        if not tds or current_name is None or fullst_lv is None:
+            continue
 
-        # 収集: (name, list_level, {ms_lv -> points}, {ms_lv with cell present})
-        rows: List[Tuple[str, int, Dict[int, int], set[int]]] = []
-        current_name: Optional[str] = None
-        for tr in table.find_all("tr"):
-            ths = tr.find_all("th")
-            if not ths:
-                continue
-            # リスト名候補
-            cand_names: List[str] = []
-            for th in ths:
-                txt = clean_text(th.get_text(" "))
-                if not txt:
-                    continue
-                if any(
-                    x in txt
-                    for x in (
-                        "強化リスト",
-                        "上限開放",
-                        "リスト名",
-                        "MSレベル毎必要強化値",
-                        "効果",
-                    )
-                ):
-                    continue
-                if re.fullmatch(r"LV\d+|Lv\d+|Lv", txt, re.IGNORECASE):
-                    continue
-                cand_names.append(txt)
-            if cand_names:
-                current_name = cand_names[0]
-
-            # フルリストのLv（例: Lv1, Lv2, Lv4 など）
-            fullst_lv: Optional[int] = None
-            for th in ths:
-                txt = clean_text(th.get_text(" "))
-                m = re.fullmatch(r"Lv(\d+)", txt, re.IGNORECASE)
-                if m:
-                    fullst_lv = int(m.group(1))
-                    break
-
-            # 数値セルを収集（行末の効果セルを除外）
-            tds = tr.find_all("td")
-            if not tds or current_name is None or fullst_lv is None:
-                continue
-            # 末尾（効果列）を除外する。安全側で1つだけ除去。
-            numeric_cells = tds[:-1] if len(tds) >= 1 else tds
-
-            # MSレベルに対応する列位置は 1始まりで左から順に対応させる
-            points_by_ms: Dict[int, int] = {}
-            present_ms_levels: set[int] = set()
-            for ms_lv in ms_levels:
-                idx = ms_lv - 1
-                if 0 <= idx < len(numeric_cells):
-                    present_ms_levels.add(ms_lv)
-                    val = to_int(clean_text(numeric_cells[idx].get_text(" ")))
-                    if val is not None:
-                        points_by_ms[ms_lv] = val
-
-            # 数値がない行はスキップ（強行出撃のみ例外で採用）
-            if not points_by_ms and "強行出撃" not in current_name:
-                continue
-            rows.append((current_name, fullst_lv, points_by_ms, present_ms_levels))
-
-        # 各MSレベルごとに、同一リスト名については
-        # 「数値が存在するLvの最小と最大のみ」を採用し、points 昇順で並べる
-        by_ms_level: Dict[int, List[Dict[str, Any]]] = {lv: [] for lv in ms_levels}
+        numeric_cells = tds[:-1] if len(tds) >= 1 else tds
+        points_by_ms: Dict[int, int] = {}
+        present_ms_levels: set[int] = set()
         for ms_lv in ms_levels:
-            # name -> list of (list_level, points or None)
-            by_name: Dict[str, List[Tuple[int, Optional[int]]]] = {}
-            for nm, flv, pmap, present_lvs in rows:
-                pts = pmap.get(ms_lv)
-                if pts is None:
-                    # 強行出撃は points がなくても、当該MS LVのセルが存在する場合のみ採用。
-                    if "強行出撃" not in nm or ms_lv not in present_lvs:
-                        continue
-                by_name.setdefault(nm, []).append((flv, pts))
-            items: List[Dict[str, Any]] = []
-            for nm, lst in by_name.items():
-                # level でソート
-                lst_sorted = sorted(lst, key=lambda x: x[0])
-                keep = []
-                if lst_sorted:
-                    keep.append(lst_sorted[0])
-                if len(lst_sorted) > 1 and lst_sorted[-1] != lst_sorted[0]:
-                    keep.append(lst_sorted[-1])
-                for flv, pts in keep:
-                    items.append({"name": nm, "level": flv, "points": pts})
-            # points 昇順で整列（None を先頭に）
-            items.sort(key=lambda d: (d.get("points") is not None, d.get("points") or 0))
-            if items:
-                by_ms_level[ms_lv] = items
-        # 空のMSレベルは削除
-        return {k: v for k, v in by_ms_level.items() if v}
+            idx = ms_lv - 1
+            if 0 <= idx < len(numeric_cells):
+                present_ms_levels.add(ms_lv)
+                val = to_int(clean_text(numeric_cells[idx].get_text(" ")))
+                if val is not None:
+                    points_by_ms[ms_lv] = val
 
-    fullst_by_lv = parse_fullst_by_ms_level(soup, levels)
+        if not points_by_ms and "強行出撃" not in current_name:
+            continue
+        rows.append((current_name, fullst_lv, points_by_ms, present_ms_levels))
 
-    def is_strong_sortie_only(items: List[Dict[str, Any]]) -> bool:
-        if not items:
-            return False
-        return all(
-            isinstance(e, dict)
-            and "強行出撃" in str(e.get("name", ""))
-            and e.get("points") is None
-            for e in items
-        )
+    by_ms_level: Dict[int, List[Dict[str, Any]]] = {lv: [] for lv in ms_levels}
+    for ms_lv in ms_levels:
+        by_name: Dict[str, List[Tuple[int, Optional[int]]]] = {}
+        for nm, flv, pmap, present_lvs in rows:
+            pts = pmap.get(ms_lv)
+            if pts is None and ("強行出撃" not in nm or ms_lv not in present_lvs):
+                continue
+            by_name.setdefault(nm, []).append((flv, pts))
 
-    def has_non_strong_sortie(items: List[Dict[str, Any]]) -> bool:
-        return any(
-            isinstance(e, dict) and "強行出撃" not in str(e.get("name", ""))
-            for e in items
-        )
+        items: List[Dict[str, Any]] = []
+        for nm, lst in by_name.items():
+            lst_sorted = sorted(lst, key=lambda x: x[0])
+            keep = []
+            if lst_sorted:
+                keep.append(lst_sorted[0])
+            if len(lst_sorted) > 1 and lst_sorted[-1] != lst_sorted[0]:
+                keep.append(lst_sorted[-1])
+            for flv, pts in keep:
+                items.append({"name": nm, "level": flv, "points": pts})
+        items.sort(key=lambda d: (d.get("points") is not None, d.get("points") or 0))
+        if items:
+            by_ms_level[ms_lv] = items
+    return {k: v for k, v in by_ms_level.items() if v}
 
-    # フォールバック: 強化リストが未掲載のMSレベルには直前レベルの
-    # fullst を採用（points は未知なので None）。
-    # 追加: 当該LVが「強行出撃のみ」に縮退している場合は、
-    # 直前LVの構成（強行出撃以外を含む）で補完する。
+
+def is_strong_sortie_only(items: List[Dict[str, Any]]) -> bool:
+    if not items:
+        return False
+    return all(
+        isinstance(e, dict)
+        and "強行出撃" in str(e.get("name", ""))
+        and e.get("points") is None
+        for e in items
+    )
+
+
+def has_non_strong_sortie(items: List[Dict[str, Any]]) -> bool:
+    return any(
+        isinstance(e, dict) and "強行出撃" not in str(e.get("name", ""))
+        for e in items
+    )
+
+
+def apply_fullst_fallback(
+    per_level: Dict[int, Dict[str, Any]],
+    levels: List[int],
+    fullst_by_lv: Dict[int, List[Dict[str, Any]]],
+) -> None:
     last_effective: List[Dict[str, Any]] = []
     for lv in sorted(levels):
         current = fullst_by_lv.get(lv) or []
@@ -677,32 +663,56 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
                 per_level[lv]["fullst"] = copied
                 last_effective = copied
 
-    # 必須キーが揃っていないLVは除外（スキーマに準拠）。
-    # ポイント: 旋回は anyOf（地上 or 宇宙のどちらか必須）
-    BASE_REQUIRED = {
-        "HP",
-        "スピード",
-        "スラスター",
-        "高速移動",
-        "射撃補正",
-        "格闘補正",
-        "耐ビーム補正",
-        "耐実弾補正",
-        "耐格闘補正",
-        "近スロット",
-        "中スロット",
-        "遠スロット",
-    }
 
+BASE_REQUIRED = {
+    "HP",
+    "スピード",
+    "スラスター",
+    "高速移動",
+    "射撃補正",
+    "格闘補正",
+    "耐ビーム補正",
+    "耐実弾補正",
+    "耐格闘補正",
+    "近スロット",
+    "中スロット",
+    "遠スロット",
+}
+
+
+def filter_complete_records(
+    per_level: Dict[int, Dict[str, Any]]
+) -> Dict[int, Dict[str, Any]]:
     def has_turn_value(rec: Dict[str, Any]) -> bool:
         return ("旋回_地上_通常時" in rec) or ("旋回_宇宙_通常時" in rec)
 
-    filtered = {
+    return {
         lv: rec
         for lv, rec in per_level.items()
         if BASE_REQUIRED.issubset(rec.keys()) and has_turn_value(rec)
     }
-    return filtered
+
+
+def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
+    soup = BeautifulSoup(html, "lxml")
+    name = extract_title(soup)
+
+    tbl_div, table = find_detail_table(soup)
+    if not table:
+        raise ValueError("機体テーブルが見つかりませんでした")
+
+    levels = levels_from_table(table)
+    if not levels:
+        raise ValueError("LV 見出しが検出できませんでした")
+
+    per_level = build_base_records(table, name, levels)
+    apply_parts_slots(soup, per_level, levels)
+    apply_attr(per_level, levels, infer_attr_from_table_div(tbl_div))
+    apply_deployment_and_env(soup, per_level, levels)
+    apply_deployment_fallbacks(per_level, levels)
+    normalize_turn_values(per_level, levels)
+    apply_fullst_fallback(per_level, levels, parse_fullst_by_ms_level(soup, levels))
+    return filter_complete_records(per_level)
 
 
 # ===============
@@ -879,13 +889,7 @@ def build_parser() -> argparse.ArgumentParser:
                     text, meta = cache.get(url)
                     soup = BeautifulSoup(text, "lxml")
                     # ステータス表の検出ロジックは parse_details と同じ方針
-                    tbl_div = soup.find(id=re.compile(r"^table_(kyoushu|hanyou|sien)$"))
-                    table = tbl_div.find("table") if tbl_div else None
-                    if not table:
-                        for t in soup.find_all("table"):
-                            if t.find(string=re.compile(r"LV\d+")):
-                                table = t
-                                break
+                    _tbl_div, table = find_detail_table(soup)
                     raw_labels: List[str] = []
                     normalized_labels: List[str] = []
                     if table:

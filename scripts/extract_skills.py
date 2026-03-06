@@ -399,7 +399,7 @@ def _select_main_skill_table(soup: BeautifulSoup) -> Optional[Tag]:
     """ページ内のうち、スキル一覧の“本体テーブル”と推定される table を返す。
 
     ヒューリスティック:
-    - 各 table を走査して "LV\d+" を含む行数をスコア化
+    - 各 table を走査して `LV\\d+` を含む行数をスコア化
     - th（スキル名）+ td（LV）構成の行が多いテーブルを採用
     - 最大スコアのテーブルを返す
     """
@@ -489,6 +489,135 @@ def extract_skill_rows_table(html: str) -> Dict[str, Any]:
 # ==========================
 
 
+def _role_from_text(text: str) -> Optional[str]:
+    if "強" in text:
+        return "強襲"
+    if "汎" in text:
+        return "汎用"
+    if "支" in text:
+        return "支援"
+    return None
+
+
+def _owner_links_from_cells(cells: List[Tag]) -> List[Dict[str, str]]:
+    owners: List[Dict[str, str]] = []
+    for td in cells:
+        for anchor in td.find_all("a"):
+            text = _norm(anchor.get_text(" "))
+            href = anchor.get("href") or ""
+            if text:
+                owners.append({"name": text, "href": href})
+    return owners
+
+
+def _candidate_owner_tables(soup: BeautifulSoup) -> List[Tag]:
+    candidates: List[Tag] = []
+    for tbl in soup.find_all("table"):
+        ok = False
+        for anchor in tbl.find_all("a"):
+            aid = (anchor.get("id") or "").strip()
+            if not aid or not _RE_ANCHOR.match(aid):
+                continue
+            th = anchor.find_parent("th")
+            tr = th.find_parent("tr") if th else None
+            nxt = tr.find_next_sibling("tr") if tr else None
+            th_role = nxt.find("th") if nxt else None
+            role_txt = _norm(th_role.get_text(" ")) if th_role else ""
+            if any(key in role_txt for key in ("強", "汎", "支")):
+                ok = True
+                break
+        if ok:
+            candidates.append(tbl)
+    return candidates
+
+
+def _find_owner_section_tables(soup: BeautifulSoup) -> List[Tag]:
+    header = None
+    for tag in soup.find_all(["h2", "h3", "h4"]):
+        text = _norm(tag.get_text(" "))
+        if "所持機体" in text and "逆引き" in text:
+            header = tag
+            break
+
+    if not header:
+        return _candidate_owner_tables(soup)
+
+    target_tables: List[Tag] = []
+    cur = header
+    while True:
+        cur = cur.find_next_sibling()
+        if not cur:
+            break
+        name = getattr(cur, "name", "")
+        if name in ("h2", "h3", "h4"):
+            break
+        if name == "table":
+            target_tables.append(cur)
+    return target_tables or _candidate_owner_tables(soup)
+
+
+def _extract_owner_anchors(target_tables: List[Tag]) -> List[Tuple[str, int, Tag]]:
+    anchors: List[Tuple[str, int, Tag]] = []
+    for tbl in target_tables:
+        for anchor in tbl.find_all("a"):
+            aid = (anchor.get("id") or "").strip()
+            if not aid:
+                continue
+            match = _RE_ANCHOR.match(aid)
+            if not match:
+                continue
+            name = match.group(1).replace("AREUS", "ZEUS")
+            level = int(match.group(2))
+            th = anchor.find_parent("th")
+            tr = th.find_parent("tr") if th else None
+            if tr:
+                anchors.append((name, level, tr))
+    return anchors
+
+
+def _collect_anchor_row_owners(tr: Tag) -> tuple[Optional[str], List[Dict[str, str]]]:
+    anchor_th = tr.find("th")
+    role_th = anchor_th.find_next_sibling("th") if anchor_th else None
+    role = _role_from_text(_norm(role_th.get_text(" "))) if role_th else None
+    if not role or not role_th:
+        return role, []
+
+    td_list: List[Tag] = []
+    td = role_th.find_next_sibling("td")
+    if td:
+        td_list.append(td)
+        td2 = td.find_next_sibling("td")
+        if td2:
+            td_list.append(td2)
+    return role, _owner_links_from_cells(td_list)
+
+
+def _collect_owner_block(
+    start_tr: Tag, stop_tr: Optional[Tag]
+) -> Dict[str, List[Dict[str, str]]]:
+    owners_by_role: Dict[str, List[Dict[str, str]]] = {"強襲": [], "汎用": [], "支援": []}
+    current_role, line_owners = _collect_anchor_row_owners(start_tr)
+    if current_role and line_owners:
+        owners_by_role[current_role].extend(line_owners)
+
+    cur_tr = start_tr
+    while True:
+        cur_tr = cur_tr.find_next_sibling("tr")
+        if not cur_tr or (stop_tr and cur_tr is stop_tr):
+            break
+        th_role = cur_tr.find("th")
+        if th_role and th_role.find("a", id=True):
+            break
+        role_txt = _norm(th_role.get_text(" ")) if th_role else ""
+        next_role = _role_from_text(role_txt)
+        if next_role:
+            current_role = next_role
+        line_owners = _owner_links_from_cells(cur_tr.find_all("td"))
+        if current_role and line_owners:
+            owners_by_role[current_role].extend(line_owners)
+    return owners_by_role
+
+
 def extract_skill_owners_rows_table(html: str) -> Dict[str, Any]:
     """ページ下部の『所持機体 逆引き一覧』セクションに限定して、行として厳格抽出する。
 
@@ -497,164 +626,16 @@ def extract_skill_owners_rows_table(html: str) -> Dict[str, Any]:
     - role: "強襲"/"汎用"/"支援" のいずれか
     """
     soup = BeautifulSoup(html, "lxml")
-
-    # 1) 見出し『所持機体 逆引き一覧』を探す
-    header = None
-    for tag in soup.find_all(["h2", "h3", "h4"]):
-        t = _norm(tag.get_text(" "))
-        if "所持機体" in t and "逆引き" in t:
-            header = tag
-            break
-    # セクションが見つからなければ、フォールバックでページ全体から『逆引き形式』のテーブルを特定
-    target_tables: List[Tag] = []
-    if not header:
-        candidates: List[Tag] = []
-        for tbl in soup.find_all("table"):
-            # アンカー + 直後の役割行（強/汎/支）が見つかるか
-            ok = False
-            for a in tbl.find_all("a"):
-                aid = (a.get("id") or "").strip()
-                if not aid or not _RE_ANCHOR.match(aid):
-                    continue
-                th = a.find_parent("th")
-                tr = th.find_parent("tr") if th else None
-                if not tr:
-                    continue
-                nxt = tr.find_next_sibling("tr")
-                if not nxt:
-                    continue
-                th_role = nxt.find("th")
-                role_txt = _norm(th_role.get_text(" ")) if th_role else ""
-                if any(k in role_txt for k in ("強", "汎", "支")):
-                    ok = True
-                    break
-            if ok:
-                candidates.append(tbl)
-        if not candidates:
-            return {"source": SKILL_URL, "rows": []}
-        target_tables = candidates
-
-    # 2) 見出しの次の見出しまでにある table 群を対象にする
-    if header:
-        cur = header
-        while True:
-            cur = cur.find_next_sibling()
-            if not cur:
-                break
-            nm = getattr(cur, "name", "")
-            if nm in ("h2", "h3", "h4"):
-                break
-            if nm == "table":
-                target_tables.append(cur)
-        # ヘッダー配下で見つからない場合は候補テーブルにフォールバック
-        if not target_tables:
-            # 探索済みの candidates を再計算
-            for tbl in soup.find_all("table"):
-                ok = False
-                for a in tbl.find_all("a", id=_RE_ANCHOR):
-                    th = a.find_parent("th")
-                    tr = th.find_parent("tr") if th else None
-                    nxt = tr.find_next_sibling("tr") if tr else None
-                    role_txt = (
-                        _norm(nxt.find("th").get_text(" ")) if nxt and nxt.find("th") else ""
-                    )
-                    if any(k in role_txt for k in ("強", "汎", "支")):
-                        ok = True
-                        break
-                if ok:
-                    target_tables.append(tbl)
+    target_tables = _find_owner_section_tables(soup)
+    if not target_tables:
+        return {"source": SKILL_URL, "rows": []}
 
     rows_out: List[Dict[str, Any]] = []
-
-    # 3) 対象テーブル内でアンカーを探索（セクション外は無視）
-    anchors: List[Tuple[str, int, Tag]] = []
-    for tbl in target_tables:
-        for a in tbl.find_all("a"):
-            aid = (a.get("id") or "").strip()
-            if not aid:
-                continue
-            m = _RE_ANCHOR.match(aid)
-            if not m:
-                continue
-            name = m.group(1)
-            # 明らかな表記揺れ・誤記の補正
-            name = name.replace("AREUS", "ZEUS")
-            level = int(m.group(2))
-            th = a.find_parent("th")
-            if not th:
-                continue
-            tr = th.find_parent("tr")
-            if not tr:
-                continue
-            anchors.append((name, level, tr))
+    anchors = _extract_owner_anchors(target_tables)
 
     for idx, (name, level, tr) in enumerate(anchors):
-        # 同一テーブル内で次のアンカー行手前までを走査
         stop_tr = anchors[idx + 1][2] if (idx + 1 < len(anchors)) else None
-        cur_tr = tr
-        # 役割ごとにオーナーを集約（rowspan対応）
-        owners_by_role: Dict[str, List[Dict[str, str]]] = {"強襲": [], "汎用": [], "支援": []}
-        current_role: Optional[str] = None
-        # アンカー行自身に所有機体があるケース（例: ALICE の Sガンダム）を処理
-        try:
-            anchor_th = tr.find("th")
-            role_th = anchor_th.find_next_sibling("th") if anchor_th else None
-            role_txt0 = _norm(role_th.get_text(" ")) if role_th else ""
-            if "強" in role_txt0:
-                current_role = "強襲"
-            elif "汎" in role_txt0:
-                current_role = "汎用"
-            elif "支" in role_txt0:
-                current_role = "支援"
-            if current_role:
-                # 役割<th>の後ろの td 群をこの行で収集
-                td = role_th.find_next_sibling("td") if role_th else None
-                td_list = []
-                if td:
-                    td_list.append(td)
-                    td2 = td.find_next_sibling("td")
-                    if td2:
-                        td_list.append(td2)
-                line_owners0: List[Dict[str, str]] = []
-                for td in td_list:
-                    for a in td.find_all("a"):
-                        t = _norm(a.get_text(" "))
-                        href = a.get("href") or ""
-                        if t:
-                            line_owners0.append({"name": t, "href": href})
-                if line_owners0:
-                    owners_by_role[current_role].extend(line_owners0)
-        except Exception:
-            pass
-        while True:
-            cur_tr = cur_tr.find_next_sibling("tr")
-            if not cur_tr:
-                break
-            if stop_tr and cur_tr is stop_tr:
-                break
-            th_role = cur_tr.find("th")
-            role_txt = _norm(th_role.get_text(" ")) if th_role else ""
-            # 次のスキル見出し（アンカー）に到達したら終了（能力UP以外も含む）
-            if th_role and th_role.find("a", id=True):
-                break
-            # rowspanで role が省略される行に対応（直前の role を継承）
-            if "強" in role_txt:
-                current_role = "強襲"
-            elif "汎" in role_txt:
-                current_role = "汎用"
-            elif "支" in role_txt:
-                current_role = "支援"
-            # owners抽出
-            line_owners: List[Dict[str, str]] = []
-            for td in cur_tr.find_all("td"):
-                for a in td.find_all("a"):
-                    t = _norm(a.get_text(" "))
-                    href = a.get("href") or ""
-                    if t:
-                        line_owners.append({"name": t, "href": href})
-            if current_role and line_owners:
-                owners_by_role[current_role].extend(line_owners)
-        # 出力行（空でも出すが、後段でフィルタ可能）
+        owners_by_role = _collect_owner_block(tr, stop_tr)
         for role, owners in owners_by_role.items():
             rows_out.append({
                 "skill": name,
@@ -768,7 +749,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         # フォールバック: 抽出できない場合は curl で直取得（環境に curl がある前提）
         if not data.get("rows"):
             try:
-                import subprocess, shlex
+                import shlex
+                import subprocess
 
                 cmd = f"curl -sL {shlex.quote(args.url)}"
                 raw = subprocess.check_output(cmd, shell=True, text=True)
