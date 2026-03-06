@@ -15,5 +15,9 @@ def test_validate_against_schema_rejects_invalid_skills_params():
     assert errors
 
 
+def test_validate_skills_data_main_accepts_absolute_requested_path():
+    assert vs.main(["--path", str(Path("data/skills_params.json").resolve())]) == 0
+
+
 def test_validate_skills_data_main_rejects_unknown_requested_path():
     assert vs.main(["--path", "data/unknown.json"]) == 2

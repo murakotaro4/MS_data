@@ -42,15 +42,21 @@ def resolve_targets(paths: list[Path]) -> tuple[dict[Path, Path], list[str]]:
     if not paths:
         return FILE_SCHEMAS, []
 
+    known_by_resolved = {
+        path.resolve(): (path, schema_path)
+        for path, schema_path in FILE_SCHEMAS.items()
+    }
     targets: dict[Path, Path] = {}
     errors: list[str] = []
     for path in paths:
-        schema_path = FILE_SCHEMAS.get(path)
-        if schema_path is None:
+        resolved = path.resolve()
+        matched = known_by_resolved.get(resolved)
+        if matched is None:
             supported = ", ".join(str(candidate) for candidate in sorted(FILE_SCHEMAS))
             errors.append(f"unsupported path: {path} (supported: {supported})")
             continue
-        targets[path] = schema_path
+        canonical_path, schema_path = matched
+        targets[canonical_path] = schema_path
     return targets, errors
 
 
