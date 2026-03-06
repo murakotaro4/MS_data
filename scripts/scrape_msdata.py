@@ -803,15 +803,27 @@ def cmd_all(args: argparse.Namespace) -> int:
     tmp_index.parent.mkdir(parents=True, exist_ok=True)
     # index
     client = get_client()
-    r = client.get(INDEX_URL)
-    r.raise_for_status()
-    items = parse_index(r.text)
+    cfg = CacheConfig(
+        ttl_seconds=parse_ttl(getattr(args, "ttl", "7d")),
+        no_network=getattr(args, "no_network", False),
+        force=getattr(args, "force", False),
+    )
+    cache = CacheHTTP(client, cfg)
+    text, _meta = cache.get(INDEX_URL)
+    items = parse_index(text)
     tmp_index.write_text(
         json.dumps(items, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     # details
     dargs = argparse.Namespace(
-        input=str(tmp_index), out=args.out, rate=args.rate, limit=args.limit
+        input=str(tmp_index),
+        out=args.out,
+        rate=args.rate,
+        limit=args.limit,
+        ttl=getattr(args, "ttl", "7d"),
+        no_network=getattr(args, "no_network", False),
+        force=getattr(args, "force", False),
+        changed_only=getattr(args, "changed_only", False),
     )
     return cmd_details(dargs)
 
@@ -855,6 +867,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_all.add_argument("--out", default="cache/details.jsonl")
     p_all.add_argument("--rate", type=float, default=1.0)
     p_all.add_argument("--limit", type=int, default=0)
+    p_all.add_argument("--ttl", default="7d")
+    p_all.add_argument("--no-network", action="store_true")
+    p_all.add_argument("--force", action="store_true")
+    p_all.add_argument(
+        "--changed-only",
+        action="store_true",
+        help="セマンティック変化がないページをスキップ（details と同じ挙動）",
+    )
     p_all.set_defaults(func=cmd_all)
 
     # ラベル監査用: 行見出し（raw / normalized）のみ抽出

@@ -181,7 +181,15 @@ def task_scrape_all() -> int:
         str(_env_float("RATE", 2.0)),
         "--limit",
         str(_env_int("LIMIT", 0)),
+        "--ttl",
+        _env_str("TTL", "7d") or "7d",
     ]
+    if _env_flag("NO_NET"):
+        args.append("--no-network")
+    if _env_flag("FORCE"):
+        args.append("--force")
+    if _env_flag("CHANGED_ONLY"):
+        args.append("--changed-only")
     return _run_python_module("scripts.scrape_msdata", *args)
 
 
