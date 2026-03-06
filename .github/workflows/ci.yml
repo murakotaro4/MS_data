@@ -35,4 +35,4 @@ jobs:
 
       - name: Run actionlint
         if: matrix.os == 'ubuntu-latest'
-        uses: rhysd/actionlint@v1
+        uses: rhysd/actionlint@v1.7.11
