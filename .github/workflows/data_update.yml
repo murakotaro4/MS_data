@@ -4,8 +4,15 @@ on:
   schedule:
     - cron: "0 9 * * 2,4" # JST 18:00 (Tue/Thu)
   workflow_dispatch:
+    inputs:
+      force_full:
+        description: "Force full scrape instead of fast-path diff detection"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
+  actions: read
   contents: write
   pull-requests: write
 
@@ -14,8 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TZ: Asia/Tokyo
-      TTL: 7d
-      RATE: 1.0
+      TTL: 1h
+      RATE: 2.0
       LIMIT: 0
       ARTIFACT_RETENTION_DAYS: 90
     steps:
@@ -40,14 +47,60 @@ jobs:
           echo "RAW_ARTIFACT_NAME=raw-snapshot-${report_date}-run-${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
           echo "RAW_SNAPSHOT_FILE=raw_snapshot_${report_date}_run${GITHUB_RUN_ID}.tar.xz" >> "$GITHUB_ENV"
 
+      - name: Restore previous detect state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .detect_state
+          mkdir -p .detect_state
+
+          previous_run_id="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/data_update.yml/runs?status=success&per_page=10" --jq '.workflow_runs[0].id // empty' 2>/dev/null || true)"
+          if [[ -n "${previous_run_id}" ]]; then
+            gh run download "${previous_run_id}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --name detect-state \
+              --dir .detect_state >/dev/null 2>&1 || true
+          fi
+
+          if [[ -f ".detect_state/cache/index_changed_meta.json" ]]; then
+            echo "PREVIOUS_PROVENANCE=.detect_state/cache/index_changed_meta.json" >> "$GITHUB_ENV"
+          elif [[ -f ".detect_state/index_changed_meta.json" ]]; then
+            echo "PREVIOUS_PROVENANCE=.detect_state/index_changed_meta.json" >> "$GITHUB_ENV"
+          fi
+
       - name: Fetch and import
         run: |
           cp msData.json msData.before.json
           mkdir -p reports
-          TTL="${TTL}" uv run python -m scripts.tasks scrape-index
-          TTL="${TTL}" RATE="${RATE}" LIMIT="${LIMIT}" uv run python -m scripts.tasks scrape-details
-          uv run python -m scripts.tasks import-details
-          MSDATA=msData.json uv run python -m scripts.tasks validate-strict
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.force_full }}" == "true" ]]; then
+            export FORCE_FULL=1
+          fi
+          FAST_TTL="${TTL}" RATE="${RATE}" LIMIT="${LIMIT}" MSDATA=msData.json \
+            uv run python -m scripts.tasks update-fast
+
+      - id: detection
+        name: Read change detection summary
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          meta = json.loads(Path("cache/index_changed_meta.json").read_text(encoding="utf-8"))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+              f.write(f"candidate_count={int(meta.get('candidate_count', 0))}\n")
+              f.write(f"fast_path={str(bool(meta.get('fast_path', False))).lower()}\n")
+              f.write(f"age_coverage={meta.get('age_coverage', 0.0)}\n")
+              f.write(f"fallback_reason={meta.get('fallback_reason') or 'none'}\n")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
+              f.write("### Change Detection\n")
+              f.write(f"- candidate_count: {int(meta.get('candidate_count', 0))}\n")
+              f.write(f"- fast_path: {str(bool(meta.get('fast_path', False))).lower()}\n")
+              f.write(f"- age_coverage: {meta.get('age_coverage', 0.0)}\n")
+              f.write(f"- fallback_reason: {meta.get('fallback_reason') or 'none'}\n")
+          PY
 
       - id: changes
         name: Check msData changes
@@ -86,6 +139,15 @@ jobs:
       - name: Cleanup temp files
         if: always()
         run: rm -f msData.before.json
+
+      - name: Upload detect state artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: detect-state
+          retention-days: 30
+          if-no-files-found: ignore
+          path: cache/index_changed_meta.json
 
       - name: Upload raw snapshot artifact
         if: steps.changes.outputs.changed == 'true'

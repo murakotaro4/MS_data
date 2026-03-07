@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -71,6 +72,35 @@ def _raw_snapshot_file() -> str:
     return _env_str(
         "RAW_SNAPSHOT_FILE", f"raw_snapshot_{_report_date()}_runlocal.tar.xz"
     ) or ""
+
+
+def _changed_index_out() -> str:
+    return _env_str("CHANGED_INDEX_OUT", "cache/index_changed.json") or ""
+
+
+def _changed_meta_out() -> str:
+    return _env_str("CHANGED_META_OUT", "cache/index_changed_meta.json") or ""
+
+
+def _fast_ttl() -> str:
+    return _env_str("FAST_TTL", _env_str("TTL", "1h")) or "1h"
+
+
+def _load_json_file(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _can_use_changed_only(changed_index: list[dict], meta: dict) -> bool:
+    if not bool(meta.get("fast_path", False)):
+        return False
+    changed_only_safe_reasons = {"recent_update"}
+    for item in changed_index:
+        reasons = item.get("change_reasons")
+        if not isinstance(reasons, list):
+            return False
+        if set(reasons) - changed_only_safe_reasons:
+            return False
+    return True
 
 
 def task_help() -> int:
@@ -191,6 +221,115 @@ def task_scrape_all() -> int:
     if _env_flag("CHANGED_ONLY"):
         args.append("--changed-only")
     return _run_python_module("scripts.scrape_msdata", *args)
+
+
+def task_detect_changed() -> int:
+    args = [
+        "detect-changed",
+        "--in",
+        _env_str("INDEX_OUT", "cache/index.json") or "cache/index.json",
+        "--out",
+        _changed_index_out(),
+        "--meta-out",
+        _changed_meta_out(),
+        "--reports-dir",
+        _env_str("REPORTS_DIR", "reports") or "reports",
+        "--msdata",
+        _env_str("MSDATA", "msData.json") or "msData.json",
+        "--freshness-window",
+        _env_str("FRESHNESS_WINDOW", "1h") or "1h",
+        "--min-age-coverage",
+        str(_env_float("MIN_AGE_COVERAGE", 0.95)),
+    ]
+    previous_provenance = _env_str("PREVIOUS_PROVENANCE")
+    if previous_provenance:
+        args.extend(["--previous-provenance", previous_provenance])
+    now_value = _env_str("NOW")
+    if now_value:
+        args.extend(["--now", now_value])
+    if _env_flag("FORCE_FULL"):
+        args.append("--force-full")
+    return _run_python_module("scripts.scrape_msdata", *args)
+
+
+def task_update_fast() -> int:
+    ttl = _fast_ttl()
+    rate = str(_env_float("RATE", 2.0))
+    limit = str(_env_int("LIMIT", 0))
+
+    rc = _run_python_module(
+        "scripts.scrape_msdata",
+        "index",
+        "--url",
+        _env_str("INDEX_URL", INDEX_URL) or INDEX_URL,
+        "--out",
+        _env_str("INDEX_OUT", "cache/index.json") or "cache/index.json",
+        "--ttl",
+        ttl,
+        *(["--no-network"] if _env_flag("NO_NET") else []),
+        *(["--force"] if _env_flag("FORCE") else []),
+    )
+    if rc != 0:
+        return rc
+
+    rc = task_detect_changed()
+    if rc != 0:
+        return rc
+
+    try:
+        changed_index = _load_json_file(Path(_changed_index_out()))
+        meta = _load_json_file(Path(_changed_meta_out()))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"ERROR: failed to read detect-changed outputs: {exc}", file=sys.stderr)
+        return 1
+
+    if not isinstance(changed_index, list) or not isinstance(meta, dict):
+        print(
+            "ERROR: invalid detect-changed output shape "
+            f"(index={type(changed_index).__name__}, meta={type(meta).__name__})",
+            file=sys.stderr,
+        )
+        return 1
+
+    candidate_count = int(meta.get("candidate_count", 0))
+    if candidate_count <= 0:
+        print("update-fast: no candidate pages, skip details/import/validate")
+        return 0
+
+    details_args = [
+        "details",
+        "--in",
+        _changed_index_out(),
+        "--out",
+        _env_str("DETAILS_OUT", "cache/details.jsonl") or "cache/details.jsonl",
+        "--rate",
+        rate,
+        "--limit",
+        limit,
+        "--ttl",
+        ttl,
+        *(["--no-network"] if _env_flag("NO_NET") else []),
+        *(["--force"] if _env_flag("FORCE") else []),
+    ]
+    if isinstance(changed_index, list) and _can_use_changed_only(changed_index, meta):
+        details_args.append("--changed-only")
+
+    rc = _run_python_module(
+        "scripts.scrape_msdata",
+        *details_args,
+    )
+    if rc != 0:
+        return rc
+
+    details_jsonl = Path(_env_str("DETAILS_OUT", "cache/details.jsonl") or "cache/details.jsonl")
+    if not details_jsonl.exists() or details_jsonl.stat().st_size == 0:
+        print("update-fast: details output is empty, skip import/validate")
+        return 0
+
+    rc = task_import_details()
+    if rc != 0:
+        return rc
+    return task_validate_strict()
 
 
 def task_import_details() -> int:
@@ -470,6 +609,8 @@ TASKS: dict[str, Callable[[], int]] = {
     "scrape-index": task_scrape_index,
     "scrape-details": task_scrape_details,
     "scrape-all": task_scrape_all,
+    "detect-changed": task_detect_changed,
+    "update-fast": task_update_fast,
     "import-details": task_import_details,
     "labels": task_labels,
     "audit-labels": task_audit_labels,
