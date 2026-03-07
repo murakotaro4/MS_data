@@ -2,7 +2,7 @@ name: data update
 
 on:
   schedule:
-    - cron: "0 9 * * 2,4" # JST 18:00 (Tue/Thu)
+    - cron: "0 9 * * *" # JST 18:00 (daily)
   workflow_dispatch:
     inputs:
       force_full:
