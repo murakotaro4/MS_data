@@ -35,6 +35,7 @@ import os
 import re
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -50,6 +51,9 @@ from scripts.label_utils import (
 
 ATWIKI_BASE = "https://w.atwiki.jp"
 INDEX_URL = "https://w.atwiki.jp/battle-operation2/pages/377.html"
+MS_NAME_WITH_LEVEL = re.compile(r"^(?P<base>.+)_LV(?P<level>\d+)$")
+PAGE_ID_RE = re.compile(r"/pages/(?P<page_id>\d+)\.html$")
+UPDATED_AGE_RE = re.compile(r"\((?P<value>\d+)(?P<unit>[mhd])\)\s*$")
 
 
 def absolute_url(href: str) -> str:
@@ -60,6 +64,183 @@ def absolute_url(href: str) -> str:
     if href.startswith("http"):
         return href
     return ATWIKI_BASE + "/" + href.lstrip("/")
+
+
+def extract_page_id(url: str) -> Optional[int]:
+    match = PAGE_ID_RE.search(url)
+    if not match:
+        return None
+    return int(match.group("page_id"))
+
+
+def extract_updated_age(title: str) -> tuple[Optional[str], Optional[int]]:
+    title = clean_text(title)
+    match = UPDATED_AGE_RE.search(title)
+    if not match:
+        return None, None
+    value = int(match.group("value"))
+    unit = match.group("unit")
+    factor = {"m": 60, "h": 3600, "d": 86400}[unit]
+    return f"{value}{unit}", value * factor
+
+
+def extract_ms_base_name(name: str) -> Optional[str]:
+    match = MS_NAME_WITH_LEVEL.match(name)
+    if not match:
+        return None
+    return match.group("base")
+
+
+def parse_iso_datetime(value: str) -> datetime:
+    parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def find_latest_provenance(
+    reports_dir: Path,
+) -> tuple[Optional[Path], Optional[Dict[str, Any]]]:
+    latest_path: Optional[Path] = None
+    latest_data: Optional[Dict[str, Any]] = None
+    latest_generated_at: Optional[datetime] = None
+    for path in sorted(reports_dir.glob("provenance_*.json")):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            generated_at = parse_iso_datetime(str(data["generated_at"]))
+        except Exception:
+            continue
+        if latest_generated_at is None or generated_at > latest_generated_at:
+            latest_generated_at = generated_at
+            latest_path = path
+            latest_data = data
+    return latest_path, latest_data
+
+
+def load_msdata_base_index(path: Path) -> Dict[str, Dict[str, Any]]:
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    if not isinstance(data, list):
+        return {}
+
+    result: Dict[str, Dict[str, Any]] = {}
+    for record in data:
+        if not isinstance(record, dict):
+            continue
+        ms_name = record.get("MS名")
+        if not isinstance(ms_name, str):
+            continue
+        base_name = extract_ms_base_name(ms_name)
+        if not base_name or base_name in result:
+            continue
+        result[base_name] = {
+            "cost": record.get("コスト"),
+            "attr": record.get("属性"),
+            "wiki_url": record.get("wiki_url"),
+        }
+    return result
+
+
+def select_changed_index_items(
+    items: List[Dict[str, Any]],
+    *,
+    previous_generated_at: Optional[datetime],
+    previous_msdata_index: Dict[str, Dict[str, Any]],
+    now: Optional[datetime] = None,
+    freshness_window_seconds: int = 3600,
+    force_full: bool = False,
+    min_age_coverage: float = 0.95,
+) -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    now = now or datetime.now(timezone.utc)
+    total_count = len(items)
+    age_count = sum(
+        1 for item in items if isinstance(item.get("updated_age_seconds"), int)
+    )
+    age_coverage = (age_count / total_count) if total_count else 1.0
+
+    meta: Dict[str, Any] = {
+        "fast_path": True,
+        "fallback_reason": "",
+        "candidate_count": 0,
+        "total_count": total_count,
+        "age_coverage": age_coverage,
+        "freshness_window_seconds": freshness_window_seconds,
+        "previous_generated_at": (
+            previous_generated_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+            if previous_generated_at
+            else None
+        ),
+        "elapsed_seconds": None,
+        "threshold_seconds": None,
+        "reason_counts": {},
+    }
+
+    if force_full:
+        meta["fast_path"] = False
+        meta["fallback_reason"] = "force_full"
+        meta["candidate_count"] = total_count
+        return items, meta
+
+    if previous_generated_at is None:
+        meta["fast_path"] = False
+        meta["fallback_reason"] = "missing_previous_provenance"
+        meta["candidate_count"] = total_count
+        return items, meta
+
+    if age_coverage < min_age_coverage:
+        meta["fast_path"] = False
+        meta["fallback_reason"] = "low_age_coverage"
+        meta["candidate_count"] = total_count
+        return items, meta
+
+    elapsed_seconds = max(
+        0, int((now.astimezone(timezone.utc) - previous_generated_at).total_seconds())
+    )
+    threshold_seconds = elapsed_seconds + freshness_window_seconds
+    meta["elapsed_seconds"] = elapsed_seconds
+    meta["threshold_seconds"] = threshold_seconds
+
+    selected: List[Dict[str, Any]] = []
+    reason_counts: Dict[str, int] = {}
+    for item in items:
+        reasons: List[str] = []
+        name = item.get("name")
+        existing = previous_msdata_index.get(name) if isinstance(name, str) else None
+        if existing is None:
+            reasons.append("new_name")
+        else:
+            if existing.get("cost") != item.get("cost"):
+                reasons.append("cost_changed")
+            if existing.get("attr") != item.get("属性"):
+                reasons.append("attr_changed")
+            current_url = item.get("url")
+            if (
+                isinstance(current_url, str)
+                and isinstance(existing.get("wiki_url"), str)
+                and existing.get("wiki_url") != current_url
+            ):
+                reasons.append("wiki_url_changed")
+
+        age_seconds = item.get("updated_age_seconds")
+        if age_seconds is None:
+            reasons.append("missing_age")
+        elif age_seconds <= threshold_seconds:
+            reasons.append("recent_update")
+
+        if reasons:
+            selected_item = dict(item)
+            selected_item["change_reasons"] = reasons
+            selected.append(selected_item)
+            for reason in reasons:
+                reason_counts[reason] = reason_counts.get(reason, 0) + 1
+
+    meta["candidate_count"] = len(selected)
+    meta["reason_counts"] = reason_counts
+    return selected, meta
 
 
 def get_client(timeout: float = 30.0) -> httpx.Client:
@@ -313,12 +494,18 @@ def parse_index(html: str) -> List[Dict[str, Any]]:
             for a in ul.select("li > a[href]"):
                 name = clean_text(a.get_text(" "))
                 href = absolute_url(a["href"])
+                updated_age_text, updated_age_seconds = extract_updated_age(
+                    a.get("title", "")
+                )
                 results.append(
                     {
                         "name": name,
                         "url": href,
+                        "page_id": extract_page_id(href),
                         "cost": cost,
                         "属性": attr,
+                        "updated_age_text": updated_age_text,
+                        "updated_age_seconds": updated_age_seconds,
                     }
                 )
     return results
@@ -828,6 +1015,84 @@ def cmd_all(args: argparse.Namespace) -> int:
     return cmd_details(dargs)
 
 
+def cmd_detect_changed(args: argparse.Namespace) -> int:
+    index_path = Path(args.input)
+    data = json.loads(index_path.read_text(encoding="utf-8"))
+    if not isinstance(data, list):
+        print("ERROR: input must be a JSON array", file=sys.stderr)
+        return 2
+
+    previous_path: Optional[Path] = None
+    previous_data: Optional[Dict[str, Any]] = None
+    if getattr(args, "previous_provenance", None):
+        previous_path = Path(args.previous_provenance)
+        if previous_path.exists():
+            try:
+                previous_data = json.loads(previous_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                print(
+                    f"WARN: failed to read previous provenance {previous_path}: {exc}",
+                    file=sys.stderr,
+                )
+    else:
+        previous_path, previous_data = find_latest_provenance(Path(args.reports_dir))
+
+    previous_generated_at: Optional[datetime] = None
+    if isinstance(previous_data, dict) and isinstance(
+        previous_data.get("generated_at"), str
+    ):
+        try:
+            previous_generated_at = parse_iso_datetime(previous_data["generated_at"])
+        except (TypeError, ValueError) as exc:
+            print(
+                "WARN: failed to parse previous provenance generated_at "
+                f"{previous_data.get('generated_at')!r}: {exc}",
+                file=sys.stderr,
+            )
+
+    now = (
+        parse_iso_datetime(args.now)
+        if getattr(args, "now", None)
+        else datetime.now(timezone.utc)
+    )
+    selected, meta = select_changed_index_items(
+        [item for item in data if isinstance(item, dict)],
+        previous_generated_at=previous_generated_at,
+        previous_msdata_index=load_msdata_base_index(Path(args.msdata)),
+        now=now,
+        freshness_window_seconds=parse_ttl(args.freshness_window),
+        force_full=args.force_full,
+        min_age_coverage=float(args.min_age_coverage),
+    )
+    meta["generated_at"] = (
+        now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    )
+    meta["selected_index_path"] = str(Path(args.out))
+    meta["source_index_path"] = str(index_path)
+    meta["previous_provenance_path"] = str(previous_path) if previous_path else None
+
+    out_path = Path(args.out)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(
+        json.dumps(selected, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    meta_path = Path(args.meta_out)
+    meta_path.parent.mkdir(parents=True, exist_ok=True)
+    meta_path.write_text(
+        json.dumps(meta, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    print(
+        "detect-changed: "
+        f"{meta['candidate_count']}/{meta['total_count']} candidates "
+        f"(fast_path={meta['fast_path']}, fallback_reason={meta['fallback_reason'] or 'none'})"
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -876,6 +1141,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="セマンティック変化がないページをスキップ（details と同じ挙動）",
     )
     p_all.set_defaults(func=cmd_all)
+
+    p_detect = sub.add_parser(
+        "detect-changed",
+        help="MS一覧の更新経過から再取得対象ページだけを抽出",
+    )
+    p_detect.add_argument("--in", dest="input", required=True)
+    p_detect.add_argument("--out", default="cache/index_changed.json")
+    p_detect.add_argument("--meta-out", default="cache/index_changed_meta.json")
+    p_detect.add_argument("--reports-dir", default="reports")
+    p_detect.add_argument("--previous-provenance", default="")
+    p_detect.add_argument("--msdata", default="msData.json")
+    p_detect.add_argument("--freshness-window", default="1h")
+    p_detect.add_argument("--min-age-coverage", type=float, default=0.95)
+    p_detect.add_argument("--force-full", action="store_true")
+    p_detect.add_argument("--now", default="")
+    p_detect.set_defaults(func=cmd_detect_changed)
 
     # ラベル監査用: 行見出し（raw / normalized）のみ抽出
     def cmd_labels(args: argparse.Namespace) -> int:
