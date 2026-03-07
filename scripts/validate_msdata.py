@@ -79,8 +79,15 @@ def extract_base_name(name: str) -> str | None:
     return match.group("base")
 
 
-def _fullst_order_key(points: Any) -> int:
-    return -1 if points is None else int(points)
+def _fullst_order_key(points: Any) -> int | None:
+    if points is None:
+        return -1
+    if isinstance(points, bool):
+        return None
+    try:
+        return int(points)
+    except (TypeError, ValueError):
+        return None
 
 
 def find_semantic_errors(records: Iterable[Dict[str, Any]]) -> List[str]:
@@ -113,6 +120,11 @@ def find_semantic_errors(records: Iterable[Dict[str, Any]]) -> List[str]:
                     continue
                 points = item.get("points")
                 order = _fullst_order_key(points)
+                if order is None:
+                    errors.append(
+                        f"{ms_name}: fullst points must be an integer or null (index={idx}, value={points!r})"
+                    )
+                    continue
                 if prev_order is not None and order < prev_order:
                     errors.append(
                         f"{ms_name}: fullst points must be sorted ascending (index={idx})"
@@ -120,11 +132,11 @@ def find_semantic_errors(records: Iterable[Dict[str, Any]]) -> List[str]:
                     break
                 prev_order = order
 
-                key = (item.get("name"), item.get("level"), item.get("points"))
-                if item.get("points") is not None:
+                key = (item.get("name"), item.get("level"), order)
+                if points is not None:
                     if key in seen_entries:
                         errors.append(
-                            f"{ms_name}: duplicated fullst entry detected ({item.get('name')}, level={item.get('level')}, points={item.get('points')})"
+                            f"{ms_name}: duplicated fullst entry detected ({item.get('name')}, level={item.get('level')}, points={order})"
                         )
                         break
                     seen_entries.add(key)
