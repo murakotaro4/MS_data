@@ -100842,32 +100842,32 @@
       {
         "name": "耐実弾装甲補強",
         "level": 1,
-        "points": null
+        "points": 490
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 990
       },
       {
         "name": "AD-FCS",
         "level": 1,
-        "points": null
+        "points": 1830
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 3330
       },
       {
         "name": "耐実弾装甲補強",
         "level": 4,
-        "points": null
+        "points": 6660
       },
       {
         "name": "対支援防御プログラム",
         "level": 3,
-        "points": null
+        "points": 9990
       }
     ]
   },
