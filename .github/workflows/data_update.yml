@@ -111,6 +111,36 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - id: no_change_mail
+        name: Build no-change mail body
+        if: github.event_name == 'schedule' && steps.changes.outputs.changed == 'false'
+        run: |
+          body_path="$RUNNER_TEMP/msdata_no_change_mail.txt"
+          {
+            echo "msData 定期更新を実行しました。"
+            echo
+            echo "- 実行日: ${REPORT_DATE}"
+            echo "- 結果: 成功"
+            echo "- msData.json: 差分なし"
+            echo "- candidate_count: ${{ steps.detection.outputs.candidate_count }}"
+            echo "- fast_path: ${{ steps.detection.outputs.fast_path }}"
+            echo "- age_coverage: ${{ steps.detection.outputs.age_coverage }}"
+            echo "- fallback_reason: ${{ steps.detection.outputs.fallback_reason }}"
+            echo "- run_id: ${GITHUB_RUN_ID}"
+          } > "$body_path"
+          echo "path=$body_path" >> "$GITHUB_OUTPUT"
+
+      - name: Send no-change mail
+        if: github.event_name == 'schedule' && steps.changes.outputs.changed == 'false'
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GMAIL_TO: ${{ secrets.GMAIL_TO }}
+        run: |
+          uv run python -m scripts.send_gmail \
+            --subject "msData 定期更新実行報告（差分なし, ${{ env.REPORT_DATE }}）" \
+            --body "${{ steps.no_change_mail.outputs.path }}"
+
       - name: Generate reports and snapshot
         if: steps.changes.outputs.changed == 'true'
         run: |
