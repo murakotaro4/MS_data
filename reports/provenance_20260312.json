@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-03-12T09:16:40Z",
+  "report_date": "20260312",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "1a831e837161054f96fb200a7ecbb489b7fcc786"
+  },
+  "github": {
+    "run_id": "22994736072",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "87a1f97f6f750967352d47670589dab71161a7f453a712f1488942958dc9322d",
+      "size_bytes": 137101,
+      "record_count": 558
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "2dd213272fbd06b394ffa0d42a7b50b8f6fc189a9ab8a62588d27501a9e6a476",
+      "size_bytes": 8389,
+      "record_count": 7
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "52bf29d517b1d5b229bb1e1866a7c051686ab55f33939ae16306cfe160730f4d",
+      "size_bytes": 10970,
+      "record_count": 7
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "2ddc4dbaa7979bc15203ba7a4687642d7245a11323e6d80d772abaed0560216f",
+      "file_count": 8,
+      "size_bytes": 1778502
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "9751e1bba9ae1a4054858680dedf0bb0dc0e590fc8047e30cfe82240661c8284",
+      "size_bytes": 2471121,
+      "record_count": 1603
+    },
+    "diff_report": {
+      "path": "reports/diff_msdata_20260312.md",
+      "sha256": "f87cb3029b2ab41b5c9b9b93e47aa7db4a831f7c1e25c3277aa0815a8ba7efb5",
+      "size_bytes": 748
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260312-run-22994736072",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260312-run22994736072",
+    "asset_name": "raw_snapshot_20260312_run22994736072.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260312-run22994736072"
+  }
+}
