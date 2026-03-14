@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-03-14T09:10:39Z",
+  "report_date": "20260314",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "f6927a1e8bf99c01b7cd69b9f44d6f035af172bb"
+  },
+  "github": {
+    "run_id": "23084934076",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "ec584bbad5139f04b1263ba3a1246f5ac5636a698e0603087e9bc3c69737d2a3",
+      "size_bytes": 137303,
+      "record_count": 559
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "bd042decf26c47b9ba86a4cde76f38dafb135c5d7d0dc1d71a6d19d34cefc0ec",
+      "size_bytes": 58320,
+      "record_count": 51
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "5f25c736d06c98791ad6b7dd042999d6a8d269fd207412dd77f78be770f8fd0f",
+      "size_bytes": 76837,
+      "record_count": 51
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "7e4beb9ee03db33a6ddfd1874e6a3acd3fd1d1aa9c7c83afb684b55bd6b80429",
+      "file_count": 40,
+      "size_bytes": 6762732
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "f2e00a9ddaa82d29255c42a0c5a7ebeb0f1704b2dc7ef5d05ad4a1b0cb29a193",
+      "size_bytes": 2477331,
+      "record_count": 1607
+    },
+    "diff_report": {
+      "path": "reports/diff_msdata_20260314.md",
+      "sha256": "8ae3b6194ac16a08b415b0891ecb8f28367de7890a17b37296270602c4dae623",
+      "size_bytes": 1817
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260314-run-23084934076",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260314-run23084934076",
+    "asset_name": "raw_snapshot_20260314_run23084934076.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260314-run23084934076"
+  }
+}
