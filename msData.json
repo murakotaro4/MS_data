@@ -17647,32 +17647,32 @@
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 160
       },
       {
         "name": "シールド構造強化",
         "level": 1,
-        "points": null
+        "points": 320
       },
       {
         "name": "フレーム補強",
         "level": 1,
-        "points": null
+        "points": 480
       },
       {
         "name": "AD-FCS",
         "level": 1,
-        "points": null
+        "points": 800
       },
       {
         "name": "シールド構造強化",
         "level": 3,
-        "points": null
+        "points": 1600
       },
       {
         "name": "AD-FCS",
         "level": 3,
-        "points": null
+        "points": 2400
       }
     ]
   },
@@ -27816,33 +27816,33 @@
     "fullst": [
       {
         "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 190
       },
       {
         "name": "シールド構造強化",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 380
       },
       {
         "name": "フレーム補強",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 570
       },
       {
         "name": "AD-FCS",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 950
       },
       {
         "name": "シールド構造強化",
         "level": 3,
-        "points": null
+        "points": 1900
       },
       {
         "name": "AD-FCS",
         "level": 3,
-        "points": null
+        "points": 2850
       }
     ]
   },

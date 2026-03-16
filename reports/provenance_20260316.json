@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-03-16T09:25:32Z",
+  "report_date": "20260316",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "59bde7ef76bbb04219f95d63e26561b3c6b87cff"
+  },
+  "github": {
+    "run_id": "23136623975",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "e138e0e03194ff12b1b32591ba2092fe75b29a324ff0464efbd34302bb607fc7",
+      "size_bytes": 137354,
+      "record_count": 559
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "8caf23eb2b22476a9b319696de9fda73492ab38979d699aa38df89be3a08ea46",
+      "size_bytes": 8913,
+      "record_count": 8
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "0988bf40684248137b7f04574b6ef36656fb2e9c8aaa53b490cd06e9ca87790c",
+      "size_bytes": 11791,
+      "record_count": 8
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "d2a5cda1638e4efbe2d034a52401c8d2b739cd94b6f5f35d73e1d24ef4ec2238",
+      "file_count": 8,
+      "size_bytes": 1715489
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "aab64ea4c5bb6ef1da0719161397aa503b79bac0a44acc14d2614e1de9f1ce4c",
+      "size_bytes": 2477323,
+      "record_count": 1607
+    },
+    "diff_report": {
+      "path": "reports/diff_msdata_20260316.md",
+      "sha256": "32d4873b70e420e4ee11364a4180114ce92176201e4f5fe8ebe4693bc0d6ffac",
+      "size_bytes": 1420
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260316-run-23136623975",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260316-run23136623975",
+    "asset_name": "raw_snapshot_20260316_run23136623975.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260316-run23136623975"
+  }
+}
