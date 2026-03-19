@@ -278,6 +278,16 @@ MS名の正規化（index準拠）
   - 関連 Issue、再現手順、UI/可視化が変わる場合はスクリーンショット。
 - `gh pr create` 等で PR 本文にバッククォート（`` ` ``）や括弧を含める場合、シェル展開で本文が崩れることがあるため `--body-file` の利用を推奨。
 
+### Codexレビュー実行手順
+- 非対話レビューは `codex exec` を使い、`-m`（モデル）と `-c model_reasoning_effort="..."`（reasoning effort）を同時指定する。
+- 基本方針として、reasoning effort は `medium` を使用する（特別な理由がある場合のみ変更）。
+- reasoning effort はモデル仕様に合わせて指定する（`gpt-5.3-codex` 系は `low` / `medium` / `high` / `xhigh`、`gpt-5.4` は `none` / `low` / `medium` / `high` / `xhigh`）。
+- 正式モデル名は `gpt-5.3-codex-spark` / `gpt-5.4` / `gpt-5.4-mini` を使用する（`SPARC` ではなく `spark`）。
+- 実行例（レビュー対象が現在の差分の場合）:
+  - `codex exec -m gpt-5.3-codex-spark -c model_reasoning_effort="medium" "このブランチの差分をレビューし、重大度順に指摘してください。"`
+  - `codex exec -m gpt-5.4 -c model_reasoning_effort="medium" "このブランチの差分をレビューし、重大度順に指摘してください。"`
+  - `codex exec -m gpt-5.4-mini -c model_reasoning_effort="medium" "このブランチの差分をレビューし、重大度順に指摘してください。"`
+
 ## テンプレート方針（Issue / Pull Request）
 - 言語: すべて日本語を原則とする（タイトル/本文/チェックリスト）。
 - 配置（参考）: `.github/ISSUE_TEMPLATE/*.md`, `.github/PULL_REQUEST_TEMPLATE.md`。
