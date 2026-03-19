@@ -175,15 +175,19 @@ MS名の正規化（index準拠）
 - 定期実行: `data update` は毎日 18:00 JST（`cron: 0 9 * * *`）で実行し、差分があれば `data/auto-update-YYYYMMDD` のPRを作成します。
 - 自動レビュー/マージ: `auto review merge` は `pull_request` ではなく `data update` 成功後の `workflow_run` で起動し、対象の `data/auto-update-*` PRに対して `@codex review` を自動実行します。Codexのファイル指摘が0件なら自動マージします（同一HEAD SHAでは重複依頼を抑止）。
 - 対象PRの解決: まず `data/auto-update-YYYYMMDD`（`workflow_run.created_at` のJST日付）を優先し、見つからない場合は open な `data/auto-update-*` の最新PRにフォールバックします。
+- reports 運用SSOT: 命名規約・分類・保持方針は `reports_manifest.yml` を正とします。
+- 契約検証: workflow と CI では `uv run python -m scripts.validate_report_contract` を呼び、`report_date/source_run_id/head_ref` と生成物名の整合を検証します。
 - 失敗時の挙動: Codexが20分以内に応答しない、またはファイル指摘が1件以上ある場合は自動マージせずPRを残して手動対応します。
 - 通知連携: 自動マージ時は `auto review merge` から `post merge notify` を `workflow_dispatch` で起動し、マージ後通知を確実に実行します。
 - 通知タイミング: メール送信はPR作成時ではなく、`data/auto-update-*` が `main` にマージされた後に `post merge notify` で実行します。
+- idempotency: 重複防止キーは `source_run_id + head_ref` を基準とし、通知は初回作成時に送信、再実行時は必要に応じて再送できるように運用します。
 - メール内容: 本文は `reports/diff_msdata_YYYYMMDD.md`、添付は `msData.json` を使用します（`scripts/send_gmail.py --attach`）。
 - 宛先運用: `GMAIL_TO` はカンマ区切りで複数宛先を指定できます（例: `a@example.com,b@example.com`）。値の参照は不可のため、変更時は最終文字列で上書き更新します。
 - 生成元追跡（provenance）: `data update` 実行時に `reports/provenance_YYYYMMDD.json` を生成し、`index/details/html` のハッシュ・件数・`source_run_id` を記録します。
 - 生データアーカイブ（短期）: 同実行で `raw_snapshot_YYYYMMDD_run<run_id>.tar.xz` を作成し、Actions artifact（90日）へ保存します。
 - 生データアーカイブ（長期）: `post merge notify` で `source_run_id` のartifactを取得し、Release tag `raw-snapshot-YYYYMMDD-run<run_id>` に asset として恒久保存します。
 - 復元手順: 対象コミットの `reports/provenance_YYYYMMDD.json` から `release.tag` / `release.url` を取得し、Release asset を展開して `cache/` を再構成します。
+- 互換期間: レポート再編時は旧パスを最低1リリース周期維持し、`参照consumerが0` かつ `互換期間経過` 後に撤去します。
 ### 週次データ更新（実例: 2025-09-17）
 - index/details を強制再取得: `uv run python -m scripts.tasks scrape-index FORCE=1 TTL=1d` → `uv run python -m scripts.tasks scrape-details FORCE=1 TTL=1d RATE=2.0 LIMIT=0`（デフォルトRATE=2.0、タイムアウト時は `NO_NET=1` に切り替えてキャッシュ再利用）
 - JSONL を配列にまとめる: `uv run python -m scripts.tasks import-details`（`scripts/jsonl_to_json.py` を使用、`jq` 非依存）

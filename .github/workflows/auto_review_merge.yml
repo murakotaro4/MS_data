@@ -105,6 +105,15 @@ jobs:
             echo "- report_date: ${{ steps.resolve.outputs.report_date }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Validate report contract (auto-review)
+        if: steps.resolve.outputs.skip != 'true'
+        run: |
+          uv run python -m scripts.validate_report_contract \
+            --mode auto-review \
+            --manifest reports_manifest.yml \
+            --report-date "${{ steps.resolve.outputs.report_date }}" \
+            --head-ref "${{ steps.resolve.outputs.head_ref }}"
+
       - id: trigger
         name: Trigger Codex review
         if: steps.resolve.outputs.skip != 'true'

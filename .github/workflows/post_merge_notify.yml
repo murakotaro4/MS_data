@@ -17,6 +17,11 @@ on:
         description: "Source data update run id"
         required: false
         type: string
+      send_mail:
+        description: "Send merged mail notification"
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   actions: read
@@ -98,7 +103,7 @@ jobs:
 
           artifact_name="raw-snapshot-${report_date}-run-${source_run_id}"
           snapshot_file="raw_snapshot_${report_date}_run${source_run_id}.tar.xz"
-          release_tag="raw-snapshot-${report_date}-run${source_run_id}"
+          release_tag="raw-snapshot-${report_date}-run-${source_run_id}"
 
           echo "report_path=$report" >> "$GITHUB_OUTPUT"
           echo "report_date=$report_date" >> "$GITHUB_OUTPUT"
@@ -107,6 +112,20 @@ jobs:
           echo "snapshot_file=$snapshot_file" >> "$GITHUB_OUTPUT"
           echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
           echo "provenance_path=$provenance_path" >> "$GITHUB_OUTPUT"
+
+      - name: Validate report contract (post-merge)
+        run: |
+          uv run python -m scripts.validate_report_contract \
+            --mode post-merge \
+            --manifest reports_manifest.yml \
+            --report-date "${{ steps.report.outputs.report_date }}" \
+            --source-run-id "${{ steps.report.outputs.source_run_id }}" \
+            --head-ref "${HEAD_REF}" \
+            --diff-path "${{ steps.report.outputs.report_path }}" \
+            --provenance-path "${{ steps.report.outputs.provenance_path }}" \
+            --artifact-name "${{ steps.report.outputs.artifact_name }}" \
+            --snapshot-file "${{ steps.report.outputs.snapshot_file }}" \
+            --release-tag "${{ steps.report.outputs.release_tag }}"
 
       - name: Download raw snapshot artifact
         env:
@@ -137,6 +156,7 @@ jobs:
 
           tag="${{ steps.report.outputs.release_tag }}"
           title="raw snapshot ${{ steps.report.outputs.report_date }} (run ${{ steps.report.outputs.source_run_id }})"
+          created="false"
           notes=$(
             cat <<EOF
           自動保存された生データスナップショットです。
@@ -152,6 +172,7 @@ jobs:
               --repo "${GITHUB_REPOSITORY}" \
               --title "${title}" \
               --notes "${notes}"
+            created="true"
           fi
 
           gh release upload "${tag}" \
@@ -175,8 +196,10 @@ jobs:
 
           release_url="$(gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" --json url --jq '.url')"
           echo "release_url=${release_url}" >> "$GITHUB_OUTPUT"
+          echo "created=${created}" >> "$GITHUB_OUTPUT"
 
       - name: Send merged msData mail
+        if: steps.release.outputs.created == 'true' || github.run_attempt != '1' || (github.event_name == 'workflow_dispatch' && github.event.inputs.send_mail == 'true')
         env:
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}

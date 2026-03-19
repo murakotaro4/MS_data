@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "compatibility": {
+    "legacy_path_support": true,
+    "min_release_cycles": 1,
+    "retirement_criteria": [
+      "legacy consumer count is 0",
+      "at least one release cycle has passed"
+    ]
+  },
+  "naming": {
+    "report_date_format": "YYYYMMDD",
+    "head_ref_pattern": "data/auto-update-{report_date}",
+    "diff_pattern": "reports/diff_msdata_{report_date}.md",
+    "provenance_pattern": "reports/provenance_{report_date}.json",
+    "artifact_pattern": "raw-snapshot-{report_date}-run-{source_run_id}",
+    "snapshot_pattern": "raw_snapshot_{report_date}_run{source_run_id}.tar.xz",
+    "release_tag_pattern": "raw-snapshot-{report_date}-run-{source_run_id}",
+    "idempotency_key": "source_run_id+head_ref"
+  },
+  "entries": [
+    {
+      "id": "diff_msdata",
+      "type": "generated",
+      "path_patterns": ["reports/diff_msdata_*.md"],
+      "producer": ["scripts.report_msdata_diff", ".github/workflows/data_update.yml"],
+      "consumers": [".github/workflows/post_merge_notify.yml", "AGENTS.md"],
+      "retention": "git"
+    },
+    {
+      "id": "provenance",
+      "type": "generated",
+      "path_patterns": ["reports/provenance_*.json"],
+      "producer": ["scripts.generate_provenance", "scripts.tasks snapshot", ".github/workflows/data_update.yml"],
+      "consumers": [".github/workflows/post_merge_notify.yml", "AGENTS.md"],
+      "retention": "git+release"
+    },
+    {
+      "id": "label_audit",
+      "type": "generated",
+      "path_patterns": ["reports/label_audit_*.md", "reports/label_audit_latest.md"],
+      "producer": ["scripts.audit_labels", "scripts.tasks audit-labels"],
+      "consumers": ["AGENTS.md", "reports/msdata_update_*.md"],
+      "retention": "git"
+    },
+    {
+      "id": "index_ms_audit",
+      "type": "generated",
+      "path_patterns": ["reports/index_ms_audit_*.md"],
+      "producer": ["scripts.audit_index_vs_msdata", "scripts.tasks audit-index"],
+      "consumers": ["AGENTS.md", "reports/msdata_update_*.md"],
+      "retention": "git"
+    },
+    {
+      "id": "msdata_update",
+      "type": "manual",
+      "path_patterns": ["reports/msdata_update_*.md", "reports/msdata_update_template.md"],
+      "producer": ["human"],
+      "consumers": ["human", "AGENTS.md"],
+      "retention": "git"
+    },
+    {
+      "id": "skills_audit",
+      "type": "generated",
+      "path_patterns": ["reports/skills_params_audit.json", "reports/owners_flat_audit.json", "reports/skill_owners_audit_*.md"],
+      "producer": ["scripts.build_param_skills", "scripts.build_owners_flat", "scripts.audit_skills"],
+      "consumers": ["AGENTS.md", "human"],
+      "retention": "git"
+    },
+    {
+      "id": "manual_notes",
+      "type": "manual",
+      "path_patterns": ["reports/actions_timing_comparison_*.md", "reports/repo_improvement_*/**", "reports/README.md", "reports/index.md", "reports/reports_inventory_*.md"],
+      "producer": ["human"],
+      "consumers": ["human"],
+      "retention": "git"
+    },
+    {
+      "id": "archive",
+      "type": "archive",
+      "path_patterns": ["reports/archive/**"],
+      "producer": ["human"],
+      "consumers": ["human"],
+      "retention": "git"
+    }
+  ]
+}

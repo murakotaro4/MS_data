@@ -44,6 +44,12 @@ uv sync --dev
 - ラベル監査: `uv run python -m scripts.tasks labels LIMIT=0` → `uv run python -m scripts.tasks audit-labels`
 - スキル抽出: `uv run python -m scripts.tasks skills TTL=7d`
 - 整形のみ: `uv run python -m scripts.tasks normalize`
+- reports 契約検証: `uv run python -m scripts.validate_report_contract --mode ci --manifest reports_manifest.yml --reports-dir reports`
+
+## reports 運用（要点）
+- 生成物/手動レポートの分類と命名契約は `reports_manifest.yml` を SSOT とします。
+- `reports/index.md` と `reports/README.md` は運用導線（latest 参照先・互換期間・撤去条件）を記載します。
+- workflow/CI は `scripts.validate_report_contract` で命名・整合性を検証します。
 
 ## Makefile（補助）
 - `make` は Linux/macOS 向けの薄いラッパーです。Windows では `uv run python -m scripts.tasks <target>` を優先してください。

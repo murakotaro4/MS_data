@@ -43,9 +43,25 @@ jobs:
         run: |
           report_date="$(date +%Y%m%d)"
           echo "REPORT_DATE=${report_date}" >> "$GITHUB_ENV"
+          echo "HEAD_REF=data/auto-update-${report_date}" >> "$GITHUB_ENV"
           echo "PROVENANCE_FILE=reports/provenance_${report_date}.json" >> "$GITHUB_ENV"
           echo "RAW_ARTIFACT_NAME=raw-snapshot-${report_date}-run-${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
           echo "RAW_SNAPSHOT_FILE=raw_snapshot_${report_date}_run${GITHUB_RUN_ID}.tar.xz" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=raw-snapshot-${report_date}-run-${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
+
+      - name: Validate report contract (naming)
+        run: |
+          uv run python -m scripts.validate_report_contract \
+            --mode data-update \
+            --manifest reports_manifest.yml \
+            --report-date "${REPORT_DATE}" \
+            --source-run-id "${GITHUB_RUN_ID}" \
+            --head-ref "${HEAD_REF}" \
+            --diff-path "reports/diff_msdata_${REPORT_DATE}.md" \
+            --provenance-path "${PROVENANCE_FILE}" \
+            --artifact-name "${RAW_ARTIFACT_NAME}" \
+            --snapshot-file "${RAW_SNAPSHOT_FILE}" \
+            --release-tag "${RELEASE_TAG}"
 
       - name: Restore previous detect state
         env:

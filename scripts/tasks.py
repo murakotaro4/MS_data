@@ -155,7 +155,13 @@ def task_normalize() -> int:
 
 
 def task_ci() -> int:
-    for task_name in ("lint", "test", "validate-strict", "validate-skills"):
+    for task_name in (
+        "validate-report-contract",
+        "lint",
+        "test",
+        "validate-strict",
+        "validate-skills",
+    ):
         rc = TASKS[task_name]()
         if rc != 0:
             return rc
@@ -594,6 +600,35 @@ def task_preview_params() -> int:
     )
 
 
+def task_validate_report_contract() -> int:
+    mode = _env_str("MODE", "ci") or "ci"
+    args = [
+        "--mode",
+        mode,
+        "--manifest",
+        _env_str("REPORTS_MANIFEST", "reports_manifest.yml") or "reports_manifest.yml",
+        "--reports-dir",
+        _env_str("REPORTS_DIR", "reports") or "reports",
+        "--report-date",
+        _env_str("REPORT_DATE", "") or "",
+        "--source-run-id",
+        _env_str("SOURCE_RUN_ID", "") or "",
+        "--head-ref",
+        _env_str("HEAD_REF", "") or "",
+        "--diff-path",
+        _env_str("DIFF_PATH", "") or "",
+        "--provenance-path",
+        _env_str("PROVENANCE_PATH", "") or "",
+        "--artifact-name",
+        _env_str("ARTIFACT_NAME", "") or "",
+        "--snapshot-file",
+        _env_str("SNAPSHOT_FILE", "") or "",
+        "--release-tag",
+        _env_str("RELEASE_TAG", "") or "",
+    ]
+    return _run_python_module("scripts.validate_report_contract", *args)
+
+
 TASKS: dict[str, Callable[[], int]] = {
     "help": task_help,
     "setup": task_setup,
@@ -626,6 +661,7 @@ TASKS: dict[str, Callable[[], int]] = {
     "build-owners-flat": task_build_owners_flat,
     "audit-skills": task_audit_skills,
     "preview-params": task_preview_params,
+    "validate-report-contract": task_validate_report_contract,
 }
 
 

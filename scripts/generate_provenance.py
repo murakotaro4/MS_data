@@ -146,7 +146,7 @@ def build_provenance(args: argparse.Namespace) -> Dict[str, Any]:
     release_tag = (
         args.release_tag
         if args.release_tag
-        else f"raw-snapshot-{args.date}-run{run_id}"
+        else f"raw-snapshot-{args.date}-run-{run_id}"
     )
     release_asset_name = (
         args.release_asset_name

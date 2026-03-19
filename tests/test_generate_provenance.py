@@ -94,10 +94,10 @@ def test_main_writes_provenance_json(tmp_path, monkeypatch):
     assert data["inputs"]["html_cache"]["file_count"] == 2
     assert data["outputs"]["msdata_json"]["record_count"] == 1
     assert data["artifact"]["name"] == "raw-snapshot-20260222-run-12345"
-    assert data["release"]["tag"] == "raw-snapshot-20260222-run12345"
+    assert data["release"]["tag"] == "raw-snapshot-20260222-run-12345"
     assert (
         data["release"]["url"]
-        == "https://github.com/owner/repo/releases/tag/raw-snapshot-20260222-run12345"
+        == "https://github.com/owner/repo/releases/tag/raw-snapshot-20260222-run-12345"
     )
 
 

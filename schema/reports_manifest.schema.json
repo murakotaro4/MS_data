@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/schema/reports_manifest.schema.json",
+  "title": "Reports Manifest",
+  "type": "object",
+  "required": ["version", "compatibility", "naming", "entries"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "compatibility": {
+      "type": "object",
+      "required": ["legacy_path_support", "min_release_cycles", "retirement_criteria"],
+      "properties": {
+        "legacy_path_support": { "type": "boolean" },
+        "min_release_cycles": { "type": "integer", "minimum": 0 },
+        "retirement_criteria": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "naming": {
+      "type": "object",
+      "required": [
+        "report_date_format",
+        "head_ref_pattern",
+        "diff_pattern",
+        "provenance_pattern",
+        "artifact_pattern",
+        "snapshot_pattern",
+        "release_tag_pattern",
+        "idempotency_key"
+      ],
+      "properties": {
+        "report_date_format": { "type": "string" },
+        "head_ref_pattern": { "type": "string" },
+        "diff_pattern": { "type": "string" },
+        "provenance_pattern": { "type": "string" },
+        "artifact_pattern": { "type": "string" },
+        "snapshot_pattern": { "type": "string" },
+        "release_tag_pattern": { "type": "string" },
+        "idempotency_key": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "path_patterns", "producer", "consumers", "retention"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "type": { "type": "string", "enum": ["generated", "manual", "archive"] },
+          "path_patterns": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "minItems": 1
+          },
+          "producer": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1
+          },
+          "consumers": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1
+          },
+          "retention": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

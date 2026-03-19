@@ -3,7 +3,7 @@ SHELL := bash
 
 MSDATA := msData.json
 
-.PHONY: help setup format lint test validate validate-strict validate-skills update normalize ci scrape-index scrape-details scrape-all import-details labels audit-labels report-diff audit-index skills skills-table owners-table build-skills build-param-skills build-owners-flat audit-skills preview-params provenance snapshot
+.PHONY: help setup format lint test validate validate-strict validate-skills update normalize ci scrape-index scrape-details scrape-all import-details labels audit-labels report-diff audit-index skills skills-table owners-table build-skills build-param-skills build-owners-flat audit-skills preview-params provenance snapshot validate-report-contract
 
 help:
 	@echo "Available targets:"
@@ -26,6 +26,7 @@ help:
 	@echo "  report-diff       Generate diff report between two msData.json files"
 	@echo "  provenance        Generate reports/provenance_YYYYMMDD.json"
 	@echo "  snapshot          Create raw_snapshot_YYYYMMDD_runlocal.tar.xz"
+	@echo "  validate-report-contract Validate reports naming/contract"
 	@echo "  audit-index       Compare index.json vs msData.json (names/attr/cost)"
 	@echo "  skills            Extract core system skills -> cache/skills.json"
 	@echo "  skills-table      Extract strict table rows -> cache/skills_table.json"
@@ -129,3 +130,6 @@ build-owners-flat:
 
 preview-params:
 	MSDATA="$(MSDATA)" uv run python -m scripts.tasks preview-params
+
+validate-report-contract:
+	MODE="$(MODE)" REPORT_DATE="$(REPORT_DATE)" SOURCE_RUN_ID="$(SOURCE_RUN_ID)" HEAD_REF="$(HEAD_REF)" DIFF_PATH="$(DIFF_PATH)" PROVENANCE_PATH="$(PROVENANCE_PATH)" ARTIFACT_NAME="$(ARTIFACT_NAME)" SNAPSHOT_FILE="$(SNAPSHOT_FILE)" RELEASE_TAG="$(RELEASE_TAG)" uv run python -m scripts.tasks validate-report-contract
