@@ -10144,32 +10144,32 @@
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 130
       },
       {
         "name": "シールド構造強化",
         "level": 1,
-        "points": null
+        "points": 260
       },
       {
         "name": "フレーム補強",
         "level": 1,
-        "points": null
+        "points": 390
       },
       {
         "name": "AD-FCS",
         "level": 1,
-        "points": null
+        "points": 650
       },
       {
         "name": "シールド構造強化",
         "level": 3,
-        "points": null
+        "points": 1300
       },
       {
         "name": "AD-FCS",
         "level": 3,
-        "points": null
+        "points": 1950
       }
     ]
   },
