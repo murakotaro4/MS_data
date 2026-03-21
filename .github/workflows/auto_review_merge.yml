@@ -105,6 +105,23 @@ jobs:
             echo "- report_date: ${{ steps.resolve.outputs.report_date }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - uses: actions/checkout@v4
+        if: steps.resolve.outputs.skip != 'true'
+
+      - uses: actions/setup-python@v5
+        if: steps.resolve.outputs.skip != 'true'
+        with:
+          python-version: "3.11"
+
+      - uses: astral-sh/setup-uv@v5
+        if: steps.resolve.outputs.skip != 'true'
+        with:
+          enable-cache: true
+
+      - name: Install deps
+        if: steps.resolve.outputs.skip != 'true'
+        run: uv sync --dev
+
       - name: Validate report contract (auto-review)
         if: steps.resolve.outputs.skip != 'true'
         run: |
