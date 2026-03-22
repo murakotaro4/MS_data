@@ -6,7 +6,6 @@
 ## 分類
 - `generated`: スクリプト/Workflowが生成する成果物
 - `manual`: 手作業で作成するレポート・メモ
-- `archive`: 互換期間後に退避した履歴
 
 ## 最新導線
 - 日次差分: `diff_msdata_YYYYMMDD.md`
@@ -22,4 +21,4 @@
 
 ## CI検証
 - CIの `reports` 検証は `reports_manifest.yml` の allowlist に対して実行します。
-- `manual` / `archive` は命名規則の厳格チェック対象から除外します。
+- `manual` タイプのパスは生成物と別枠で allowlist に照合します（失敗時は stderr に `report file not listed in manifest allowlist:` と違反パスが出ます）。

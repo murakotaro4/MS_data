@@ -12,10 +12,7 @@
 ## manual
 - `msdata_update_YYYYMMDD.md` : 週次/都度の人手更新レポート
 - `actions_timing_comparison_YYYYMMDD.md` : 実験・比較メモ
-- `repo_improvement_*/` : 改善検討ログ
-
-## archive
-- `archive/` : 互換期間終了後の退避先
+- `README.md` / `index.md` / `reports_inventory_*.md` : 運用・棚卸しメモ
 
 ## 参照先
 - PR本文: `reports/diff_msdata_YYYYMMDD.md`

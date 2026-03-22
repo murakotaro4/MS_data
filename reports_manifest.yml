@@ -70,15 +70,7 @@
     {
       "id": "manual_notes",
       "type": "manual",
-      "path_patterns": ["reports/actions_timing_comparison_*.md", "reports/repo_improvement_*/**", "reports/README.md", "reports/index.md", "reports/reports_inventory_*.md"],
-      "producer": ["human"],
-      "consumers": ["human"],
-      "retention": "git"
-    },
-    {
-      "id": "archive",
-      "type": "archive",
-      "path_patterns": ["reports/archive/**"],
+      "path_patterns": ["reports/actions_timing_comparison_*.md", "reports/README.md", "reports/index.md", "reports/reports_inventory_*.md"],
       "producer": ["human"],
       "consumers": ["human"],
       "retention": "git"

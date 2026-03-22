@@ -55,7 +55,7 @@
         "required": ["id", "type", "path_patterns", "producer", "consumers", "retention"],
         "properties": {
           "id": { "type": "string", "minLength": 1 },
-          "type": { "type": "string", "enum": ["generated", "manual", "archive"] },
+          "type": { "type": "string", "enum": ["generated", "manual"] },
           "path_patterns": {
             "type": "array",
             "items": { "type": "string", "minLength": 1 },

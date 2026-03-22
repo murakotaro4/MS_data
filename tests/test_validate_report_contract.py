@@ -110,6 +110,51 @@ def test_data_update_mode_release_tag_mismatch(tmp_path: Path) -> None:
     assert rc == 1
 
 
+def test_manifest_rejects_unknown_entry_type(tmp_path: Path) -> None:
+    bad = {
+        "version": 1,
+        "compatibility": {
+            "legacy_path_support": True,
+            "min_release_cycles": 1,
+            "retirement_criteria": ["x"],
+        },
+        "naming": {
+            "report_date_format": "YYYYMMDD",
+            "head_ref_pattern": "data/auto-update-{report_date}",
+            "diff_pattern": "reports/diff_msdata_{report_date}.md",
+            "provenance_pattern": "reports/provenance_{report_date}.json",
+            "artifact_pattern": "raw-snapshot-{report_date}-run-{source_run_id}",
+            "snapshot_pattern": "raw_snapshot_{report_date}_run{source_run_id}.tar.xz",
+            "release_tag_pattern": "raw-snapshot-{report_date}-run-{source_run_id}",
+            "idempotency_key": "source_run_id+head_ref",
+        },
+        "entries": [
+            {
+                "id": "arch",
+                "type": "archive",
+                "path_patterns": ["reports/archive/**"],
+                "producer": ["human"],
+                "consumers": ["human"],
+                "retention": "git",
+            },
+        ],
+    }
+    manifest = tmp_path / "reports_manifest.yml"
+    _write_json(manifest, bad)
+
+    rc = validate_report_contract.main(
+        [
+            "--mode",
+            "ci",
+            "--manifest",
+            str(manifest),
+            "--reports-dir",
+            str(tmp_path / "reports"),
+        ]
+    )
+    assert rc == 1
+
+
 def test_ci_mode_rejects_unknown_report_file(tmp_path: Path) -> None:
     manifest = tmp_path / "reports_manifest.yml"
     _write_json(manifest, _manifest())

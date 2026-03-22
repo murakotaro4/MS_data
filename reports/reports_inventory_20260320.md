@@ -1,5 +1,7 @@
 # reports 棚卸し（2026-03-20）
 
+> **注**: 2026-03-22 以降の `reports_manifest.yml` では `repo_improvement_*` と `reports/archive` は廃止済み。以下の「manual / retention に関する archive 記述」は当時のスナップショットとして残す。
+
 `reports_manifest.yml` を定義するための現物棚卸しメモ。
 
 ## generated（主なパターン）

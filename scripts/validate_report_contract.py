@@ -11,6 +11,9 @@ from typing import Any
 
 DATE_RE = re.compile(r"^\d{8}$")
 
+# reports_manifest.schema.json の entry.type と一致させる
+ALLOWED_MANIFEST_ENTRY_TYPES = frozenset({"generated", "manual"})
+
 
 def _load_manifest(path: Path) -> dict[str, Any]:
     try:
@@ -23,7 +26,9 @@ def _error(message: str) -> None:
     print(f"ERROR: {message}", file=sys.stderr)
 
 
-def _build_allowed_patterns(manifest: dict[str, Any], include_types: set[str]) -> list[str]:
+def _build_allowed_patterns(
+    manifest: dict[str, Any], include_types: set[str]
+) -> list[str]:
     patterns: list[str] = []
     for entry in manifest.get("entries", []):
         if entry.get("type") not in include_types:
@@ -37,7 +42,9 @@ def _matches_any(path: str, patterns: list[str]) -> bool:
     return any(posix_path.match(pattern) for pattern in patterns)
 
 
-def _expected_from_manifest(manifest: dict[str, Any], report_date: str, source_run_id: str) -> dict[str, str]:
+def _expected_from_manifest(
+    manifest: dict[str, Any], report_date: str, source_run_id: str
+) -> dict[str, str]:
     naming = manifest["naming"]
     return {
         "head_ref": naming["head_ref_pattern"].format(report_date=report_date),
@@ -77,6 +84,13 @@ def _validate_manifest_shape(manifest: dict[str, Any]) -> int:
             _error(f"entry.id duplicated: {entry_id}")
             rc = 1
         ids.add(entry_id)
+        etype = entry.get("type")
+        if etype not in ALLOWED_MANIFEST_ENTRY_TYPES:
+            _error(
+                f"entry.type must be one of {sorted(ALLOWED_MANIFEST_ENTRY_TYPES)}: "
+                f"id={entry_id!r} type={etype!r}"
+            )
+            rc = 1
     return rc
 
 
@@ -123,7 +137,9 @@ def _validate_auto_review(args: argparse.Namespace, manifest: dict[str, Any]) ->
     if not args.head_ref:
         _error("head_ref is required")
         return 1
-    expected_head = manifest["naming"]["head_ref_pattern"].format(report_date=args.report_date)
+    expected_head = manifest["naming"]["head_ref_pattern"].format(
+        report_date=args.report_date
+    )
     if args.head_ref != expected_head:
         _error(f"head_ref mismatch: expected={expected_head} actual={args.head_ref}")
         rc = 1
@@ -139,7 +155,7 @@ def _validate_ci(args: argparse.Namespace, manifest: dict[str, Any]) -> int:
     if not reports_dir.exists():
         return 0
     generated_patterns = _build_allowed_patterns(manifest, {"generated"})
-    manual_patterns = _build_allowed_patterns(manifest, {"manual", "archive"})
+    manual_patterns = _build_allowed_patterns(manifest, {"manual"})
     rc = 0
     for path in reports_dir.rglob("*"):
         if not path.is_file():
