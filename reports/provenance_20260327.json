@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-03-27T09:19:45Z",
+  "report_date": "20260327",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "022e88cff58eed617c2e907339fdab3b3cf4c1d2"
+  },
+  "github": {
+    "run_id": "23639446986",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "ec5881474d5a28e79c2730d6e4561ef8338ccc5ba7e68e215c63afc16e09eb70",
+      "size_bytes": 138480,
+      "record_count": 563
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "a0e5ed86b0b1c90cf1e1ab4122c3b912e2ad814c2317410606a5ae297a599e2d",
+      "size_bytes": 84684,
+      "record_count": 75
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "6972490d5094d074586093e4927a02e1e5ac14f271a1ef4f5db9e25d40f79e45",
+      "size_bytes": 111613,
+      "record_count": 75
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "1232c35ca192e1f064ad4ec75e631b9364d1e575aa9107831014c887f7208277",
+      "file_count": 64,
+      "size_bytes": 10230559
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "3dd11402b15f83b9d570bab2da5407fc6c41a1cfecccb45f27a6c25a6542ea3a",
+      "size_bytes": 2490414,
+      "record_count": 1615
+    },
+    "diff_report": {
+      "path": "reports/diff_msdata_20260327.md",
+      "sha256": "3f5d5e09931c306ef6aa6c5f898661f404966eeab5ddbcd955dd49cafa972e7a",
+      "size_bytes": 3821
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260327-run-23639446986",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260327-run-23639446986",
+    "asset_name": "raw_snapshot_20260327_run23639446986.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260327-run-23639446986"
+  }
+}
