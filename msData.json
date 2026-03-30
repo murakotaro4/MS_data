@@ -82446,32 +82446,32 @@
       {
         "name": "冷却補助システム",
         "level": 1,
-        "points": null
+        "points": 710
       },
       {
         "name": "プロペラントタンク",
         "level": 1,
-        "points": null
+        "points": 1420
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 2130
       },
       {
         "name": "AD-PA",
         "level": 1,
-        "points": null
+        "points": 2850
       },
       {
         "name": "強化セキュリティ",
         "level": 1,
-        "points": null
+        "points": 5700
       },
       {
         "name": "AD-PA",
         "level": 3,
-        "points": null
+        "points": 8550
       }
     ]
   },
@@ -92965,33 +92965,33 @@
     "fullst": [
       {
         "name": "冷却補助システム",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 530
       },
       {
         "name": "プロペラントタンク",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 1070
       },
       {
         "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 1610
       },
       {
         "name": "AD-PA",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 2150
       },
       {
         "name": "強化セキュリティ",
         "level": 1,
-        "points": null
+        "points": 4300
       },
       {
         "name": "AD-PA",
         "level": 3,
-        "points": null
+        "points": 6450
       }
     ]
   },
