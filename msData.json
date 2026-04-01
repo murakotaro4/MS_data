@@ -98706,32 +98706,32 @@
       {
         "name": "AD-FCS",
         "level": 1,
-        "points": null
+        "points": 1100
       },
       {
         "name": "シールド構造強化",
         "level": 1,
-        "points": null
+        "points": 2210
       },
       {
         "name": "強化セキュリティ",
         "level": 3,
-        "points": null
+        "points": 3320
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 4430
       },
       {
         "name": "支援砲撃耐性",
         "level": 3,
-        "points": null
+        "points": 8860
       },
       {
         "name": "緊急射撃防御機構",
         "level": 1,
-        "points": null
+        "points": 13290
       }
     ]
   },
@@ -99631,32 +99631,32 @@
       {
         "name": "AD-PA",
         "level": 1,
-        "points": null
+        "points": 1320
       },
       {
         "name": "シールド構造強化",
         "level": 1,
-        "points": null
+        "points": 2650
       },
       {
         "name": "強化セキュリティ",
         "level": 3,
-        "points": null
+        "points": 3540
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 4430
       },
       {
         "name": "支援砲撃耐性",
         "level": 3,
-        "points": null
+        "points": 8860
       },
       {
         "name": "緊急格闘防御機構",
         "level": 1,
-        "points": null
+        "points": 13290
       }
     ]
   },
