@@ -213,9 +213,11 @@ def select_changed_index_items(
         if existing is None:
             reasons.append("new_name")
         else:
-            if existing.get("cost") != item.get("cost"):
+            item_cost = item.get("cost")
+            if isinstance(item_cost, int) and existing.get("cost") != item_cost:
                 reasons.append("cost_changed")
-            if existing.get("attr") != item.get("属性"):
+            item_attr = item.get("属性")
+            if isinstance(item_attr, str) and item_attr and existing.get("attr") != item_attr:
                 reasons.append("attr_changed")
             current_url = item.get("url")
             if (

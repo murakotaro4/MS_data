@@ -88,6 +88,38 @@ def _write_json(path: Path, data: object) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def test_select_changed_index_items_ignores_unknown_cost_and_attr():
+    items = [
+        {
+            "name": "フリーダムガンダム",
+            "url": "https://w.atwiki.jp/battle-operation2/pages/5529.html",
+            "cost": None,
+            "属性": None,
+            "updated_age_text": "43d",
+            "updated_age_seconds": 43 * 86400,
+        }
+    ]
+
+    selected, meta = sm.select_changed_index_items(
+        items,
+        previous_generated_at=sm.parse_iso_datetime("2026-04-11T09:00:00Z"),
+        previous_msdata_index={
+            "フリーダムガンダム": {
+                "cost": 700,
+                "attr": "汎用",
+                "wiki_url": "https://w.atwiki.jp/battle-operation2/pages/5529.html",
+            }
+        },
+        now=sm.parse_iso_datetime("2026-04-12T09:00:00Z"),
+        freshness_window_seconds=3600,
+        min_age_coverage=0.95,
+    )
+
+    assert selected == []
+    assert meta["candidate_count"] == 0
+    assert meta["reason_counts"] == {}
+
+
 def test_cmd_detect_changed_selects_recent_and_mismatched_records(tmp_path: Path):
     index_path = tmp_path / "cache/index.json"
     out_path = tmp_path / "cache/index_changed.json"
