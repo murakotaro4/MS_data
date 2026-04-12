@@ -42,6 +42,41 @@ def test_parse_index_extracts_updated_age_metadata():
     ]
 
 
+def test_parse_index_includes_steam_limited_entries():
+    html = """
+    <html><body>
+      <div id="menu_hanyou">
+        <h4>700</h4>
+        <ul>
+          <li><a href="//w.atwiki.jp/battle-operation2/pages/6994.html">ウイングガンダムゼロ【EW】</a></li>
+        </ul>
+      </div>
+      <div id="menu_etc">
+        <h3>Steam版限定</h3>
+        <ul>
+          <li><a href="//w.atwiki.jp/battle-operation2/pages/5529.html" title="フリーダムガンダム (43d)">フリーダムガンダム</a></li>
+          <li><a href="//w.atwiki.jp/battle-operation2/pages/6180.html" title="ゴッドガンダム (3d)">ゴッドガンダム</a></li>
+          <li><a href="//w.atwiki.jp/battle-operation2/pages/6603.html" title="ウイングガンダムゼロ (59d)">ウイングガンダムゼロ</a></li>
+        </ul>
+      </div>
+    </body></html>
+    """
+
+    items = sm.parse_index(html)
+
+    assert [item["name"] for item in items] == [
+        "ウイングガンダムゼロ【EW】",
+        "フリーダムガンダム",
+        "ゴッドガンダム",
+        "ウイングガンダムゼロ",
+    ]
+    assert items[1]["url"] == "https://w.atwiki.jp/battle-operation2/pages/5529.html"
+    assert items[1]["cost"] is None
+    assert items[1]["属性"] is None
+    assert items[1]["updated_age_text"] == "43d"
+    assert items[1]["updated_age_seconds"] == 43 * 86400
+
+
 def test_parse_iso_datetime_assumes_utc_for_naive_timestamp():
     parsed = sm.parse_iso_datetime("2026-03-05T14:47:11")
     assert parsed.tzinfo is not None

@@ -78,6 +78,7 @@ def test_details_changed_only_skips_when_only_comments(monkeypatch, tmp_path: Pa
     assert rc1 == 0
     lines1 = out.read_text(encoding="utf-8").splitlines()
     assert len(lines1) == 1
+    assert json.loads(lines1[0])["wiki_url"] == url
 
     # Run 2: only comments changed (should skip -> 0 records in new file)
     rc2 = sm.cmd_details(args)

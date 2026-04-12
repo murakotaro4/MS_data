@@ -478,9 +478,38 @@ SECTION_IDS = [
 ]
 
 
+def append_index_items(
+    results: List[Dict[str, Any]],
+    ul: Tag,
+    *,
+    cost: Optional[int],
+    attr: Optional[str],
+    seen_names: set[str],
+) -> None:
+    for a in ul.select("li > a[href]"):
+        name = clean_text(a.get_text(" "))
+        if not name or name in seen_names:
+            continue
+        href = absolute_url(a["href"])
+        updated_age_text, updated_age_seconds = extract_updated_age(a.get("title", ""))
+        results.append(
+            {
+                "name": name,
+                "url": href,
+                "page_id": extract_page_id(href),
+                "cost": cost,
+                "属性": attr,
+                "updated_age_text": updated_age_text,
+                "updated_age_seconds": updated_age_seconds,
+            }
+        )
+        seen_names.add(name)
+
+
 def parse_index(html: str) -> List[Dict[str, Any]]:
     soup = BeautifulSoup(html, "lxml")
     results: List[Dict[str, Any]] = []
+    seen_names: set[str] = set()
     for sec_id, attr in SECTION_IDS:
         sec = soup.find("div", id=sec_id)
         if not sec:
@@ -491,23 +520,21 @@ def parse_index(html: str) -> List[Dict[str, Any]]:
             ul = h4.find_next_sibling("ul")
             if not ul:
                 continue
-            for a in ul.select("li > a[href]"):
-                name = clean_text(a.get_text(" "))
-                href = absolute_url(a["href"])
-                updated_age_text, updated_age_seconds = extract_updated_age(
-                    a.get("title", "")
+            append_index_items(
+                results, ul, cost=cost, attr=attr, seen_names=seen_names
+            )
+
+    etc = soup.find("div", id="menu_etc")
+    if etc:
+        for h3 in etc.find_all("h3"):
+            if "Steam版限定" not in clean_text(h3.get_text(" ")):
+                continue
+            ul = h3.find_next_sibling("ul")
+            if ul:
+                append_index_items(
+                    results, ul, cost=None, attr=None, seen_names=seen_names
                 )
-                results.append(
-                    {
-                        "name": name,
-                        "url": href,
-                        "page_id": extract_page_id(href),
-                        "cost": cost,
-                        "属性": attr,
-                        "updated_age_text": updated_age_text,
-                        "updated_age_seconds": updated_age_seconds,
-                    }
-                )
+            break
     return results
 
 
@@ -973,6 +1000,9 @@ def cmd_details(args: argparse.Namespace) -> int:
                         "コスト": rec.get("コスト") or item.get("cost"),
                         "属性": rec.get("属性") or item.get("属性"),
                     }
+                    wiki_url = item.get("url")
+                    if isinstance(wiki_url, str) and wiki_url:
+                        base["wiki_url"] = wiki_url
                     merged = {**rec, **base}
                     f.write(json.dumps(merged, ensure_ascii=False))
                     f.write("\n")
