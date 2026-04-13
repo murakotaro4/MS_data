@@ -7744,32 +7744,32 @@
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 90
       },
       {
         "name": "耐実弾装甲補強",
         "level": 1,
-        "points": null
+        "points": 190
       },
       {
         "name": "AD-FCS",
         "level": 1,
-        "points": null
+        "points": 350
       },
       {
         "name": "AD-PA",
         "level": 1,
-        "points": null
+        "points": 640
       },
       {
         "name": "支援砲撃耐性",
         "level": 1,
-        "points": null
+        "points": 1280
       },
       {
         "name": "AD-FCS",
         "level": 3,
-        "points": null
+        "points": 1920
       }
     ]
   },
@@ -13927,33 +13927,33 @@
     "fullst": [
       {
         "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 110
       },
       {
         "name": "耐実弾装甲補強",
         "level": 1,
-        "points": null
+        "points": 230
       },
       {
         "name": "AD-FCS",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 420
       },
       {
         "name": "AD-PA",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 770
       },
       {
         "name": "支援砲撃耐性",
         "level": 1,
-        "points": null
+        "points": 1540
       },
       {
         "name": "AD-FCS",
         "level": 3,
-        "points": null
+        "points": 2310
       }
     ]
   },
@@ -65064,7 +65064,7 @@
     "レアリティ": "☆☆☆",
     "必要階級": "二等兵01",
     "必要DP": 21200,
-    "必要リサイクルチケット": 80,
+    "必要リサイクルチケット": 75,
     "fullst": [
       {
         "name": "AD-FCS",
