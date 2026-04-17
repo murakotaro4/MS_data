@@ -87856,9 +87856,34 @@
     "必要階級": "",
     "fullst": [
       {
-        "name": "強行出撃",
+        "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 570
+      },
+      {
+        "name": "AD-PA",
+        "level": 1,
+        "points": 1140
+      },
+      {
+        "name": "シールド構造強化",
+        "level": 1,
+        "points": 1710
+      },
+      {
+        "name": "複合拡張パーツスロット",
+        "level": 1,
+        "points": 2290
+      },
+      {
+        "name": "耐ビーム装甲補強",
+        "level": 4,
+        "points": 4580
+      },
+      {
+        "name": "AD-PA",
+        "level": 4,
+        "points": 6870
       }
     ]
   },
@@ -97830,8 +97855,33 @@
     "必要階級": "",
     "fullst": [
       {
-        "name": "強行出撃",
+        "name": "耐ビーム装甲補強",
         "level": 1,
+        "points": null
+      },
+      {
+        "name": "AD-PA",
+        "level": 1,
+        "points": null
+      },
+      {
+        "name": "シールド構造強化",
+        "level": 1,
+        "points": null
+      },
+      {
+        "name": "複合拡張パーツスロット",
+        "level": 1,
+        "points": null
+      },
+      {
+        "name": "耐ビーム装甲補強",
+        "level": 4,
+        "points": null
+      },
+      {
+        "name": "AD-PA",
+        "level": 4,
         "points": null
       }
     ]
