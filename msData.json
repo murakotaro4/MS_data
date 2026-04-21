@@ -26302,33 +26302,33 @@
     "fullst": [
       {
         "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 210
       },
       {
         "name": "シールド構造強化",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 420
       },
       {
         "name": "AD-PA",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 640
       },
       {
         "name": "耐格闘装甲補強",
         "level": 1,
-        "points": null
+        "points": 1070
       },
       {
         "name": "シールド構造強化",
         "level": 3,
-        "points": null
+        "points": 2140
       },
       {
         "name": "AD-PA",
         "level": 3,
-        "points": null
+        "points": 3210
       }
     ]
   },
