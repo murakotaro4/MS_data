@@ -957,10 +957,17 @@ def parse_fullst_by_ms_level(
                 if skip_fallback:
                     item["_skip_fallback"] = True
                 items.append(item)
-        items.sort(key=lambda d: (d.get("points") is not None, d.get("points") or 0))
+        items.sort(key=fullst_sort_key)
         if items:
             by_ms_level[ms_lv] = items
     return {k: v for k, v in by_ms_level.items() if v}
+
+
+def fullst_sort_key(item: Dict[str, Any]) -> tuple[int, bool, int]:
+    name = str(item.get("name", ""))
+    points = item.get("points")
+    point_value = points if isinstance(points, int) else 0
+    return (0 if name == "強行出撃" else 1, points is not None, point_value)
 
 
 def fullst_entry_key(item: Dict[str, Any]) -> tuple[Any, Any, Any]:
@@ -1026,7 +1033,7 @@ def merge_fullst_with_previous(
         and fullst_section_name_key(e) not in current_section_names
     ]
     merged = copied_missing + current
-    merged.sort(key=lambda d: (d.get("points") is not None, d.get("points") or 0))
+    merged.sort(key=fullst_sort_key)
     return merged
 
 

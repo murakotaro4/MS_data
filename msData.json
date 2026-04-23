@@ -99835,6 +99835,11 @@
     "必要階級": "",
     "fullst": [
       {
+        "name": "強行出撃",
+        "level": 1,
+        "points": null
+      },
+      {
         "name": "AD-PA",
         "level": 1,
         "points": null
@@ -99856,11 +99861,6 @@
       },
       {
         "name": "緊急格闘防御機構",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "強行出撃",
         "level": 1,
         "points": null
       }
@@ -103160,6 +103160,11 @@
     "必要階級": "",
     "fullst": [
       {
+        "name": "強行出撃",
+        "level": 1,
+        "points": null
+      },
+      {
         "name": "AD-FCS",
         "level": 1,
         "points": null
@@ -103181,11 +103186,6 @@
       },
       {
         "name": "緊急射撃防御機構",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "強行出撃",
         "level": 1,
         "points": null
       }

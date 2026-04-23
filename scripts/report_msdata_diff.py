@@ -182,6 +182,22 @@ def format_value(value: Any, max_len: int = 120) -> str:
     return s
 
 
+def format_value_plain(value: Any, max_len: int = 120) -> str:
+    if isinstance(value, _Sentinel):
+        return ""
+    if value is None:
+        return "null"
+    if isinstance(value, str):
+        s = json.dumps(value, ensure_ascii=False)[1:-1]
+    elif isinstance(value, (list, dict)):
+        s = json.dumps(value, ensure_ascii=False)
+    else:
+        s = str(value)
+    if len(s) > max_len:
+        return s[: max_len - 1] + "…"
+    return s
+
+
 def format_field_value(field: str, value: Any, max_len: int = 120) -> str:
     """変更表向けに値を短く整形する。"""
     if field == "fullst" and isinstance(value, list):
@@ -202,6 +218,64 @@ def format_field_value(field: str, value: Any, max_len: int = 120) -> str:
             parts.append(f"他{len(value) - 6}件")
         return _escape_md(f"{len(value)}件: " + " / ".join(parts))
     return format_value(value, max_len=max_len)
+
+
+def format_fullst_summary(value: Any) -> str:
+    if isinstance(value, _Sentinel):
+        return "なし"
+    if isinstance(value, list):
+        return f"{len(value)}件"
+    return format_value(value)
+
+
+def fullst_point_text(item: Any) -> str:
+    if isinstance(item, dict):
+        if "points" not in item:
+            return "未設定"
+        if item.get("points") is None:
+            return "null"
+        return format_value_plain(item.get("points"))
+    return ""
+
+
+def indexed_fullst_items(
+    items: List[Any],
+) -> Dict[tuple[str, Any, int], tuple[int, Any]]:
+    counts: Counter[tuple[str, Any]] = Counter()
+    indexed: Dict[tuple[str, Any, int], tuple[int, Any]] = {}
+    for pos, item in enumerate(items, start=1):
+        if isinstance(item, dict):
+            name = str(item.get("name", ""))
+            level = item.get("level", "")
+        else:
+            name = str(item)
+            level = ""
+        counts[(name, level)] += 1
+        indexed[(name, level, counts[(name, level)])] = (pos, item)
+    return indexed
+
+
+def fullst_detail_rows(old_val: Any, new_val: Any) -> List[List[str]]:
+    old_items = old_val if isinstance(old_val, list) else []
+    new_items = new_val if isinstance(new_val, list) else []
+    old_index = indexed_fullst_items(old_items)
+    new_index = indexed_fullst_items(new_items)
+    keys = list(old_index.keys()) + [key for key in new_index if key not in old_index]
+    rows: List[List[str]] = []
+    for name, level, occurrence in keys:
+        old_pos, old_item = old_index.get((name, level, occurrence), ("", None))
+        new_pos, new_item = new_index.get((name, level, occurrence), ("", None))
+        rows.append(
+            [
+                str(old_pos),
+                str(new_pos),
+                name,
+                format_value_plain(level),
+                fullst_point_text(old_item),
+                fullst_point_text(new_item),
+            ]
+        )
+    return rows
 
 
 def format_change_inline(
@@ -239,6 +313,15 @@ def level_sort_key(name: str) -> tuple[int, str]:
 def level_label(name: str) -> str:
     match = re.search(r"_LV(\d+)$", name)
     return f"LV{match.group(1)}" if match else "LV不明"
+
+
+def base_ms_name(name: str) -> str:
+    return re.sub(r"_LV\d+$", "", name)
+
+
+def ms_level_sort_key(name: str) -> tuple[str, int, str]:
+    lv, full_name = level_sort_key(name)
+    return base_ms_name(name), lv, full_name
 
 
 def append_table(lines: List[str], headers: List[str], rows: List[List[str]]) -> None:
@@ -283,7 +366,11 @@ def record_table_row(name: str, rec: Dict[str, Any]) -> List[str]:
     ]
 
 
-def append_records_by_level_table(
+def record_ms_table_row(name: str, rec: Dict[str, Any]) -> List[str]:
+    return [level_label(name), *record_table_row(name, rec)[1:]]
+
+
+def append_records_by_ms_table(
     lines: List[str],
     title: str,
     names: List[str],
@@ -299,17 +386,15 @@ def append_records_by_level_table(
         lines.append("")
         return
 
-    shown = sorted(names, key=level_sort_key)[:list_limit]
-    for lv in sorted(
-        {level_label(name) for name in shown},
-        key=lambda x: int(x[2:]) if x[2:].isdigit() else 999,
-    ):
-        group = [name for name in shown if level_label(name) == lv]
-        lines.append(f"### {lv}")
+    shown = sorted(names, key=ms_level_sort_key)[:list_limit]
+    for base in sorted({base_ms_name(name) for name in shown}):
+        group = [name for name in shown if base_ms_name(name) == base]
+        group.sort(key=level_sort_key)
+        lines.append(f"### {_escape_md(base)}")
         append_table(
             lines,
             [
-                "MS名",
+                "LV",
                 "属性",
                 "コスト",
                 "HP",
@@ -321,7 +406,7 @@ def append_records_by_level_table(
                 "スロット(近/中/遠)",
                 "fullst",
             ],
-            [record_table_row(name, records[name]) for name in group],
+            [record_ms_table_row(name, records[name]) for name in group],
         )
         lines.append("")
     if len(names) > list_limit:
@@ -343,29 +428,55 @@ def append_changed_records_table(
         lines.append("")
         return
 
-    sorted_changed = sorted(changed_records_detail, key=lambda x: level_sort_key(x[0]))
+    sorted_changed = sorted(
+        changed_records_detail, key=lambda x: ms_level_sort_key(x[0])
+    )
     shown = sorted_changed[:list_limit]
-    for lv in sorted(
-        {level_label(name) for name, _ in shown},
-        key=lambda x: int(x[2:]) if x[2:].isdigit() else 999,
-    ):
-        group = [(name, changes) for name, changes in shown if level_label(name) == lv]
+    for base in sorted({base_ms_name(name) for name, _ in shown}):
+        group = [
+            (name, changes) for name, changes in shown if base_ms_name(name) == base
+        ]
+        group.sort(key=lambda x: level_sort_key(x[0]))
         rows: List[List[str]] = []
+        fullst_details: List[Tuple[str, Any, Any]] = []
         for name, changes in group:
+            lv = level_label(name)
             for op, field, old_val, new_val in changes:
-                if op == "added":
-                    old_text = "追加"
+                if field == "fullst":
+                    old_text = "" if op == "added" else format_fullst_summary(old_val)
+                    new_text = "" if op == "removed" else format_fullst_summary(new_val)
+                    fullst_details.append((lv, old_val, new_val))
+                elif op == "added":
+                    old_text = ""
                     new_text = format_field_value(field, new_val)
                 elif op == "removed":
                     old_text = format_field_value(field, old_val)
-                    new_text = "削除"
+                    new_text = ""
                 else:
                     old_text = format_field_value(field, old_val)
                     new_text = format_field_value(field, new_val)
-                rows.append([_escape_md(name), _escape_md(field), old_text, new_text])
-        lines.append(f"### {lv}")
-        append_table(lines, ["MS名", "項目", "変更前", "変更後"], rows)
+                rows.append([_escape_md(lv), _escape_md(field), old_text, new_text])
+        lines.append(f"### {_escape_md(base)}")
+        append_table(lines, ["LV", "項目", "変更前", "変更後"], rows)
         lines.append("")
+        for lv, old_val, new_val in fullst_details:
+            lines.append(f"{_escape_md(lv)} fullst 明細:")
+            append_table(
+                lines,
+                [
+                    "変更前 No",
+                    "変更後 No",
+                    "名称",
+                    "Lv",
+                    "変更前 points",
+                    "変更後 points",
+                ],
+                [
+                    [_escape_md(cell) for cell in row]
+                    for row in fullst_detail_rows(old_val, new_val)
+                ],
+            )
+            lines.append("")
     if len(sorted_changed) > list_limit:
         lines.append(f"...（残り {len(sorted_changed) - list_limit} 件）")
         lines.append("")
@@ -379,6 +490,7 @@ def build_report_lines(
     generated_at: datetime | None = None,
     old_label: str = "old",
     new_label: str = "new",
+    notes: List[str] | None = None,
 ) -> tuple[list[str], str]:
     if not isinstance(old_list, list) or not isinstance(new_list, list):
         raise ValueError("old/new は配列(JSON)である必要があります。")
@@ -437,6 +549,8 @@ def build_report_lines(
     lines.append("")
     lines.append(f"- 生成日時: {out_dt}")
     lines.append(f"- 比較対象: `{old_label}` → `{new_label}`")
+    for note in notes or []:
+        lines.append(f"- {note}")
     lines.append("")
     lines.append("## サマリ")
     lines.append(
@@ -463,10 +577,10 @@ def build_report_lines(
     lines.append("## レコード単位で削除された項目（頻度）")
     append_counter_table(lines, removed_fields)
     lines.append("")
-    append_records_by_level_table(
+    append_records_by_ms_table(
         lines, "追加レコード一覧", added_records, new_index, list_limit
     )
-    append_records_by_level_table(
+    append_records_by_ms_table(
         lines, "削除レコード一覧", removed_records, old_index, list_limit
     )
     append_changed_records_table(lines, changed_records_detail, list_limit)
@@ -479,6 +593,7 @@ def main(argv: List[str] | None = None) -> int:
     ap.add_argument("--new", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--list-limit", type=int, default=200)
+    ap.add_argument("--note", action="append", default=[])
     ap.add_argument("--print-summary", action="store_true")
     args = ap.parse_args(argv)
 
@@ -490,6 +605,7 @@ def main(argv: List[str] | None = None) -> int:
         list_limit=args.list_limit,
         old_label=str(args.old),
         new_label=str(args.new),
+        notes=args.note,
     )
 
     try:
