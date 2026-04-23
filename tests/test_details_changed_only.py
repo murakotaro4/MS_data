@@ -7,7 +7,12 @@ import pytest
 import scripts.scrape_msdata as sm
 
 
-def _resp(html: str, etag: str | None = None, last_modified: str | None = None, status: int = 200):
+def _resp(
+    html: str,
+    etag: str | None = None,
+    last_modified: str | None = None,
+    status: int = 200,
+):
     headers = {}
     if etag is not None:
         headers["ETag"] = etag
@@ -64,16 +69,22 @@ def test_details_changed_only_skips_when_only_comments(monkeypatch, tmp_path: Pa
     out = tmp_path / "details.jsonl"
 
     # Run 1: initial (should write 1 record)
-    args = type("Args", (), {
-        "input": str(idx_path),
-        "out": str(out),
-        "rate": 100.0,  # effectively no wait
-        "limit": 0,
-        "ttl": "0s",
-        "no_network": False,
-        "force": False,
-        "changed_only": True,
-    })()
+    detail_state = tmp_path / "detail_fetch_state.json"
+    args = type(
+        "Args",
+        (),
+        {
+            "input": str(idx_path),
+            "out": str(out),
+            "rate": 100.0,  # effectively no wait
+            "limit": 0,
+            "ttl": "0s",
+            "no_network": False,
+            "force": False,
+            "changed_only": True,
+            "detail_fetch_state_out": str(detail_state),
+        },
+    )()
     rc1 = sm.cmd_details(args)
     assert rc1 == 0
     lines1 = out.read_text(encoding="utf-8").splitlines()
@@ -86,10 +97,12 @@ def test_details_changed_only_skips_when_only_comments(monkeypatch, tmp_path: Pa
     # File is overwritten each run; when skipped entirely, it will be empty
     content2 = out.read_text(encoding="utf-8")
     assert content2.strip() == ""
+    state2 = json.loads(detail_state.read_text(encoding="utf-8"))
+    assert state2["items"][url]["http_status"] == 200
+    assert state2["items"][url]["semantic_sha256"]
 
     # Run 3: status changed (should write again)
     rc3 = sm.cmd_details(args)
     assert rc3 == 0
     lines3 = out.read_text(encoding="utf-8").splitlines()
     assert len(lines3) == 1
-

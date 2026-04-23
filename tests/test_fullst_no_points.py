@@ -1,4 +1,5 @@
 """fullst の points 処理に関するテスト（数値/ハイフン/空セル/ソート）"""
+
 import scripts.scrape_msdata as sm
 
 
@@ -59,9 +60,11 @@ def _make_html_with_fullst(fullst_rows: str) -> str:
 
 def test_fullst_with_numeric_points():
     """数値が入っている場合 → points: 数値（例: 2580）"""
-    html = _make_html_with_fullst("""
+    html = _make_html_with_fullst(
+        """
         <tr><th>HP強化</th><th>Lv1</th><td>2580</td><td>効果:+500</td></tr>
-    """)
+    """
+    )
     per_level = sm.parse_details(html)
 
     assert 1 in per_level
@@ -75,9 +78,11 @@ def test_fullst_with_numeric_points():
 
 def test_fullst_with_hyphen_strong_sortie():
     """強行出撃のみ、ハイフン（-）は points: None で採用される。"""
-    html = _make_html_with_fullst("""
+    html = _make_html_with_fullst(
+        """
         <tr><th>強行出撃</th><th>Lv1</th><td>-</td><td>効果:+500</td></tr>
-    """)
+    """
+    )
     per_level = sm.parse_details(html)
 
     assert 1 in per_level
@@ -92,9 +97,11 @@ def test_fullst_with_hyphen_strong_sortie():
 
 def test_fullst_with_hyphen_non_special():
     """ハイフン（-）は強行出撃以外では fullst に含めない。"""
-    html = _make_html_with_fullst("""
+    html = _make_html_with_fullst(
+        """
         <tr><th>HP強化</th><th>Lv1</th><td>-</td><td>効果:+500</td></tr>
-    """)
+    """
+    )
     per_level = sm.parse_details(html)
 
     assert 1 in per_level
@@ -104,9 +111,11 @@ def test_fullst_with_hyphen_non_special():
 
 def test_fullst_with_empty_cell():
     """空セルは（強行出撃以外） fullst に含めない。"""
-    html = _make_html_with_fullst("""
+    html = _make_html_with_fullst(
+        """
         <tr><th>スピード強化</th><th>Lv1</th><td></td><td>効果:+2</td></tr>
-    """)
+    """
+    )
     per_level = sm.parse_details(html)
 
     assert 1 in per_level
@@ -121,11 +130,13 @@ def test_fullst_sort_none_first():
     points: None は強行出撃のみ許可される。
     """
     # 数値あり・強行出撃（ハイフン）・数値あり の混在
-    html = _make_html_with_fullst("""
+    html = _make_html_with_fullst(
+        """
         <tr><th>HP強化</th><th>Lv1</th><td>3000</td><td>効果:+500</td></tr>
         <tr><th>強行出撃</th><th>Lv1</th><td>-</td><td>効果:+2</td></tr>
         <tr><th>スラスター強化</th><th>Lv1</th><td>1000</td><td>効果:+5</td></tr>
-    """)
+    """
+    )
     per_level = sm.parse_details(html)
 
     assert 1 in per_level
@@ -143,10 +154,10 @@ def test_fullst_sort_none_first():
 
 
 def test_fullst_fallback_with_none_points():
-    """上位レベルの fullst が下位レベルにコピーされる際の points: None 確認。
+    """明示的な '-' は前Lv補完せず、当該Lvの fullst から除外する。
 
-    LV1 には fullst 数値があり、LV2 以降には数値がない場合、
-    LV2 以降には LV1 の構造がコピーされ points: None となる。
+    LV1 には fullst 数値があり、LV2 には '-' が明示されている場合、
+    LV2 に LV1 の構造を points: None でコピーしない。
     """
     # LV1 と LV2 両方を含むHTML
     html = """
@@ -205,17 +216,9 @@ def test_fullst_fallback_with_none_points():
     assert lv1_fullst[0]["points"] == 2000
     assert lv1_fullst[1]["points"] == 4000
 
-    # LV2 には数値がないため、LV1 の構造がコピーされ points: None
+    # LV2 は '-' が明示されているため、前Lvの構造を補完しない
     assert 2 in per_level
-    assert "fullst" in per_level[2]
-    lv2_fullst = per_level[2]["fullst"]
-    assert len(lv2_fullst) == 2
-    # フォールバックコピーでは points: None
-    assert lv2_fullst[0]["points"] is None
-    assert lv2_fullst[1]["points"] is None
-    # 名前とレベルは保持
-    assert lv2_fullst[0]["name"] == "HP強化"
-    assert lv2_fullst[1]["name"] == "HP強化"
+    assert "fullst" not in per_level[2]
 
 
 def test_fullst_skip_missing_points_per_level():
@@ -274,6 +277,54 @@ def test_fullst_skip_missing_points_per_level():
     assert len(fullst) == 1
     assert fullst[0]["name"] == "AD-FCS"
     assert fullst[0]["points"] == 1100
+
+
+def test_fullst_same_section_upgrade_does_not_copy_previous_level():
+    """同じ通常枠で上位リストLvが明記された場合、旧Lvを null 補完しない。"""
+    html = """
+    <html><head><title>テスト機体</title></head>
+    <body>
+      <div id="table_hanyou">
+        <table>
+          <thead>
+            <tr><th></th><th>LV1</th><th>LV2</th></tr>
+          </thead>
+          <tbody>
+            <tr><th>機体HP</th><td>10000</td><td>11000</td></tr>
+            <tr><th>スピード</th><td>120</td><td>120</td></tr>
+            <tr><th>スラスター</th><td>60</td><td>62</td></tr>
+            <tr><th>高速移動</th><td>180</td><td>182</td></tr>
+            <tr><th>射撃補正</th><td>15</td><td>17</td></tr>
+            <tr><th>格闘補正</th><td>10</td><td>12</td></tr>
+            <tr><th>耐ビーム補正</th><td>8</td><td>9</td></tr>
+            <tr><th>耐実弾補正</th><td>10</td><td>11</td></tr>
+            <tr><th>耐格闘補正</th><td>6</td><td>7</td></tr>
+            <tr><th>旋回（地上）[度/秒]</th><td>75</td><td>76</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>パーツスロット</h3>
+      <table>
+        <tr><th>近距離</th><td>8</td><td>9</td></tr>
+        <tr><th>中距離</th><td>6</td><td>7</td></tr>
+        <tr><th>遠距離</th><td>4</td><td>5</td></tr>
+      </table>
+
+      <h2>強化リスト情報</h2>
+      <table>
+        <tr><th>リスト名</th><th>Lv</th><th>Lv1</th><th>Lv2</th><th>効果</th></tr>
+        <tr><th>AD-FCS</th><th>Lv1</th><td>100</td><td></td><td>射撃補正が1増加</td></tr>
+        <tr><th>Lv2</th><td></td><td>200</td><td>射撃補正が2増加</td></tr>
+      </table>
+
+      <div id="label_sortie_G_S"></div>
+      <div id="label_env_G_S"></div>
+    </body></html>
+    """
+    per_level = sm.parse_details(html)
+
+    assert per_level[1]["fullst"] == [{"name": "AD-FCS", "level": 1, "points": 100}]
+    assert per_level[2]["fullst"] == [{"name": "AD-FCS", "level": 2, "points": 200}]
 
 
 def test_fullst_fallback_when_level_cells_are_missing():
@@ -339,8 +390,8 @@ def test_fullst_fallback_when_level_cells_are_missing():
     assert all(e["points"] is None for e in lv2_fullst)
 
 
-def test_fullst_fallback_when_current_level_is_only_strong_sortie():
-    """当該LVが強行出撃のみへ縮退した場合は直前LV構成で補完する。"""
+def test_fullst_when_current_level_is_only_strong_sortie():
+    """当該LVが強行出撃のみの場合、非特殊行を前Lvから補完しない。"""
     html = """
     <html><head><title>テスト機体</title></head>
     <body>
@@ -397,9 +448,9 @@ def test_fullst_fallback_when_current_level_is_only_strong_sortie():
     assert len(lv1_fullst) == 3
     assert [e["name"] for e in lv1_fullst] == ["強行出撃", "AD-PA", "冷却補助システム"]
 
-    assert len(lv2_fullst) == 3
-    assert [e["name"] for e in lv2_fullst] == [e["name"] for e in lv1_fullst]
-    assert all(e["points"] is None for e in lv2_fullst)
+    assert len(lv2_fullst) == 1
+    assert lv2_fullst[0]["name"] == "強行出撃"
+    assert lv2_fullst[0]["points"] is None
 
 
 def test_fullst_only_strong_sortie_remains_single_entry():

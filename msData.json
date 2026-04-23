@@ -13671,39 +13671,7 @@
     "再出撃時間": 8,
     "格闘判定力": "弱",
     "レアリティ": "☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐実弾装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 3,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ザク・ハーフキャノン（MB）_LV2",
@@ -15815,39 +15783,7 @@
     "再出撃時間": 8,
     "格闘判定力": "強",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐格闘装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "フレーム補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ドム_LV2",
@@ -20676,39 +20612,7 @@
     "再出撃時間": 9,
     "格闘判定力": "中",
     "レアリティ": "☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "フレーム補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐実弾装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 3,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "グフ飛行試験型_LV2",
@@ -20990,39 +20894,7 @@
     "再出撃時間": 9,
     "格闘判定力": "強",
     "レアリティ": "☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "冷却補助システム",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "シールド構造強化",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "冷却補助システム",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 3,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ゲルググL_LV1",
@@ -27119,39 +26991,7 @@
     "再出撃時間": 9,
     "格闘判定力": "強",
     "レアリティ": "☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "冷却補助システム",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "プロペラントタンク",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "冷却補助システム",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 3,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "リック・ドム_LV3",
@@ -39193,39 +39033,7 @@
     "再出撃時間": 9,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐実弾装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐実弾装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "量産型ガンキャノン_LV4",
@@ -51272,39 +51080,7 @@
     "再出撃時間": 10,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐実弾装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐実弾装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "量産型ガンキャノン_LV5",
@@ -63863,39 +63639,7 @@
     "再出撃時間": 10,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐実弾装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐実弾装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "量産型Ζガンダム_LV1",
@@ -67307,39 +67051,7 @@
     "再出撃時間": 11,
     "格闘判定力": "弱",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "フレーム補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ガンダム4号機Bst_LV3",
@@ -67751,39 +67463,7 @@
     "再出撃時間": 11,
     "格闘判定力": "強",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐格闘装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "シールド構造強化",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ガンダムMk-Ⅲ_LV2",
@@ -68769,39 +68449,7 @@
     "再出撃時間": 11,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "プロペラントタンク",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "キハールⅡ_LV1",
@@ -68866,6 +68514,67 @@
         "name": "AD-PA",
         "level": 4,
         "points": 6840
+      }
+    ]
+  },
+  {
+    "MS名": "ギャプランTR-5_LV3",
+    "wiki_url": "https://w.atwiki.jp/battle-operation2/pages/5254.html",
+    "属性": "汎用",
+    "出撃_地上可": true,
+    "出撃_宇宙可": true,
+    "環境適正_地上": false,
+    "環境適正_宇宙": false,
+    "環境適正_水中": false,
+    "コスト": 600,
+    "HP": 23000,
+    "耐実弾補正": 22,
+    "耐ビーム補正": 25,
+    "耐格闘補正": 29,
+    "射撃補正": 28,
+    "格闘補正": 31,
+    "スピード": 135,
+    "スピード_変形時": 185,
+    "高速移動": 205,
+    "高速移動_変形時": 215,
+    "スラスター": 55,
+    "旋回_地上_通常時": 63,
+    "旋回_宇宙_通常時": 69,
+    "旋回_地上_変形時": 48,
+    "旋回_宇宙_変形時": 48,
+    "近スロット": 13,
+    "中スロット": 14,
+    "遠スロット": 17,
+    "カウンター": "膝蹴り",
+    "再出撃時間": 11,
+    "格闘判定力": "中",
+    "レアリティ": "☆☆☆",
+    "必要階級": "",
+    "fullst": [
+      {
+        "name": "シールド構造強化",
+        "level": 1,
+        "points": 1260
+      },
+      {
+        "name": "プロペラントタンク",
+        "level": 1,
+        "points": 1890
+      },
+      {
+        "name": "複合拡張パーツスロット",
+        "level": 1,
+        "points": 2520
+      },
+      {
+        "name": "シールド構造強化",
+        "level": 5,
+        "points": 5040
+      },
+      {
+        "name": "AD-PA",
+        "level": 4,
+        "points": 7560
       }
     ]
   },
@@ -69352,39 +69061,7 @@
     "再出撃時間": 11,
     "格闘判定力": "強",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐格闘装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "冷却補助システム",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ギラ・ドーガ［サイコミュ試験型］_LV2",
@@ -73980,39 +73657,7 @@
     "再出撃時間": 11,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "シールド構造強化",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "プロペラントタンク",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "緊急格闘防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "フルアーマーガンダム7号機_LV2",
@@ -77107,39 +76752,7 @@
     "再出撃時間": 11,
     "格闘判定力": "強",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐格闘装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "シールド構造強化",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "高機動型ゲルググ（UL）_LV4",
@@ -77680,39 +77293,7 @@
     "再出撃時間": 11,
     "格闘判定力": "弱",
     "レアリティ": "☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "シールド構造強化",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "シールド構造強化",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 3,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "Gキャノン・マグナ_LV1",
@@ -77989,39 +77570,7 @@
     "再出撃時間": 11,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐実弾装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐実弾装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "RFドム_LV1",
@@ -79483,39 +79032,7 @@
     "再出撃時間": 11,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "フレーム補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "緊急格闘防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "カプール_LV4",
@@ -79870,39 +79387,7 @@
     "再出撃時間": 11,
     "格闘判定力": "弱",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "フレーム補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ガンダム4号機Bst_LV4",
@@ -80640,39 +80125,7 @@
     "再出撃時間": 11,
     "格闘判定力": "通常： 強 スキル発動時： 強＋",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "フレーム補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "緊急射撃防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ガンダム試作1号機Fb_LV3",
@@ -81005,7 +80458,7 @@
     "射撃補正": 35,
     "格闘補正": 45,
     "スピード": 130,
-    "高速移動": 225,
+    "高速移動": 220,
     "スラスター": 75,
     "旋回_地上_通常時": 69,
     "旋回_宇宙_通常時": 78,
@@ -81433,6 +80886,47 @@
     ]
   },
   {
+    "MS名": "ギャプランTR-5_LV4",
+    "wiki_url": "https://w.atwiki.jp/battle-operation2/pages/5254.html",
+    "属性": "汎用",
+    "出撃_地上可": true,
+    "出撃_宇宙可": true,
+    "環境適正_地上": false,
+    "環境適正_宇宙": false,
+    "環境適正_水中": false,
+    "コスト": 650,
+    "HP": 25000,
+    "耐実弾補正": 24,
+    "耐ビーム補正": 27,
+    "耐格闘補正": 31,
+    "射撃補正": 32,
+    "格闘補正": 34,
+    "スピード": 135,
+    "スピード_変形時": 185,
+    "高速移動": 210,
+    "高速移動_変形時": 215,
+    "スラスター": 55,
+    "旋回_地上_通常時": 63,
+    "旋回_宇宙_通常時": 72,
+    "旋回_地上_変形時": 48,
+    "旋回_宇宙_変形時": 48,
+    "近スロット": 14,
+    "中スロット": 15,
+    "遠スロット": 19,
+    "カウンター": "膝蹴り",
+    "再出撃時間": 11,
+    "格闘判定力": "中",
+    "レアリティ": "☆☆",
+    "必要階級": "",
+    "fullst": [
+      {
+        "name": "AD-PA",
+        "level": 1,
+        "points": 630
+      }
+    ]
+  },
+  {
     "MS名": "ギャプラン_LV3",
     "wiki_url": "https://w.atwiki.jp/battle-operation2/pages/2129.html",
     "属性": "強襲",
@@ -81851,39 +81345,7 @@
     "再出撃時間": 11,
     "格闘判定力": "強",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐格闘装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "冷却補助システム",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ギラ・ドーガ［重武装仕様］_LV3",
@@ -85736,39 +85198,7 @@
     "再出撃時間": 11,
     "格闘判定力": "弱",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "フレーム補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "緊急射撃防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "バイアラン・カスタム_LV2",
@@ -90037,39 +89467,7 @@
     "再出撃時間": 12,
     "格闘判定力": "強",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐格闘装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "冷却補助システム",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "Ζガンダム_LV3",
@@ -90683,39 +90081,7 @@
     "再出撃時間": 12,
     "格闘判定力": "強",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐格闘装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "強化セキュリティ",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "支援砲撃耐性",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "緊急格闘防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "アマクサ_LV1",
@@ -90848,48 +90214,63 @@
     "属性": "汎用",
     "出撃_地上可": true,
     "出撃_宇宙可": true,
+    "環境適正_地上": false,
+    "環境適正_宇宙": false,
+    "環境適正_水中": false,
     "コスト": 700,
-    "HP": 21000,
+    "HP": 20000,
     "耐実弾補正": 28,
     "耐ビーム補正": 28,
     "耐格闘補正": 22,
     "射撃補正": 50,
     "格闘補正": 20,
     "スピード": 135,
+    "スピード_変形時": 200,
     "高速移動": 225,
+    "高速移動_変形時": 240,
     "スラスター": 80,
     "旋回_地上_通常時": 84,
     "旋回_宇宙_通常時": 87,
+    "旋回_地上_変形時": 66,
+    "旋回_宇宙_変形時": 66,
     "近スロット": 14,
     "中スロット": 18,
     "遠スロット": 20,
-    "カウンター": "通常：特殊　高性能：特殊2",
+    "カウンター": "通常：特殊 高性能：特殊2",
     "再出撃時間": 12,
     "格闘判定力": "中",
+    "レアリティ": "☆☆☆☆",
+    "必要階級": "",
     "fullst": [
       {
         "name": "耐ビーム装甲補強",
-        "level": 1
+        "level": 1,
+        "points": 1180
       },
       {
         "name": "AD-FCS",
-        "level": 1
+        "level": 1,
+        "points": 2360
       },
       {
         "name": "フレーム補強",
-        "level": 1
+        "level": 1,
+        "points": 3150
       },
       {
         "name": "複合拡張パーツスロット",
-        "level": 1
+        "level": 1,
+        "points": 3940
       },
       {
         "name": "耐ビーム装甲補強",
-        "level": 4
+        "level": 4,
+        "points": 7880
       },
       {
         "name": "緊急射撃防御機構",
-        "level": 1
+        "level": 1,
+        "points": 11820
       }
     ]
   },
@@ -91178,39 +90559,7 @@
     "再出撃時間": 12,
     "格闘判定力": "弱",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "フレーム補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ガンダムGファースト_LV2",
@@ -91429,39 +90778,7 @@
     "再出撃時間": 12,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "シールド構造強化",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ガンダムデルタアンス_LV3",
@@ -91495,39 +90812,7 @@
     "再出撃時間": 12,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "プロペラントタンク",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ガンダムデルタカイ_LV2",
@@ -91990,7 +91275,7 @@
     "射撃補正": 37,
     "格闘補正": 50,
     "スピード": 130,
-    "高速移動": 225,
+    "高速移動": 220,
     "スラスター": 75,
     "旋回_地上_通常時": 69,
     "旋回_宇宙_通常時": 78,
@@ -92515,39 +91800,7 @@
     "再出撃時間": 12,
     "格闘判定力": "強",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐格闘装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "冷却補助システム",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ギラ・ドーガ［重武装仕様］_LV4",
@@ -92873,6 +92126,9 @@
     "属性": "強襲",
     "出撃_地上可": true,
     "出撃_宇宙可": true,
+    "環境適正_地上": true,
+    "環境適正_宇宙": false,
+    "環境適正_水中": false,
     "コスト": 700,
     "HP": 23000,
     "耐実弾補正": 21,
@@ -92888,33 +92144,41 @@
     "近スロット": 24,
     "中スロット": 16,
     "遠スロット": 12,
-    "カウンター": "通常：特殊　高性能：特殊2",
+    "カウンター": "通常：特殊 高性能：特殊2",
     "再出撃時間": 12,
     "格闘判定力": "強",
+    "レアリティ": "☆☆☆☆",
+    "必要階級": "",
     "fullst": [
       {
         "name": "耐格闘装甲補強",
-        "level": 1
+        "level": 1,
+        "points": 1180
       },
       {
         "name": "AD-PA",
-        "level": 1
+        "level": 1,
+        "points": 2360
       },
       {
         "name": "フレーム補強",
-        "level": 1
+        "level": 1,
+        "points": 3150
       },
       {
         "name": "複合拡張パーツスロット",
-        "level": 1
+        "level": 1,
+        "points": 3940
       },
       {
         "name": "AD-PA",
-        "level": 4
+        "level": 4,
+        "points": 7880
       },
       {
         "name": "緊急格闘防御機構",
-        "level": 1
+        "level": 1,
+        "points": 11820
       }
     ]
   },
@@ -94980,39 +94244,7 @@
     "再出撃時間": 12,
     "格闘判定力": "強",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "フレーム補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "緊急格闘防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "デスティニーガンダム_LV1",
@@ -95104,39 +94336,7 @@
     "再出撃時間": 12,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "デルタプラス_LV2",
@@ -95678,39 +94878,7 @@
     "再出撃時間": 12,
     "格闘判定力": "強",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "フレーム補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "緊急射撃防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ハイゼンスレイⅡ・ラー_LV1",
@@ -96633,6 +95801,9 @@
     "属性": "汎用",
     "出撃_地上可": true,
     "出撃_宇宙可": true,
+    "環境適正_地上": false,
+    "環境適正_宇宙": true,
+    "環境適正_水中": false,
     "コスト": 700,
     "HP": 19000,
     "耐実弾補正": 29,
@@ -96651,30 +95822,38 @@
     "カウンター": "通常時：蹴り飛ばし 高性能：特殊",
     "再出撃時間": 12,
     "格闘判定力": "中",
+    "レアリティ": "☆☆☆☆",
+    "必要階級": "",
     "fullst": [
       {
         "name": "AD-FCS",
-        "level": 1
+        "level": 1,
+        "points": 980
       },
       {
         "name": "プロペラントタンク",
-        "level": 1
+        "level": 1,
+        "points": 1970
       },
       {
         "name": "フレーム補強",
-        "level": 1
+        "level": 1,
+        "points": 2950
       },
       {
         "name": "複合拡張パーツスロット",
-        "level": 1
+        "level": 1,
+        "points": 3940
       },
       {
         "name": "AD-FCS",
-        "level": 4
+        "level": 4,
+        "points": 7880
       },
       {
         "name": "緊急射撃防御機構",
-        "level": 1
+        "level": 1,
+        "points": 11820
       }
     ]
   },
@@ -96833,39 +96012,7 @@
     "再出撃時間": 12,
     "格闘判定力": "弱",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "フレーム補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "緊急射撃防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "フルアーマー百式改_LV2",
@@ -96959,39 +96106,7 @@
     "再出撃時間": 12,
     "格闘判定力": "強",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ヘイズル・アウスラ［GAU装備］_LV1",
@@ -97398,39 +96513,7 @@
     "再出撃時間": 12,
     "格闘判定力": "強",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ヤクト・ドーガ（GG）_LV2",
@@ -97854,39 +96937,7 @@
     "カウンター": "蹴り飛ばし",
     "再出撃時間": 12,
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "シールド構造強化",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "リック・ディアスⅡ_LV3",
@@ -99064,39 +98115,7 @@
     "再出撃時間": 12,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "シールド構造強化",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "フレーム補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "緊急格闘防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "MSN-04FF サザビー_LV2",
@@ -99126,39 +98145,7 @@
     "再出撃時間": 12,
     "格闘判定力": "弱",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "フレーム補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "強化セキュリティ",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "支援砲撃耐性",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "緊急射撃防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "RX-93ff νガンダム_LV2",
@@ -99188,39 +98175,7 @@
     "再出撃時間": 12,
     "格闘判定力": "強",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "シールド構造強化",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "強化セキュリティ",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "支援砲撃耐性",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "緊急射撃防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "V2ガンダム_LV1",
@@ -99649,31 +98604,6 @@
         "name": "強行出撃",
         "level": 1,
         "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "冷却補助システム",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "緊急格闘防御機構",
-        "level": 1,
-        "points": null
       }
     ]
   },
@@ -99767,39 +98697,41 @@
     "再出撃時間": 12,
     "格闘判定力": "弱",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "プロペラントタンク",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "フレーム補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "緊急射撃防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
+  },
+  {
+    "MS名": "ウイングガンダムゼロ_LV2",
+    "wiki_url": "https://w.atwiki.jp/battle-operation2/pages/6603.html",
+    "属性": "汎用",
+    "出撃_地上可": true,
+    "出撃_宇宙可": true,
+    "環境適正_地上": false,
+    "環境適正_宇宙": false,
+    "環境適正_水中": false,
+    "コスト": 750,
+    "HP": 25000,
+    "耐実弾補正": 30,
+    "耐ビーム補正": 30,
+    "耐格闘補正": 24,
+    "射撃補正": 55,
+    "格闘補正": 22,
+    "スピード": 135,
+    "スピード_変形時": 200,
+    "高速移動": 225,
+    "高速移動_変形時": 240,
+    "スラスター": 80,
+    "旋回_地上_通常時": 84,
+    "旋回_宇宙_通常時": 87,
+    "旋回_地上_変形時": 66,
+    "旋回_宇宙_変形時": 66,
+    "近スロット": 15,
+    "中スロット": 20,
+    "遠スロット": 21,
+    "カウンター": "通常：特殊 高性能：特殊2",
+    "再出撃時間": 12,
+    "格闘判定力": "中",
+    "レアリティ": "☆☆☆☆",
+    "必要階級": ""
   },
   {
     "MS名": "ガンダムMk-Ⅴ_LV3",
@@ -99896,39 +98828,7 @@
     "再出撃時間": 12,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "シールド構造強化",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "強化セキュリティ",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "支援砲撃耐性",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "緊急射撃防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "キュベレイMk-Ⅱ_LV3",
@@ -100084,39 +98984,7 @@
     "再出撃時間": 12,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "フレーム補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "強化セキュリティ",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "支援砲撃耐性",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "緊急射撃防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "クラスターガンダム_LV1",
@@ -100620,6 +99488,9 @@
     "属性": "強襲",
     "出撃_地上可": true,
     "出撃_宇宙可": true,
+    "環境適正_地上": true,
+    "環境適正_宇宙": false,
+    "環境適正_水中": false,
     "コスト": 750,
     "HP": 26000,
     "耐実弾補正": 23,
@@ -100635,35 +99506,11 @@
     "近スロット": 26,
     "中スロット": 17,
     "遠スロット": 13,
-    "カウンター": "通常：特殊　高性能：特殊2",
+    "カウンター": "通常：特殊 高性能：特殊2",
     "再出撃時間": 12,
     "格闘判定力": "強",
-    "fullst": [
-      {
-        "name": "耐格闘装甲補強",
-        "level": 1
-      },
-      {
-        "name": "AD-PA",
-        "level": 1
-      },
-      {
-        "name": "フレーム補強",
-        "level": 1
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1
-      },
-      {
-        "name": "AD-PA",
-        "level": 4
-      },
-      {
-        "name": "緊急格闘防御機構",
-        "level": 1
-      }
-    ]
+    "レアリティ": "☆☆☆☆",
+    "必要階級": ""
   },
   {
     "MS名": "サザビー_LV2",
@@ -100755,39 +99602,7 @@
     "再出撃時間": 12,
     "格闘判定力": "強",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "冷却補助システム",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "プロペラントタンク",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "強化セキュリティ",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "冷却補助システム",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ザクⅣ（IP）_LV2",
@@ -100879,39 +99694,7 @@
     "再出撃時間": 12,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "プロペラントタンク",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "強化セキュリティ",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "支援砲撃耐性",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "緊急格闘防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "シナンジュ・スタイン（ZA）_LV2",
@@ -101502,39 +100285,7 @@
     "再出撃時間": 12,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "フレーム補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "強化セキュリティ",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "支援砲撃耐性",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "緊急射撃防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ダギ・イルス_LV2",
@@ -101564,39 +100315,7 @@
     "再出撃時間": 12,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "シールド構造強化",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "プロペラントタンク",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "シールド構造強化",
-        "level": 5,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ダグ・ドール_LV2",
@@ -101626,39 +100345,7 @@
     "再出撃時間": 12,
     "格闘判定力": "弱",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "強化セキュリティ",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "支援砲撃耐性",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "緊急射撃防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ディジェSE-R_LV4",
@@ -101878,39 +100565,7 @@
     "再出撃時間": 12,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐実弾装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "シールド構造強化",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "シールド構造強化",
-        "level": 5,
-        "points": null
-      },
-      {
-        "name": "支援砲撃耐性",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ドーベン・ウルフ_LV4",
@@ -102065,39 +100720,7 @@
     "再出撃時間": 12,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "強化セキュリティ",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "支援砲撃耐性",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "緊急射撃防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ネオガンダム_LV1",
@@ -102641,39 +101264,7 @@
     "再出撃時間": 12,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "フレーム補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "強化セキュリティ",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "支援砲撃耐性",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "緊急格闘防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "フリーダムガンダム_LV2",
@@ -102681,6 +101272,9 @@
     "属性": "汎用",
     "出撃_地上可": true,
     "出撃_宇宙可": true,
+    "環境適正_地上": false,
+    "環境適正_宇宙": true,
+    "環境適正_水中": false,
     "コスト": 750,
     "HP": 22000,
     "耐実弾補正": 31,
@@ -102699,32 +101293,8 @@
     "カウンター": "通常時：蹴り飛ばし 高性能：特殊",
     "再出撃時間": 12,
     "格闘判定力": "中",
-    "fullst": [
-      {
-        "name": "AD-FCS",
-        "level": 1
-      },
-      {
-        "name": "プロペラントタンク",
-        "level": 1
-      },
-      {
-        "name": "フレーム補強",
-        "level": 1
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1
-      },
-      {
-        "name": "AD-FCS",
-        "level": 4
-      },
-      {
-        "name": "緊急射撃防御機構",
-        "level": 1
-      }
-    ]
+    "レアリティ": "☆☆☆☆",
+    "必要階級": ""
   },
   {
     "MS名": "フルアーマー百式改_LV3",
@@ -102886,31 +101456,6 @@
         "name": "強行出撃",
         "level": 1,
         "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "フレーム補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "緊急射撃防御機構",
-        "level": 1,
-        "points": null
       }
     ]
   },
@@ -102942,39 +101487,7 @@
     "再出撃時間": 12,
     "格闘判定力": "通常時：中 共振発動時： 強",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐実弾装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "強化セキュリティ",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "支援砲撃耐性",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "緊急格闘防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "メッサーF01型_LV3",
@@ -103004,39 +101517,7 @@
     "再出撃時間": 12,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "プロペラントタンク",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-FCS",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "メッサーF02型_LV3",
@@ -103066,39 +101547,7 @@
     "再出撃時間": 12,
     "格闘判定力": "強",
     "レアリティ": "☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐格闘装甲補強",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "耐ビーム装甲補強",
-        "level": 4,
-        "points": null
-      },
-      {
-        "name": "AD-PA",
-        "level": 4,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "ヤクト・ドーガ（GG）_LV3",
@@ -103260,39 +101709,7 @@
     "再出撃時間": 12,
     "格闘判定力": "中",
     "レアリティ": "☆☆☆☆",
-    "必要階級": "",
-    "fullst": [
-      {
-        "name": "AD-FCS",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "シールド構造強化",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "強化セキュリティ",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
-      },
-      {
-        "name": "支援砲撃耐性",
-        "level": 3,
-        "points": null
-      },
-      {
-        "name": "緊急射撃防御機構",
-        "level": 1,
-        "points": null
-      }
-    ]
+    "必要階級": ""
   },
   {
     "MS名": "リゼルC型［DbU装備］_LV3",

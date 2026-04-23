@@ -40,5 +40,36 @@ def test_parse_details_transform_and_fullst_fixture():
     assert [entry["name"] for entry in lv1["fullst"]] == ["強行出撃", "AD-PA", "AD-PA"]
     assert [entry["points"] for entry in lv1["fullst"]] == [None, 2200, 4400]
 
-    assert [entry["name"] for entry in lv2["fullst"]] == ["強行出撃", "AD-PA", "AD-PA"]
+    assert [entry["name"] for entry in lv2["fullst"]] == ["強行出撃"]
     assert all(entry["points"] is None for entry in lv2["fullst"])
+
+
+def test_parse_details_tr5_sparse_fullst_keeps_lv4_record():
+    per_level = parse_details(load_fixture("parse_details_tr5_sparse_fullst.html"))
+
+    assert set(per_level) == {1, 2, 3, 4}
+    assert per_level[3]["MS名"] == "ギャプランTR-5_LV3"
+    assert per_level[4]["MS名"] == "ギャプランTR-5_LV4"
+    assert per_level[4]["コスト"] == 650
+    assert per_level[4]["HP"] == 25000
+    assert per_level[4]["スラスター"] == 55
+
+    lv3_fullst = per_level[3]["fullst"]
+    assert [entry["name"] for entry in lv3_fullst] == [
+        "シールド構造強化",
+        "プロペラントタンク",
+        "複合拡張パーツスロット",
+        "シールド構造強化",
+        "AD-PA",
+    ]
+    assert [entry["points"] for entry in lv3_fullst] == [
+        1260,
+        1890,
+        2520,
+        5040,
+        7560,
+    ]
+
+    lv4_fullst = per_level[4]["fullst"]
+    assert [entry["name"] for entry in lv4_fullst] == ["AD-PA"]
+    assert [entry["points"] for entry in lv4_fullst] == [630]

@@ -69,9 +69,10 @@ def _provenance_out() -> str:
 
 
 def _raw_snapshot_file() -> str:
-    return _env_str(
-        "RAW_SNAPSHOT_FILE", f"raw_snapshot_{_report_date()}_runlocal.tar.xz"
-    ) or ""
+    return (
+        _env_str("RAW_SNAPSHOT_FILE", f"raw_snapshot_{_report_date()}_runlocal.tar.xz")
+        or ""
+    )
 
 
 def _changed_index_out() -> str:
@@ -80,6 +81,10 @@ def _changed_index_out() -> str:
 
 def _changed_meta_out() -> str:
     return _env_str("CHANGED_META_OUT", "cache/index_changed_meta.json") or ""
+
+
+def _detail_fetch_state() -> str:
+    return _env_str("DETAIL_FETCH_STATE", "cache/detail_fetch_state.json") or ""
 
 
 def _fast_ttl() -> str:
@@ -198,6 +203,8 @@ def task_scrape_details() -> int:
         str(_env_int("LIMIT", 0)),
         "--ttl",
         _env_str("TTL", "7d") or "7d",
+        "--detail-fetch-state-out",
+        _detail_fetch_state(),
     ]
     if _env_flag("NO_NET"):
         args.append("--no-network")
@@ -219,6 +226,8 @@ def task_scrape_all() -> int:
         str(_env_int("LIMIT", 0)),
         "--ttl",
         _env_str("TTL", "7d") or "7d",
+        "--detail-fetch-state-out",
+        _detail_fetch_state(),
     ]
     if _env_flag("NO_NET"):
         args.append("--no-network")
@@ -244,6 +253,10 @@ def task_detect_changed() -> int:
         _env_str("MSDATA", "msData.json") or "msData.json",
         "--freshness-window",
         _env_str("FRESHNESS_WINDOW", "1h") or "1h",
+        "--detail-fetch-state",
+        _detail_fetch_state(),
+        "--stale-detail-days",
+        _env_str("STALE_DETAIL_DAYS", "14") or "14",
         "--min-age-coverage",
         str(_env_float("MIN_AGE_COVERAGE", 0.95)),
     ]
@@ -302,6 +315,13 @@ def task_update_fast() -> int:
         print("update-fast: no candidate pages, skip details/import/validate")
         return 0
 
+    use_changed_only = (
+        isinstance(changed_index, list)
+        and _can_use_changed_only(changed_index, meta)
+        and not _env_flag("NO_NET")
+    )
+    detail_ttl = "0s" if use_changed_only else ttl
+
     details_args = [
         "details",
         "--in",
@@ -313,11 +333,13 @@ def task_update_fast() -> int:
         "--limit",
         limit,
         "--ttl",
-        ttl,
+        detail_ttl,
+        "--detail-fetch-state-out",
+        _detail_fetch_state(),
         *(["--no-network"] if _env_flag("NO_NET") else []),
         *(["--force"] if _env_flag("FORCE") else []),
     ]
-    if isinstance(changed_index, list) and _can_use_changed_only(changed_index, meta):
+    if use_changed_only:
         details_args.append("--changed-only")
 
     rc = _run_python_module(
@@ -327,7 +349,9 @@ def task_update_fast() -> int:
     if rc != 0:
         return rc
 
-    details_jsonl = Path(_env_str("DETAILS_OUT", "cache/details.jsonl") or "cache/details.jsonl")
+    details_jsonl = Path(
+        _env_str("DETAILS_OUT", "cache/details.jsonl") or "cache/details.jsonl"
+    )
     if not details_jsonl.exists() or details_jsonl.stat().st_size == 0:
         print("update-fast: details output is empty, skip import/validate")
         return 0
@@ -339,8 +363,12 @@ def task_update_fast() -> int:
 
 
 def task_import_details() -> int:
-    details_jsonl = _env_str("DETAILS_OUT", "cache/details.jsonl") or "cache/details.jsonl"
-    details_json = _env_str("DETAILS_JSON", "cache/details.json") or "cache/details.json"
+    details_jsonl = (
+        _env_str("DETAILS_OUT", "cache/details.jsonl") or "cache/details.jsonl"
+    )
+    details_json = (
+        _env_str("DETAILS_JSON", "cache/details.json") or "cache/details.json"
+    )
     rc = _run_python_module("scripts.jsonl_to_json", details_jsonl, details_json)
     if rc != 0:
         return rc
@@ -375,8 +403,7 @@ def task_audit_labels() -> int:
         "--in",
         _env_str("LABELS_OUT", "cache/labels_raw.jsonl") or "cache/labels_raw.jsonl",
         "--out",
-        _env_str("AUDIT_LABELS_OUT", f"reports/label_audit_{report_date}.md")
-        or "",
+        _env_str("AUDIT_LABELS_OUT", f"reports/label_audit_{report_date}.md") or "",
     )
 
 
@@ -468,8 +495,7 @@ def task_audit_index() -> int:
         "--ms",
         msdata,
         "--out",
-        _env_str("AUDIT_INDEX_OUT", f"reports/index_ms_audit_{report_date}.md")
-        or "",
+        _env_str("AUDIT_INDEX_OUT", f"reports/index_ms_audit_{report_date}.md") or "",
     )
 
 

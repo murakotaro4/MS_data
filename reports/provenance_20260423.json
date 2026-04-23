@@ -1,69 +1,69 @@
 {
   "schema_version": "1",
-  "generated_at": "2026-04-23T09:35:08Z",
+  "generated_at": "2026-04-23T12:22:11Z",
   "report_date": "20260423",
   "git": {
     "repo": "murakotaro4/MS_data",
     "branch": "main",
-    "head_sha": "a5fae1d1b52e27e5689033e688c2276401b71454"
+    "head_sha": "696435882ea89071f6ae4c98da4d62c14b0e938e"
   },
   "github": {
-    "run_id": "24827963938",
-    "run_attempt": "1",
-    "workflow": "data update",
-    "event_name": "schedule"
+    "run_id": "local",
+    "run_attempt": "",
+    "workflow": "",
+    "event_name": ""
   },
   "params": {
-    "ttl": "1h",
+    "ttl": "7d",
     "rate": "2.0",
     "limit": "0"
   },
   "inputs": {
     "index": {
       "path": "cache/index.json",
-      "sha256": "127beb18d437f80c0ef1756ea101ae153cacb4a708c3a24cf808a38c4267611c",
-      "size_bytes": 140545,
+      "sha256": "23f4387301d469bd4763e9a619b80b7127998bcf27bea9a5ea1d84c0ecbec0a9",
+      "size_bytes": 140536,
       "record_count": 571
     },
     "details_jsonl": {
       "path": "cache/details.jsonl",
-      "sha256": "a5314f546744848fa8c6a5dbf5719a0ff483e568afd988e19f9d22533989a920",
-      "size_bytes": 9329,
-      "record_count": 8
+      "sha256": "fae341a0b2264d700d473d519d27e5c1cff057ae585c7c71e0d0f4ee6f2e914e",
+      "size_bytes": 1908682,
+      "record_count": 1635
     },
     "details_json": {
       "path": "cache/details.json",
-      "sha256": "918e0f94ed69a903efc7d19941f456049bcb9f1bb0425d1df03afa4ac597c40c",
-      "size_bytes": 12223,
-      "record_count": 8
+      "sha256": "9b294e7c2d3e51e5e139c83b712526aee1772d57d24fed65914c482e57866ee7",
+      "size_bytes": 2488425,
+      "record_count": 1635
     },
     "html_cache": {
       "path": "cache/html",
-      "sha256": "85acf9f677d6a7429c5b009108aabf9afc5dad20f126b233e84c1e9ee6477def",
-      "file_count": 10,
-      "size_bytes": 1984914
+      "sha256": "e740ee2a10835b14374110477401fddb70eb96e244f408a06f921bd37605f174",
+      "file_count": 1148,
+      "size_bytes": 170007873
     }
   },
   "outputs": {
     "msdata_json": {
       "path": "msData.json",
-      "sha256": "930345636b4b9a64f0d9267873c50708f050d0ca6b06cc78d487e13d9988ab1c",
-      "size_bytes": 2518624,
-      "record_count": 1633
+      "sha256": "e3e28504ad6f1165fd2db7771ce00ad9a48f2e9bfb09ac1ff937ad7df6cc25c1",
+      "size_bytes": 2489618,
+      "record_count": 1636
     },
     "diff_report": {
       "path": "reports/diff_msdata_20260423.md",
-      "sha256": "f6ecd68f83eb7e06014048526e383dbb9f7ae8fbad6901323e4e24df1bc5e18c",
-      "size_bytes": 887
+      "sha256": "72a092071dce99acc57dddb3447b0e1d4cfc815eaa696f47b95304bf812953cf",
+      "size_bytes": 20421
     }
   },
   "artifact": {
-    "name": "raw-snapshot-20260423-run-24827963938",
+    "name": "raw-snapshot-20260423-run-local",
     "retention_days": 90
   },
   "release": {
-    "tag": "raw-snapshot-20260423-run-24827963938",
-    "asset_name": "raw_snapshot_20260423_run24827963938.tar.xz",
-    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260423-run-24827963938"
+    "tag": "raw-snapshot-20260423-run-local",
+    "asset_name": "raw_snapshot_20260423_runlocal.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260423-run-local"
   }
 }

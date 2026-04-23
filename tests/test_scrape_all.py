@@ -34,6 +34,7 @@ def test_cmd_all_forwards_detail_options(monkeypatch, tmp_path):
         captured["no_network"] = args.no_network
         captured["force"] = args.force
         captured["changed_only"] = args.changed_only
+        captured["detail_fetch_state_out"] = args.detail_fetch_state_out
         return 0
 
     monkeypatch.setattr(sm, "cmd_details", fake_cmd_details)
@@ -48,6 +49,7 @@ def test_cmd_all_forwards_detail_options(monkeypatch, tmp_path):
             no_network=True,
             force=True,
             changed_only=True,
+            detail_fetch_state_out="cache/detail_fetch_state.json",
         )
     )
 
@@ -61,5 +63,6 @@ def test_cmd_all_forwards_detail_options(monkeypatch, tmp_path):
         "no_network": True,
         "force": True,
         "changed_only": True,
+        "detail_fetch_state_out": "cache/detail_fetch_state.json",
     }
     assert Path("cache/index.json").exists()

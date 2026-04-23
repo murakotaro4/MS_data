@@ -145,6 +145,78 @@ def load_msdata_base_index(path: Path) -> Dict[str, Dict[str, Any]]:
     return result
 
 
+def load_detail_fetch_state(path: Path) -> Dict[str, Dict[str, Any]]:
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+
+    items = data.get("items")
+    if isinstance(items, dict):
+        return {
+            str(url): entry for url, entry in items.items() if isinstance(entry, dict)
+        }
+
+    # Backward-compatible shape for ad-hoc state files: {url: {fetched_at: ...}}.
+    return {
+        str(url): entry
+        for url, entry in data.items()
+        if isinstance(entry, dict) and isinstance(entry.get("fetched_at"), str)
+    }
+
+
+def write_detail_fetch_state(
+    path: Path, items: Dict[str, Dict[str, Any]], generated_at: datetime
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "generated_at": generated_at.astimezone(timezone.utc)
+        .isoformat()
+        .replace("+00:00", "Z"),
+        "items": dict(sorted(items.items())),
+    }
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+
+
+def remember_detail_fetch(
+    detail_state: Dict[str, Dict[str, Any]],
+    url: str,
+    item: Dict[str, Any],
+    meta: Dict[str, Any],
+) -> None:
+    fetched_at = meta.get("fetched_at")
+    if not isinstance(fetched_at, str):
+        fetched_at = datetime.now(timezone.utc).isoformat()
+    detail_state[url] = {
+        "name": item.get("name"),
+        "page_id": item.get("page_id") or extract_page_id(url),
+        "fetched_at": fetched_at,
+        "http_status": meta.get("http_status"),
+        "semantic_sha256": meta.get("semantic_sha256"),
+    }
+
+
+def _detail_state_fetched_at(
+    detail_fetch_state: Dict[str, Dict[str, Any]], url: str
+) -> Optional[datetime]:
+    entry = detail_fetch_state.get(url)
+    if not isinstance(entry, dict):
+        return None
+    fetched_at = entry.get("fetched_at")
+    if not isinstance(fetched_at, str):
+        return None
+    try:
+        return parse_iso_datetime(fetched_at)
+    except (TypeError, ValueError):
+        return None
+
+
 def select_changed_index_items(
     items: List[Dict[str, Any]],
     *,
@@ -154,13 +226,21 @@ def select_changed_index_items(
     freshness_window_seconds: int = 3600,
     force_full: bool = False,
     min_age_coverage: float = 0.95,
+    detail_fetch_state: Optional[Dict[str, Dict[str, Any]]] = None,
+    stale_detail_seconds: Optional[int] = None,
 ) -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
     now = now or datetime.now(timezone.utc)
+    now_utc = now.astimezone(timezone.utc)
     total_count = len(items)
     age_count = sum(
         1 for item in items if isinstance(item.get("updated_age_seconds"), int)
     )
     age_coverage = (age_count / total_count) if total_count else 1.0
+    stale_detail_enabled = (
+        detail_fetch_state is not None
+        and isinstance(stale_detail_seconds, int)
+        and stale_detail_seconds > 0
+    )
 
     meta: Dict[str, Any] = {
         "fast_path": True,
@@ -170,12 +250,16 @@ def select_changed_index_items(
         "age_coverage": age_coverage,
         "freshness_window_seconds": freshness_window_seconds,
         "previous_generated_at": (
-            previous_generated_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+            previous_generated_at.astimezone(timezone.utc)
+            .isoformat()
+            .replace("+00:00", "Z")
             if previous_generated_at
             else None
         ),
         "elapsed_seconds": None,
         "threshold_seconds": None,
+        "stale_detail_seconds": stale_detail_seconds if stale_detail_enabled else None,
+        "detail_fetch_state_count": len(detail_fetch_state or {}),
         "reason_counts": {},
     }
 
@@ -198,7 +282,8 @@ def select_changed_index_items(
         return items, meta
 
     elapsed_seconds = max(
-        0, int((now.astimezone(timezone.utc) - previous_generated_at).total_seconds())
+        0,
+        int((now_utc - previous_generated_at.astimezone(timezone.utc)).total_seconds()),
     )
     threshold_seconds = elapsed_seconds + freshness_window_seconds
     meta["elapsed_seconds"] = elapsed_seconds
@@ -217,7 +302,11 @@ def select_changed_index_items(
             if isinstance(item_cost, int) and existing.get("cost") != item_cost:
                 reasons.append("cost_changed")
             item_attr = item.get("属性")
-            if isinstance(item_attr, str) and item_attr and existing.get("attr") != item_attr:
+            if (
+                isinstance(item_attr, str)
+                and item_attr
+                and existing.get("attr") != item_attr
+            ):
                 reasons.append("attr_changed")
             current_url = item.get("url")
             if (
@@ -232,6 +321,21 @@ def select_changed_index_items(
             reasons.append("missing_age")
         elif age_seconds <= threshold_seconds:
             reasons.append("recent_update")
+
+        url = item.get("url")
+        if stale_detail_enabled and isinstance(url, str):
+            fetched_at = _detail_state_fetched_at(detail_fetch_state or {}, url)
+            if fetched_at is None:
+                reasons.append("stale_detail_cache")
+            else:
+                detail_age_seconds = int(
+                    max(
+                        0,
+                        (now_utc - fetched_at.astimezone(timezone.utc)).total_seconds(),
+                    )
+                )
+                if detail_age_seconds >= int(stale_detail_seconds or 0):
+                    reasons.append("stale_detail_cache")
 
         if reasons:
             selected_item = dict(item)
@@ -257,7 +361,10 @@ def get_client(timeout: float = 30.0) -> httpx.Client:
             scraper.request = functools.partial(scraper.request, timeout=timeout)
             return scraper
         except Exception as exc:  # cloudscraperが使えない場合は httpx へフォールバック
-            print(f"[warn] cloudscraper unavailable, fallback to httpx: {exc}", file=sys.stderr)
+            print(
+                f"[warn] cloudscraper unavailable, fallback to httpx: {exc}",
+                file=sys.stderr,
+            )
     return httpx.Client(headers=headers, timeout=timeout, follow_redirects=True)
 
 
@@ -522,9 +629,7 @@ def parse_index(html: str) -> List[Dict[str, Any]]:
             ul = h4.find_next_sibling("ul")
             if not ul:
                 continue
-            append_index_items(
-                results, ul, cost=cost, attr=attr, seen_names=seen_names
-            )
+            append_index_items(results, ul, cost=cost, attr=attr, seen_names=seen_names)
 
     etc = soup.find("div", id="menu_etc")
     if etc:
@@ -747,9 +852,16 @@ def parse_fullst_by_ms_level(
     if not table:
         return {}
 
-    rows: List[Tuple[str, int, Dict[int, int], set[int]]] = []
+    rows: List[Tuple[str, int, str, Dict[int, int], set[int], set[int]]] = []
     current_name: Optional[str] = None
+    section = "normal"
     for tr in table.find_all("tr"):
+        row_text = clean_text(tr.get_text(" "))
+        if row_text == "上限開放":
+            section = "upper"
+            current_name = None
+            continue
+
         ths = tr.find_all("th")
         if not ths:
             continue
@@ -791,59 +903,134 @@ def parse_fullst_by_ms_level(
         numeric_cells = tds[:-1] if len(tds) >= 1 else tds
         points_by_ms: Dict[int, int] = {}
         present_ms_levels: set[int] = set()
+        blocked_ms_levels: set[int] = set()
         for ms_lv in ms_levels:
             idx = ms_lv - 1
             if 0 <= idx < len(numeric_cells):
                 present_ms_levels.add(ms_lv)
-                val = to_int(clean_text(numeric_cells[idx].get_text(" ")))
+                raw_value = clean_text(numeric_cells[idx].get_text(" "))
+                val = to_int(raw_value)
                 if val is not None:
                     points_by_ms[ms_lv] = val
+                elif (
+                    raw_value in {"", "?", "？", "-", "－"}
+                    and "強行出撃" not in current_name
+                ):
+                    blocked_ms_levels.add(ms_lv)
 
-        if not points_by_ms and "強行出撃" not in current_name:
+        if (
+            not points_by_ms
+            and "強行出撃" not in current_name
+            and not blocked_ms_levels
+        ):
             continue
-        rows.append((current_name, fullst_lv, points_by_ms, present_ms_levels))
+        rows.append(
+            (
+                current_name,
+                fullst_lv,
+                section,
+                points_by_ms,
+                present_ms_levels,
+                blocked_ms_levels,
+            )
+        )
 
     by_ms_level: Dict[int, List[Dict[str, Any]]] = {lv: [] for lv in ms_levels}
     for ms_lv in ms_levels:
-        by_name: Dict[str, List[Tuple[int, Optional[int]]]] = {}
-        for nm, flv, pmap, present_lvs in rows:
+        by_name: Dict[tuple[str, str], List[Tuple[int, Optional[int], bool]]] = {}
+        for nm, flv, section, pmap, present_lvs, blocked_lvs in rows:
             pts = pmap.get(ms_lv)
-            if pts is None and ("強行出撃" not in nm or ms_lv not in present_lvs):
+            skip_fallback = False
+            if pts is None and "強行出撃" not in nm and ms_lv in blocked_lvs:
+                skip_fallback = True
+            elif pts is None and ("強行出撃" not in nm or ms_lv not in present_lvs):
                 continue
-            by_name.setdefault(nm, []).append((flv, pts))
+            by_name.setdefault((section, nm), []).append((flv, pts, skip_fallback))
 
         items: List[Dict[str, Any]] = []
-        for nm, lst in by_name.items():
+        for (section, nm), lst in by_name.items():
             lst_sorted = sorted(lst, key=lambda x: x[0])
             keep = []
             if lst_sorted:
                 keep.append(lst_sorted[0])
             if len(lst_sorted) > 1 and lst_sorted[-1] != lst_sorted[0]:
                 keep.append(lst_sorted[-1])
-            for flv, pts in keep:
-                items.append({"name": nm, "level": flv, "points": pts})
+            for flv, pts, skip_fallback in keep:
+                item = {"name": nm, "level": flv, "points": pts, "_section": section}
+                if skip_fallback:
+                    item["_skip_fallback"] = True
+                items.append(item)
         items.sort(key=lambda d: (d.get("points") is not None, d.get("points") or 0))
         if items:
             by_ms_level[ms_lv] = items
     return {k: v for k, v in by_ms_level.items() if v}
 
 
-def is_strong_sortie_only(items: List[Dict[str, Any]]) -> bool:
-    if not items:
-        return False
-    return all(
-        isinstance(e, dict)
-        and "強行出撃" in str(e.get("name", ""))
-        and e.get("points") is None
-        for e in items
-    )
+def fullst_entry_key(item: Dict[str, Any]) -> tuple[Any, Any, Any]:
+    return item.get("_section"), item.get("name"), item.get("level")
 
 
-def has_non_strong_sortie(items: List[Dict[str, Any]]) -> bool:
-    return any(
-        isinstance(e, dict) and "強行出撃" not in str(e.get("name", ""))
+def fullst_section_name_key(item: Dict[str, Any]) -> tuple[Any, Any]:
+    return item.get("_section"), item.get("name")
+
+
+def copy_fullst_with_null_points(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    copied = []
+    for e in items:
+        if not isinstance(e, dict) or e.get("_skip_fallback"):
+            continue
+        item = {"name": e.get("name"), "level": e.get("level"), "points": None}
+        if "_section" in e:
+            item["_section"] = e.get("_section")
+        copied.append(item)
+    return copied
+
+
+def strip_skip_fallback_entries(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    stripped = []
+    for e in items:
+        if not isinstance(e, dict) or e.get("_skip_fallback"):
+            continue
+        item = {
+            "name": e.get("name"),
+            "level": e.get("level"),
+            "points": e.get("points"),
+        }
+        if "_section" in e:
+            item["_section"] = e.get("_section")
+        stripped.append(item)
+    return stripped
+
+
+def public_fullst_entries(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    return [
+        {"name": e.get("name"), "level": e.get("level"), "points": e.get("points")}
         for e in items
-    )
+        if isinstance(e, dict) and not e.get("_skip_fallback")
+    ]
+
+
+def merge_fullst_with_previous(
+    current: List[Dict[str, Any]], previous: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    if not previous:
+        return current
+
+    current_keys = {fullst_entry_key(e) for e in current if isinstance(e, dict)}
+    current_section_names = {
+        fullst_section_name_key(e)
+        for e in current
+        if isinstance(e, dict) and not e.get("_skip_fallback")
+    }
+    copied_missing = [
+        e
+        for e in copy_fullst_with_null_points(previous)
+        if fullst_entry_key(e) not in current_keys
+        and fullst_section_name_key(e) not in current_section_names
+    ]
+    merged = copied_missing + current
+    merged.sort(key=lambda d: (d.get("points") is not None, d.get("points") or 0))
+    return merged
 
 
 def apply_fullst_fallback(
@@ -856,27 +1043,18 @@ def apply_fullst_fallback(
         current = fullst_by_lv.get(lv) or []
         use_current = bool(current)
 
-        if (
-            use_current
-            and last_effective
-            and is_strong_sortie_only(current)
-            and has_non_strong_sortie(last_effective)
-        ):
-            use_current = False
-
         if use_current:
-            per_level[lv]["fullst"] = current
-            last_effective = current
+            merged = merge_fullst_with_previous(current, last_effective)
+            effective = strip_skip_fallback_entries(merged)
+            if effective:
+                per_level[lv]["fullst"] = public_fullst_entries(effective)
+                last_effective = effective
             continue
 
         if last_effective:
-            copied = [
-                {"name": e.get("name"), "level": e.get("level"), "points": None}
-                for e in last_effective
-                if isinstance(e, dict)
-            ]
+            copied = copy_fullst_with_null_points(last_effective)
             if copied:
-                per_level[lv]["fullst"] = copied
+                per_level[lv]["fullst"] = public_fullst_entries(copied)
                 last_effective = copied
 
 
@@ -894,14 +1072,37 @@ BASE_REQUIRED = {
     "中スロット",
     "遠スロット",
 }
+FALLBACKABLE_REQUIRED_KEYS = {"スラスター"}
+
+
+def has_turn_value(rec: Dict[str, Any]) -> bool:
+    return ("旋回_地上_通常時" in rec) or ("旋回_宇宙_通常時" in rec)
+
+
+def apply_required_value_fallbacks(
+    per_level: Dict[int, Dict[str, Any]], levels: List[int]
+) -> None:
+    last_values: Dict[str, Any] = {}
+    for lv in sorted(levels):
+        rec = per_level.get(lv)
+        if not isinstance(rec, dict):
+            continue
+
+        for key in FALLBACKABLE_REQUIRED_KEYS:
+            if key in rec:
+                last_values[key] = rec[key]
+                continue
+            if key not in last_values:
+                continue
+
+            required_without_key = BASE_REQUIRED - {key}
+            if required_without_key.issubset(rec.keys()) and has_turn_value(rec):
+                rec[key] = last_values[key]
 
 
 def filter_complete_records(
     per_level: Dict[int, Dict[str, Any]]
 ) -> Dict[int, Dict[str, Any]]:
-    def has_turn_value(rec: Dict[str, Any]) -> bool:
-        return ("旋回_地上_通常時" in rec) or ("旋回_宇宙_通常時" in rec)
-
     return {
         lv: rec
         for lv, rec in per_level.items()
@@ -927,6 +1128,7 @@ def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
     apply_deployment_and_env(soup, per_level, levels)
     apply_deployment_fallbacks(per_level, levels)
     normalize_turn_values(per_level, levels)
+    apply_required_value_fallbacks(per_level, levels)
     apply_fullst_fallback(per_level, levels, parse_fullst_by_ms_level(soup, levels))
     return filter_complete_records(per_level)
 
@@ -968,6 +1170,10 @@ def cmd_details(args: argparse.Namespace) -> int:
         ttl_seconds=parse_ttl(args.ttl), no_network=args.no_network, force=args.force
     )
     cache = CacheHTTP(client, cfg)
+    detail_state_path = Path(
+        getattr(args, "detail_fetch_state_out", "") or "cache/detail_fetch_state.json"
+    )
+    detail_state = load_detail_fetch_state(detail_state_path)
     t_last = 0.0
     written = 0
     with out.open("w", encoding="utf-8") as f:
@@ -986,6 +1192,7 @@ def cmd_details(args: argparse.Namespace) -> int:
                 # 変更がなければスキップ（オプション）
                 if getattr(args, "changed_only", False):
                     if not _meta.get("semantic_changed", False):
+                        remember_detail_fetch(detail_state, url, item, _meta)
                         continue
                 per_level = parse_details(text)
                 # 補足情報（index由来）を併合
@@ -995,7 +1202,9 @@ def cmd_details(args: argparse.Namespace) -> int:
                     m = re.match(r"^(.*)_LV(\d+)$", msn)
                     lvno = m.group(2) if m else None
                     idx_name = item.get("name") or (m.group(1) if m else msn)
-                    ms_name_index = f"{idx_name}_LV{lvno}" if lvno else (msn or idx_name)
+                    ms_name_index = (
+                        f"{idx_name}_LV{lvno}" if lvno else (msn or idx_name)
+                    )
 
                     base = {
                         "MS名": ms_name_index,
@@ -1009,10 +1218,14 @@ def cmd_details(args: argparse.Namespace) -> int:
                     f.write(json.dumps(merged, ensure_ascii=False))
                     f.write("\n")
                     written += 1
+                remember_detail_fetch(detail_state, url, item, _meta)
             except Exception as e:
                 print(f"WARN: failed {url}: {e}", file=sys.stderr)
             if args.limit and written >= args.limit:
                 break
+    write_detail_fetch_state(
+        detail_state_path, detail_state, datetime.now(timezone.utc)
+    )
     print(f"details: wrote {written} records -> {out}")
     return 0
 
@@ -1043,6 +1256,9 @@ def cmd_all(args: argparse.Namespace) -> int:
         no_network=getattr(args, "no_network", False),
         force=getattr(args, "force", False),
         changed_only=getattr(args, "changed_only", False),
+        detail_fetch_state_out=getattr(
+            args, "detail_fetch_state_out", "cache/detail_fetch_state.json"
+        ),
     )
     return cmd_details(dargs)
 
@@ -1087,6 +1303,17 @@ def cmd_detect_changed(args: argparse.Namespace) -> int:
         if getattr(args, "now", None)
         else datetime.now(timezone.utc)
     )
+    stale_detail_days = getattr(args, "stale_detail_days", None)
+    detail_fetch_state: Optional[Dict[str, Dict[str, Any]]] = None
+    stale_detail_seconds: Optional[int] = None
+    if stale_detail_days is not None:
+        stale_detail_seconds = int(float(stale_detail_days) * 86400)
+        detail_fetch_state = load_detail_fetch_state(
+            Path(
+                getattr(args, "detail_fetch_state", "")
+                or "cache/detail_fetch_state.json"
+            )
+        )
     selected, meta = select_changed_index_items(
         [item for item in data if isinstance(item, dict)],
         previous_generated_at=previous_generated_at,
@@ -1095,6 +1322,8 @@ def cmd_detect_changed(args: argparse.Namespace) -> int:
         freshness_window_seconds=parse_ttl(args.freshness_window),
         force_full=args.force_full,
         min_age_coverage=float(args.min_age_coverage),
+        detail_fetch_state=detail_fetch_state,
+        stale_detail_seconds=stale_detail_seconds,
     )
     meta["generated_at"] = (
         now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -1154,6 +1383,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_det.add_argument("--no-network", action="store_true")
     p_det.add_argument("--force", action="store_true")
     p_det.add_argument(
+        "--detail-fetch-state-out", default="cache/detail_fetch_state.json"
+    )
+    p_det.add_argument(
         "--changed-only",
         action="store_true",
         help="セマンティック変化がないページをスキップ（コメント等の更新は無視）",
@@ -1167,6 +1399,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_all.add_argument("--ttl", default="7d")
     p_all.add_argument("--no-network", action="store_true")
     p_all.add_argument("--force", action="store_true")
+    p_all.add_argument(
+        "--detail-fetch-state-out", default="cache/detail_fetch_state.json"
+    )
     p_all.add_argument(
         "--changed-only",
         action="store_true",
@@ -1185,6 +1420,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_detect.add_argument("--previous-provenance", default="")
     p_detect.add_argument("--msdata", default="msData.json")
     p_detect.add_argument("--freshness-window", default="1h")
+    p_detect.add_argument(
+        "--detail-fetch-state", default="cache/detail_fetch_state.json"
+    )
+    p_detect.add_argument("--stale-detail-days", default="14")
     p_detect.add_argument("--min-age-coverage", type=float, default=0.95)
     p_detect.add_argument("--force-full", action="store_true")
     p_detect.add_argument("--now", default="")

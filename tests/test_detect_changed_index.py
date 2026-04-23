@@ -120,6 +120,138 @@ def test_select_changed_index_items_ignores_unknown_cost_and_attr():
     assert meta["reason_counts"] == {}
 
 
+def test_select_changed_index_items_selects_stale_detail_cache():
+    items = [
+        {
+            "name": "ギャプランTR-5",
+            "url": "https://w.atwiki.jp/battle-operation2/pages/5254.html",
+            "cost": 500,
+            "属性": "汎用",
+            "updated_age_text": "30d",
+            "updated_age_seconds": 30 * 86400,
+        }
+    ]
+
+    selected, meta = sm.select_changed_index_items(
+        items,
+        previous_generated_at=sm.parse_iso_datetime("2026-04-20T09:00:00Z"),
+        previous_msdata_index={
+            "ギャプランTR-5": {
+                "cost": 500,
+                "attr": "汎用",
+                "wiki_url": "https://w.atwiki.jp/battle-operation2/pages/5254.html",
+            }
+        },
+        now=sm.parse_iso_datetime("2026-04-23T09:00:00Z"),
+        freshness_window_seconds=3600,
+        min_age_coverage=0.95,
+        detail_fetch_state={
+            "https://w.atwiki.jp/battle-operation2/pages/5254.html": {
+                "fetched_at": "2026-04-01T09:00:00Z"
+            }
+        },
+        stale_detail_seconds=14 * 86400,
+    )
+
+    assert [item["name"] for item in selected] == ["ギャプランTR-5"]
+    assert selected[0]["change_reasons"] == ["stale_detail_cache"]
+    assert meta["candidate_count"] == 1
+    assert meta["reason_counts"] == {"stale_detail_cache": 1}
+
+
+def test_select_changed_index_items_ignores_fresh_detail_cache():
+    items = [
+        {
+            "name": "ギャプランTR-5",
+            "url": "https://w.atwiki.jp/battle-operation2/pages/5254.html",
+            "cost": 500,
+            "属性": "汎用",
+            "updated_age_text": "30d",
+            "updated_age_seconds": 30 * 86400,
+        }
+    ]
+
+    selected, meta = sm.select_changed_index_items(
+        items,
+        previous_generated_at=sm.parse_iso_datetime("2026-04-20T09:00:00Z"),
+        previous_msdata_index={
+            "ギャプランTR-5": {
+                "cost": 500,
+                "attr": "汎用",
+                "wiki_url": "https://w.atwiki.jp/battle-operation2/pages/5254.html",
+            }
+        },
+        now=sm.parse_iso_datetime("2026-04-23T09:00:00Z"),
+        freshness_window_seconds=3600,
+        min_age_coverage=0.95,
+        detail_fetch_state={
+            "https://w.atwiki.jp/battle-operation2/pages/5254.html": {
+                "fetched_at": "2026-04-20T09:00:00Z"
+            }
+        },
+        stale_detail_seconds=14 * 86400,
+    )
+
+    assert selected == []
+    assert meta["candidate_count"] == 0
+    assert meta["reason_counts"] == {}
+
+
+def test_select_changed_index_items_selects_missing_detail_fetch_history():
+    items = [
+        {
+            "name": "ギャプランTR-5",
+            "url": "https://w.atwiki.jp/battle-operation2/pages/5254.html",
+            "cost": 500,
+            "属性": "汎用",
+            "updated_age_text": "30d",
+            "updated_age_seconds": 30 * 86400,
+        }
+    ]
+
+    selected, meta = sm.select_changed_index_items(
+        items,
+        previous_generated_at=sm.parse_iso_datetime("2026-04-20T09:00:00Z"),
+        previous_msdata_index={
+            "ギャプランTR-5": {
+                "cost": 500,
+                "attr": "汎用",
+                "wiki_url": "https://w.atwiki.jp/battle-operation2/pages/5254.html",
+            }
+        },
+        now=sm.parse_iso_datetime("2026-04-23T09:00:00Z"),
+        freshness_window_seconds=3600,
+        min_age_coverage=0.95,
+        detail_fetch_state={},
+        stale_detail_seconds=14 * 86400,
+    )
+
+    assert [item["name"] for item in selected] == ["ギャプランTR-5"]
+    assert selected[0]["change_reasons"] == ["stale_detail_cache"]
+
+
+def test_select_changed_index_items_force_full_selects_all_with_stale_enabled():
+    items = [
+        {"name": "A", "url": "https://w.atwiki.jp/battle-operation2/pages/1.html"},
+        {"name": "B", "url": "https://w.atwiki.jp/battle-operation2/pages/2.html"},
+    ]
+
+    selected, meta = sm.select_changed_index_items(
+        items,
+        previous_generated_at=sm.parse_iso_datetime("2026-04-20T09:00:00Z"),
+        previous_msdata_index={},
+        now=sm.parse_iso_datetime("2026-04-23T09:00:00Z"),
+        force_full=True,
+        detail_fetch_state={},
+        stale_detail_seconds=14 * 86400,
+    )
+
+    assert selected == items
+    assert meta["fast_path"] is False
+    assert meta["fallback_reason"] == "force_full"
+    assert meta["candidate_count"] == 2
+
+
 def test_cmd_detect_changed_selects_recent_and_mismatched_records(tmp_path: Path):
     index_path = tmp_path / "cache/index.json"
     out_path = tmp_path / "cache/index_changed.json"
@@ -212,7 +344,11 @@ def test_cmd_detect_changed_selects_recent_and_mismatched_records(tmp_path: Path
     selected = json.loads(out_path.read_text(encoding="utf-8"))
     meta = json.loads(meta_path.read_text(encoding="utf-8"))
 
-    assert [item["name"] for item in selected] == ["最近更新機", "コスト変更機", "新規機体"]
+    assert [item["name"] for item in selected] == [
+        "最近更新機",
+        "コスト変更機",
+        "新規機体",
+    ]
     assert meta["fast_path"] is True
     assert meta["fallback_reason"] == ""
     assert meta["candidate_count"] == 3
@@ -221,7 +357,9 @@ def test_cmd_detect_changed_selects_recent_and_mismatched_records(tmp_path: Path
     assert meta["reason_counts"]["new_name"] == 1
 
 
-def test_cmd_detect_changed_falls_back_when_previous_provenance_is_missing(tmp_path: Path):
+def test_cmd_detect_changed_falls_back_when_previous_provenance_is_missing(
+    tmp_path: Path,
+):
     index_path = tmp_path / "cache/index.json"
     out_path = tmp_path / "cache/index_changed.json"
     meta_path = tmp_path / "cache/index_changed_meta.json"

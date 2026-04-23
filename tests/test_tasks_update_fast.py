@@ -9,7 +9,9 @@ def _write_json(path: Path, data: object) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def test_task_update_fast_skips_followup_steps_when_no_candidates(monkeypatch, tmp_path: Path):
+def test_task_update_fast_skips_followup_steps_when_no_candidates(
+    monkeypatch, tmp_path: Path
+):
     calls = []
     monkeypatch.chdir(tmp_path)
 
@@ -62,6 +64,10 @@ def test_task_update_fast_skips_followup_steps_when_no_candidates(monkeypatch, t
                 "msData.json",
                 "--freshness-window",
                 "1h",
+                "--detail-fetch-state",
+                "cache/detail_fetch_state.json",
+                "--stale-detail-days",
+                "14",
                 "--min-age-coverage",
                 "0.95",
             ),
@@ -155,6 +161,10 @@ def test_task_update_fast_runs_import_and_validate_when_candidates_exist(
                 "msData.json",
                 "--freshness-window",
                 "1h",
+                "--detail-fetch-state",
+                "cache/detail_fetch_state.json",
+                "--stale-detail-days",
+                "14",
                 "--min-age-coverage",
                 "0.95",
             ),
@@ -172,7 +182,9 @@ def test_task_update_fast_runs_import_and_validate_when_candidates_exist(
                 "--limit",
                 "0",
                 "--ttl",
-                "1h",
+                "0s",
+                "--detail-fetch-state-out",
+                "cache/detail_fetch_state.json",
                 "--changed-only",
             ),
         ),
@@ -223,6 +235,62 @@ def test_task_update_fast_disables_changed_only_for_index_reasoned_candidates(
     assert detail_call[0] == "scripts.scrape_msdata"
     assert detail_call[1][0] == "details"
     assert "--changed-only" not in detail_call[1]
+
+
+def test_can_use_changed_only_rejects_stale_detail_cache_reason():
+    changed_index = [
+        {
+            "name": "A",
+            "change_reasons": ["recent_update", "stale_detail_cache"],
+        }
+    ]
+    meta = {"fast_path": True}
+
+    assert tasks._can_use_changed_only(changed_index, meta) is False
+
+
+def test_task_update_fast_disables_changed_only_in_no_network(
+    monkeypatch, tmp_path: Path
+):
+    calls = []
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("NO_NET", "1")
+
+    def fake_run_python_module(module: str, *args: str) -> int:
+        calls.append((module, args))
+        if module == "scripts.scrape_msdata" and args[0] == "detect-changed":
+            _write_json(
+                tmp_path / "cache/index_changed.json",
+                [{"name": "A", "change_reasons": ["recent_update"]}],
+            )
+            _write_json(
+                tmp_path / "cache/index_changed_meta.json",
+                {
+                    "candidate_count": 1,
+                    "total_count": 558,
+                    "fast_path": True,
+                    "fallback_reason": "",
+                },
+            )
+        if module == "scripts.scrape_msdata" and args[0] == "details":
+            details = tmp_path / "cache/details.jsonl"
+            details.parent.mkdir(parents=True, exist_ok=True)
+            details.write_text('{"MS名":"A_LV1"}\n', encoding="utf-8")
+        return 0
+
+    monkeypatch.setattr(tasks, "_run_python_module", fake_run_python_module)
+    monkeypatch.setattr(tasks, "task_import_details", lambda: 0)
+    monkeypatch.setattr(tasks, "task_validate_strict", lambda: 0)
+
+    rc = tasks.task_update_fast()
+
+    assert rc == 0
+    detail_call = calls[-1]
+    assert detail_call[0] == "scripts.scrape_msdata"
+    assert detail_call[1][0] == "details"
+    assert "--no-network" in detail_call[1]
+    assert "--changed-only" not in detail_call[1]
+    assert detail_call[1][detail_call[1].index("--ttl") + 1] == "1h"
 
 
 def test_task_update_fast_fails_when_detect_changed_outputs_are_invalid(

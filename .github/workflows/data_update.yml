@@ -2,7 +2,8 @@ name: data update
 
 on:
   schedule:
-    - cron: "0 9 * * *" # JST 18:00 (daily)
+    - cron: "0 9 * * 1-6" # JST 18:00 (Mon-Sat fast update)
+    - cron: "0 9 * * 0" # JST 18:00 (Sunday full update)
   workflow_dispatch:
     inputs:
       force_full:
@@ -86,12 +87,25 @@ jobs:
             echo "PREVIOUS_PROVENANCE=.detect_state/index_changed_meta.json" >> "$GITHUB_ENV"
           fi
 
+          if [[ -f ".detect_state/cache/detail_fetch_state.json" ]]; then
+            mkdir -p cache
+            cp ".detect_state/cache/detail_fetch_state.json" "cache/detail_fetch_state.json"
+          elif [[ -f ".detect_state/detail_fetch_state.json" ]]; then
+            mkdir -p cache
+            cp ".detect_state/detail_fetch_state.json" "cache/detail_fetch_state.json"
+          fi
+
       - name: Fetch and import
         run: |
           cp msData.json msData.before.json
           mkdir -p reports
           if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.force_full }}" == "true" ]]; then
             export FORCE_FULL=1
+            export FORCE=1
+          fi
+          if [[ "${{ github.event_name }}" == "schedule" && "${{ github.event.schedule }}" == "0 9 * * 0" ]]; then
+            export FORCE_FULL=1
+            export FORCE=1
           fi
           FAST_TTL="${TTL}" RATE="${RATE}" LIMIT="${LIMIT}" MSDATA=msData.json \
             uv run python -m scripts.tasks update-fast
@@ -193,7 +207,9 @@ jobs:
           name: detect-state
           retention-days: 30
           if-no-files-found: ignore
-          path: cache/index_changed_meta.json
+          path: |
+            cache/index_changed_meta.json
+            cache/detail_fetch_state.json
 
       - name: Upload raw snapshot artifact
         if: steps.changes.outputs.changed == 'true'

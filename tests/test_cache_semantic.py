@@ -4,10 +4,15 @@ from pathlib import Path
 import httpx
 import pytest
 
-from scripts.cache_http import CacheHTTP, CacheConfig
+from scripts.cache_http import CacheHTTP, CacheConfig, _extract_semantic_text
 
 
-def _resp(html: str, etag: str | None = None, last_modified: str | None = None, status: int = 200):
+def _resp(
+    html: str,
+    etag: str | None = None,
+    last_modified: str | None = None,
+    status: int = 200,
+):
     headers = {}
     if etag is not None:
         headers["ETag"] = etag
@@ -71,3 +76,27 @@ def test_semantic_hash_ignores_comments(tmp_path: Path, ttl: int):
     assert meta3.get("semantic_changed") is True
     assert meta3["semantic_sha256"] != meta2["semantic_sha256"]
 
+
+def test_extract_semantic_text_keeps_status_table_when_outer_has_comment_text():
+    html = """
+    <html><head><title>テストMS</title></head>
+    <body>
+      <div id="wiki-body">
+        <nav>目次 コメント欄</nav>
+        <div id="table_hanyou">
+          <table>
+            <thead><tr><th></th><th>LV1</th></tr></thead>
+            <tbody><tr><th>機体HP</th><td>10000</td></tr></tbody>
+          </table>
+        </div>
+        <h2>コメント欄</h2>
+        <div class="plugin-comment">コメントだけが変わる領域</div>
+      </div>
+    </body></html>
+    """
+
+    text = _extract_semantic_text(html)
+
+    assert "機体HP" in text
+    assert "10000" in text
+    assert "コメントだけが変わる領域" not in text

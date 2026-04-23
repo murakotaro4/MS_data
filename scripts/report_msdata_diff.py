@@ -115,6 +115,7 @@ def format_list(items: Iterable[str], limit: int) -> Tuple[List[str], bool]:
 
 class _Sentinel:
     """キー削除を表すセンチネル。None と区別するために使用。"""
+
     pass
 
 
@@ -181,6 +182,28 @@ def format_value(value: Any, max_len: int = 120) -> str:
     return s
 
 
+def format_field_value(field: str, value: Any, max_len: int = 120) -> str:
+    """変更表向けに値を短く整形する。"""
+    if field == "fullst" and isinstance(value, list):
+        parts = []
+        for item in value[:6]:
+            if not isinstance(item, dict):
+                parts.append(format_value(item, max_len=40))
+                continue
+            name = item.get("name", "")
+            level = item.get("level", "")
+            if "points" not in item:
+                points_text = "未設定"
+            else:
+                points = item.get("points", None)
+                points_text = "null" if points is None else str(points)
+            parts.append(f"{name} Lv{level}:{points_text}")
+        if len(value) > 6:
+            parts.append(f"他{len(value) - 6}件")
+        return _escape_md(f"{len(value)}件: " + " / ".join(parts))
+    return format_value(value, max_len=max_len)
+
+
 def format_change_inline(
     name: str, changes: List[Tuple[str, str, Any, Any]], max_items: int = 5
 ) -> str:
@@ -204,6 +227,148 @@ def format_change_inline(
         parts.append(f"他{len(changes) - max_items}件")
     escaped_name = _escape_md(name)
     return f"{escaped_name}: {', '.join(parts)}"
+
+
+def level_sort_key(name: str) -> tuple[int, str]:
+    match = re.search(r"_LV(\d+)$", name)
+    if match:
+        return int(match.group(1)), name
+    return 999, name
+
+
+def level_label(name: str) -> str:
+    match = re.search(r"_LV(\d+)$", name)
+    return f"LV{match.group(1)}" if match else "LV不明"
+
+
+def append_table(lines: List[str], headers: List[str], rows: List[List[str]]) -> None:
+    lines.append("| " + " | ".join(headers) + " |")
+    lines.append("| " + " | ".join("---" for _ in headers) + " |")
+    if rows:
+        for row in rows:
+            lines.append("| " + " | ".join(row) + " |")
+    else:
+        lines.append(
+            "| "
+            + " | ".join("なし" if i == 0 else "" for i in range(len(headers)))
+            + " |"
+        )
+
+
+def append_counter_table(
+    lines: List[str], counter: Counter[str], limit: int = 20
+) -> None:
+    rows = [
+        [_escape_md(key), str(count)]
+        for key, count in sorted(counter.items(), key=lambda x: (-x[1], x[0]))[:limit]
+    ]
+    append_table(lines, ["項目", "件数"], rows)
+
+
+def record_table_row(name: str, rec: Dict[str, Any]) -> List[str]:
+    slots = [rec.get(key, "") for key in ("近スロット", "中スロット", "遠スロット")]
+    slots_text = "" if all(v == "" for v in slots) else "/".join(str(v) for v in slots)
+    return [
+        _escape_md(name),
+        format_value(rec.get("属性", "")),
+        format_value(rec.get("コスト", "")),
+        format_value(rec.get("HP", "")),
+        format_value(rec.get("スピード", "")),
+        format_value(rec.get("高速移動", "")),
+        format_value(rec.get("スラスター", "")),
+        format_value(rec.get("射撃補正", "")),
+        format_value(rec.get("格闘補正", "")),
+        _escape_md(slots_text),
+        str(len(rec.get("fullst") or [])),
+    ]
+
+
+def append_records_by_level_table(
+    lines: List[str],
+    title: str,
+    names: List[str],
+    records: Dict[str, Dict[str, Any]],
+    list_limit: int,
+) -> None:
+    lines.append(f"## {title}")
+    lines.append("")
+    lines.append(f"- 件数: {len(names)}")
+    lines.append("")
+    if not names:
+        lines.append("該当なし")
+        lines.append("")
+        return
+
+    shown = sorted(names, key=level_sort_key)[:list_limit]
+    for lv in sorted(
+        {level_label(name) for name in shown},
+        key=lambda x: int(x[2:]) if x[2:].isdigit() else 999,
+    ):
+        group = [name for name in shown if level_label(name) == lv]
+        lines.append(f"### {lv}")
+        append_table(
+            lines,
+            [
+                "MS名",
+                "属性",
+                "コスト",
+                "HP",
+                "スピード",
+                "高速移動",
+                "スラスター",
+                "射撃",
+                "格闘",
+                "スロット(近/中/遠)",
+                "fullst",
+            ],
+            [record_table_row(name, records[name]) for name in group],
+        )
+        lines.append("")
+    if len(names) > list_limit:
+        lines.append(f"...（残り {len(names) - list_limit} 件）")
+        lines.append("")
+
+
+def append_changed_records_table(
+    lines: List[str],
+    changed_records_detail: List[Tuple[str, List[Tuple[str, str, Any, Any]]]],
+    list_limit: int,
+) -> None:
+    lines.append("## 変更レコード一覧")
+    lines.append("")
+    lines.append(f"- 件数: {len(changed_records_detail)}")
+    lines.append("")
+    if not changed_records_detail:
+        lines.append("該当なし")
+        lines.append("")
+        return
+
+    sorted_changed = sorted(changed_records_detail, key=lambda x: level_sort_key(x[0]))
+    shown = sorted_changed[:list_limit]
+    for lv in sorted(
+        {level_label(name) for name, _ in shown},
+        key=lambda x: int(x[2:]) if x[2:].isdigit() else 999,
+    ):
+        group = [(name, changes) for name, changes in shown if level_label(name) == lv]
+        rows: List[List[str]] = []
+        for name, changes in group:
+            for op, field, old_val, new_val in changes:
+                if op == "added":
+                    old_text = "追加"
+                    new_text = format_field_value(field, new_val)
+                elif op == "removed":
+                    old_text = format_field_value(field, old_val)
+                    new_text = "削除"
+                else:
+                    old_text = format_field_value(field, old_val)
+                    new_text = format_field_value(field, new_val)
+                rows.append([_escape_md(name), _escape_md(field), old_text, new_text])
+        lines.append(f"### {lv}")
+        append_table(lines, ["MS名", "項目", "変更前", "変更後"], rows)
+        lines.append("")
+    if len(sorted_changed) > list_limit:
+        lines.append(f"...（残り {len(sorted_changed) - list_limit} 件）")
+        lines.append("")
 
 
 def build_report_lines(
@@ -255,7 +420,9 @@ def build_report_lines(
     added_keys = sorted(new_keys - old_keys)
     removed_keys = sorted(old_keys - new_keys)
 
-    changed_fields, added_fields, removed_fields = diff_field_counts(old_index, new_index)
+    changed_fields, added_fields, removed_fields = diff_field_counts(
+        old_index, new_index
+    )
     added_records = sorted(set(new_index.keys()) - set(old_index.keys()))
     removed_records = sorted(set(old_index.keys()) - set(new_index.keys()))
     changed_records_detail = get_changed_records_detail(old_index, new_index)
@@ -263,9 +430,7 @@ def build_report_lines(
     now = generated_at or datetime.now()
     out_date = now.strftime("%Y%m%d")
     out_dt = now.strftime("%Y-%m-%d %H:%M:%S")
-    summary = (
-        f"records: {old_count} -> {new_count} | +{added_count} -{removed_count} ~{changed_count}"
-    )
+    summary = f"records: {old_count} -> {new_count} | +{added_count} -{removed_count} ~{changed_count}"
 
     lines: List[str] = []
     lines.append(f"# msData 差分レポート ({out_date})")
@@ -274,7 +439,9 @@ def build_report_lines(
     lines.append(f"- 比較対象: `{old_label}` → `{new_label}`")
     lines.append("")
     lines.append("## サマリ")
-    lines.append(f"- レコード数: {old_count} → {new_count} | +{added_count} -{removed_count} ~{changed_count}")
+    lines.append(
+        f"- レコード数: {old_count} → {new_count} | +{added_count} -{removed_count} ~{changed_count}"
+    )
     lines.append(
         f"- グローバル項目数: {len(old_keys)} → {len(new_keys)} | +{len(added_keys)} -{len(removed_keys)}"
     )
@@ -288,42 +455,21 @@ def build_report_lines(
     )
     lines.append("")
     lines.append("## 変更項目の頻度（上位）")
-    lines.extend(format_top(changed_fields))
-    if not changed_fields:
-        lines.append("- 変更なし")
+    append_counter_table(lines, changed_fields)
     lines.append("")
     lines.append("## レコード単位で新規追加された項目（頻度）")
-    lines.extend(format_top(added_fields))
-    if not added_fields:
-        lines.append("- 追加なし")
+    append_counter_table(lines, added_fields)
     lines.append("")
     lines.append("## レコード単位で削除された項目（頻度）")
-    lines.extend(format_top(removed_fields))
-    if not removed_fields:
-        lines.append("- 削除なし")
+    append_counter_table(lines, removed_fields)
     lines.append("")
-    lines.append("## 追加レコード一覧")
-    lines.append(f"- 件数: {len(added_records)}")
-    add_list, add_truncated = format_list(added_records, list_limit)
-    lines.extend(add_list)
-    if add_truncated:
-        lines.append(f"  - ...（残り {len(added_records) - list_limit} 件）")
-    lines.append("")
-    lines.append("## 削除レコード一覧")
-    lines.append(f"- 件数: {len(removed_records)}")
-    del_list, del_truncated = format_list(removed_records, list_limit)
-    lines.extend(del_list)
-    if del_truncated:
-        lines.append(f"  - ...（残り {len(removed_records) - list_limit} 件）")
-    lines.append("")
-    lines.append("## 変更レコード一覧")
-    lines.append(f"- 件数: {len(changed_records_detail)}")
-    sorted_changed = sorted(changed_records_detail)
-    for name, changes in sorted_changed[:list_limit]:
-        lines.append(f"  - {format_change_inline(name, changes)}")
-    if len(sorted_changed) > list_limit:
-        lines.append(f"  - ...（残り {len(sorted_changed) - list_limit} 件）")
-    lines.append("")
+    append_records_by_level_table(
+        lines, "追加レコード一覧", added_records, new_index, list_limit
+    )
+    append_records_by_level_table(
+        lines, "削除レコード一覧", removed_records, old_index, list_limit
+    )
+    append_changed_records_table(lines, changed_records_detail, list_limit)
     return lines, summary
 
 

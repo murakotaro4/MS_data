@@ -106,7 +106,9 @@ class CacheHTTP:
                 ttl_ok = False
 
         # オフライン or TTL内: キャッシュ優先（force は TTL 判定を無視）
-        if (self.cfg.no_network or (ttl_ok and not self.cfg.force)) and html_path.exists():
+        if (
+            self.cfg.no_network or (ttl_ok and not self.cfg.force)
+        ) and html_path.exists():
             text = html_path.read_text(encoding="utf-8")
             if not meta.get("content_sha256"):
                 meta["content_sha256"] = self._sha256_text(text)
@@ -141,7 +143,7 @@ class CacheHTTP:
             text = html_path.read_text(encoding="utf-8")
             prev_sem = meta.get("semantic_sha256")
             cur_sem = _semantic_sha256(text)
-            semantic_changed = (prev_sem != cur_sem)
+            semantic_changed = prev_sem != cur_sem
             meta.update(
                 {
                     "url": url,
@@ -152,7 +154,9 @@ class CacheHTTP:
                     "semantic_sha256": cur_sem,
                     "semantic_changed": semantic_changed,
                     "last_semantic_change_at": (
-                        now.isoformat() if semantic_changed else meta.get("last_semantic_change_at")
+                        now.isoformat()
+                        if semantic_changed
+                        else meta.get("last_semantic_change_at")
                     ),
                 }
             )
@@ -164,7 +168,7 @@ class CacheHTTP:
         # 200: 新規または内容変更
         cur_sem = _semantic_sha256(text)
         prev_sem = meta.get("semantic_sha256")
-        semantic_changed = (prev_sem != cur_sem)
+        semantic_changed = prev_sem != cur_sem
         meta_new = {
             "url": url,
             "fetched_at": now.isoformat(),
@@ -176,7 +180,9 @@ class CacheHTTP:
             "semantic_sha256": cur_sem,
             "semantic_changed": semantic_changed,
             "last_semantic_change_at": (
-                now.isoformat() if semantic_changed else meta.get("last_semantic_change_at")
+                now.isoformat()
+                if semantic_changed
+                else meta.get("last_semantic_change_at")
             ),
         }
         html_path.write_text(text, encoding="utf-8")
@@ -209,7 +215,7 @@ def _extract_semantic_text(html: str) -> str:
         c.extract()
 
     # 2) コメント/掲示板ブロックの除去（見出し以降など）
-    def decompose_if_noise(tag) -> None:
+    def decompose_if_noise(tag, *, text_markers: bool = False) -> None:
         if tag is None or not hasattr(tag, "get_text") or not hasattr(tag, "get"):
             return
         txt = ""
@@ -225,10 +231,10 @@ def _extract_semantic_text(html: str) -> str:
             ident = ((tag.get("id") or "") + " " + " ".join(cls)).lower()
         except Exception:
             ident = ""
-        if (
-            (txt and ("コメント" in txt or "掲示板" in txt))
-            or re.search(r"comment|plugin[_-]?comment|bbs|lastmod|recent|counter|sns|social|tweet|footer|foot", ident)
-        ):
+        if re.search(
+            r"comment|plugin[_-]?comment|bbs|lastmod|recent|counter|sns|social|tweet|footer|foot",
+            ident,
+        ) or (text_markers and txt and ("コメント" in txt or "掲示板" in txt)):
             tag.decompose()
 
     for h in soup.find_all(["h2", "h3", "h4"]):
@@ -240,7 +246,7 @@ def _extract_semantic_text(html: str) -> str:
                 nxt = cur.find_next_sibling()
                 if not nxt or (getattr(nxt, "name", "").startswith("h")):
                     break
-                decompose_if_noise(nxt)
+                decompose_if_noise(nxt, text_markers=True)
                 cur = nxt
             # 見出し自身も除去
             h.decompose()
