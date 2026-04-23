@@ -56,6 +56,7 @@ def test_parse_details_tr5_sparse_fullst_keeps_lv4_record():
 
     lv3_fullst = per_level[3]["fullst"]
     assert [entry["name"] for entry in lv3_fullst] == [
+        "AD-PA",
         "シールド構造強化",
         "プロペラントタンク",
         "複合拡張パーツスロット",
@@ -63,6 +64,7 @@ def test_parse_details_tr5_sparse_fullst_keeps_lv4_record():
         "AD-PA",
     ]
     assert [entry["points"] for entry in lv3_fullst] == [
+        None,
         1260,
         1890,
         2520,
@@ -71,5 +73,19 @@ def test_parse_details_tr5_sparse_fullst_keeps_lv4_record():
     ]
 
     lv4_fullst = per_level[4]["fullst"]
-    assert [entry["name"] for entry in lv4_fullst] == ["AD-PA"]
-    assert [entry["points"] for entry in lv4_fullst] == [630]
+    assert [entry["name"] for entry in lv4_fullst] == [
+        "シールド構造強化",
+        "プロペラントタンク",
+        "複合拡張パーツスロット",
+        "シールド構造強化",
+        "AD-PA",
+        "AD-PA",
+    ]
+    assert [entry["points"] for entry in lv4_fullst] == [
+        None,
+        None,
+        None,
+        None,
+        None,
+        630,
+    ]

@@ -279,6 +279,66 @@ def test_fullst_skip_missing_points_per_level():
     assert fullst[0]["points"] == 1100
 
 
+def test_fullst_fallback_when_upper_level_cells_are_blank():
+    """上位Lvの強化値セルが空欄の場合、直前Lvの構成を points: None で補完する。"""
+    html = """
+    <html><head><title>テスト機体</title></head>
+    <body>
+      <div id="table_hanyou">
+        <table>
+          <thead>
+            <tr><th></th><th>LV1</th><th>LV2</th></tr>
+          </thead>
+          <tbody>
+            <tr><th>機体HP</th><td>10000</td><td>11000</td></tr>
+            <tr><th>スピード</th><td>120</td><td>120</td></tr>
+            <tr><th>スラスター</th><td>60</td><td>62</td></tr>
+            <tr><th>高速移動</th><td>180</td><td>182</td></tr>
+            <tr><th>射撃補正</th><td>15</td><td>17</td></tr>
+            <tr><th>格闘補正</th><td>10</td><td>12</td></tr>
+            <tr><th>耐ビーム補正</th><td>8</td><td>9</td></tr>
+            <tr><th>耐実弾補正</th><td>10</td><td>11</td></tr>
+            <tr><th>耐格闘補正</th><td>6</td><td>7</td></tr>
+            <tr><th>旋回（地上）[度/秒]</th><td>75</td><td>76</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>パーツスロット</h3>
+      <table>
+        <tr><th>近距離</th><td>8</td><td>9</td></tr>
+        <tr><th>中距離</th><td>6</td><td>7</td></tr>
+        <tr><th>遠距離</th><td>4</td><td>5</td></tr>
+      </table>
+
+      <h2>強化リスト情報</h2>
+      <table>
+        <tr>
+          <th>強化リスト名</th>
+          <th>リストLv</th>
+          <th>LV1</th>
+          <th>LV2</th>
+          <th>効果</th>
+        </tr>
+        <tr><th>シールド構造強化</th><th>Lv1</th><td>450</td><td></td><td>効果:+100</td></tr>
+        <tr><th>複合拡張パーツスロット</th><th>Lv1</th><td>910</td><td></td><td>効果:+1</td></tr>
+      </table>
+
+      <div id="label_sortie_G_S"></div>
+      <div id="label_env_G_S"></div>
+    </body></html>
+    """
+    per_level = sm.parse_details(html)
+
+    assert per_level[1]["fullst"] == [
+        {"name": "シールド構造強化", "level": 1, "points": 450},
+        {"name": "複合拡張パーツスロット", "level": 1, "points": 910},
+    ]
+    assert per_level[2]["fullst"] == [
+        {"name": "シールド構造強化", "level": 1, "points": None},
+        {"name": "複合拡張パーツスロット", "level": 1, "points": None},
+    ]
+
+
 def test_fullst_same_section_upgrade_does_not_copy_previous_level():
     """同じ通常枠で上位リストLvが明記された場合、旧Lvを null 補完しない。"""
     html = """

@@ -1,11 +1,11 @@
 {
   "schema_version": "1",
-  "generated_at": "2026-04-23T12:22:11Z",
+  "generated_at": "2026-04-23T12:39:38Z",
   "report_date": "20260423",
   "git": {
     "repo": "murakotaro4/MS_data",
     "branch": "main",
-    "head_sha": "696435882ea89071f6ae4c98da4d62c14b0e938e"
+    "head_sha": "3cf6638e9ba5e8b7cc5cf5311a593cfef98403af"
   },
   "github": {
     "run_id": "local",
@@ -27,34 +27,34 @@
     },
     "details_jsonl": {
       "path": "cache/details.jsonl",
-      "sha256": "fae341a0b2264d700d473d519d27e5c1cff057ae585c7c71e0d0f4ee6f2e914e",
-      "size_bytes": 1908682,
+      "sha256": "4959215383258d807f2ad4fc0b42a88a0cf273e42d0276800761e127cd2f8478",
+      "size_bytes": 1930806,
       "record_count": 1635
     },
     "details_json": {
       "path": "cache/details.json",
-      "sha256": "9b294e7c2d3e51e5e139c83b712526aee1772d57d24fed65914c482e57866ee7",
-      "size_bytes": 2488425,
+      "sha256": "21ff21d04f3aa543eb17c4e88feb950326c206f979179b7d9a82e34810762dd4",
+      "size_bytes": 2524399,
       "record_count": 1635
     },
     "html_cache": {
       "path": "cache/html",
-      "sha256": "e740ee2a10835b14374110477401fddb70eb96e244f408a06f921bd37605f174",
+      "sha256": "b6b7819502af8cba80fd8599e4d2105039b19c00858cf58e9fd1bd01a26d08b2",
       "file_count": 1148,
-      "size_bytes": 170007873
+      "size_bytes": 170008445
     }
   },
   "outputs": {
     "msdata_json": {
       "path": "msData.json",
-      "sha256": "e3e28504ad6f1165fd2db7771ce00ad9a48f2e9bfb09ac1ff937ad7df6cc25c1",
-      "size_bytes": 2489618,
+      "sha256": "b185d35af600cffa05e7b0a81cdf80da903e7828459482adb9d720f2846fa508",
+      "size_bytes": 2525592,
       "record_count": 1636
     },
     "diff_report": {
       "path": "reports/diff_msdata_20260423.md",
-      "sha256": "72a092071dce99acc57dddb3447b0e1d4cfc815eaa696f47b95304bf812953cf",
-      "size_bytes": 20421
+      "sha256": "113bcc42a86db66bf2a2265e7188be16ce72ceeb356c5676841ceca2b5075c28",
+      "size_bytes": 16553
     }
   },
   "artifact": {

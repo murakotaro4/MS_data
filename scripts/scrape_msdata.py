@@ -912,10 +912,7 @@ def parse_fullst_by_ms_level(
                 val = to_int(raw_value)
                 if val is not None:
                     points_by_ms[ms_lv] = val
-                elif (
-                    raw_value in {"", "?", "？", "-", "－"}
-                    and "強行出撃" not in current_name
-                ):
+                elif raw_value in {"-", "－"} and "強行出撃" not in current_name:
                     blocked_ms_levels.add(ms_lv)
 
         if (
