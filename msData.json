@@ -60447,32 +60447,32 @@
       {
         "name": "耐格闘装甲補強",
         "level": 1,
-        "points": null
+        "points": 870
       },
       {
         "name": "AD-PA",
         "level": 1,
-        "points": null
+        "points": 1740
       },
       {
         "name": "フレーム補強",
         "level": 1,
-        "points": null
+        "points": 2110
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 2490
       },
       {
         "name": "耐格闘装甲補強",
         "level": 4,
-        "points": null
+        "points": 4980
       },
       {
         "name": "AD-PA",
         "level": 4,
-        "points": null
+        "points": 7470
       }
     ]
   },
@@ -73171,32 +73171,32 @@
       {
         "name": "耐格闘装甲補強",
         "level": 1,
-        "points": null
+        "points": 920
       },
       {
         "name": "AD-PA",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 1850
       },
       {
         "name": "フレーム補強",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 2250
       },
       {
         "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 2650
       },
       {
         "name": "耐格闘装甲補強",
         "level": 4,
-        "points": null
+        "points": 5300
       },
       {
         "name": "AD-PA",
         "level": 4,
-        "points": null
+        "points": 7950
       }
     ]
   },
