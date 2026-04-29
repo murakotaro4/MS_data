@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-04-29T09:44:31Z",
+  "report_date": "20260429",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "a7185f619aa13c1ef7fb1804f812ba961704935c"
+  },
+  "github": {
+    "run_id": "25101882521",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "1ddbcd47888b6200e88d261acf297b4d41d3e9f5f3b67740f897a13d0bfe2352",
+      "size_bytes": 140589,
+      "record_count": 571
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "8c083d5d9868583d7898640cfb422ad30df8ee2b0cf3ca0ce5f4315e3505300d",
+      "size_bytes": 15019,
+      "record_count": 13
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "9de3059003624ac187d078a7b6c324b7631fd2f359bf73dd8b298688ef292381",
+      "size_bytes": 19742,
+      "record_count": 13
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "514111414a320a909c794b9f29473d797d3b5adfbb928a7691772a30304f153a",
+      "file_count": 10,
+      "size_bytes": 2032311
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "5949c0c4ba240e278587ac686794570be60f55d9bd0678446d55843cd8f1fbd8",
+      "size_bytes": 2528490,
+      "record_count": 1638
+    },
+    "diff_report": {
+      "path": "reports/diff_msdata_20260429.md",
+      "sha256": "1c26a6fdaa950493fd04496426068007e89e8a2d1264eca661d670d2eb797a19",
+      "size_bytes": 1074
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260429-run-25101882521",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260429-run-25101882521",
+    "asset_name": "raw_snapshot_20260429_run25101882521.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260429-run-25101882521"
+  }
+}
