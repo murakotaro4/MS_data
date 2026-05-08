@@ -91717,36 +91717,37 @@
     "格闘判定力": "中",
     "レアリティ": "☆☆☆",
     "必要階級": "",
+    "必要リサイクルチケット": 380,
     "fullst": [
       {
         "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 770
       },
       {
         "name": "AD-FCS",
         "level": 1,
-        "points": null
+        "points": 1550
       },
       {
         "name": "シールド構造強化",
         "level": 1,
-        "points": null
+        "points": 2330
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 3110
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 4,
-        "points": null
+        "points": 6220
       },
       {
         "name": "AD-FCS",
         "level": 4,
-        "points": null
+        "points": 9330
       }
     ]
   },
@@ -102146,6 +102147,7 @@
     "格闘判定力": "中",
     "レアリティ": "☆☆",
     "必要階級": "",
+    "必要リサイクルチケット": 190,
     "fullst": [
       {
         "name": "耐実弾装甲補強",
@@ -102340,6 +102342,7 @@
     "格闘判定力": "中",
     "レアリティ": "☆☆",
     "必要階級": "",
+    "必要リサイクルチケット": 190,
     "fullst": [
       {
         "name": "AD-PA",
@@ -103605,32 +103608,32 @@
       {
         "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 710
       },
       {
         "name": "耐格闘装甲補強",
         "level": 1,
-        "points": null
+        "points": 1420
       },
       {
         "name": "AD-PA",
         "level": 1,
-        "points": null
+        "points": 2130
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 2850
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 4,
-        "points": null
+        "points": 5700
       },
       {
         "name": "AD-PA",
         "level": 4,
-        "points": null
+        "points": 8550
       }
     ]
   },
