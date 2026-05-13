@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-05-13T09:56:12Z",
+  "report_date": "20260513",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "e648ce3dab02ac9fa275a7e3f8b931022c9c6cc5"
+  },
+  "github": {
+    "run_id": "25791857708",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "136684aba651bd8ace88f5726ef08ebd51f45ad8c98466fe314d9a48f848fa77",
+      "size_bytes": 140570,
+      "record_count": 571
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "fa5d61189cad9cd507f96a6a082ad45a09998de6eb1d05331092f9fa6c4dc737",
+      "size_bytes": 9468,
+      "record_count": 8
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "7f47a120fe2096a95e0923db2eb4464fb488b0a724c49a0aa2d088189d7f7606",
+      "size_bytes": 12370,
+      "record_count": 8
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "e3a212012f447e0a5c57aa374080220a5a43d6a11758432a3e117b9d2d4a6923",
+      "file_count": 8,
+      "size_bytes": 1756344
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "4d2116a8043a9eb508d1e1fee8210e20ad77ee209e386a258cbad93d8ee89126",
+      "size_bytes": 2531958,
+      "record_count": 1640
+    },
+    "diff_report": {
+      "path": "reports/diff_msdata_20260513.md",
+      "sha256": "3ce4124200df3a2e1a8b0547fab692022a533e0162e277e2c714e4fdee1a409a",
+      "size_bytes": 924
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260513-run-25791857708",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260513-run-25791857708",
+    "asset_name": "raw_snapshot_20260513_run25791857708.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260513-run-25791857708"
+  }
+}
