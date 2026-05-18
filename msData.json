@@ -80085,32 +80085,32 @@
       {
         "name": "AD-FCS",
         "level": 1,
-        "points": null
+        "points": 550
       },
       {
         "name": "耐格闘装甲補強",
         "level": 1,
-        "points": null
+        "points": 1100
       },
       {
         "name": "フレーム補強",
         "level": 1,
-        "points": null
+        "points": 1650
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 2750
       },
       {
         "name": "耐格闘装甲補強",
         "level": 4,
-        "points": null
+        "points": 5500
       },
       {
         "name": "AD-FCS",
         "level": 4,
-        "points": null
+        "points": 8250
       }
     ]
   },
@@ -91914,7 +91914,7 @@
     "近スロット": 20,
     "中スロット": 20,
     "遠スロット": 12,
-    "カウンター": "通常：連続格闘 レイズ：特殊",
+    "カウンター": "通常：連続格闘 高性能：特殊",
     "再出撃時間": 12,
     "格闘判定力": "強",
     "レアリティ": "☆☆☆☆",
