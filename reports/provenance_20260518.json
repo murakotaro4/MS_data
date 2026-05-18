@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-05-18T10:30:18Z",
+  "report_date": "20260518",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "3b232e25d8adc45c92649192e69e024206efda9c"
+  },
+  "github": {
+    "run_id": "26027991464",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "935be6381ac32455fe944f2b109fab3309adbddffecaf8a68eeca797d63b3e9f",
+      "size_bytes": 140808,
+      "record_count": 572
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "7774cbfe579b7b93cca8adb51c099768098e7c057932242a085f6eadbe729d8b",
+      "size_bytes": 23866,
+      "record_count": 20
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "cea0b5d095cd035dd9bc11cf02ebf5e3c597d79023738210edcf26d9ad579871",
+      "size_bytes": 31172,
+      "record_count": 20
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "39cf6f858b3547993248b01d3e36431bb4ffb9364bd726acb413e800964fa215",
+      "file_count": 16,
+      "size_bytes": 3010224
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "583fc21798f44915eb554a1df9529b2733df0acffacd27a4a386b1d220b26a6e",
+      "size_bytes": 2533652,
+      "record_count": 1641
+    },
+    "diff_report": {
+      "path": "reports/diff_msdata_20260518.md",
+      "sha256": "e43c0cc7d6a3b73b5869629f741f589144f891bdd566e9b735c245f6c33d853f",
+      "size_bytes": 1564
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260518-run-26027991464",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260518-run-26027991464",
+    "asset_name": "raw_snapshot_20260518_run26027991464.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260518-run-26027991464"
+  }
+}
