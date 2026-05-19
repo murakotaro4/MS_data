@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-05-19T10:19:10Z",
+  "report_date": "20260519",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "d1c20c880fd4c0b871c9687e04910cc74de382fa"
+  },
+  "github": {
+    "run_id": "26090987177",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "aa2401339cd746159a6558e8ebade81849279f49f5c31d4e80b555ee3df1e381",
+      "size_bytes": 140809,
+      "record_count": 572
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "3de217f0f89b19c18ff6bd7cce284be26a9af5346bbe2ae5b6590a844a59cdd6",
+      "size_bytes": 30848,
+      "record_count": 26
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "fa86169361a37b42998d7dcce4eacabb38b68c71eb05abd237ae3882ea486718",
+      "size_bytes": 40300,
+      "record_count": 26
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "6fa5b61782b8c2b8f881525bd13f7f9339dfdc0893f36c2e8f45a63354d1e66e",
+      "file_count": 22,
+      "size_bytes": 3922168
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "416bf12bc5b1599262c666bd9c9552ca97592b15d7997498571a396f5fc178ba",
+      "size_bytes": 2533651,
+      "record_count": 1641
+    },
+    "diff_report": {
+      "path": "reports/diff_msdata_20260519.md",
+      "sha256": "87450a9838eeddb71e34a0f381f9319efe2d76043208ca1969ea16061cd9f7a9",
+      "size_bytes": 926
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260519-run-26090987177",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260519-run-26090987177",
+    "asset_name": "raw_snapshot_20260519_run26090987177.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260519-run-26090987177"
+  }
+}
