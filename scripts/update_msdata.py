@@ -5,6 +5,7 @@ msData.json 更新ユーティリティ（uv 前提）
 機能
 - 入力 JSON（配列のレコード群）を読み込み、キー表記揺れを正規化
 - 既存 msData とのマージ・重複（MS名）解消・ソート
+- 公式調整オーバーライドを適用し、未反映の取得元による巻き戻りを防止
 - 差分サマリを表示しつつ JSON を整形保存（UTF-8, 2スペース, ソートキー）
 
 使用例
@@ -17,7 +18,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, Iterable, List, Tuple, TypedDict
 from scripts.label_utils import apply_key_aliases
 import re
 
@@ -66,6 +67,13 @@ CANONICAL_ORDER = (
 )
 
 MS_NAME_WITH_LEVEL = re.compile(r"^(.*)_LV(\d+)$")
+OFFICIAL_OVERRIDES_DIR = Path("data/official_overrides")
+OFFICIAL_OVERRIDE_VALUE_KEYS = set(CANONICAL_ORDER) - {"MS名"}
+
+
+class OfficialOverrideValue(TypedDict, total=False):
+    value: Any
+    stale_value: Any
 
 
 def normalize_ms_base_name(name: str) -> str:
@@ -129,11 +137,7 @@ def normalize_record(rec: Dict[str, Any]) -> Dict[str, Any]:
         normalized_name = normalize_ms_name(name)
         rec["MS名"] = normalized_name
         base_name = extract_ms_base_name(normalized_name)
-        if (
-            base_name
-            and base_name in INDEX_URL_MAP
-            and "wiki_url" not in rec
-        ):
+        if base_name and base_name in INDEX_URL_MAP and "wiki_url" not in rec:
             rec["wiki_url"] = INDEX_URL_MAP[base_name]
     # 別名キーを正規キーへ移し替え（既存が無い場合のみ）
     rec = apply_key_aliases(rec)
@@ -226,6 +230,117 @@ def merge_by_msname(records: Iterable[Dict[str, Any]]) -> Dict[str, Dict[str, An
     return merged
 
 
+def load_official_overrides(
+    directory: Path = OFFICIAL_OVERRIDES_DIR,
+) -> Dict[str, Dict[str, OfficialOverrideValue]]:
+    """公式調整由来の一時オーバーライドを読み込む。
+
+    形式:
+    {
+      "schema_version": "1",
+      "active": true,
+      "overrides": [
+        {
+          "MS名": "ザクⅢ改_LV1",
+          "values": {"HP": 27000},
+          "stale_values": {"HP": 23500}
+        }
+      ]
+    }
+    """
+
+    if not directory.exists():
+        return {}
+    if not directory.is_dir():
+        raise ValueError(f"official overrides path is not a directory: {directory}")
+
+    overrides: Dict[str, Dict[str, OfficialOverrideValue]] = {}
+    for path in sorted(directory.glob("*.json")):
+        data = load_json(path)
+        if not isinstance(data, dict):
+            raise ValueError(f"official override file must be an object: {path}")
+        if data.get("active", True) is False:
+            continue
+        entries = data.get("overrides", data.get("records", []))
+        if not isinstance(entries, list):
+            raise ValueError(f"official override entries must be a list: {path}")
+
+        for index, entry in enumerate(entries):
+            if not isinstance(entry, dict):
+                raise ValueError(
+                    f"official override entry must be an object: {path}#{index}"
+                )
+            raw_name = entry.get("MS名")
+            if not isinstance(raw_name, str) or not raw_name.strip():
+                raise ValueError(
+                    f"official override entry missing MS名: {path}#{index}"
+                )
+            raw_values = entry.get("values")
+            if not isinstance(raw_values, dict) or not raw_values:
+                raise ValueError(
+                    f"official override entry values must be a non-empty object: "
+                    f"{path}#{index}"
+                )
+
+            values = apply_key_aliases(dict(raw_values))
+            invalid_keys = sorted(set(values) - OFFICIAL_OVERRIDE_VALUE_KEYS)
+            if invalid_keys:
+                raise ValueError(
+                    f"official override entry has invalid keys: {path}#{index} "
+                    f"{invalid_keys}"
+                )
+
+            raw_stale_values = entry.get("stale_values", {})
+            if not isinstance(raw_stale_values, dict):
+                raise ValueError(
+                    f"official override entry stale_values must be an object: "
+                    f"{path}#{index}"
+                )
+            stale_values = apply_key_aliases(dict(raw_stale_values))
+            invalid_stale_keys = sorted(set(stale_values) - set(values))
+            if invalid_stale_keys:
+                raise ValueError(
+                    f"official override stale_values must match values keys: "
+                    f"{path}#{index} {invalid_stale_keys}"
+                )
+
+            name = normalize_ms_name(raw_name)
+            target = overrides.setdefault(name, {})
+            for key, value in values.items():
+                spec: OfficialOverrideValue = {"value": value}
+                if key in stale_values:
+                    spec["stale_value"] = stale_values[key]
+                target[key] = spec
+    return overrides
+
+
+def apply_official_overrides(
+    records_by_name: Dict[str, Dict[str, Any]],
+    overrides: Dict[str, Dict[str, OfficialOverrideValue]],
+) -> int:
+    """既存/取得済みレコードへ公式オーバーライドを適用する。
+
+    指定された項目だけを書き換えるため、atwiki 側で更新済みの別項目は
+    通常どおり取り込まれる。
+    """
+
+    changed = 0
+    for name, values in overrides.items():
+        record = records_by_name.get(name)
+        if record is None:
+            continue
+        for key, spec in values.items():
+            value = spec["value"]
+            current = record.get(key)
+            if current == value:
+                continue
+            if "stale_value" in spec and current != spec["stale_value"]:
+                continue
+            record[key] = value
+            changed += 1
+    return changed
+
+
 def sort_records(recs: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
     def key(r: Dict[str, Any]) -> Tuple[int, str]:
         cost = r.get("コスト")
@@ -279,6 +394,17 @@ def main(argv: List[str] | None = None) -> int:
         action="store_true",
         help="既存 msData.json を正規化/マージして上書き",
     )
+    ap.add_argument(
+        "--official-overrides-dir",
+        type=Path,
+        default=OFFICIAL_OVERRIDES_DIR,
+        help="公式調整オーバーライドJSONのディレクトリ",
+    )
+    ap.add_argument(
+        "--no-official-overrides",
+        action="store_true",
+        help="公式調整オーバーライドを適用しない",
+    )
     ap.add_argument("--no-sort", action="store_true", help="配列の並び替えを行わない")
     ap.add_argument("--dry-run", action="store_true", help="書き込みを行わない")
     args = ap.parse_args(argv)
@@ -299,6 +425,20 @@ def main(argv: List[str] | None = None) -> int:
     new_records = list(iter_records_from_files(args.inputs)) if args.inputs else []
     merged_old = merge_by_msname(base_records)
     merged_new = merge_by_msname([*base_records, *new_records])
+
+    if not args.no_official_overrides:
+        try:
+            official_overrides = load_official_overrides(args.official_overrides_dir)
+            changed = apply_official_overrides(merged_new, official_overrides)
+        except Exception as exc:
+            print(f"エラー: 公式調整オーバーライドの適用に失敗: {exc}", file=sys.stderr)
+            return 1
+        if changed:
+            print(
+                "official-overrides: "
+                f"{len(official_overrides)} records / {changed} values applied",
+                file=sys.stderr,
+            )
 
     print(diff_summary(merged_old, merged_new), file=sys.stderr)
 
