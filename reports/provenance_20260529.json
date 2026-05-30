@@ -1,0 +1,93 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-05-30T00:00:56Z",
+  "report_date": "20260529",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "d6455622dbf4da6f58d6230d449199505b1658ac"
+  },
+  "github": {
+    "run_id": "26631850975",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1d",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "2d8f4d452b0db58e23c9e01d46c7503c60d1aefc57de7532babd8adf326328d2",
+      "size_bytes": 141279,
+      "record_count": 574
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "42a75c49f6c7df02ea3298c536110e74bbd1144de0a27798cbb3b65c695d3018",
+      "size_bytes": 1941007,
+      "record_count": 1643
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "2c518541644bf2a722a76e4a97ad42085556cfebf597cec2eddaf6047d99dd2c",
+      "size_bytes": 2537596,
+      "record_count": 1643
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "954c68f5bd3f7abc2813dea3e7ea106d98c27418d38ad2f325c8b65f32b83bfe",
+      "file_count": 1150,
+      "size_bytes": 181073399
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "e449c6cd2bc1bbdf1f2ea4aa233fc44e5fc12405986bed324fe017e42d2a9aa4",
+      "size_bytes": 2538795,
+      "record_count": 1644
+    },
+    "diff_report": {
+      "path": "reports/diff_msdata_20260529.md",
+      "sha256": "7f1a04764c39a2f5070a82eabae3f60041ac4b976608704dc986c4061cb569de",
+      "size_bytes": 12080
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260529-run-26631850975",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260529-run-26631850975",
+    "asset_name": "raw_snapshot_20260529_run26631850975.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260529-run-26631850975"
+  },
+  "manual_sources": [
+    {
+      "url": "https://bo2.ggame.jp/jp/info/?p=186181",
+      "title": "ユニット関連の調整【汎用タイプ】",
+      "fetched_path": "cache/official_20260528_general.html",
+      "sha256": "f914ee534562deb32617837917010d6a0d798ab1043467c8ce568df9e01fca34",
+      "size_bytes": 208594
+    },
+    {
+      "url": "https://bo2.ggame.jp/jp/info/?p=186185",
+      "title": "ユニット関連の調整【強襲タイプ】",
+      "fetched_path": "cache/official_20260528_raid.html",
+      "sha256": "fc50264d1a9fb312ca64b18100d3a6123d57b0babb903faeee16d2b6eaa3d6e8",
+      "size_bytes": 189343
+    },
+    {
+      "url": "https://bo2.ggame.jp/jp/info/?p=186187",
+      "title": "ユニット関連の調整【支援タイプ】",
+      "fetched_path": "cache/official_20260528_support.html",
+      "sha256": "e94f991e37300338fdc691e343bce101952bd9a632a7cae80f5b85791b8f33e7",
+      "size_bytes": 125256
+    }
+  ],
+  "manual_note": "2026-05-28公式調整のうち、atwiki未反映だった機体性能の明示値をmsData.jsonへ補正。上位LVの個別値が公式本文にない箇所は推測で上書きしない。"
+}
