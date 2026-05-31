@@ -289,6 +289,20 @@ def _positive_int(value: str, default: int) -> int:
     return parsed if parsed > 0 else default
 
 
+def _bool_text(value: str) -> bool:
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _int_or_none(value: str) -> int | None:
+    value = value.strip()
+    if not value:
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
+
+
 def cmd_resolve_target_pr(args: argparse.Namespace) -> int:
     client = GitHubClient(args.repo)
     pulls = client.api_json(
@@ -507,6 +521,81 @@ def cmd_record_stop(args: argparse.Namespace) -> int:
     return 0
 
 
+def build_auto_review_report(args: argparse.Namespace) -> dict[str, Any]:
+    merge_ok = _bool_text(args.merge_ok)
+    merged = _bool_text(args.merged)
+    merge_outcome = getattr(args, "merge_outcome", "") or ""
+    stop_reason = args.stop_reason or "none"
+    if merged:
+        status = "merged"
+        effective_stop_reason = "none"
+    elif merge_ok and merge_outcome == "failure":
+        status = "merge_failed"
+        effective_stop_reason = "merge_failed"
+    elif merge_ok:
+        status = "merge_ready"
+        effective_stop_reason = "none"
+    else:
+        status = "stopped"
+        effective_stop_reason = stop_reason
+
+    return {
+        "schema_version": "1",
+        "generated_at": datetime.now(timezone.utc)
+        .isoformat(timespec="seconds")
+        .replace("+00:00", "Z"),
+        "report_date": args.report_date,
+        "source_run_id": args.run_id,
+        "pr_number": args.pr_number,
+        "head_ref": args.head_ref,
+        "head_sha": args.head_sha,
+        "status": status,
+        "stop_reason": effective_stop_reason,
+        "merge_ok": merge_ok,
+        "merged": merged,
+        "merge_outcome": merge_outcome,
+        "findings": _int_or_none(args.findings),
+        "review_complete": _bool_text(args.review_complete),
+        "review": {
+            "responded": _bool_text(args.responded),
+            "attempts_used": _int_or_none(args.attempts_used),
+            "max_attempts": _int_or_none(args.max_attempts),
+            "attempt_timeout_seconds": _int_or_none(args.attempt_timeout_seconds),
+            "poll_seconds": _int_or_none(args.poll_seconds),
+            "settle_seconds": _int_or_none(args.settle_seconds),
+            "response_attempt": _int_or_none(args.response_attempt),
+            "response_seconds": _int_or_none(args.response_seconds),
+            "trigger_comment_ids": [
+                item.strip()
+                for item in args.trigger_comment_ids.split(",")
+                if item.strip()
+            ],
+            "first_trigger_created_at": args.first_trigger_created_at,
+        },
+    }
+
+
+def cmd_write_report(args: argparse.Namespace) -> int:
+    report = build_auto_review_report(args)
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    append_step_summary(
+        [
+            "### Auto Review Report",
+            f"- status: {report['status']}",
+            f"- stop_reason: {report['stop_reason']}",
+            f"- responded: {str(report['review']['responded']).lower()}",
+            f"- attempts_used: {report['review']['attempts_used']}",
+            f"- report: {args.out}",
+        ],
+        args.step_summary,
+    )
+    print(f"auto review report: {args.out}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -560,6 +649,32 @@ def build_parser() -> argparse.ArgumentParser:
     record.add_argument("--attempt-timeout-seconds", required=True)
     record.add_argument("--step-summary", type=Path, default=None)
     record.set_defaults(func=cmd_record_stop)
+
+    report = sub.add_parser("write-report")
+    report.add_argument("--report-date", required=True)
+    report.add_argument("--run-id", required=True)
+    report.add_argument("--pr-number", required=True)
+    report.add_argument("--head-ref", required=True)
+    report.add_argument("--head-sha", required=True)
+    report.add_argument("--responded", default="")
+    report.add_argument("--attempts-used", default="")
+    report.add_argument("--max-attempts", default="")
+    report.add_argument("--attempt-timeout-seconds", default="")
+    report.add_argument("--poll-seconds", default="")
+    report.add_argument("--settle-seconds", default="")
+    report.add_argument("--response-attempt", default="")
+    report.add_argument("--response-seconds", default="")
+    report.add_argument("--trigger-comment-ids", default="")
+    report.add_argument("--first-trigger-created-at", default="")
+    report.add_argument("--findings", default="")
+    report.add_argument("--review-complete", default="")
+    report.add_argument("--merge-ok", default="")
+    report.add_argument("--merged", default="")
+    report.add_argument("--merge-outcome", default="")
+    report.add_argument("--stop-reason", default="")
+    report.add_argument("--out", type=Path, required=True)
+    report.add_argument("--step-summary", type=Path, default=None)
+    report.set_defaults(func=cmd_write_report)
 
     return parser
 

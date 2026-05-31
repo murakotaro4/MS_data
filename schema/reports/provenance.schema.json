@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/murakotaro4/MS_data/schema/reports/provenance.schema.json",
+  "title": "MS_data provenance report",
+  "type": "object",
+  "required": ["schema_version", "generated_at", "report_date", "git", "github", "params", "inputs", "outputs", "artifact", "release"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {"type": "string", "const": "1"},
+    "generated_at": {"type": "string", "minLength": 1},
+    "report_date": {"type": "string", "pattern": "^\\d{8}$"},
+    "git": {"type": "object", "required": ["repo", "branch", "head_sha"], "additionalProperties": true},
+    "github": {"type": "object", "required": ["run_id", "run_attempt", "workflow", "event_name"], "additionalProperties": true},
+    "params": {"type": "object"},
+    "inputs": {
+      "type": "object",
+      "required": ["index", "details_jsonl", "details_json", "html_cache"],
+      "additionalProperties": true
+    },
+    "outputs": {
+      "type": "object",
+      "required": ["msdata_json", "diff_report"],
+      "additionalProperties": true
+    },
+    "artifact": {"type": "object", "required": ["name", "retention_days"], "additionalProperties": true},
+    "release": {"type": "object", "required": ["tag", "asset_name", "url"], "additionalProperties": true}
+  }
+}

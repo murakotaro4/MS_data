@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/murakotaro4/MS_data/schema/reports/atwiki_quality.schema.json",
+  "title": "MS_data atwiki quality report",
+  "type": "object",
+  "required": ["schema_version", "report_date", "source_run_id", "index", "detail_fetch", "details", "msdata_diff", "warnings"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {"type": "string", "const": "1"},
+    "report_date": {"type": "string", "pattern": "^\\d{8}$"},
+    "source_run_id": {"type": "string", "minLength": 1},
+    "index": {
+      "type": "object",
+      "required": ["total_count", "candidate_count", "full_update", "fast_path", "fallback_reason"],
+      "additionalProperties": true,
+      "properties": {
+        "total_count": {"type": "integer", "minimum": 0},
+        "candidate_count": {"type": "integer", "minimum": 0},
+        "full_update": {"type": "boolean"},
+        "fast_path": {"type": "boolean"},
+        "fallback_reason": {"type": "string"}
+      }
+    },
+    "detail_fetch": {
+      "type": "object",
+      "required": ["attempted_url_count", "successful_url_count", "failed_url_count", "http_status_counts", "conditional_cache_hit_count", "cache_utilization"],
+      "additionalProperties": true,
+      "properties": {
+        "attempted_url_count": {"type": "integer", "minimum": 0},
+        "successful_url_count": {"type": "integer", "minimum": 0},
+        "failed_url_count": {"type": "integer", "minimum": 0},
+        "http_status_counts": {"type": "object"},
+        "conditional_cache_hit_count": {"type": "integer", "minimum": 0},
+        "cache_utilization": {"type": "number", "minimum": 0}
+      }
+    },
+    "details": {
+      "type": "object",
+      "required": ["json_records", "jsonl_records"],
+      "properties": {
+        "json_records": {"type": "integer", "minimum": 0},
+        "jsonl_records": {"type": "integer", "minimum": 0}
+      }
+    },
+    "msdata_diff": {
+      "type": "object",
+      "required": ["old_count", "new_count", "added", "removed", "changed"],
+      "properties": {
+        "old_count": {"type": "integer", "minimum": 0},
+        "new_count": {"type": "integer", "minimum": 0},
+        "added": {"type": "integer", "minimum": 0},
+        "removed": {"type": "integer", "minimum": 0},
+        "changed": {"type": "integer", "minimum": 0}
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "severity", "message", "observed", "threshold"],
+        "additionalProperties": true,
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "severity": {"type": "string", "enum": ["warning"]},
+          "message": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

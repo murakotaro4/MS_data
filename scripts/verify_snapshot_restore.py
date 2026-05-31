@@ -83,11 +83,33 @@ def create_sample_snapshot(root: Path, snapshot_path: Path) -> None:
             "schema_version": "1",
             "report_date": REPORT_DATE,
             "source_run_id": SOURCE_RUN_ID,
+            "index": {
+                "total_count": 1,
+                "candidate_count": 1,
+                "full_update": False,
+                "fast_path": True,
+                "fallback_reason": "none",
+            },
             "detail_fetch": {
                 "attempted_url_count": 1,
                 "successful_url_count": 1,
                 "failed_url_count": 0,
+                "http_status_counts": {"200": 1},
+                "conditional_cache_hit_count": 0,
+                "cache_utilization": 0.0,
             },
+            "details": {
+                "json_records": 1,
+                "jsonl_records": 1,
+            },
+            "msdata_diff": {
+                "old_count": 1,
+                "new_count": 1,
+                "added": 0,
+                "removed": 0,
+                "changed": 0,
+            },
+            "warnings": [],
         },
     )
 

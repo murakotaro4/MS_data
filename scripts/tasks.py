@@ -162,6 +162,7 @@ def task_normalize() -> int:
 def task_ci() -> int:
     for task_name in (
         "validate-report-contract",
+        "validate-generated-reports",
         "validate-official-overrides-schema",
         "verify-snapshot-restore",
         "lint",
@@ -770,6 +771,16 @@ def task_validate_report_contract() -> int:
     return _run_python_module("scripts.validate_report_contract", *args)
 
 
+def task_validate_generated_reports() -> int:
+    return _run_python_module(
+        "scripts.validate_generated_reports",
+        "--reports-dir",
+        _env_str("REPORTS_DIR", "reports") or "reports",
+        "--schema-dir",
+        _env_str("REPORT_SCHEMA_DIR", "schema/reports") or "schema/reports",
+    )
+
+
 TASKS: dict[str, Callable[[], int]] = {
     "help": task_help,
     "setup": task_setup,
@@ -809,6 +820,7 @@ TASKS: dict[str, Callable[[], int]] = {
     "audit-skills": task_audit_skills,
     "preview-params": task_preview_params,
     "validate-report-contract": task_validate_report_contract,
+    "validate-generated-reports": task_validate_generated_reports,
 }
 
 

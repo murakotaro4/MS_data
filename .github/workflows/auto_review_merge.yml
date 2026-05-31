@@ -174,6 +174,51 @@ jobs:
           echo "merge_commit_sha=${merge_commit_sha}" >> "$GITHUB_OUTPUT"
           echo "head_ref=${HEAD_REF}" >> "$GITHUB_OUTPUT"
 
+      - name: Write auto review report
+        if: always() && steps.resolve.outputs.skip == 'false'
+        run: |
+          uv run python -m scripts.auto_review_merge write-report \
+            --report-date "${{ steps.resolve.outputs.report_date }}" \
+            --run-id "${{ steps.prepare.outputs.run_id }}" \
+            --pr-number "${{ steps.resolve.outputs.pr }}" \
+            --head-ref "${{ steps.resolve.outputs.head_ref }}" \
+            --head-sha "${{ steps.resolve.outputs.head_sha }}" \
+            --responded "${{ steps.wait.outputs.responded }}" \
+            --attempts-used "${{ steps.wait.outputs.attempts_used }}" \
+            --max-attempts "${{ steps.wait.outputs.max_attempts }}" \
+            --attempt-timeout-seconds "${{ steps.wait.outputs.attempt_timeout_seconds }}" \
+            --poll-seconds "${{ steps.wait.outputs.poll_seconds }}" \
+            --settle-seconds "${{ steps.wait.outputs.settle_seconds }}" \
+            --response-attempt "${{ steps.wait.outputs.response_attempt }}" \
+            --response-seconds "${{ steps.wait.outputs.response_seconds }}" \
+            --trigger-comment-ids "${{ steps.wait.outputs.trigger_comment_ids }}" \
+            --first-trigger-created-at "${{ steps.wait.outputs.first_trigger_created_at }}" \
+            --findings "${{ steps.gate.outputs.findings }}" \
+            --review-complete "${{ steps.gate.outputs.review_complete }}" \
+            --merge-ok "${{ steps.gate.outputs.merge_ok }}" \
+            --merged "${{ steps.merge.outputs.merged }}" \
+            --merge-outcome "${{ steps.merge.outcome }}" \
+            --stop-reason "${{ steps.gate.outputs.stop_reason }}" \
+            --out "reports/auto_review_${{ steps.resolve.outputs.report_date }}.json" \
+            --step-summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate auto review report
+        if: always() && steps.resolve.outputs.skip == 'false'
+        run: |
+          test -f "reports/auto_review_${{ steps.resolve.outputs.report_date }}.json"
+          uv run python -m scripts.validate_generated_reports \
+            --reports-dir reports \
+            --schema-dir schema/reports
+
+      - name: Upload auto review report
+        if: always() && steps.resolve.outputs.skip == 'false'
+        uses: actions/upload-artifact@v7
+        with:
+          name: auto-review-${{ steps.resolve.outputs.report_date }}-run-${{ steps.prepare.outputs.run_id }}
+          retention-days: 30
+          if-no-files-found: ignore
+          path: reports/auto_review_${{ steps.resolve.outputs.report_date }}.json
+
       - name: Trigger post merge notify workflow
         if: steps.resolve.outputs.skip != 'true' && steps.gate.outputs.merge_ok == 'true' && steps.merge.outputs.merged == 'true'
         env:
