@@ -165,6 +165,86 @@ def test_update_main_allows_partial_updates_while_guarding_official_values(
     assert "official-overrides" in capsys.readouterr().err
 
 
+def test_update_main_guards_confirmed_upper_level_hp_without_blocking_slots(
+    tmp_path, capsys
+):
+    msdata = tmp_path / "msData.json"
+    incoming = tmp_path / "details.json"
+    overrides_dir = tmp_path / "official_overrides"
+    overrides_dir.mkdir()
+
+    msdata.write_text(
+        json.dumps(
+            [
+                {
+                    "MS名": "ザクⅢ改_LV3",
+                    "HP": 28500,
+                    "近スロット": 26,
+                    "中スロット": 19,
+                    "遠スロット": 11,
+                }
+            ],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    incoming.write_text(
+        json.dumps(
+            [
+                {
+                    "MS名": "ザクⅢ改_LV3",
+                    "HP": 23000,
+                    "近スロット": 27,
+                    "中スロット": 22,
+                    "遠スロット": 14,
+                }
+            ],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (overrides_dir / "20260528.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1",
+                "overrides": [
+                    {
+                        "MS名": "ザクⅢ改_LV3",
+                        "values": {"HP": 28500},
+                        "stale_values": {"HP": 23000},
+                    }
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    rc = update_msdata.main(
+        [
+            "--in-place",
+            "--output",
+            str(msdata),
+            "--official-overrides-dir",
+            str(overrides_dir),
+            str(incoming),
+        ]
+    )
+
+    assert rc == 0
+    output = json.loads(msdata.read_text(encoding="utf-8"))
+    assert output == [
+        {
+            "MS名": "ザクⅢ改_LV3",
+            "HP": 28500,
+            "近スロット": 27,
+            "中スロット": 22,
+            "遠スロット": 14,
+        }
+    ]
+    assert "official-overrides" in capsys.readouterr().err
+
+
 def test_load_official_overrides_normalizes_names_and_stale_values(tmp_path):
     overrides_dir = tmp_path / "official_overrides"
     overrides_dir.mkdir()
