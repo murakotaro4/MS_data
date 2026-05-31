@@ -105,15 +105,15 @@ jobs:
             echo "- report_date: ${{ steps.resolve.outputs.report_date }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         if: steps.resolve.outputs.skip != 'true'
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         if: steps.resolve.outputs.skip != 'true'
         with:
           python-version: "3.11"
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v8.1.0
         if: steps.resolve.outputs.skip != 'true'
         with:
           enable-cache: true

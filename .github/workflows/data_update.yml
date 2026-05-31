@@ -27,13 +27,13 @@ jobs:
       LIMIT: 0
       ARTIFACT_RETENTION_DAYS: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
 
@@ -202,7 +202,7 @@ jobs:
 
       - name: Upload detect state artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: detect-state
           retention-days: 30
@@ -213,7 +213,7 @@ jobs:
 
       - name: Upload raw snapshot artifact
         if: steps.changes.outputs.changed == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.RAW_ARTIFACT_NAME }}
           retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
@@ -225,7 +225,7 @@ jobs:
 
       - name: Create pull request
         if: steps.changes.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           commit-message: "data: msData.json を更新（${{ env.REPORT_DATE }}; ${{ steps.summary.outputs.summary }}）"
           title: "data: msData.json を更新（${{ env.REPORT_DATE }}）"
