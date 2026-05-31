@@ -499,6 +499,51 @@ def task_audit_index() -> int:
     )
 
 
+def task_rollback_guard() -> int:
+    report_date = _report_date()
+    args = [
+        "--old",
+        _require_env("OLD"),
+        "--new",
+        _require_env("NEW"),
+        "--official-overrides-dir",
+        _env_str("OFFICIAL_OVERRIDES_DIR", "data/official_overrides")
+        or "data/official_overrides",
+        "--out",
+        _env_str("ROLLBACK_GUARD_OUT", f"reports/rollback_guard_{report_date}.md")
+        or f"reports/rollback_guard_{report_date}.md",
+    ]
+    if _env_flag("FAIL_ON_PROTECTED_ROLLBACK"):
+        args.append("--fail-on-protected-rollback")
+    return _run_python_module("scripts.detect_msdata_rollbacks", *args)
+
+
+def task_audit_official_overrides() -> int:
+    report_date = _report_date()
+    args = [
+        "--overrides-dir",
+        _env_str("OFFICIAL_OVERRIDES_DIR", "data/official_overrides")
+        or "data/official_overrides",
+        "--current",
+        _env_str("CURRENT", "msData.json") or "msData.json",
+        "--out",
+        _env_str(
+            "OFFICIAL_OVERRIDES_AUDIT_OUT",
+            f"reports/official_overrides_audit_{report_date}.md",
+        )
+        or f"reports/official_overrides_audit_{report_date}.md",
+    ]
+    raw = _env_str("RAW")
+    before = _env_str("BEFORE")
+    if raw:
+        args.extend(["--raw", raw])
+    if before:
+        args.extend(["--before", before])
+    if _env_flag("FAIL_ON_PROTECTED_ROLLBACK"):
+        args.append("--fail-on-protected-rollback")
+    return _run_python_module("scripts.audit_official_overrides", *args)
+
+
 def task_skills() -> int:
     args = [
         "all",
@@ -679,6 +724,8 @@ TASKS: dict[str, Callable[[], int]] = {
     "provenance": task_provenance,
     "snapshot": task_snapshot,
     "audit-index": task_audit_index,
+    "rollback-guard": task_rollback_guard,
+    "audit-official-overrides": task_audit_official_overrides,
     "skills": task_skills,
     "skills-table": task_skills_table,
     "owners-table": task_owners_table,

@@ -107,8 +107,24 @@ jobs:
             export FORCE_FULL=1
             export FORCE=1
           fi
+          OFFICIAL_OVERRIDE_RAW_OUT=cache/msData.before_official_overrides.json \
           FAST_TTL="${TTL}" RATE="${RATE}" LIMIT="${LIMIT}" MSDATA=msData.json \
             uv run python -m scripts.tasks update-fast
+
+      - name: Run rollback guard and official override audit
+        run: |
+          mkdir -p reports
+          uv run python -m scripts.detect_msdata_rollbacks \
+            --old msData.before.json \
+            --new msData.json \
+            --out "reports/rollback_guard_${REPORT_DATE}.md" \
+            --fail-on-protected-rollback
+          uv run python -m scripts.audit_official_overrides \
+            --before msData.before.json \
+            --raw cache/msData.before_official_overrides.json \
+            --current msData.json \
+            --out "reports/official_overrides_audit_${REPORT_DATE}.md" \
+            --fail-on-protected-rollback
 
       - id: detection
         name: Read change detection summary
@@ -178,6 +194,8 @@ jobs:
             --old msData.before.json \
             --new msData.json \
             --out "reports/diff_msdata_${REPORT_DATE}.md" \
+            --note "巻き戻りガード: reports/rollback_guard_${REPORT_DATE}.md" \
+            --note "official_overrides監査: reports/official_overrides_audit_${REPORT_DATE}.md" \
             --print-summary | tee reports/diff_summary.txt
           REPORT_DATE="${REPORT_DATE}" \
           PROVENANCE_OUT="${PROVENANCE_FILE}" \
@@ -222,6 +240,8 @@ jobs:
             ${{ env.RAW_SNAPSHOT_FILE }}
             reports/diff_msdata_${{ env.REPORT_DATE }}.md
             reports/provenance_${{ env.REPORT_DATE }}.json
+            reports/rollback_guard_${{ env.REPORT_DATE }}.md
+            reports/official_overrides_audit_${{ env.REPORT_DATE }}.md
 
       - name: Create pull request
         if: steps.changes.outputs.changed == 'true'
@@ -233,6 +253,8 @@ jobs:
             自動更新（定期実行）により差分を作成しました。
             - 差分: ${{ steps.summary.outputs.summary }}
             - レポート: reports/diff_msdata_${{ env.REPORT_DATE }}.md
+            - 巻き戻りガード: reports/rollback_guard_${{ env.REPORT_DATE }}.md
+            - official_overrides監査: reports/official_overrides_audit_${{ env.REPORT_DATE }}.md
             - provenance: reports/provenance_${{ env.REPORT_DATE }}.json
             - source_run_id: ${{ github.run_id }}
             - source_artifact: ${{ env.RAW_ARTIFACT_NAME }}
@@ -242,3 +264,5 @@ jobs:
             msData.json
             reports/diff_msdata_${{ env.REPORT_DATE }}.md
             reports/provenance_${{ env.REPORT_DATE }}.json
+            reports/rollback_guard_${{ env.REPORT_DATE }}.md
+            reports/official_overrides_audit_${{ env.REPORT_DATE }}.md

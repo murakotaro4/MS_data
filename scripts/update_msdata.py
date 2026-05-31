@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple, TypedDict
@@ -341,6 +342,22 @@ def apply_official_overrides(
     return changed
 
 
+def write_records_snapshot(
+    records_by_name: Dict[str, Dict[str, Any]],
+    out_path: Path,
+    *,
+    sort: bool = True,
+) -> None:
+    records = list(records_by_name.values())
+    if sort:
+        records = sort_records(records)
+    records = [stable_key_order(r) for r in records]
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("w", encoding="utf-8") as f:
+        json.dump(records, f, ensure_ascii=False, indent=2, sort_keys=False)
+        f.write("\n")
+
+
 def sort_records(recs: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
     def key(r: Dict[str, Any]) -> Tuple[int, str]:
         cost = r.get("コスト")
@@ -405,6 +422,13 @@ def main(argv: List[str] | None = None) -> int:
         action="store_true",
         help="公式調整オーバーライドを適用しない",
     )
+    default_raw_out = os.getenv("OFFICIAL_OVERRIDE_RAW_OUT") or None
+    ap.add_argument(
+        "--official-overrides-raw-out",
+        type=Path,
+        default=Path(default_raw_out) if default_raw_out else None,
+        help="公式調整オーバーライド適用前のマージ結果を書き出す",
+    )
     ap.add_argument("--no-sort", action="store_true", help="配列の並び替えを行わない")
     ap.add_argument("--dry-run", action="store_true", help="書き込みを行わない")
     args = ap.parse_args(argv)
@@ -425,6 +449,13 @@ def main(argv: List[str] | None = None) -> int:
     new_records = list(iter_records_from_files(args.inputs)) if args.inputs else []
     merged_old = merge_by_msname(base_records)
     merged_new = merge_by_msname([*base_records, *new_records])
+
+    if args.official_overrides_raw_out is not None:
+        write_records_snapshot(
+            merged_new,
+            args.official_overrides_raw_out,
+            sort=not args.no_sort,
+        )
 
     if not args.no_official_overrides:
         try:
