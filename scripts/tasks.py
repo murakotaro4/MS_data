@@ -162,6 +162,8 @@ def task_normalize() -> int:
 def task_ci() -> int:
     for task_name in (
         "validate-report-contract",
+        "validate-official-overrides-schema",
+        "verify-snapshot-restore",
         "lint",
         "test",
         "validate-strict",
@@ -495,6 +497,14 @@ def task_restore_snapshot() -> int:
     )
 
 
+def task_verify_snapshot_restore() -> int:
+    return _run_python_module(
+        "scripts.verify_snapshot_restore",
+        "--root",
+        _env_str("ROOT", ".") or ".",
+    )
+
+
 def task_audit_index() -> int:
     report_date = _report_date()
     msdata = _env_str("MSDATA", "msData.json") or "msData.json"
@@ -557,6 +567,51 @@ def task_audit_official_overrides() -> int:
     if _env_flag("FAIL_ON_REMOVE_DUE"):
         args.append("--fail-on-remove-due")
     return _run_python_module("scripts.audit_official_overrides", *args)
+
+
+def task_validate_official_overrides_schema() -> int:
+    return _run_python_module(
+        "scripts.validate_official_overrides_schema",
+        "--overrides-dir",
+        _env_str("OFFICIAL_OVERRIDES_DIR", "data/official_overrides")
+        or "data/official_overrides",
+        "--schema",
+        _env_str("OFFICIAL_OVERRIDES_SCHEMA", "schema/official_overrides.schema.json")
+        or "schema/official_overrides.schema.json",
+    )
+
+
+def task_atwiki_quality_report() -> int:
+    report_date = _report_date()
+    return _run_python_module(
+        "scripts.build_atwiki_quality_report",
+        "--report-date",
+        report_date,
+        "--source-run-id",
+        _env_str("GITHUB_RUN_ID", "local") or "local",
+        "--index",
+        _env_str("INDEX_OUT", "cache/index.json") or "cache/index.json",
+        "--changed-index",
+        _env_str("CHANGED_INDEX_OUT", "cache/index_changed.json")
+        or "cache/index_changed.json",
+        "--changed-meta",
+        _env_str("CHANGED_META_OUT", "cache/index_changed_meta.json")
+        or "cache/index_changed_meta.json",
+        "--detail-fetch-state",
+        _env_str("DETAIL_FETCH_STATE", "cache/detail_fetch_state.json")
+        or "cache/detail_fetch_state.json",
+        "--details-json",
+        _env_str("DETAILS_JSON", "cache/details.json") or "cache/details.json",
+        "--details-jsonl",
+        _env_str("DETAILS_OUT", "cache/details.jsonl") or "cache/details.jsonl",
+        "--before-msdata",
+        _env_str("BEFORE", "msData.before.json") or "msData.before.json",
+        "--current-msdata",
+        _env_str("MSDATA", "msData.json") or "msData.json",
+        "--out",
+        _env_str("ATWIKI_QUALITY_OUT", f"reports/atwiki_quality_{report_date}.json")
+        or f"reports/atwiki_quality_{report_date}.json",
+    )
 
 
 def task_skills() -> int:
@@ -739,9 +794,12 @@ TASKS: dict[str, Callable[[], int]] = {
     "provenance": task_provenance,
     "snapshot": task_snapshot,
     "restore-snapshot": task_restore_snapshot,
+    "verify-snapshot-restore": task_verify_snapshot_restore,
     "audit-index": task_audit_index,
     "rollback-guard": task_rollback_guard,
     "audit-official-overrides": task_audit_official_overrides,
+    "validate-official-overrides-schema": task_validate_official_overrides_schema,
+    "atwiki-quality-report": task_atwiki_quality_report,
     "skills": task_skills,
     "skills-table": task_skills_table,
     "owners-table": task_owners_table,

@@ -177,6 +177,7 @@ MS名の正規化（index準拠）
 - 対象PRの解決: まず `data/auto-update-YYYYMMDD`（`workflow_run.created_at` のJST日付）を優先し、見つからない場合は open な `data/auto-update-*` の最新PRにフォールバックします。
 - dry-run: `data update` の `workflow_dispatch` では `dry_run=true` を指定できます。取得・監査・artifact作成までは実行し、PR作成と通知送信は行いません。
 - 古い自動更新PR整理: `cleanup auto update prs` が毎日 20:30 JST に実行され、`data/auto-update-*` の古い open PR を `keep_days` 超過で close します。手動実行時は `dry_run=true` で対象確認できます。
+- PRラベル: 自動更新PRには `data-update` / `rollback-guard` / `official-overrides` / `atwiki-quality` を付与します。ラベルが無い場合は `data update` 内で作成・更新します。
 - reports 運用SSOT: 命名規約・分類・保持方針は `reports_manifest.yml` を正とします。
 - 契約検証: workflow と CI では `uv run python -m scripts.validate_report_contract` を呼び、`report_date/source_run_id/head_ref` と生成物名の整合を検証します。
 - 失敗時の挙動: Codexが20分以内に応答しない、またはファイル指摘が1件以上ある場合は自動マージせずPRを残して手動対応します。
@@ -191,7 +192,10 @@ MS名の正規化（index準拠）
 - 生データアーカイブ（短期）: 同実行で `raw_snapshot_YYYYMMDD_run<run_id>.tar.xz` を作成し、Actions artifact（90日）へ保存します。
 - 生データアーカイブ（長期）: `post merge notify` で `source_run_id` のartifactを取得し、Release tag `raw-snapshot-YYYYMMDD-run<run_id>` に asset として恒久保存します。
 - 復元手順: 対象コミットの `reports/provenance_YYYYMMDD.json` から `release.tag` / `release.url` を取得し、Release asset を展開して `uv run python -m scripts.tasks restore-snapshot SNAPSHOT=raw_snapshot_YYYYMMDD_run<run_id>.tar.xz OUT_DIR=restore_tmp` で `cache/` と `reports/` を再構成します。
+- 復元CI: `uv run python -m scripts.tasks verify-snapshot-restore` で raw snapshot に近いサンプルを作り、復元後に `cache/details.json` とレポート命名契約を検証します。
 - official_overrides期限管理: overrideファイルには `review_after` / `remove_after` を設定し、`reports/official_overrides_audit_YYYYMMDD.md` の `review_due` / `remove_due` を見て再確認・撤去判断を行います。
+- official_overridesスキーマ: `schema/official_overrides.schema.json` を正とし、CIで `uv run python -m scripts.tasks validate-official-overrides-schema` を実行します。各entryは `MS名` / `values` / `stale_values` が必須です。
+- atwiki取得品質: `data update` は `reports/atwiki_quality_YYYYMMDD.json` を生成し、HTTPステータス、条件付きGET(304)件数、取得失敗推定、詳細レコード数、msData差分件数を記録します。
 - 互換期間: レポート再編時は旧パスを最低1リリース周期維持し、`参照consumerが0` かつ `互換期間経過` 後に撤去します。
 - CI runner: Windows は GitHub の 2026-06 移行を先取りして `windows-2025-vs2026` を明示使用します。`windows-latest` に戻す場合は Actions の runner image 移行告知とテスト結果を確認してください。
 ### 週次データ更新（実例: 2025-09-17）

@@ -22,6 +22,7 @@ class PostMergeAssets:
     provenance_path: str
     rollback_guard_path: str
     official_overrides_audit_path: str
+    atwiki_quality_path: str
     artifact_name: str
     snapshot_file: str
     release_tag: str
@@ -30,6 +31,7 @@ class PostMergeAssets:
     report_asset_path: str
     rollback_guard_asset_path: str
     official_overrides_audit_asset_path: str
+    atwiki_quality_asset_path: str
 
 
 def resolve_source_run_id(source_run_id_input: str, pr_body: str) -> str:
@@ -61,6 +63,7 @@ def resolve_assets(
     provenance_path = f"reports/provenance_{report_date}.json"
     rollback_guard_path = f"reports/rollback_guard_{report_date}.md"
     official_overrides_audit_path = f"reports/official_overrides_audit_{report_date}.md"
+    atwiki_quality_path = f"reports/atwiki_quality_{report_date}.json"
     artifact_name = f"raw-snapshot-{report_date}-run-{source_run_id}"
     snapshot_file = f"raw_snapshot_{report_date}_run{source_run_id}.tar.xz"
     release_tag = f"raw-snapshot-{report_date}-run-{source_run_id}"
@@ -70,6 +73,7 @@ def resolve_assets(
         for label, rel_path in (
             ("差分レポート", report_path),
             ("provenance", provenance_path),
+            ("atwiki品質レポート", atwiki_quality_path),
         ):
             if not (root / rel_path).is_file():
                 raise FileNotFoundError(f"{label}が見つかりません: {rel_path}")
@@ -81,6 +85,7 @@ def resolve_assets(
         provenance_path=provenance_path,
         rollback_guard_path=rollback_guard_path,
         official_overrides_audit_path=official_overrides_audit_path,
+        atwiki_quality_path=atwiki_quality_path,
         artifact_name=artifact_name,
         snapshot_file=snapshot_file,
         release_tag=release_tag,
@@ -89,6 +94,7 @@ def resolve_assets(
         report_asset_path=report_path,
         rollback_guard_asset_path=rollback_guard_path,
         official_overrides_audit_asset_path=official_overrides_audit_path,
+        atwiki_quality_asset_path=atwiki_quality_path,
     )
 
 

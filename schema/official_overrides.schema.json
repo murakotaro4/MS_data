@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/murakotaro4/MS_data/schema/official_overrides.schema.json",
+  "title": "MS_data official_overrides",
+  "type": "object",
+  "required": ["schema_version", "active", "overrides"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1"
+    },
+    "active": {
+      "type": "boolean"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reason": {
+      "type": "string"
+    },
+    "policy": {
+      "type": "string"
+    },
+    "scope_note": {
+      "type": "string"
+    },
+    "review_after": {
+      "$ref": "#/$defs/date"
+    },
+    "remove_after": {
+      "$ref": "#/$defs/date"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "url", "title"],
+        "additionalProperties": true,
+        "properties": {
+          "type": {
+            "type": "string",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "overrides": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/override_entry"
+      }
+    }
+  },
+  "$defs": {
+    "date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "json_value": {
+      "anyOf": [
+        {"type": "string"},
+        {"type": "number"},
+        {"type": "boolean"},
+        {"type": "null"},
+        {
+          "type": "array",
+          "items": {"$ref": "#/$defs/json_value"}
+        },
+        {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/json_value"}
+        }
+      ]
+    },
+    "value_map": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"$ref": "#/$defs/json_value"}
+    },
+    "override_entry": {
+      "type": "object",
+      "required": ["MS名", "values", "stale_values"],
+      "additionalProperties": true,
+      "properties": {
+        "MS名": {
+          "type": "string",
+          "minLength": 1
+        },
+        "values": {
+          "$ref": "#/$defs/value_map"
+        },
+        "stale_values": {
+          "$ref": "#/$defs/value_map"
+        },
+        "review_after": {
+          "$ref": "#/$defs/date"
+        },
+        "remove_after": {
+          "$ref": "#/$defs/date"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
