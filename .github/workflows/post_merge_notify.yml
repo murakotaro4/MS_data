@@ -180,16 +180,16 @@ jobs:
             --repo "${GITHUB_REPOSITORY}" \
             --clobber
 
-          if [[ -f "release_assets/${{ steps.report.outputs.provenance_path }}" ]]; then
+          if [[ -f "${{ steps.report.outputs.provenance_path }}" ]]; then
             gh release upload "${tag}" \
-              "release_assets/${{ steps.report.outputs.provenance_path }}" \
+              "${{ steps.report.outputs.provenance_path }}" \
               --repo "${GITHUB_REPOSITORY}" \
               --clobber
           fi
 
-          if [[ -f "release_assets/${{ steps.report.outputs.report_path }}" ]]; then
+          if [[ -f "${{ steps.report.outputs.report_path }}" ]]; then
             gh release upload "${tag}" \
-              "release_assets/${{ steps.report.outputs.report_path }}" \
+              "${{ steps.report.outputs.report_path }}" \
               --repo "${GITHUB_REPOSITORY}" \
               --clobber
           fi
