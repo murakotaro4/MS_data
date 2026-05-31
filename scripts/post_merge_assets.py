@@ -20,12 +20,16 @@ class PostMergeAssets:
     source_run_id: str
     report_path: str
     provenance_path: str
+    rollback_guard_path: str
+    official_overrides_audit_path: str
     artifact_name: str
     snapshot_file: str
     release_tag: str
     snapshot_asset_path: str
     provenance_asset_path: str
     report_asset_path: str
+    rollback_guard_asset_path: str
+    official_overrides_audit_asset_path: str
 
 
 def resolve_source_run_id(source_run_id_input: str, pr_body: str) -> str:
@@ -55,6 +59,8 @@ def resolve_assets(
     source_run_id = resolve_source_run_id(source_run_id_input, pr_body)
     report_path = f"reports/diff_msdata_{report_date}.md"
     provenance_path = f"reports/provenance_{report_date}.json"
+    rollback_guard_path = f"reports/rollback_guard_{report_date}.md"
+    official_overrides_audit_path = f"reports/official_overrides_audit_{report_date}.md"
     artifact_name = f"raw-snapshot-{report_date}-run-{source_run_id}"
     snapshot_file = f"raw_snapshot_{report_date}_run{source_run_id}.tar.xz"
     release_tag = f"raw-snapshot-{report_date}-run-{source_run_id}"
@@ -73,12 +79,16 @@ def resolve_assets(
         source_run_id=source_run_id,
         report_path=report_path,
         provenance_path=provenance_path,
+        rollback_guard_path=rollback_guard_path,
+        official_overrides_audit_path=official_overrides_audit_path,
         artifact_name=artifact_name,
         snapshot_file=snapshot_file,
         release_tag=release_tag,
         snapshot_asset_path=snapshot_asset_path,
         provenance_asset_path=provenance_path,
         report_asset_path=report_path,
+        rollback_guard_asset_path=rollback_guard_path,
+        official_overrides_audit_asset_path=official_overrides_audit_path,
     )
 
 

@@ -34,70 +34,29 @@ jobs:
           echo "run_id=${{ github.event.workflow_run.id }}" >> "$GITHUB_OUTPUT"
           echo "run_created_at=${{ github.event.workflow_run.created_at }}" >> "$GITHUB_OUTPUT"
 
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+
+      - name: Install deps
+        run: uv sync --dev
+
       - id: resolve
         name: Resolve target PR
         env:
           GH_TOKEN: ${{ github.token }}
-          REPO: ${{ steps.prepare.outputs.repo }}
-          RUN_ID: ${{ steps.prepare.outputs.run_id }}
-          RUN_CREATED_AT: ${{ steps.prepare.outputs.run_created_at }}
-        shell: bash
         run: |
-          set -euo pipefail
-
-          report_date="$(TZ=Asia/Tokyo date -d "${RUN_CREATED_AT}" +%Y%m%d)"
-          expected_head_ref="data/auto-update-${report_date}"
-          echo "expected_head_ref=${expected_head_ref}"
-
-          pulls_json="$(gh api "repos/${REPO}/pulls?state=open&base=main&per_page=100")"
-          source_marker="source_run_id:${RUN_ID}"
-
-          by_run_id="$(jq -c --arg marker "${source_marker}" \
-            '[.[] | select(.user.login=="github-actions[bot]" and (.head.ref | startswith("data/auto-update-")) and ((.body // "") | contains($marker)))] | sort_by(.created_at) | last // empty' \
-            <<< "${pulls_json}")"
-
-          if [[ -n "${by_run_id}" ]]; then
-            pr_number="$(jq -r '.number' <<< "${by_run_id}")"
-            head_ref="$(jq -r '.head.ref' <<< "${by_run_id}")"
-            head_sha="$(jq -r '.head.sha' <<< "${by_run_id}")"
-            resolved_by="source_run_id_marker"
-            skip="false"
-            skip_reason=""
-          else
-            exact_legacy="$(jq -c --arg ref "${expected_head_ref}" \
-              '[.[] | select(.head.ref==$ref and .user.login=="github-actions[bot]" and (((.body // "") | contains("source_run_id:")) | not))] | sort_by(.created_at) | last // empty' \
-              <<< "${pulls_json}")"
-
-            if [[ -n "${exact_legacy}" ]]; then
-              pr_number="$(jq -r '.number' <<< "${exact_legacy}")"
-              head_ref="$(jq -r '.head.ref' <<< "${exact_legacy}")"
-              head_sha="$(jq -r '.head.sha' <<< "${exact_legacy}")"
-              resolved_by="exact_branch_legacy_no_marker"
-              skip="false"
-              skip_reason=""
-            else
-              pr_number=""
-              head_ref=""
-              head_sha=""
-              resolved_by="not_found"
-              skip="true"
-              skip_reason="no_target_pr"
-            fi
-          fi
-
-          echo "report_date=${report_date}" >> "$GITHUB_OUTPUT"
-          echo "skip=${skip}" >> "$GITHUB_OUTPUT"
-          echo "skip_reason=${skip_reason}" >> "$GITHUB_OUTPUT"
-          echo "pr=${pr_number}" >> "$GITHUB_OUTPUT"
-          echo "head_ref=${head_ref}" >> "$GITHUB_OUTPUT"
-          echo "head_sha=${head_sha}" >> "$GITHUB_OUTPUT"
-          echo "resolved_by=${resolved_by}" >> "$GITHUB_OUTPUT"
-
-          if [[ "${skip}" == "true" ]]; then
-            echo "No matching open PR found. Skip auto review merge."
-          else
-            echo "Resolved PR #${pr_number} (${head_ref} @ ${head_sha}) via ${resolved_by}."
-          fi
+          uv run python -m scripts.auto_review_merge resolve-target-pr \
+            --repo "${{ steps.prepare.outputs.repo }}" \
+            --run-id "${{ steps.prepare.outputs.run_id }}" \
+            --run-created-at "${{ steps.prepare.outputs.run_created_at }}" \
+            --github-output "$GITHUB_OUTPUT"
 
       - name: No target PR found
         if: steps.resolve.outputs.skip == 'true'
@@ -109,23 +68,6 @@ jobs:
             echo "- reason: ${{ steps.resolve.outputs.skip_reason }}"
             echo "- report_date: ${{ steps.resolve.outputs.report_date }}"
           } >> "$GITHUB_STEP_SUMMARY"
-
-      - uses: actions/checkout@v6
-        if: steps.resolve.outputs.skip != 'true'
-
-      - uses: actions/setup-python@v6
-        if: steps.resolve.outputs.skip != 'true'
-        with:
-          python-version: "3.11"
-
-      - uses: astral-sh/setup-uv@v8.1.0
-        if: steps.resolve.outputs.skip != 'true'
-        with:
-          enable-cache: true
-
-      - name: Install deps
-        if: steps.resolve.outputs.skip != 'true'
-        run: uv sync --dev
 
       - name: Validate report contract (auto-review)
         if: steps.resolve.outputs.skip != 'true'
@@ -141,290 +83,62 @@ jobs:
         if: steps.resolve.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          REPO: ${{ steps.prepare.outputs.repo }}
-          PR_NUMBER: ${{ steps.resolve.outputs.pr }}
-          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
-        shell: bash
         run: |
-          set -euo pipefail
-
-          marker="<!-- auto-review head_sha:${HEAD_SHA} -->"
-          existing_id="$(gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate | \
-            jq -r --arg marker "${marker}" \
-            '[.[] | select(.user.login=="github-actions[bot]" and (.body | contains($marker)))] | sort_by(.created_at) | last | .id // empty')"
-
-          if [[ -z "${existing_id}" ]]; then
-            comment_body=$'@codex review\n\n'"${marker}"
-            trigger_comment_id="$(gh api -X POST "repos/${REPO}/issues/${PR_NUMBER}/comments" \
-              -f body="${comment_body}" \
-              --jq '.id')"
-            created_new=true
-          else
-            trigger_comment_id="${existing_id}"
-            created_new=false
-          fi
-
-          trigger_created_at="$(gh api "repos/${REPO}/issues/comments/${trigger_comment_id}" --jq '.created_at')"
-
-          echo "trigger_comment_id=${trigger_comment_id}" >> "$GITHUB_OUTPUT"
-          echo "trigger_created_at=${trigger_created_at}" >> "$GITHUB_OUTPUT"
-          echo "created_new=${created_new}" >> "$GITHUB_OUTPUT"
+          uv run python -m scripts.auto_review_merge trigger-review \
+            --repo "${{ steps.prepare.outputs.repo }}" \
+            --pr-number "${{ steps.resolve.outputs.pr }}" \
+            --head-sha "${{ steps.resolve.outputs.head_sha }}" \
+            --github-output "$GITHUB_OUTPUT"
 
       - id: wait
         name: Wait for Codex response with retries
         if: steps.resolve.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          REPO: ${{ steps.prepare.outputs.repo }}
-          PR_NUMBER: ${{ steps.resolve.outputs.pr }}
-          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
-          TRIGGER_COMMENT_ID: ${{ steps.trigger.outputs.trigger_comment_id }}
-          TRIGGER_COMMENT_CREATED_AT: ${{ steps.trigger.outputs.trigger_created_at }}
-        shell: bash
         run: |
-          set -euo pipefail
-
-          max_attempts="${CODEX_REVIEW_MAX_ATTEMPTS:-3}"
-          attempt_timeout_seconds="${CODEX_REVIEW_ATTEMPT_TIMEOUT_SECONDS:-420}"
-          poll_seconds="${CODEX_REVIEW_POLL_SECONDS:-30}"
-          settle_seconds="${CODEX_REVIEW_SETTLE_SECONDS:-60}"
-          responded=false
-          response_attempt=""
-          response_seconds=""
-          trigger_comment_ids="${TRIGGER_COMMENT_ID}"
-          first_trigger_created_at="${TRIGGER_COMMENT_CREATED_AT}"
-          started_at="${SECONDS}"
-          attempt=1
-
-          collect_codex_signals() {
-            local out_path="$1"
-            local tmp_dir
-            tmp_dir="$(mktemp -d)"
-
-            gh api "repos/${REPO}/pulls/${PR_NUMBER}/reviews" --paginate > "${tmp_dir}/reviews.json"
-            gh api "repos/${REPO}/pulls/${PR_NUMBER}/comments" --paginate > "${tmp_dir}/file_comments.json"
-            gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate > "${tmp_dir}/issue_comments.json"
-
-            echo "[]" > "${tmp_dir}/reactions.json"
-            IFS=',' read -r -a trigger_ids <<< "${trigger_comment_ids}"
-            for id in "${trigger_ids[@]}"; do
-              gh api "repos/${REPO}/issues/comments/${id}/reactions" \
-                --paginate \
-                -H "Accept: application/vnd.github+json" \
-                > "${tmp_dir}/reaction-${id}.json"
-              jq -s 'add' "${tmp_dir}/reactions.json" "${tmp_dir}/reaction-${id}.json" \
-                > "${tmp_dir}/reactions-next.json"
-              mv "${tmp_dir}/reactions-next.json" "${tmp_dir}/reactions.json"
-            done
-
-            python -m scripts.auto_review_gate \
-              --reviews "${tmp_dir}/reviews.json" \
-              --file-comments "${tmp_dir}/file_comments.json" \
-              --issue-comments "${tmp_dir}/issue_comments.json" \
-              --reactions "${tmp_dir}/reactions.json" \
-              --head-sha "${HEAD_SHA}" \
-              --since "${first_trigger_created_at}" \
-              --out "${out_path}"
-          }
-
-          while (( attempt <= max_attempts )); do
-            attempt_started="${SECONDS}"
-
-            if (( attempt == 1 )); then
-              trigger_comment_id="${TRIGGER_COMMENT_ID}"
-              echo "Codex review attempt ${attempt}/${max_attempts}: using initial trigger comment ${trigger_comment_id}."
-            else
-              marker="<!-- auto-review retry:${attempt} head_sha:${HEAD_SHA} -->"
-              existing_id="$(gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate | \
-                jq -r --arg marker "${marker}" \
-                '[.[] | select(.user.login=="github-actions[bot]" and (.body | contains($marker)))] | sort_by(.created_at) | last | .id // empty')"
-
-              if [[ -z "${existing_id}" ]]; then
-                comment_body=$'@codex review\n\n'"${marker}"
-                trigger_comment_id="$(gh api -X POST "repos/${REPO}/issues/${PR_NUMBER}/comments" \
-                  -f body="${comment_body}" \
-                  --jq '.id')"
-                created_new=true
-              else
-                trigger_comment_id="${existing_id}"
-                created_new=false
-              fi
-
-              trigger_comment_ids="${trigger_comment_ids},${trigger_comment_id}"
-              echo "Codex review attempt ${attempt}/${max_attempts}: trigger_comment_id=${trigger_comment_id}, created_new=${created_new}."
-            fi
-
-            deadline=$((SECONDS + attempt_timeout_seconds))
-            while (( SECONDS < deadline )); do
-              metrics_path="$(mktemp)"
-              collect_codex_signals "${metrics_path}"
-              review_count="$(jq -r '.review_count' "${metrics_path}")"
-              finding_count="$(jq -r '.finding_count' "${metrics_path}")"
-              reaction_count="$(jq -r '.reaction_count' "${metrics_path}")"
-              issue_comment_count="$(jq -r '.issue_comment_count' "${metrics_path}")"
-              no_issue_comment_count="$(jq -r '.no_issue_comment_count' "${metrics_path}")"
-              terminal_count="$(jq -r '.terminal_count' "${metrics_path}")"
-              review_complete="$(jq -r '.review_complete' "${metrics_path}")"
-              total_elapsed=$((SECONDS - started_at))
-              attempt_elapsed=$((SECONDS - attempt_started))
-              echo "Codex response poll: attempt=${attempt}/${max_attempts} attempt_elapsed=${attempt_elapsed}s total_elapsed=${total_elapsed}s reviews=${review_count} findings=${finding_count} reactions=${reaction_count} issue_comments=${issue_comment_count} no_issue_comments=${no_issue_comment_count} terminal=${terminal_count} review_complete=${review_complete}"
-
-              if [[ "${review_complete}" == "true" ]]; then
-                responded=true
-                response_attempt="${attempt}"
-                response_seconds="${total_elapsed}"
-                if (( settle_seconds > 0 )); then
-                  echo "Codex response detected. Waiting ${settle_seconds}s before gate re-check."
-                  sleep "${settle_seconds}"
-                fi
-                break 2
-              fi
-
-              sleep "${poll_seconds}"
-            done
-
-            attempt=$((attempt + 1))
-          done
-
-          if [[ "${responded}" == "true" ]]; then
-            attempts_used="${response_attempt}"
-          else
-            attempts_used="${max_attempts}"
-          fi
-
-          echo "responded=${responded}" >> "$GITHUB_OUTPUT"
-          echo "attempts_used=${attempts_used}" >> "$GITHUB_OUTPUT"
-          echo "max_attempts=${max_attempts}" >> "$GITHUB_OUTPUT"
-          echo "attempt_timeout_seconds=${attempt_timeout_seconds}" >> "$GITHUB_OUTPUT"
-          echo "poll_seconds=${poll_seconds}" >> "$GITHUB_OUTPUT"
-          echo "settle_seconds=${settle_seconds}" >> "$GITHUB_OUTPUT"
-          echo "response_attempt=${response_attempt}" >> "$GITHUB_OUTPUT"
-          echo "response_seconds=${response_seconds}" >> "$GITHUB_OUTPUT"
-          echo "trigger_comment_ids=${trigger_comment_ids}" >> "$GITHUB_OUTPUT"
-          echo "first_trigger_created_at=${first_trigger_created_at}" >> "$GITHUB_OUTPUT"
-
-          {
-            echo "### Codex Review Response"
-            echo "- responded: ${responded}"
-            echo "- attempts_used: ${attempts_used}/${max_attempts}"
-            echo "- attempt_timeout_seconds: ${attempt_timeout_seconds}"
-            echo "- poll_seconds: ${poll_seconds}"
-            echo "- settle_seconds: ${settle_seconds}"
-            if [[ "${responded}" == "true" ]]; then
-              echo "- response_attempt: ${response_attempt}"
-              echo "- response_seconds: ${response_seconds}"
-            fi
-            echo "- trigger_comment_ids: ${trigger_comment_ids}"
-          } >> "$GITHUB_STEP_SUMMARY"
+          uv run python -m scripts.auto_review_merge wait-for-review \
+            --repo "${{ steps.prepare.outputs.repo }}" \
+            --pr-number "${{ steps.resolve.outputs.pr }}" \
+            --head-sha "${{ steps.resolve.outputs.head_sha }}" \
+            --trigger-comment-id "${{ steps.trigger.outputs.trigger_comment_id }}" \
+            --trigger-comment-created-at "${{ steps.trigger.outputs.trigger_created_at }}" \
+            --max-attempts "${CODEX_REVIEW_MAX_ATTEMPTS}" \
+            --attempt-timeout-seconds "${CODEX_REVIEW_ATTEMPT_TIMEOUT_SECONDS}" \
+            --poll-seconds "${CODEX_REVIEW_POLL_SECONDS}" \
+            --settle-seconds "${CODEX_REVIEW_SETTLE_SECONDS}" \
+            --github-output "$GITHUB_OUTPUT" \
+            --step-summary "$GITHUB_STEP_SUMMARY"
 
       - id: gate
         name: Check Codex findings
         if: steps.resolve.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          REPO: ${{ steps.prepare.outputs.repo }}
-          PR_NUMBER: ${{ steps.resolve.outputs.pr }}
-          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
-          TRIGGER_COMMENT_IDS: ${{ steps.wait.outputs.trigger_comment_ids }}
-          FIRST_TRIGGER_CREATED_AT: ${{ steps.wait.outputs.first_trigger_created_at }}
-        shell: bash
         run: |
-          set -euo pipefail
-
-          tmp_dir="$(mktemp -d)"
-          gh api "repos/${REPO}/pulls/${PR_NUMBER}/reviews" --paginate > "${tmp_dir}/reviews.json"
-          gh api "repos/${REPO}/pulls/${PR_NUMBER}/comments" --paginate > "${tmp_dir}/file_comments.json"
-          gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate > "${tmp_dir}/issue_comments.json"
-
-          echo "[]" > "${tmp_dir}/reactions.json"
-          IFS=',' read -r -a trigger_ids <<< "${TRIGGER_COMMENT_IDS}"
-          for id in "${trigger_ids[@]}"; do
-            gh api "repos/${REPO}/issues/comments/${id}/reactions" \
-              --paginate \
-              -H "Accept: application/vnd.github+json" \
-              > "${tmp_dir}/reaction-${id}.json"
-            jq -s 'add' "${tmp_dir}/reactions.json" "${tmp_dir}/reaction-${id}.json" \
-              > "${tmp_dir}/reactions-next.json"
-            mv "${tmp_dir}/reactions-next.json" "${tmp_dir}/reactions.json"
-          done
-
-          metrics_path="${tmp_dir}/metrics.json"
-          python -m scripts.auto_review_gate \
-            --reviews "${tmp_dir}/reviews.json" \
-            --file-comments "${tmp_dir}/file_comments.json" \
-            --issue-comments "${tmp_dir}/issue_comments.json" \
-            --reactions "${tmp_dir}/reactions.json" \
-            --head-sha "${HEAD_SHA}" \
-            --since "${FIRST_TRIGGER_CREATED_AT}" \
-            --out "${metrics_path}"
-
-          findings="$(jq -r '.finding_count' "${metrics_path}")"
-          merge_ok="$(jq -r '.merge_ok' "${metrics_path}")"
-          stop_reason="$(jq -r '.stop_reason' "${metrics_path}")"
-          review_complete="$(jq -r '.review_complete' "${metrics_path}")"
-          terminal_count="$(jq -r '.terminal_count' "${metrics_path}")"
-
-          echo "findings=${findings}" >> "$GITHUB_OUTPUT"
-          echo "review_complete=${review_complete}" >> "$GITHUB_OUTPUT"
-          echo "terminal_count=${terminal_count}" >> "$GITHUB_OUTPUT"
-
-          if [[ "${merge_ok}" == "true" ]]; then
-            echo "merge_ok=true" >> "$GITHUB_OUTPUT"
-            echo "stop_reason=none" >> "$GITHUB_OUTPUT"
-          else
-            echo "merge_ok=false" >> "$GITHUB_OUTPUT"
-            echo "stop_reason=${stop_reason}" >> "$GITHUB_OUTPUT"
-          fi
+          uv run python -m scripts.auto_review_merge check-gate \
+            --repo "${{ steps.prepare.outputs.repo }}" \
+            --pr-number "${{ steps.resolve.outputs.pr }}" \
+            --head-sha "${{ steps.resolve.outputs.head_sha }}" \
+            --trigger-comment-ids "${{ steps.wait.outputs.trigger_comment_ids }}" \
+            --first-trigger-created-at "${{ steps.wait.outputs.first_trigger_created_at }}" \
+            --github-output "$GITHUB_OUTPUT"
 
       - name: Record stop reason
         if: steps.resolve.outputs.skip != 'true' && steps.gate.outputs.merge_ok != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          REPO: ${{ steps.prepare.outputs.repo }}
-          PR_NUMBER: ${{ steps.resolve.outputs.pr }}
-          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
-          FINDINGS: ${{ steps.gate.outputs.findings }}
-          STOP_REASON: ${{ steps.gate.outputs.stop_reason }}
-          RUN_ID: ${{ steps.prepare.outputs.run_id }}
-          ATTEMPTS_USED: ${{ steps.wait.outputs.attempts_used }}
-          MAX_ATTEMPTS: ${{ steps.wait.outputs.max_attempts }}
-          ATTEMPT_TIMEOUT_SECONDS: ${{ steps.wait.outputs.attempt_timeout_seconds }}
-        shell: bash
         run: |
-          set -euo pipefail
-
-          if [[ "${STOP_REASON}" == "no_response" ]]; then
-            reason_label="codex_no_response"
-            message="Codex の応答を ${ATTEMPTS_USED}/${MAX_ATTEMPTS} 回試行（各 ${ATTEMPT_TIMEOUT_SECONDS} 秒）しましたが確認できなかったため、自動マージを停止しました。手動で確認してください。 (run_id: ${RUN_ID})"
-          else
-            reason_label="codex_findings"
-            message="Codex のファイル指摘が ${FINDINGS} 件あるため、自動マージを停止しました。手動で確認してください。 (run_id: ${RUN_ID})"
-          fi
-
-          marker="<!-- auto-review-stop reason:${reason_label} run_id:${RUN_ID} head_sha:${HEAD_SHA} -->"
-          existing_id="$(gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate | \
-            jq -r --arg marker "${marker}" \
-            '[.[] | select(.user.login=="github-actions[bot]" and ((.body // "") | contains($marker)))] | sort_by(.created_at) | last | .id // empty')"
-
-          if [[ -z "${existing_id}" ]]; then
-            gh api -X POST "repos/${REPO}/issues/${PR_NUMBER}/comments" \
-              -f body="${message}"$'\n\n'"${marker}" >/dev/null
-            posted="true"
-          else
-            posted="false"
-          fi
-
-          {
-            echo "### Auto Review Merge"
-            echo "- status: stopped"
-            echo "- reason: ${reason_label}"
-            echo "- pr: #${PR_NUMBER}"
-            echo "- head_sha: ${HEAD_SHA}"
-            if [[ "${STOP_REASON}" == "findings" ]]; then
-              echo "- findings: ${FINDINGS}"
-            fi
-            echo "- comment_posted: ${posted}"
-          } >> "$GITHUB_STEP_SUMMARY"
+          uv run python -m scripts.auto_review_merge record-stop \
+            --repo "${{ steps.prepare.outputs.repo }}" \
+            --pr-number "${{ steps.resolve.outputs.pr }}" \
+            --head-sha "${{ steps.resolve.outputs.head_sha }}" \
+            --findings "${{ steps.gate.outputs.findings }}" \
+            --stop-reason "${{ steps.gate.outputs.stop_reason }}" \
+            --run-id "${{ steps.prepare.outputs.run_id }}" \
+            --attempts-used "${{ steps.wait.outputs.attempts_used }}" \
+            --max-attempts "${{ steps.wait.outputs.max_attempts }}" \
+            --attempt-timeout-seconds "${{ steps.wait.outputs.attempt_timeout_seconds }}" \
+            --step-summary "$GITHUB_STEP_SUMMARY"
 
       - id: merge
         name: Merge pull request

@@ -1,0 +1,48 @@
+name: cleanup auto update prs
+
+on:
+  schedule:
+    - cron: "30 11 * * *" # JST 20:30
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Report cleanup targets without closing PRs"
+        required: false
+        default: true
+        type: boolean
+      keep_days:
+        description: "Keep open auto-update PRs within this many days"
+        required: false
+        default: "2"
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Cleanup stale auto-update PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || 'false' }}
+          KEEP_DAYS: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.keep_days || '2' }}
+        run: |
+          args=(
+            --repo "${GITHUB_REPOSITORY}"
+            --keep-days "${KEEP_DAYS}"
+            --step-summary "$GITHUB_STEP_SUMMARY"
+          )
+          if [[ "${DRY_RUN}" == "true" ]]; then
+            args+=(--dry-run)
+          fi
+          python -m scripts.cleanup_auto_update_prs "${args[@]}"

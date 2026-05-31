@@ -14,6 +14,8 @@ def test_audit_reports_protected_and_upstream_current(tmp_path):
         overrides_dir / "20260528.json",
         {
             "schema_version": "1",
+            "review_after": "2026-05-01",
+            "remove_after": "2026-06-30",
             "overrides": [
                 {
                     "MS名": "ザクⅢ改_LV1",
@@ -43,6 +45,8 @@ def test_audit_reports_protected_and_upstream_current(tmp_path):
             str(current),
             "--out",
             str(out),
+            "--today",
+            "2026-05-31",
             "--fail-on-protected-rollback",
         ]
     )
@@ -51,6 +55,7 @@ def test_audit_reports_protected_and_upstream_current(tmp_path):
     text = out.read_text(encoding="utf-8")
     assert "- protected_by_override: 1" in text
     assert "- upstream_current: 1" in text
+    assert "- review_due: 2" in text
     assert "ザクⅢ改_LV1" in text
 
 
@@ -87,3 +92,42 @@ def test_audit_fails_when_current_value_is_stale(tmp_path):
 
     assert rc == 1
     assert "protected_rollback" in out.read_text(encoding="utf-8")
+
+
+def test_audit_can_fail_when_override_remove_date_is_due(tmp_path):
+    overrides_dir = tmp_path / "official_overrides"
+    _write_json(
+        overrides_dir / "20260528.json",
+        {
+            "schema_version": "1",
+            "remove_after": "2026-05-31",
+            "overrides": [
+                {
+                    "MS名": "ザクⅢ改_LV1",
+                    "values": {"HP": 27000},
+                    "stale_values": {"HP": 23500},
+                }
+            ],
+        },
+    )
+    current = tmp_path / "current.json"
+    out = tmp_path / "audit.md"
+    _write_json(current, [{"MS名": "ザクⅢ改_LV1", "HP": 27000}])
+
+    rc = audit_official_overrides.main(
+        [
+            "--overrides-dir",
+            str(overrides_dir),
+            "--current",
+            str(current),
+            "--out",
+            str(out),
+            "--today",
+            "2026-05-31",
+            "--fail-on-remove-due",
+        ]
+    )
+
+    assert rc == 1
+    text = out.read_text(encoding="utf-8")
+    assert "- remove_due: 1" in text

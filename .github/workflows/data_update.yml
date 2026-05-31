@@ -11,6 +11,11 @@ on:
         required: false
         default: false
         type: boolean
+      dry_run:
+        description: "Run update checks and upload reports without creating a PR"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   actions: read
@@ -43,8 +48,13 @@ jobs:
       - name: Prepare
         run: |
           report_date="$(date +%Y%m%d)"
+          dry_run="false"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.dry_run }}" == "true" ]]; then
+            dry_run="true"
+          fi
           echo "REPORT_DATE=${report_date}" >> "$GITHUB_ENV"
           echo "HEAD_REF=data/auto-update-${report_date}" >> "$GITHUB_ENV"
+          echo "DRY_RUN=${dry_run}" >> "$GITHUB_ENV"
           echo "PROVENANCE_FILE=reports/provenance_${report_date}.json" >> "$GITHUB_ENV"
           echo "RAW_ARTIFACT_NAME=raw-snapshot-${report_date}-run-${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
           echo "RAW_SNAPSHOT_FILE=raw_snapshot_${report_date}_run${GITHUB_RUN_ID}.tar.xz" >> "$GITHUB_ENV"
@@ -124,6 +134,7 @@ jobs:
             --raw cache/msData.before_official_overrides.json \
             --current msData.json \
             --out "reports/official_overrides_audit_${REPORT_DATE}.md" \
+            --today "${REPORT_DATE}" \
             --fail-on-protected-rollback
 
       - id: detection
@@ -159,25 +170,25 @@ jobs:
 
       - id: no_change_mail
         name: Build no-change mail body
-        if: github.event_name == 'schedule' && steps.changes.outputs.changed == 'false'
+        if: github.event_name == 'schedule' && steps.changes.outputs.changed == 'false' && env.DRY_RUN != 'true'
         run: |
           body_path="$RUNNER_TEMP/msdata_no_change_mail.txt"
-          {
-            echo "msData 定期更新を実行しました。"
-            echo
-            echo "- 実行日: ${REPORT_DATE}"
-            echo "- 結果: 成功"
-            echo "- msData.json: 差分なし"
-            echo "- candidate_count: ${{ steps.detection.outputs.candidate_count }}"
-            echo "- fast_path: ${{ steps.detection.outputs.fast_path }}"
-            echo "- age_coverage: ${{ steps.detection.outputs.age_coverage }}"
-            echo "- fallback_reason: ${{ steps.detection.outputs.fallback_reason }}"
-            echo "- run_id: ${GITHUB_RUN_ID}"
-          } > "$body_path"
+          uv run python -m scripts.build_update_mail_body \
+            --report-date "${REPORT_DATE}" \
+            --result "成功（差分なし）" \
+            --changed "false" \
+            --candidate-count "${{ steps.detection.outputs.candidate_count }}" \
+            --fast-path "${{ steps.detection.outputs.fast_path }}" \
+            --age-coverage "${{ steps.detection.outputs.age_coverage }}" \
+            --fallback-reason "${{ steps.detection.outputs.fallback_reason }}" \
+            --run-id "${GITHUB_RUN_ID}" \
+            --rollback-guard-path "reports/rollback_guard_${REPORT_DATE}.md" \
+            --official-overrides-audit-path "reports/official_overrides_audit_${REPORT_DATE}.md" \
+            --out "$body_path"
           echo "path=$body_path" >> "$GITHUB_OUTPUT"
 
       - name: Send no-change mail
-        if: github.event_name == 'schedule' && steps.changes.outputs.changed == 'false'
+        if: github.event_name == 'schedule' && steps.changes.outputs.changed == 'false' && env.DRY_RUN != 'true'
         env:
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
@@ -243,8 +254,33 @@ jobs:
             reports/rollback_guard_${{ env.REPORT_DATE }}.md
             reports/official_overrides_audit_${{ env.REPORT_DATE }}.md
 
+      - name: Upload dry-run reports
+        if: env.DRY_RUN == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: msdata-dry-run-${{ env.REPORT_DATE }}-run-${{ github.run_id }}
+          retention-days: 30
+          if-no-files-found: ignore
+          path: |
+            reports/diff_msdata_${{ env.REPORT_DATE }}.md
+            reports/provenance_${{ env.REPORT_DATE }}.json
+            reports/rollback_guard_${{ env.REPORT_DATE }}.md
+            reports/official_overrides_audit_${{ env.REPORT_DATE }}.md
+            ${{ env.RAW_SNAPSHOT_FILE }}
+
+      - name: Dry-run summary
+        if: env.DRY_RUN == 'true'
+        run: |
+          {
+            echo "### Data Update Dry Run"
+            echo "- changed: ${{ steps.changes.outputs.changed }}"
+            echo "- report_date: ${REPORT_DATE}"
+            echo "- raw_artifact_name: ${RAW_ARTIFACT_NAME}"
+            echo "- dry_run_artifact: msdata-dry-run-${REPORT_DATE}-run-${GITHUB_RUN_ID}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Create pull request
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true' && env.DRY_RUN != 'true'
         uses: peter-evans/create-pull-request@v8
         with:
           commit-message: "data: msData.json を更新（${{ env.REPORT_DATE }}; ${{ steps.summary.outputs.summary }}）"
