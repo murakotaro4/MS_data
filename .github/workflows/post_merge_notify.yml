@@ -68,50 +68,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-          head_ref="${HEAD_REF}"
-          if [[ ! "$head_ref" =~ ^data/auto-update-([0-9]{8})$ ]]; then
-            echo "head_ref から report_date を解決できません: ${head_ref}" >&2
-            exit 1
-          fi
-          report_date="${BASH_REMATCH[1]}"
-          report="reports/diff_msdata_${report_date}.md"
-          provenance_path="reports/provenance_${report_date}.json"
-
-          if [[ ! -f "$report" ]]; then
-            echo "差分レポートが見つかりません: ${report}" >&2
-            exit 1
-          fi
-
-          if [[ ! -f "$provenance_path" ]]; then
-            echo "provenance が見つかりません: ${provenance_path}" >&2
-            exit 1
-          fi
-
-          source_run_id="${SOURCE_RUN_ID_INPUT}"
-          if [[ -z "${source_run_id}" ]]; then
-            source_run_id="$(printf '%s' "${PR_BODY:-}" \
-              | grep -Eo 'source_run_id[:=[:space:]]*[0-9]+' \
-              | head -n 1 \
-              | grep -Eo '[0-9]+' || true)"
-          fi
-
-          if [[ -z "${source_run_id}" ]]; then
-            echo "source_run_id を解決できませんでした。PR本文に source_run_id を含めるか、workflow_dispatch で指定してください。" >&2
-            exit 1
-          fi
-
-          artifact_name="raw-snapshot-${report_date}-run-${source_run_id}"
-          snapshot_file="raw_snapshot_${report_date}_run${source_run_id}.tar.xz"
-          release_tag="raw-snapshot-${report_date}-run-${source_run_id}"
-
-          echo "report_path=$report" >> "$GITHUB_OUTPUT"
-          echo "report_date=$report_date" >> "$GITHUB_OUTPUT"
-          echo "source_run_id=$source_run_id" >> "$GITHUB_OUTPUT"
-          echo "artifact_name=$artifact_name" >> "$GITHUB_OUTPUT"
-          echo "snapshot_file=$snapshot_file" >> "$GITHUB_OUTPUT"
-          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
-          echo "provenance_path=$provenance_path" >> "$GITHUB_OUTPUT"
+          python -m scripts.post_merge_assets \
+            --head-ref "${HEAD_REF}" \
+            --source-run-id "${SOURCE_RUN_ID_INPUT}" \
+            --pr-body-env PR_BODY \
+            --root . \
+            --require-files \
+            --github-output "$GITHUB_OUTPUT"
 
       - name: Validate report contract (post-merge)
         run: |
@@ -140,8 +103,8 @@ jobs:
             --name "${{ steps.report.outputs.artifact_name }}" \
             --dir release_assets
 
-          if [[ ! -f "release_assets/${{ steps.report.outputs.snapshot_file }}" ]]; then
-            echo "スナップショットファイルが見つかりません: release_assets/${{ steps.report.outputs.snapshot_file }}" >&2
+          if [[ ! -f "${{ steps.report.outputs.snapshot_asset_path }}" ]]; then
+            echo "スナップショットファイルが見つかりません: ${{ steps.report.outputs.snapshot_asset_path }}" >&2
             find release_assets -maxdepth 4 -type f -print || true
             exit 1
           fi
@@ -176,20 +139,20 @@ jobs:
           fi
 
           gh release upload "${tag}" \
-            "release_assets/${{ steps.report.outputs.snapshot_file }}" \
+            "${{ steps.report.outputs.snapshot_asset_path }}" \
             --repo "${GITHUB_REPOSITORY}" \
             --clobber
 
-          if [[ -f "${{ steps.report.outputs.provenance_path }}" ]]; then
+          if [[ -f "${{ steps.report.outputs.provenance_asset_path }}" ]]; then
             gh release upload "${tag}" \
-              "${{ steps.report.outputs.provenance_path }}" \
+              "${{ steps.report.outputs.provenance_asset_path }}" \
               --repo "${GITHUB_REPOSITORY}" \
               --clobber
           fi
 
-          if [[ -f "${{ steps.report.outputs.report_path }}" ]]; then
+          if [[ -f "${{ steps.report.outputs.report_asset_path }}" ]]; then
             gh release upload "${tag}" \
-              "${{ steps.report.outputs.report_path }}" \
+              "${{ steps.report.outputs.report_asset_path }}" \
               --repo "${GITHUB_REPOSITORY}" \
               --clobber
           fi

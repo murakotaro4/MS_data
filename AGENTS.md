@@ -178,16 +178,19 @@ MS名の正規化（index準拠）
 - reports 運用SSOT: 命名規約・分類・保持方針は `reports_manifest.yml` を正とします。
 - 契約検証: workflow と CI では `uv run python -m scripts.validate_report_contract` を呼び、`report_date/source_run_id/head_ref` と生成物名の整合を検証します。
 - 失敗時の挙動: Codexが20分以内に応答しない、またはファイル指摘が1件以上ある場合は自動マージせずPRを残して手動対応します。
+- Codexレビュー待ち: `auto review merge` は既定で3回まで `@codex review` を試行し、各試行の待機秒数・ポーリング間隔・応答検出結果を step summary に記録します。調整する場合は repository variables の `CODEX_REVIEW_MAX_ATTEMPTS` / `CODEX_REVIEW_ATTEMPT_TIMEOUT_SECONDS` / `CODEX_REVIEW_POLL_SECONDS` / `CODEX_REVIEW_SETTLE_SECONDS` を変更します。
 - 通知連携: 自動マージ時は `auto review merge` から `post merge notify` を `workflow_dispatch` で起動し、マージ後通知を確実に実行します。
 - 通知タイミング: メール送信はPR作成時ではなく、`data/auto-update-*` が `main` にマージされた後に `post merge notify` で実行します。
 - idempotency: 重複防止キーは `source_run_id + head_ref` を基準とし、通知は初回作成時に送信、再実行時は必要に応じて再送できるように運用します。
 - メール内容: 本文は `reports/diff_msdata_YYYYMMDD.md`、添付は `msData.json` を使用します（`scripts/send_gmail.py --attach`）。
 - 宛先運用: `GMAIL_TO` はカンマ区切りで複数宛先を指定できます（例: `a@example.com,b@example.com`）。値の参照は不可のため、変更時は最終文字列で上書き更新します。
 - 生成元追跡（provenance）: `data update` 実行時に `reports/provenance_YYYYMMDD.json` を生成し、`index/details/html` のハッシュ・件数・`source_run_id` を記録します。
+- 巻き戻り対策レポート: `data update` 実行時に `reports/rollback_guard_YYYYMMDD.md` と `reports/official_overrides_audit_YYYYMMDD.md` を生成します。`official_overrides` の protected rollback は自動更新を失敗させ、数値低下やLV間の増減混在は確認候補としてレポートします。
 - 生データアーカイブ（短期）: 同実行で `raw_snapshot_YYYYMMDD_run<run_id>.tar.xz` を作成し、Actions artifact（90日）へ保存します。
 - 生データアーカイブ（長期）: `post merge notify` で `source_run_id` のartifactを取得し、Release tag `raw-snapshot-YYYYMMDD-run<run_id>` に asset として恒久保存します。
 - 復元手順: 対象コミットの `reports/provenance_YYYYMMDD.json` から `release.tag` / `release.url` を取得し、Release asset を展開して `cache/` を再構成します。
 - 互換期間: レポート再編時は旧パスを最低1リリース周期維持し、`参照consumerが0` かつ `互換期間経過` 後に撤去します。
+- CI runner: Windows は GitHub の 2026-06 移行を先取りして `windows-2025-vs2026` を明示使用します。`windows-latest` に戻す場合は Actions の runner image 移行告知とテスト結果を確認してください。
 ### 週次データ更新（実例: 2025-09-17）
 - index/details を強制再取得: `uv run python -m scripts.tasks scrape-index FORCE=1 TTL=1d` → `uv run python -m scripts.tasks scrape-details FORCE=1 TTL=1d RATE=2.0 LIMIT=0`（デフォルトRATE=2.0、タイムアウト時は `NO_NET=1` に切り替えてキャッシュ再利用）
 - JSONL を配列にまとめる: `uv run python -m scripts.tasks import-details`（`scripts/jsonl_to_json.py` を使用、`jq` 非依存）

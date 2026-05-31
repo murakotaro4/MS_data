@@ -36,6 +36,22 @@
       "retention": "git+release"
     },
     {
+      "id": "rollback_guard",
+      "type": "generated",
+      "path_patterns": ["reports/rollback_guard_*.md"],
+      "producer": ["scripts.detect_msdata_rollbacks", ".github/workflows/data_update.yml"],
+      "consumers": [".github/workflows/data_update.yml", "human"],
+      "retention": "git"
+    },
+    {
+      "id": "official_overrides_audit",
+      "type": "generated",
+      "path_patterns": ["reports/official_overrides_audit_*.md"],
+      "producer": ["scripts.audit_official_overrides", ".github/workflows/data_update.yml"],
+      "consumers": [".github/workflows/data_update.yml", "human"],
+      "retention": "git"
+    },
+    {
       "id": "label_audit",
       "type": "generated",
       "path_patterns": ["reports/label_audit_*.md", "reports/label_audit_latest.md"],
