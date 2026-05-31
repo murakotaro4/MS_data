@@ -60,6 +60,14 @@
       "retention": "git+artifact+release"
     },
     {
+      "id": "auto_review",
+      "type": "generated",
+      "path_patterns": ["reports/auto_review_*.json"],
+      "producer": ["scripts.auto_review_merge", ".github/workflows/auto_review_merge.yml"],
+      "consumers": [".github/workflows/auto_review_merge.yml", "human"],
+      "retention": "artifact"
+    },
+    {
       "id": "label_audit",
       "type": "generated",
       "path_patterns": ["reports/label_audit_*.md", "reports/label_audit_latest.md"],

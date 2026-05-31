@@ -179,7 +179,7 @@ MS名の正規化（index準拠）
 - 古い自動更新PR整理: `cleanup auto update prs` が毎日 20:30 JST に実行され、`data/auto-update-*` の古い open PR を `keep_days` 超過で close します。手動実行時は `dry_run=true` で対象確認できます。
 - PRラベル: 自動更新PRには `data-update` / `rollback-guard` / `official-overrides` / `atwiki-quality` を付与します。ラベルが無い場合は `data update` 内で作成・更新します。
 - reports 運用SSOT: 命名規約・分類・保持方針は `reports_manifest.yml` を正とします。
-- 契約検証: workflow と CI では `uv run python -m scripts.validate_report_contract` を呼び、`report_date/source_run_id/head_ref` と生成物名の整合を検証します。
+- 契約検証: workflow と CI では `uv run python -m scripts.validate_report_contract` を呼び、`report_date/source_run_id/head_ref` と生成物名の整合を検証します。生成レポート自体は `uv run python -m scripts.tasks validate-generated-reports` で JSON Schema / Markdown 必須見出しを検証します。
 - 失敗時の挙動: Codexが20分以内に応答しない、またはファイル指摘が1件以上ある場合は自動マージせずPRを残して手動対応します。
 - Codexレビュー待ち: `auto review merge` は既定で3回まで `@codex review` を試行し、各試行の待機秒数・ポーリング間隔・応答検出結果を step summary に記録します。調整する場合は repository variables の `CODEX_REVIEW_MAX_ATTEMPTS` / `CODEX_REVIEW_ATTEMPT_TIMEOUT_SECONDS` / `CODEX_REVIEW_POLL_SECONDS` / `CODEX_REVIEW_SETTLE_SECONDS` を変更します。
 - 通知連携: 自動マージ時は `auto review merge` から `post merge notify` を `workflow_dispatch` で起動し、マージ後通知を確実に実行します。
@@ -193,9 +193,10 @@ MS名の正規化（index準拠）
 - 生データアーカイブ（長期）: `post merge notify` で `source_run_id` のartifactを取得し、Release tag `raw-snapshot-YYYYMMDD-run<run_id>` に asset として恒久保存します。
 - 復元手順: 対象コミットの `reports/provenance_YYYYMMDD.json` から `release.tag` / `release.url` を取得し、Release asset を展開して `uv run python -m scripts.tasks restore-snapshot SNAPSHOT=raw_snapshot_YYYYMMDD_run<run_id>.tar.xz OUT_DIR=restore_tmp` で `cache/` と `reports/` を再構成します。
 - 復元CI: `uv run python -m scripts.tasks verify-snapshot-restore` で raw snapshot に近いサンプルを作り、復元後に `cache/details.json` とレポート命名契約を検証します。
-- official_overrides期限管理: overrideファイルには `review_after` / `remove_after` を設定し、`reports/official_overrides_audit_YYYYMMDD.md` の `review_due` / `remove_due` を見て再確認・撤去判断を行います。
+- official_overrides期限管理: overrideファイルには `review_after` / `remove_after` を設定し、`reports/official_overrides_audit_YYYYMMDD.md` の `review_due` / `remove_due` を見て再確認・撤去判断を行います。期限到達時は `data update` が Step Summary に件数を出し、dry-run ではなく protected rollback が0件の場合に open Issue `official_overrides 期限確認` を作成または追記します。
 - official_overridesスキーマ: `schema/official_overrides.schema.json` を正とし、CIで `uv run python -m scripts.tasks validate-official-overrides-schema` を実行します。各entryは `MS名` / `values` / `stale_values` が必須です。
-- atwiki取得品質: `data update` は `reports/atwiki_quality_YYYYMMDD.json` を生成し、HTTPステータス、条件付きGET(304)件数、取得失敗推定、詳細レコード数、msData差分件数を記録します。
+- atwiki取得品質: `data update` は `reports/atwiki_quality_YYYYMMDD.json` を生成し、HTTPステータス、条件付きGET(304)件数、取得失敗推定、詳細レコード数、msData差分件数を記録します。しきい値超過は fail ではなく `warnings`、Step Summary、PR本文で警告します（`ATWIKI_QUALITY_MAX_FAILURE_RATE` / `ATWIKI_QUALITY_MIN_DETAIL_RECORD_RATIO` / `ATWIKI_QUALITY_FULL_DIFF_WARNING_COUNT` で調整）。
+- auto review可視化: `auto review merge` は停止/マージ/merge_failed、no_response、試行回数、応答時間を `reports/auto_review_YYYYMMDD.json` に出力し、Actions artifact と Step Summary に残します。
 - 互換期間: レポート再編時は旧パスを最低1リリース周期維持し、`参照consumerが0` かつ `互換期間経過` 後に撤去します。
 - CI runner: Windows は GitHub の 2026-06 移行を先取りして `windows-2025-vs2026` を明示使用します。`windows-latest` に戻す場合は Actions の runner image 移行告知とテスト結果を確認してください。
 ### 週次データ更新（実例: 2025-09-17）

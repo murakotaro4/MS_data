@@ -34,6 +34,9 @@ jobs:
       RATE: 2.0
       LIMIT: 0
       ARTIFACT_RETENTION_DAYS: 90
+      ATWIKI_QUALITY_MAX_FAILURE_RATE: ${{ vars.ATWIKI_QUALITY_MAX_FAILURE_RATE || '0.10' }}
+      ATWIKI_QUALITY_MIN_DETAIL_RECORD_RATIO: ${{ vars.ATWIKI_QUALITY_MIN_DETAIL_RECORD_RATIO || '0.80' }}
+      ATWIKI_QUALITY_FULL_DIFF_WARNING_COUNT: ${{ vars.ATWIKI_QUALITY_FULL_DIFF_WARNING_COUNT || '200' }}
     steps:
       - uses: actions/checkout@v6
 
@@ -52,12 +55,20 @@ jobs:
         run: |
           report_date="$(date +%Y%m%d)"
           dry_run="false"
+          full_update="false"
           if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.dry_run }}" == "true" ]]; then
             dry_run="true"
+          fi
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.force_full }}" == "true" ]]; then
+            full_update="true"
+          fi
+          if [[ "${{ github.event_name }}" == "schedule" && "${{ github.event.schedule }}" == "0 9 * * 0" ]]; then
+            full_update="true"
           fi
           echo "REPORT_DATE=${report_date}" >> "$GITHUB_ENV"
           echo "HEAD_REF=data/auto-update-${report_date}" >> "$GITHUB_ENV"
           echo "DRY_RUN=${dry_run}" >> "$GITHUB_ENV"
+          echo "FULL_UPDATE=${full_update}" >> "$GITHUB_ENV"
           echo "PROVENANCE_FILE=reports/provenance_${report_date}.json" >> "$GITHUB_ENV"
           echo "RAW_ARTIFACT_NAME=raw-snapshot-${report_date}-run-${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
           echo "RAW_SNAPSHOT_FILE=raw_snapshot_${report_date}_run${GITHUB_RUN_ID}.tar.xz" >> "$GITHUB_ENV"
@@ -127,21 +138,72 @@ jobs:
           FAST_TTL="${TTL}" RATE="${RATE}" LIMIT="${LIMIT}" MSDATA=msData.json \
             uv run python -m scripts.tasks update-fast
 
-      - name: Run rollback guard and official override audit
+      - name: Run rollback guard
         run: |
           mkdir -p reports
           uv run python -m scripts.detect_msdata_rollbacks \
             --old msData.before.json \
             --new msData.json \
-            --out "reports/rollback_guard_${REPORT_DATE}.md" \
-            --fail-on-protected-rollback
+            --out "reports/rollback_guard_${REPORT_DATE}.md"
+
+      - id: official_overrides_audit
+        name: Run official override audit
+        run: |
+          mkdir -p reports
           uv run python -m scripts.audit_official_overrides \
             --before msData.before.json \
             --raw cache/msData.before_official_overrides.json \
             --current msData.json \
             --out "reports/official_overrides_audit_${REPORT_DATE}.md" \
             --today "${REPORT_DATE}" \
-            --fail-on-protected-rollback
+            --github-output "$GITHUB_OUTPUT" \
+            --step-summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Notify official override due issue
+        if: env.DRY_RUN != 'true' && steps.official_overrides_audit.outputs.protected_rollback == '0' && steps.official_overrides_audit.outputs.due_count != '' && steps.official_overrides_audit.outputs.due_count != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create official-overrides \
+            --repo "${GITHUB_REPOSITORY}" \
+            --description "Touches official override audit path" \
+            --color "5319E7" \
+            --force
+          gh label create override-due \
+            --repo "${GITHUB_REPOSITORY}" \
+            --description "official_overrides review/remove date reached" \
+            --color "B60205" \
+            --force
+
+          body_path="$RUNNER_TEMP/official_overrides_due.md"
+          cat > "$body_path" <<EOF
+          official_overrides の期限確認が必要です。
+
+          - report_date: ${REPORT_DATE}
+          - review_due: ${{ steps.official_overrides_audit.outputs.review_due }}
+          - remove_due: ${{ steps.official_overrides_audit.outputs.remove_due }}
+          - audit_report: reports/official_overrides_audit_${REPORT_DATE}.md
+          - workflow_run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+
+          remove_due が 1 件以上ある場合は、該当 override を撤去できるか確認してください。
+          EOF
+
+          issue_number="$(gh issue list \
+            --repo "${GITHUB_REPOSITORY}" \
+            --state open \
+            --search "official_overrides 期限確認 in:title" \
+            --json number \
+            --jq '.[0].number // ""')"
+          if [[ -n "${issue_number}" ]]; then
+            gh issue comment "${issue_number}" --repo "${GITHUB_REPOSITORY}" --body-file "$body_path"
+          else
+            gh issue create \
+              --repo "${GITHUB_REPOSITORY}" \
+              --title "official_overrides 期限確認" \
+              --body-file "$body_path" \
+              --label official-overrides \
+              --label override-due
+          fi
 
       - id: detection
         name: Read change detection summary
@@ -165,14 +227,40 @@ jobs:
               f.write(f"- fallback_reason: {meta.get('fallback_reason') or 'none'}\n")
           PY
 
-      - name: Build atwiki quality report
+      - id: quality
+        name: Build atwiki quality report
         run: |
+          full_update_args=()
+          if [[ "${FULL_UPDATE}" == "true" ]]; then
+            full_update_args+=(--full-update)
+          fi
           uv run python -m scripts.build_atwiki_quality_report \
             --report-date "${REPORT_DATE}" \
             --source-run-id "${GITHUB_RUN_ID}" \
             --before-msdata msData.before.json \
             --current-msdata msData.json \
-            --out "reports/atwiki_quality_${REPORT_DATE}.json"
+            --max-failure-rate "${ATWIKI_QUALITY_MAX_FAILURE_RATE}" \
+            --min-detail-record-ratio "${ATWIKI_QUALITY_MIN_DETAIL_RECORD_RATIO}" \
+            --full-diff-warning-count "${ATWIKI_QUALITY_FULL_DIFF_WARNING_COUNT}" \
+            --github-output "$GITHUB_OUTPUT" \
+            --step-summary "$GITHUB_STEP_SUMMARY" \
+            --out "reports/atwiki_quality_${REPORT_DATE}.json" \
+            "${full_update_args[@]}"
+
+      - name: Validate generated operational reports
+        run: |
+          test -f "reports/rollback_guard_${REPORT_DATE}.md"
+          test -f "reports/official_overrides_audit_${REPORT_DATE}.md"
+          test -f "reports/atwiki_quality_${REPORT_DATE}.json"
+          uv run python -m scripts.validate_generated_reports \
+            --reports-dir reports \
+            --schema-dir schema/reports
+
+      - name: Fail on protected official override rollback
+        if: steps.official_overrides_audit.outputs.protected_rollback != '0'
+        run: |
+          echo "official_overrides protected rollback detected. See reports/official_overrides_audit_${REPORT_DATE}.md" >&2
+          exit 1
 
       - id: changes
         name: Check msData changes
@@ -235,6 +323,14 @@ jobs:
           MSDATA=msData.json \
           uv run python -m scripts.tasks snapshot
 
+      - name: Validate generated update reports
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          test -f "reports/provenance_${REPORT_DATE}.json"
+          uv run python -m scripts.validate_generated_reports \
+            --reports-dir reports \
+            --schema-dir schema/reports
+
       - id: summary
         if: steps.changes.outputs.changed == 'true'
         name: Read summary
@@ -265,6 +361,17 @@ jobs:
           if-no-files-found: ignore
           path: reports/atwiki_quality_${{ env.REPORT_DATE }}.json
 
+      - name: Upload operational reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: operational-reports-${{ env.REPORT_DATE }}-run-${{ github.run_id }}
+          retention-days: 30
+          if-no-files-found: ignore
+          path: |
+            reports/rollback_guard_${{ env.REPORT_DATE }}.md
+            reports/official_overrides_audit_${{ env.REPORT_DATE }}.md
+
       - name: Upload raw snapshot artifact
         if: steps.changes.outputs.changed == 'true'
         uses: actions/upload-artifact@v7
@@ -281,7 +388,7 @@ jobs:
             reports/atwiki_quality_${{ env.REPORT_DATE }}.json
 
       - name: Upload dry-run reports
-        if: env.DRY_RUN == 'true'
+        if: always() && env.DRY_RUN == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: msdata-dry-run-${{ env.REPORT_DATE }}-run-${{ github.run_id }}
@@ -296,7 +403,7 @@ jobs:
             ${{ env.RAW_SNAPSHOT_FILE }}
 
       - name: Dry-run summary
-        if: env.DRY_RUN == 'true'
+        if: always() && env.DRY_RUN == 'true'
         run: |
           {
             echo "### Data Update Dry Run"
@@ -344,7 +451,9 @@ jobs:
             - レポート: reports/diff_msdata_${{ env.REPORT_DATE }}.md
             - 巻き戻りガード: reports/rollback_guard_${{ env.REPORT_DATE }}.md
             - official_overrides監査: reports/official_overrides_audit_${{ env.REPORT_DATE }}.md
+            - official_overrides期限: ${{ steps.official_overrides_audit.outputs.due_summary }}
             - atwiki品質: reports/atwiki_quality_${{ env.REPORT_DATE }}.json
+            - atwiki品質警告: ${{ steps.quality.outputs.warning_summary }}
             - provenance: reports/provenance_${{ env.REPORT_DATE }}.json
             - source_run_id: ${{ github.run_id }}
             - source_artifact: ${{ env.RAW_ARTIFACT_NAME }}

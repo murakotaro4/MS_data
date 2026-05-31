@@ -1,4 +1,5 @@
 from scripts.auto_review_merge import (
+    build_auto_review_report,
     find_latest_bot_comment,
     jst_report_date,
     resolve_target_pr,
@@ -93,3 +94,80 @@ def test_comment_markers_and_latest_bot_comment():
         == "<!-- auto-review-stop reason:codex_no_response run_id:123 head_sha:abc123 -->"
     )
     assert find_latest_bot_comment(comments, marker)["id"] == 2
+
+
+def test_build_auto_review_report_records_no_response_stop():
+    args = type(
+        "Args",
+        (),
+        {
+            "report_date": "20260531",
+            "run_id": "26709621743",
+            "pr_number": "97",
+            "head_ref": "data/auto-update-20260531",
+            "head_sha": "abc123",
+            "merge_ok": "false",
+            "merged": "",
+            "merge_outcome": "skipped",
+            "stop_reason": "no_response",
+            "findings": "0",
+            "review_complete": "false",
+            "responded": "false",
+            "attempts_used": "3",
+            "max_attempts": "3",
+            "attempt_timeout_seconds": "420",
+            "poll_seconds": "30",
+            "settle_seconds": "60",
+            "response_attempt": "",
+            "response_seconds": "",
+            "trigger_comment_ids": "10,11,12",
+            "first_trigger_created_at": "2026-05-31T10:00:00Z",
+        },
+    )()
+
+    report = build_auto_review_report(args)
+
+    assert report["schema_version"] == "1"
+    assert report["status"] == "stopped"
+    assert report["stop_reason"] == "no_response"
+    assert report["review"]["responded"] is False
+    assert report["review"]["attempts_used"] == 3
+    assert report["review"]["trigger_comment_ids"] == ["10", "11", "12"]
+
+
+def test_build_auto_review_report_records_merge_failure():
+    args = type(
+        "Args",
+        (),
+        {
+            "report_date": "20260531",
+            "run_id": "26709621743",
+            "pr_number": "97",
+            "head_ref": "data/auto-update-20260531",
+            "head_sha": "abc123",
+            "merge_ok": "true",
+            "merged": "",
+            "merge_outcome": "failure",
+            "stop_reason": "none",
+            "findings": "0",
+            "review_complete": "true",
+            "responded": "true",
+            "attempts_used": "1",
+            "max_attempts": "3",
+            "attempt_timeout_seconds": "420",
+            "poll_seconds": "30",
+            "settle_seconds": "60",
+            "response_attempt": "1",
+            "response_seconds": "90",
+            "trigger_comment_ids": "10",
+            "first_trigger_created_at": "2026-05-31T10:00:00Z",
+        },
+    )()
+
+    report = build_auto_review_report(args)
+
+    assert report["status"] == "merge_failed"
+    assert report["stop_reason"] == "merge_failed"
+    assert report["merge_ok"] is True
+    assert report["merged"] is False
+    assert report["merge_outcome"] == "failure"

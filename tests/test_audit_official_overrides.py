@@ -131,3 +131,51 @@ def test_audit_can_fail_when_override_remove_date_is_due(tmp_path):
     assert rc == 1
     text = out.read_text(encoding="utf-8")
     assert "- remove_due: 1" in text
+
+
+def test_audit_writes_github_output_and_step_summary(tmp_path):
+    overrides_dir = tmp_path / "official_overrides"
+    _write_json(
+        overrides_dir / "20260528.json",
+        {
+            "schema_version": "1",
+            "review_after": "2026-05-01",
+            "remove_after": "2026-06-30",
+            "overrides": [
+                {
+                    "MS名": "ザクⅢ改_LV1",
+                    "values": {"HP": 27000},
+                    "stale_values": {"HP": 23500},
+                }
+            ],
+        },
+    )
+    current = tmp_path / "current.json"
+    out = tmp_path / "audit.md"
+    github_output = tmp_path / "github_output.txt"
+    step_summary = tmp_path / "summary.md"
+    _write_json(current, [{"MS名": "ザクⅢ改_LV1", "HP": 27000}])
+
+    rc = audit_official_overrides.main(
+        [
+            "--overrides-dir",
+            str(overrides_dir),
+            "--current",
+            str(current),
+            "--out",
+            str(out),
+            "--today",
+            "2026-05-31",
+            "--github-output",
+            str(github_output),
+            "--step-summary",
+            str(step_summary),
+        ]
+    )
+
+    assert rc == 0
+    output_text = github_output.read_text(encoding="utf-8")
+    assert "review_due=1" in output_text
+    assert "remove_due=0" in output_text
+    assert "due_count=1" in output_text
+    assert "### official_overrides 期限監査" in step_summary.read_text(encoding="utf-8")

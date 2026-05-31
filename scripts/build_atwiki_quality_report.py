@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
@@ -62,6 +63,117 @@ def _is_failed_fetch(entry: dict[str, Any]) -> bool:
     return entry.get("ok") is False or bool(entry.get("error"))
 
 
+def _warning(
+    warning_id: str,
+    message: str,
+    *,
+    observed: int | float,
+    threshold: int | float,
+) -> dict[str, Any]:
+    return {
+        "id": warning_id,
+        "severity": "warning",
+        "message": message,
+        "observed": observed,
+        "threshold": threshold,
+    }
+
+
+def evaluate_quality_warnings(
+    report: dict[str, Any],
+    *,
+    max_failure_rate: float,
+    min_detail_record_ratio: float,
+    full_diff_warning_count: int,
+) -> list[dict[str, Any]]:
+    detail_fetch = report.get("detail_fetch", {})
+    details = report.get("details", {})
+    msdata_diff = report.get("msdata_diff", {})
+    index = report.get("index", {})
+    warnings: list[dict[str, Any]] = []
+
+    attempted = int(detail_fetch.get("attempted_url_count", 0) or 0)
+    failed = int(detail_fetch.get("failed_url_count", 0) or 0)
+    if attempted > 0:
+        failure_rate = failed / attempted
+        if failure_rate > max_failure_rate:
+            warnings.append(
+                _warning(
+                    "high_failure_rate",
+                    "詳細取得の失敗率がしきい値を超えています。",
+                    observed=round(failure_rate, 6),
+                    threshold=max_failure_rate,
+                )
+            )
+
+        jsonl_records = int(details.get("jsonl_records", 0) or 0)
+        detail_record_ratio = jsonl_records / attempted
+        if detail_record_ratio < min_detail_record_ratio:
+            warnings.append(
+                _warning(
+                    "low_detail_record_ratio",
+                    "候補URL数に対して詳細レコード数が少なすぎます。",
+                    observed=round(detail_record_ratio, 6),
+                    threshold=min_detail_record_ratio,
+                )
+            )
+
+    changed_total = sum(
+        int(msdata_diff.get(key, 0) or 0) for key in ("added", "removed", "changed")
+    )
+    if bool(index.get("full_update")) and changed_total >= full_diff_warning_count:
+        warnings.append(
+            _warning(
+                "large_full_update_diff",
+                "full更新の msData 差分件数がしきい値以上です。",
+                observed=changed_total,
+                threshold=full_diff_warning_count,
+            )
+        )
+
+    return warnings
+
+
+def _write_github_output(path: Path, values: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as f:
+        for key, value in values.items():
+            f.write(f"{key}={value}\n")
+
+
+def _append_step_summary(report: dict[str, Any], path: Path | None) -> None:
+    summary_path = path or os.environ.get("GITHUB_STEP_SUMMARY")
+    if not summary_path:
+        return
+    warnings = report.get("warnings", [])
+    detail_fetch = report["detail_fetch"]
+    msdata_diff = report["msdata_diff"]
+    lines = [
+        "### atwiki 取得品質",
+        f"- warnings: {len(warnings)}",
+        f"- attempted_url_count: {detail_fetch['attempted_url_count']}",
+        f"- successful_url_count: {detail_fetch['successful_url_count']}",
+        f"- failed_url_count: {detail_fetch['failed_url_count']}",
+        f"- cache_utilization: {detail_fetch['cache_utilization']}",
+        (
+            "- msdata_diff: "
+            f"+{msdata_diff['added']} -{msdata_diff['removed']} "
+            f"~{msdata_diff['changed']}"
+        ),
+    ]
+    for warning in warnings:
+        lines.append(f"- warning[{warning['id']}]: {warning['message']}")
+    with Path(summary_path).open("a", encoding="utf-8") as f:
+        for line in lines:
+            f.write(f"{line}\n")
+
+
+def _warning_summary(warnings: list[dict[str, Any]]) -> str:
+    if not warnings:
+        return "なし"
+    return "; ".join(str(item["id"]) for item in warnings)
+
+
 def build_report(
     *,
     report_date: str,
@@ -74,6 +186,10 @@ def build_report(
     details_jsonl_path: Path,
     before_msdata_path: Path | None,
     current_msdata_path: Path | None,
+    full_update: bool = False,
+    max_failure_rate: float = 0.10,
+    min_detail_record_ratio: float = 0.80,
+    full_diff_warning_count: int = 200,
 ) -> dict[str, Any]:
     index_data = _load_json(index_path, [])
     changed_index = _load_json(changed_index_path, [])
@@ -145,13 +261,14 @@ def build_report(
     details_json = _load_json(details_json_path, [])
     details_json_count = len(details_json) if isinstance(details_json, list) else 0
 
-    return {
+    report: dict[str, Any] = {
         "schema_version": "1",
         "report_date": report_date,
         "source_run_id": source_run_id,
         "index": {
             "total_count": len(index_data),
             "candidate_count": candidate_count,
+            "full_update": bool(full_update),
             "fast_path": bool(changed_meta.get("fast_path", False)),
             "fallback_reason": changed_meta.get("fallback_reason") or "none",
             "age_coverage": changed_meta.get("age_coverage", 0.0),
@@ -178,6 +295,13 @@ def build_report(
             "changed": changed,
         },
     }
+    report["warnings"] = evaluate_quality_warnings(
+        report,
+        max_failure_rate=max_failure_rate,
+        min_detail_record_ratio=min_detail_record_ratio,
+        full_diff_warning_count=full_diff_warning_count,
+    )
+    return report
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -202,6 +326,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--before-msdata", type=Path, default=None)
     parser.add_argument("--current-msdata", type=Path, default=Path("msData.json"))
+    parser.add_argument("--full-update", action="store_true")
+    parser.add_argument("--max-failure-rate", type=float, default=0.10)
+    parser.add_argument("--min-detail-record-ratio", type=float, default=0.80)
+    parser.add_argument("--full-diff-warning-count", type=int, default=200)
+    parser.add_argument("--github-output", type=Path, default=None)
+    parser.add_argument("--step-summary", type=Path, default=None)
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args(argv)
 
@@ -216,12 +346,26 @@ def main(argv: list[str] | None = None) -> int:
         details_jsonl_path=args.details_jsonl,
         before_msdata_path=args.before_msdata,
         current_msdata_path=args.current_msdata,
+        full_update=args.full_update,
+        max_failure_rate=args.max_failure_rate,
+        min_detail_record_ratio=args.min_detail_record_ratio,
+        full_diff_warning_count=args.full_diff_warning_count,
     )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+    warnings = report["warnings"]
+    if args.github_output is not None:
+        _write_github_output(
+            args.github_output,
+            {
+                "warning_count": len(warnings),
+                "warning_summary": _warning_summary(warnings),
+            },
+        )
+    _append_step_summary(report, args.step_summary)
     print(f"atwiki quality report: {args.out}")
     return 0
 

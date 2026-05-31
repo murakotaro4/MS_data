@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -290,6 +291,47 @@ def render_markdown(
     return "\n".join(lines) + "\n"
 
 
+def _write_github_output(
+    path: Path, counts: Counter[str], lifecycle_counts: Counter[str]
+) -> None:
+    due_count = lifecycle_counts.get("review_due", 0) + lifecycle_counts.get(
+        "remove_due", 0
+    )
+    values = {
+        "protected_rollback": counts.get("protected_rollback", 0),
+        "source_changed": counts.get("source_changed", 0),
+        "review_due": lifecycle_counts.get("review_due", 0),
+        "remove_due": lifecycle_counts.get("remove_due", 0),
+        "due_count": due_count,
+        "due_summary": (
+            f"review_due={lifecycle_counts.get('review_due', 0)},"
+            f"remove_due={lifecycle_counts.get('remove_due', 0)}"
+        ),
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as f:
+        for key, value in values.items():
+            f.write(f"{key}={value}\n")
+
+
+def _append_step_summary(
+    counts: Counter[str], lifecycle_counts: Counter[str], path: Path | None = None
+) -> None:
+    summary_path = path or os.environ.get("GITHUB_STEP_SUMMARY")
+    if not summary_path:
+        return
+    lines = [
+        "### official_overrides 期限監査",
+        f"- protected_rollback: {counts.get('protected_rollback', 0)}",
+        f"- source_changed: {counts.get('source_changed', 0)}",
+        f"- review_due: {lifecycle_counts.get('review_due', 0)}",
+        f"- remove_due: {lifecycle_counts.get('remove_due', 0)}",
+    ]
+    with Path(summary_path).open("a", encoding="utf-8") as f:
+        for line in lines:
+            f.write(f"{line}\n")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -304,6 +346,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--today", default=None)
     parser.add_argument("--fail-on-protected-rollback", action="store_true")
     parser.add_argument("--fail-on-remove-due", action="store_true")
+    parser.add_argument("--github-output", type=Path, default=None)
+    parser.add_argument("--step-summary", type=Path, default=None)
     args = parser.parse_args(argv)
 
     overrides = update_msdata.load_official_overrides(args.overrides_dir)
@@ -323,6 +367,9 @@ def main(argv: list[str] | None = None) -> int:
     args.out.write_text(
         render_markdown(rows, counts, lifecycle_counts), encoding="utf-8"
     )
+    if args.github_output is not None:
+        _write_github_output(args.github_output, counts, lifecycle_counts)
+    _append_step_summary(counts, lifecycle_counts, args.step_summary)
 
     if args.fail_on_protected_rollback and counts.get("protected_rollback", 0) > 0:
         return 1
