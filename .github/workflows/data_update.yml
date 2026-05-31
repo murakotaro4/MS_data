@@ -100,7 +100,7 @@ jobs:
           rm -rf .detect_state
           mkdir -p .detect_state
 
-          previous_run_id="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/data_update.yml/runs?status=success&per_page=10" --jq '.workflow_runs[0].id // empty' 2>/dev/null || true)"
+          previous_run_id="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/data_update.yml/runs?status=success&event=schedule&per_page=10" --jq '.workflow_runs[0].id // empty' 2>/dev/null || true)"
           if [[ -n "${previous_run_id}" ]]; then
             gh run download "${previous_run_id}" \
               --repo "${GITHUB_REPOSITORY}" \
@@ -342,7 +342,7 @@ jobs:
         run: rm -f msData.before.json
 
       - name: Upload detect state artifact
-        if: always()
+        if: always() && env.DRY_RUN != 'true'
         uses: actions/upload-artifact@v7
         with:
           name: detect-state
