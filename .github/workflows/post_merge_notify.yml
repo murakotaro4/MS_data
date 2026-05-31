@@ -24,11 +24,13 @@ on:
         type: boolean
 
 permissions:
-  actions: read
-  contents: write
+  contents: read
 
 jobs:
   notify:
+    permissions:
+      actions: read
+      contents: write
     if: >
       (
         github.event_name == 'pull_request' &&
@@ -167,6 +169,13 @@ jobs:
           if [[ -f "${{ steps.report.outputs.official_overrides_audit_asset_path }}" ]]; then
             gh release upload "${tag}" \
               "${{ steps.report.outputs.official_overrides_audit_asset_path }}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --clobber
+          fi
+
+          if [[ -f "${{ steps.report.outputs.atwiki_quality_asset_path }}" ]]; then
+            gh release upload "${tag}" \
+              "${{ steps.report.outputs.atwiki_quality_asset_path }}" \
               --repo "${GITHUB_REPOSITORY}" \
               --clobber
           fi

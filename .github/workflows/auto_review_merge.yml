@@ -8,13 +8,15 @@ on:
       - completed
 
 permissions:
-  actions: write
-  contents: write
-  pull-requests: write
-  issues: write
+  contents: read
 
 jobs:
   review-and-merge:
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
+      issues: write
     concurrency:
       group: auto-review-merge-${{ github.event.workflow_run.id }}
       cancel-in-progress: true

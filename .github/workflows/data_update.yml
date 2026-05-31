@@ -18,12 +18,15 @@ on:
         type: boolean
 
 permissions:
-  actions: read
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   update:
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: write
+      issues: write
     runs-on: ubuntu-latest
     env:
       TZ: Asia/Tokyo
@@ -73,6 +76,9 @@ jobs:
             --artifact-name "${RAW_ARTIFACT_NAME}" \
             --snapshot-file "${RAW_SNAPSHOT_FILE}" \
             --release-tag "${RELEASE_TAG}"
+
+      - name: Validate official overrides schema
+        run: uv run python -m scripts.tasks validate-official-overrides-schema
 
       - name: Restore previous detect state
         env:
@@ -159,6 +165,15 @@ jobs:
               f.write(f"- fallback_reason: {meta.get('fallback_reason') or 'none'}\n")
           PY
 
+      - name: Build atwiki quality report
+        run: |
+          uv run python -m scripts.build_atwiki_quality_report \
+            --report-date "${REPORT_DATE}" \
+            --source-run-id "${GITHUB_RUN_ID}" \
+            --before-msdata msData.before.json \
+            --current-msdata msData.json \
+            --out "reports/atwiki_quality_${REPORT_DATE}.json"
+
       - id: changes
         name: Check msData changes
         run: |
@@ -207,6 +222,7 @@ jobs:
             --out "reports/diff_msdata_${REPORT_DATE}.md" \
             --note "巻き戻りガード: reports/rollback_guard_${REPORT_DATE}.md" \
             --note "official_overrides監査: reports/official_overrides_audit_${REPORT_DATE}.md" \
+            --note "atwiki品質: reports/atwiki_quality_${REPORT_DATE}.json" \
             --print-summary | tee reports/diff_summary.txt
           REPORT_DATE="${REPORT_DATE}" \
           PROVENANCE_OUT="${PROVENANCE_FILE}" \
@@ -240,6 +256,15 @@ jobs:
             cache/index_changed_meta.json
             cache/detail_fetch_state.json
 
+      - name: Upload atwiki quality report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: atwiki-quality-${{ env.REPORT_DATE }}-run-${{ github.run_id }}
+          retention-days: 30
+          if-no-files-found: ignore
+          path: reports/atwiki_quality_${{ env.REPORT_DATE }}.json
+
       - name: Upload raw snapshot artifact
         if: steps.changes.outputs.changed == 'true'
         uses: actions/upload-artifact@v7
@@ -253,6 +278,7 @@ jobs:
             reports/provenance_${{ env.REPORT_DATE }}.json
             reports/rollback_guard_${{ env.REPORT_DATE }}.md
             reports/official_overrides_audit_${{ env.REPORT_DATE }}.md
+            reports/atwiki_quality_${{ env.REPORT_DATE }}.json
 
       - name: Upload dry-run reports
         if: env.DRY_RUN == 'true'
@@ -266,6 +292,7 @@ jobs:
             reports/provenance_${{ env.REPORT_DATE }}.json
             reports/rollback_guard_${{ env.REPORT_DATE }}.md
             reports/official_overrides_audit_${{ env.REPORT_DATE }}.md
+            reports/atwiki_quality_${{ env.REPORT_DATE }}.json
             ${{ env.RAW_SNAPSHOT_FILE }}
 
       - name: Dry-run summary
@@ -279,6 +306,32 @@ jobs:
             echo "- dry_run_artifact: msdata-dry-run-${REPORT_DATE}-run-${GITHUB_RUN_ID}"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Ensure pull request labels
+        if: steps.changes.outputs.changed == 'true' && env.DRY_RUN != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create data-update \
+            --repo "${GITHUB_REPOSITORY}" \
+            --description "msData automated data update" \
+            --color "1D76DB" \
+            --force
+          gh label create rollback-guard \
+            --repo "${GITHUB_REPOSITORY}" \
+            --description "Includes rollback guard report" \
+            --color "D93F0B" \
+            --force
+          gh label create official-overrides \
+            --repo "${GITHUB_REPOSITORY}" \
+            --description "Touches official override audit path" \
+            --color "5319E7" \
+            --force
+          gh label create atwiki-quality \
+            --repo "${GITHUB_REPOSITORY}" \
+            --description "Includes atwiki fetch quality report" \
+            --color "0E8A16" \
+            --force
+
       - name: Create pull request
         if: steps.changes.outputs.changed == 'true' && env.DRY_RUN != 'true'
         uses: peter-evans/create-pull-request@v8
@@ -291,14 +344,21 @@ jobs:
             - レポート: reports/diff_msdata_${{ env.REPORT_DATE }}.md
             - 巻き戻りガード: reports/rollback_guard_${{ env.REPORT_DATE }}.md
             - official_overrides監査: reports/official_overrides_audit_${{ env.REPORT_DATE }}.md
+            - atwiki品質: reports/atwiki_quality_${{ env.REPORT_DATE }}.json
             - provenance: reports/provenance_${{ env.REPORT_DATE }}.json
             - source_run_id: ${{ github.run_id }}
             - source_artifact: ${{ env.RAW_ARTIFACT_NAME }}
             <!-- source_run_id:${{ github.run_id }} -->
           branch: "data/auto-update-${{ env.REPORT_DATE }}"
+          labels: |
+            data-update
+            rollback-guard
+            official-overrides
+            atwiki-quality
           add-paths: |
             msData.json
             reports/diff_msdata_${{ env.REPORT_DATE }}.md
             reports/provenance_${{ env.REPORT_DATE }}.json
             reports/rollback_guard_${{ env.REPORT_DATE }}.md
             reports/official_overrides_audit_${{ env.REPORT_DATE }}.md
+            reports/atwiki_quality_${{ env.REPORT_DATE }}.json

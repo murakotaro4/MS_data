@@ -169,16 +169,23 @@ def load_detail_fetch_state(path: Path) -> Dict[str, Dict[str, Any]]:
     }
 
 
+def _utc_iso(value: datetime) -> str:
+    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
 def write_detail_fetch_state(
-    path: Path, items: Dict[str, Dict[str, Any]], generated_at: datetime
+    path: Path,
+    items: Dict[str, Dict[str, Any]],
+    generated_at: datetime,
+    run_started_at: Optional[datetime] = None,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "generated_at": generated_at.astimezone(timezone.utc)
-        .isoformat()
-        .replace("+00:00", "Z"),
+        "generated_at": _utc_iso(generated_at),
         "items": dict(sorted(items.items())),
     }
+    if run_started_at is not None:
+        payload["run_started_at"] = _utc_iso(run_started_at)
     path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
@@ -189,16 +196,36 @@ def remember_detail_fetch(
     url: str,
     item: Dict[str, Any],
     meta: Dict[str, Any],
+    attempted_at: Optional[datetime] = None,
 ) -> None:
     fetched_at = meta.get("fetched_at")
     if not isinstance(fetched_at, str):
-        fetched_at = datetime.now(timezone.utc).isoformat()
+        fetched_at = _utc_iso(datetime.now(timezone.utc))
     detail_state[url] = {
         "name": item.get("name"),
         "page_id": item.get("page_id") or extract_page_id(url),
+        "attempted_at": _utc_iso(attempted_at or datetime.now(timezone.utc)),
+        "ok": True,
         "fetched_at": fetched_at,
         "http_status": meta.get("http_status"),
         "semantic_sha256": meta.get("semantic_sha256"),
+    }
+
+
+def remember_detail_fetch_failure(
+    detail_state: Dict[str, Dict[str, Any]],
+    url: str,
+    item: Dict[str, Any],
+    error: Exception,
+    attempted_at: datetime,
+) -> None:
+    detail_state[url] = {
+        "name": item.get("name"),
+        "page_id": item.get("page_id") or extract_page_id(url),
+        "attempted_at": _utc_iso(attempted_at),
+        "ok": False,
+        "http_status": None,
+        "error": str(error),
     }
 
 
@@ -1178,6 +1205,7 @@ def cmd_details(args: argparse.Namespace) -> int:
         getattr(args, "detail_fetch_state_out", "") or "cache/detail_fetch_state.json"
     )
     detail_state = load_detail_fetch_state(detail_state_path)
+    run_started_at = datetime.now(timezone.utc)
     t_last = 0.0
     written = 0
     with out.open("w", encoding="utf-8") as f:
@@ -1196,7 +1224,9 @@ def cmd_details(args: argparse.Namespace) -> int:
                 # 変更がなければスキップ（オプション）
                 if getattr(args, "changed_only", False):
                     if not _meta.get("semantic_changed", False):
-                        remember_detail_fetch(detail_state, url, item, _meta)
+                        remember_detail_fetch(
+                            detail_state, url, item, _meta, run_started_at
+                        )
                         continue
                 per_level = parse_details(text)
                 # 補足情報（index由来）を併合
@@ -1222,13 +1252,16 @@ def cmd_details(args: argparse.Namespace) -> int:
                     f.write(json.dumps(merged, ensure_ascii=False))
                     f.write("\n")
                     written += 1
-                remember_detail_fetch(detail_state, url, item, _meta)
+                remember_detail_fetch(detail_state, url, item, _meta, run_started_at)
             except Exception as e:
+                remember_detail_fetch_failure(
+                    detail_state, url, item, e, run_started_at
+                )
                 print(f"WARN: failed {url}: {e}", file=sys.stderr)
             if args.limit and written >= args.limit:
                 break
     write_detail_fetch_state(
-        detail_state_path, detail_state, datetime.now(timezone.utc)
+        detail_state_path, detail_state, datetime.now(timezone.utc), run_started_at
     )
     print(f"details: wrote {written} records -> {out}")
     return 0

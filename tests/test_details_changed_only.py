@@ -106,3 +106,47 @@ def test_details_changed_only_skips_when_only_comments(monkeypatch, tmp_path: Pa
     assert rc3 == 0
     lines3 = out.read_text(encoding="utf-8").splitlines()
     assert len(lines3) == 1
+
+
+def test_cmd_details_records_current_fetch_failure(monkeypatch, tmp_path: Path):
+    url = "https://example.test/ms/failed"
+    idx_path = tmp_path / "index.json"
+    idx_path.write_text(
+        json.dumps([{"name": "Failed", "url": url, "cost": 300, "属性": "汎用"}]),
+        encoding="utf-8",
+    )
+    detail_state = tmp_path / "detail_fetch_state.json"
+
+    class FailingCache:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def get(self, _url: str):
+            raise RuntimeError("timeout")
+
+    monkeypatch.setattr(sm, "get_client", lambda *_args, **_kwargs: object())
+    monkeypatch.setattr(sm, "CacheHTTP", FailingCache)
+
+    args = type(
+        "Args",
+        (),
+        {
+            "input": str(idx_path),
+            "out": str(tmp_path / "details.jsonl"),
+            "rate": 100.0,
+            "limit": 0,
+            "ttl": "0s",
+            "no_network": False,
+            "force": False,
+            "changed_only": False,
+            "detail_fetch_state_out": str(detail_state),
+        },
+    )()
+
+    assert sm.cmd_details(args) == 0
+    state = json.loads(detail_state.read_text(encoding="utf-8"))
+    assert state["run_started_at"]
+    assert state["items"][url]["ok"] is False
+    assert state["items"][url]["attempted_at"]
+    assert state["items"][url]["error"] == "timeout"
+    assert "fetched_at" not in state["items"][url]
