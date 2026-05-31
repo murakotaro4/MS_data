@@ -47,14 +47,14 @@
   "outputs": {
     "msdata_json": {
       "path": "msData.json",
-      "sha256": "df36102cd5c47ccf8e8e0b78c951020dcac18af787cf6d02f4ae3faef698c488",
+      "sha256": "81a6717478a0b5624e9cbe31474b0caa844a8b4f2d96c8abc5af5b4e583e1f44",
       "size_bytes": 2538798,
       "record_count": 1644
     },
     "diff_report": {
       "path": "reports/diff_msdata_20260531.md",
-      "sha256": "bb2ae80e4011e44a65bd8c1311ce2e77c6158f6b840765fd869f34636dc2af29",
-      "size_bytes": 3171
+      "sha256": "e93d750a071a60b6511595cbe3570b4fac9acea9c4cd7eac8919c74c40f58125",
+      "size_bytes": 3142
     }
   },
   "artifact": {
