@@ -485,6 +485,16 @@ def task_snapshot() -> int:
     return 0
 
 
+def task_restore_snapshot() -> int:
+    return _run_python_module(
+        "scripts.restore_snapshot",
+        "--snapshot",
+        _require_env("SNAPSHOT"),
+        "--out-dir",
+        _env_str("OUT_DIR", ".") or ".",
+    )
+
+
 def task_audit_index() -> int:
     report_date = _report_date()
     msdata = _env_str("MSDATA", "msData.json") or "msData.json"
@@ -539,8 +549,13 @@ def task_audit_official_overrides() -> int:
         args.extend(["--raw", raw])
     if before:
         args.extend(["--before", before])
+    today = _env_str("TODAY")
+    if today:
+        args.extend(["--today", today])
     if _env_flag("FAIL_ON_PROTECTED_ROLLBACK"):
         args.append("--fail-on-protected-rollback")
+    if _env_flag("FAIL_ON_REMOVE_DUE"):
+        args.append("--fail-on-remove-due")
     return _run_python_module("scripts.audit_official_overrides", *args)
 
 
@@ -723,6 +738,7 @@ TASKS: dict[str, Callable[[], int]] = {
     "report-diff": task_report_diff,
     "provenance": task_provenance,
     "snapshot": task_snapshot,
+    "restore-snapshot": task_restore_snapshot,
     "audit-index": task_audit_index,
     "rollback-guard": task_rollback_guard,
     "audit-official-overrides": task_audit_official_overrides,

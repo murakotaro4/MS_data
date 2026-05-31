@@ -157,9 +157,40 @@ jobs:
               --clobber
           fi
 
+          if [[ -f "${{ steps.report.outputs.rollback_guard_asset_path }}" ]]; then
+            gh release upload "${tag}" \
+              "${{ steps.report.outputs.rollback_guard_asset_path }}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --clobber
+          fi
+
+          if [[ -f "${{ steps.report.outputs.official_overrides_audit_asset_path }}" ]]; then
+            gh release upload "${tag}" \
+              "${{ steps.report.outputs.official_overrides_audit_asset_path }}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --clobber
+          fi
+
           release_url="$(gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" --json url --jq '.url')"
           echo "release_url=${release_url}" >> "$GITHUB_OUTPUT"
           echo "created=${created}" >> "$GITHUB_OUTPUT"
+
+      - id: mail_body
+        name: Build merged msData mail body
+        if: steps.release.outputs.created == 'true' || github.run_attempt != '1' || (github.event_name == 'workflow_dispatch' && github.event.inputs.send_mail == 'true')
+        run: |
+          body_path="$RUNNER_TEMP/msdata_merged_mail.txt"
+          uv run python -m scripts.build_update_mail_body \
+            --report-date "${{ steps.report.outputs.report_date }}" \
+            --result "マージ済み" \
+            --changed "true" \
+            --source-run-id "${{ steps.report.outputs.source_run_id }}" \
+            --release-url "${{ steps.release.outputs.release_url }}" \
+            --diff-path "${{ steps.report.outputs.report_path }}" \
+            --rollback-guard-path "${{ steps.report.outputs.rollback_guard_path }}" \
+            --official-overrides-audit-path "${{ steps.report.outputs.official_overrides_audit_path }}" \
+            --out "$body_path"
+          echo "path=$body_path" >> "$GITHUB_OUTPUT"
 
       - name: Send merged msData mail
         if: steps.release.outputs.created == 'true' || github.run_attempt != '1' || (github.event_name == 'workflow_dispatch' && github.event.inputs.send_mail == 'true')
@@ -170,5 +201,5 @@ jobs:
         run: |
           uv run python -m scripts.send_gmail \
             --subject "msData 更新反映通知 (${{ steps.report.outputs.report_date }})" \
-            --body "${{ steps.report.outputs.report_path }}" \
+            --body "${{ steps.mail_body.outputs.path }}" \
             --attach "msData.json"

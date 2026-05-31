@@ -175,6 +175,8 @@ MS名の正規化（index準拠）
 - 定期実行: `data update` は毎日 18:00 JST（`cron: 0 9 * * *`）で実行し、差分があれば `data/auto-update-YYYYMMDD` のPRを作成します。
 - 自動レビュー/マージ: `auto review merge` は `pull_request` ではなく `data update` 成功後の `workflow_run` で起動し、対象の `data/auto-update-*` PRに対して `@codex review` を自動実行します。Codexのファイル指摘が0件なら自動マージします（同一HEAD SHAでは重複依頼を抑止）。
 - 対象PRの解決: まず `data/auto-update-YYYYMMDD`（`workflow_run.created_at` のJST日付）を優先し、見つからない場合は open な `data/auto-update-*` の最新PRにフォールバックします。
+- dry-run: `data update` の `workflow_dispatch` では `dry_run=true` を指定できます。取得・監査・artifact作成までは実行し、PR作成と通知送信は行いません。
+- 古い自動更新PR整理: `cleanup auto update prs` が毎日 20:30 JST に実行され、`data/auto-update-*` の古い open PR を `keep_days` 超過で close します。手動実行時は `dry_run=true` で対象確認できます。
 - reports 運用SSOT: 命名規約・分類・保持方針は `reports_manifest.yml` を正とします。
 - 契約検証: workflow と CI では `uv run python -m scripts.validate_report_contract` を呼び、`report_date/source_run_id/head_ref` と生成物名の整合を検証します。
 - 失敗時の挙動: Codexが20分以内に応答しない、またはファイル指摘が1件以上ある場合は自動マージせずPRを残して手動対応します。
@@ -188,7 +190,8 @@ MS名の正規化（index準拠）
 - 巻き戻り対策レポート: `data update` 実行時に `reports/rollback_guard_YYYYMMDD.md` と `reports/official_overrides_audit_YYYYMMDD.md` を生成します。`official_overrides` の protected rollback は自動更新を失敗させ、数値低下やLV間の増減混在は確認候補としてレポートします。
 - 生データアーカイブ（短期）: 同実行で `raw_snapshot_YYYYMMDD_run<run_id>.tar.xz` を作成し、Actions artifact（90日）へ保存します。
 - 生データアーカイブ（長期）: `post merge notify` で `source_run_id` のartifactを取得し、Release tag `raw-snapshot-YYYYMMDD-run<run_id>` に asset として恒久保存します。
-- 復元手順: 対象コミットの `reports/provenance_YYYYMMDD.json` から `release.tag` / `release.url` を取得し、Release asset を展開して `cache/` を再構成します。
+- 復元手順: 対象コミットの `reports/provenance_YYYYMMDD.json` から `release.tag` / `release.url` を取得し、Release asset を展開して `uv run python -m scripts.tasks restore-snapshot SNAPSHOT=raw_snapshot_YYYYMMDD_run<run_id>.tar.xz OUT_DIR=restore_tmp` で `cache/` と `reports/` を再構成します。
+- official_overrides期限管理: overrideファイルには `review_after` / `remove_after` を設定し、`reports/official_overrides_audit_YYYYMMDD.md` の `review_due` / `remove_due` を見て再確認・撤去判断を行います。
 - 互換期間: レポート再編時は旧パスを最低1リリース周期維持し、`参照consumerが0` かつ `互換期間経過` 後に撤去します。
 - CI runner: Windows は GitHub の 2026-06 移行を先取りして `windows-2025-vs2026` を明示使用します。`windows-latest` に戻す場合は Actions の runner image 移行告知とテスト結果を確認してください。
 ### 週次データ更新（実例: 2025-09-17）
