@@ -59,6 +59,50 @@ def test_audit_reports_protected_and_upstream_current(tmp_path):
     assert "ザクⅢ改_LV1" in text
 
 
+def test_audit_treats_missing_raw_override_record_as_not_upstream_current(tmp_path):
+    overrides_dir = tmp_path / "official_overrides"
+    _write_json(
+        overrides_dir / "20260528.json",
+        {
+            "schema_version": "1",
+            "overrides": [
+                {
+                    "MS名": "ザクⅢ改_LV1",
+                    "values": {"HP": 27000},
+                    "stale_values": {"HP": 23500},
+                }
+            ],
+        },
+    )
+    before = tmp_path / "before.json"
+    raw = tmp_path / "raw.json"
+    current = tmp_path / "current.json"
+    out = tmp_path / "audit.md"
+    _write_json(before, [{"MS名": "ザクⅢ改_LV1", "HP": 27000}])
+    _write_json(raw, [{"MS名": "別機体_LV1", "HP": 12500}])
+    _write_json(current, [{"MS名": "ザクⅢ改_LV1", "HP": 27000}])
+
+    rc = audit_official_overrides.main(
+        [
+            "--overrides-dir",
+            str(overrides_dir),
+            "--before",
+            str(before),
+            "--raw",
+            str(raw),
+            "--current",
+            str(current),
+            "--out",
+            str(out),
+        ]
+    )
+
+    assert rc == 0
+    text = out.read_text(encoding="utf-8")
+    assert "- already_protected: 1" in text
+    assert "- upstream_current:" not in text
+
+
 def test_audit_fails_when_current_value_is_stale(tmp_path):
     overrides_dir = tmp_path / "official_overrides"
     _write_json(

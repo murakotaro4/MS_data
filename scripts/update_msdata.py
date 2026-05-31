@@ -427,7 +427,7 @@ def main(argv: List[str] | None = None) -> int:
         "--official-overrides-raw-out",
         type=Path,
         default=Path(default_raw_out) if default_raw_out else None,
-        help="公式調整オーバーライド適用前のマージ結果を書き出す",
+        help="公式調整オーバーライド適用前の入力取得レコードを書き出す",
     )
     ap.add_argument("--no-sort", action="store_true", help="配列の並び替えを行わない")
     ap.add_argument("--dry-run", action="store_true", help="書き込みを行わない")
@@ -452,7 +452,7 @@ def main(argv: List[str] | None = None) -> int:
 
     if args.official_overrides_raw_out is not None:
         write_records_snapshot(
-            merged_new,
+            merge_by_msname(new_records),
             args.official_overrides_raw_out,
             sort=not args.no_sort,
         )

@@ -299,6 +299,67 @@ def test_update_main_writes_raw_snapshot_before_official_overrides(tmp_path):
     ]
 
 
+def test_update_main_raw_snapshot_excludes_unfetched_base_records(tmp_path):
+    msdata = tmp_path / "msData.json"
+    incoming = tmp_path / "details.json"
+    raw_out = tmp_path / "raw.json"
+    overrides_dir = tmp_path / "official_overrides"
+    overrides_dir.mkdir()
+
+    msdata.write_text(
+        json.dumps(
+            [
+                {"MS名": "ザクⅢ改_LV1", "HP": 27000},
+                {"MS名": "別機体_LV1", "HP": 12000},
+            ],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    incoming.write_text(
+        json.dumps([{"MS名": "別機体_LV1", "HP": 12500}], ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (overrides_dir / "20260528.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1",
+                "overrides": [
+                    {
+                        "MS名": "ザクⅢ改_LV1",
+                        "values": {"HP": 27000},
+                        "stale_values": {"HP": 23500},
+                    }
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    rc = update_msdata.main(
+        [
+            "--in-place",
+            "--output",
+            str(msdata),
+            "--official-overrides-dir",
+            str(overrides_dir),
+            "--official-overrides-raw-out",
+            str(raw_out),
+            str(incoming),
+        ]
+    )
+
+    assert rc == 0
+    assert json.loads(raw_out.read_text(encoding="utf-8")) == [
+        {"MS名": "別機体_LV1", "HP": 12500}
+    ]
+    assert json.loads(msdata.read_text(encoding="utf-8")) == [
+        {"MS名": "ザクⅢ改_LV1", "HP": 27000},
+        {"MS名": "別機体_LV1", "HP": 12500},
+    ]
+
+
 def test_load_official_overrides_normalizes_names_and_stale_values(tmp_path):
     overrides_dir = tmp_path / "official_overrides"
     overrides_dir.mkdir()
