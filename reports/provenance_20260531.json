@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-05-31T10:02:49Z",
+  "report_date": "20260531",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "23da1ea3b11506aff5aacccbeec589107ecad43f"
+  },
+  "github": {
+    "run_id": "26709410162",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "58ad81b2136a25bd6087d0797d3a7c577961813fe31976bade481771f13e1205",
+      "size_bytes": 141264,
+      "record_count": 574
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "5cf2d2d8861d042ad57ab71bd66130f9310a5fe51d807d637af82ca49eef99dc",
+      "size_bytes": 1941011,
+      "record_count": 1643
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "79c93572866f02901a6847aff91c6b095375b6e0b1390fc6d254fda50ba39eea",
+      "size_bytes": 2537600,
+      "record_count": 1643
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "0f3fb551cc27cc2eeafba0f2ddcba4d9f7c0b7f35bd17fbb6ea5d25a4252e731",
+      "file_count": 1150,
+      "size_bytes": 181074792
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "df36102cd5c47ccf8e8e0b78c951020dcac18af787cf6d02f4ae3faef698c488",
+      "size_bytes": 2538798,
+      "record_count": 1644
+    },
+    "diff_report": {
+      "path": "reports/diff_msdata_20260531.md",
+      "sha256": "bb2ae80e4011e44a65bd8c1311ce2e77c6158f6b840765fd869f34636dc2af29",
+      "size_bytes": 3171
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260531-run-26709410162",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260531-run-26709410162",
+    "asset_name": "raw_snapshot_20260531_run26709410162.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260531-run-26709410162"
+  }
+}
