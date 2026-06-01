@@ -18,6 +18,12 @@ SUMMARY_KEYS = (
     "remove_due",
 )
 
+DETAIL_SECTION_HEADINGS = (
+    "追加レコード一覧",
+    "削除レコード一覧",
+    "変更レコード一覧",
+)
+
 
 def _read(path: Path | None) -> str:
     if path is None or not path.exists():
@@ -41,6 +47,82 @@ def _extract_summary_lines(path: Path | None, *, limit: int = 8) -> list[str]:
         if len(lines) >= limit:
             break
     return lines
+
+
+def _section_lines(text: str, heading: str) -> list[str]:
+    lines = text.splitlines()
+    start = None
+    target = f"## {heading}"
+    for index, line in enumerate(lines):
+        if line.strip() == target:
+            start = index
+            break
+    if start is None:
+        return []
+
+    end = len(lines)
+    for index in range(start + 1, len(lines)):
+        line = lines[index].strip()
+        if line.startswith("## "):
+            end = index
+            break
+    return lines[start:end]
+
+
+def _section_count(lines: list[str]) -> int | None:
+    for raw in lines:
+        line = raw.strip()
+        if not line.startswith("- 件数:"):
+            continue
+        value = line.split(":", 1)[1].strip()
+        try:
+            return int(value)
+        except ValueError:
+            return None
+    return None
+
+
+def _trim_blank_edges(lines: list[str]) -> list[str]:
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    while lines and not lines[-1].strip():
+        lines.pop()
+    return lines
+
+
+def _extract_diff_detail_lines(path: Path | None, *, limit: int = 160) -> list[str]:
+    text = _read(path)
+    if not text:
+        return []
+
+    detail_lines: list[str] = []
+    truncated = False
+    for heading in DETAIL_SECTION_HEADINGS:
+        section = _trim_blank_edges(_section_lines(text, heading))
+        if not section:
+            continue
+        count = _section_count(section)
+        if count == 0:
+            continue
+        if detail_lines:
+            detail_lines.append("")
+        for line in section:
+            if len(detail_lines) >= limit:
+                truncated = True
+                break
+            detail_lines.append(line)
+        if truncated:
+            break
+
+    if truncated:
+        detail_lines.extend(
+            [
+                "",
+                f"（変更内容が多いため先頭 {limit} 行のみ表示しています。"
+                "全文は添付/Release の差分レポートを確認してください。）",
+            ]
+        )
+    return detail_lines
 
 
 def _bool_text(value: str) -> str:
@@ -81,6 +163,11 @@ def build_body(args: argparse.Namespace) -> str:
     if diff_lines:
         lines.extend(["", "## 差分サマリ", ""])
         lines.extend(diff_lines)
+
+    detail_lines = _extract_diff_detail_lines(args.diff_path)
+    if detail_lines:
+        lines.extend(["", "## 変更内容", ""])
+        lines.extend(detail_lines)
 
     rollback_lines = _extract_summary_lines(args.rollback_guard_path)
     if rollback_lines:
