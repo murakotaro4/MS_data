@@ -90,13 +90,12 @@ def _trim_blank_edges(lines: list[str]) -> list[str]:
     return lines
 
 
-def _extract_diff_detail_lines(path: Path | None, *, limit: int = 160) -> list[str]:
+def _extract_diff_detail_lines(path: Path | None) -> list[str]:
     text = _read(path)
     if not text:
         return []
 
     detail_lines: list[str] = []
-    truncated = False
     for heading in DETAIL_SECTION_HEADINGS:
         section = _trim_blank_edges(_section_lines(text, heading))
         if not section:
@@ -106,22 +105,7 @@ def _extract_diff_detail_lines(path: Path | None, *, limit: int = 160) -> list[s
             continue
         if detail_lines:
             detail_lines.append("")
-        for line in section:
-            if len(detail_lines) >= limit:
-                truncated = True
-                break
-            detail_lines.append(line)
-        if truncated:
-            break
-
-    if truncated:
-        detail_lines.extend(
-            [
-                "",
-                f"（変更内容が多いため先頭 {limit} 行のみ表示しています。"
-                "全文は添付/Release の差分レポートを確認してください。）",
-            ]
-        )
+        detail_lines.extend(section)
     return detail_lines
 
 
