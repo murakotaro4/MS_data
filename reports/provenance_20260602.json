@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-06-02T10:34:59Z",
+  "report_date": "20260602",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "90f595e2b1fb338c7f11d945cb5ab8b9e27311bd"
+  },
+  "github": {
+    "run_id": "26814185189",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "43bdfb243964ca9503c2192dad5eaa05673b9ea5785658da79880f63d8ae2a11",
+      "size_bytes": 141248,
+      "record_count": 574
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "92231f88c66b86adfc800fc5f915623a905bb7d2b361bfbe2e2862c41cd5e34c",
+      "size_bytes": 57749,
+      "record_count": 49
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "3f803089cde92717e678ed47992e2e4fd26d438f39c0510754fb7a6297ffc5a9",
+      "size_bytes": 75568,
+      "record_count": 49
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "bec3bf7eefd7ac74d286b0d24bd3c5a38e7f43e95308c03a2ab2ba0a9e966368",
+      "file_count": 40,
+      "size_bytes": 6849476
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "891d0fd4559d5d7c651bd254eb8af835377817b7a7dbcf052ae8a151eab28f7e",
+      "size_bytes": 2540224,
+      "record_count": 1645
+    },
+    "diff_report": {
+      "path": "reports/diff_msdata_20260602.md",
+      "sha256": "032b110cda7bf2729dedbea1eee68e0db5c383e4091f7bac7389c43341a08c38",
+      "size_bytes": 1897
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260602-run-26814185189",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260602-run-26814185189",
+    "asset_name": "raw_snapshot_20260602_run26814185189.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260602-run-26814185189"
+  }
+}
