@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-06-03T10:35:54Z",
+  "report_date": "20260603",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "d202d06cdbc9c12666594a44e9f231cc32119cfa"
+  },
+  "github": {
+    "run_id": "26879241995",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "5507c8be030615ab939f867615dd36bce098bd3d6c1d7a265bf4143a171b2f08",
+      "size_bytes": 141231,
+      "record_count": 574
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "cf6ad30c007bf0cb38ff739d22d1e207dd5ce122296f189bd95c374107b93248",
+      "size_bytes": 88439,
+      "record_count": 74
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "27ddc0668bbcc894b46bc0fbfc83c786c9f40e20158241f8db1e4939bcebf4ca",
+      "size_bytes": 115479,
+      "record_count": 74
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "c126beeab937f1a16ffdfa726fc1d42d91be571258810b7e7f8d5076ca3ea837",
+      "file_count": 52,
+      "size_bytes": 8887846
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "c1df0bbbf5a85477c182474506c2868232055053c873ac27a2f953b9fc60a8b6",
+      "size_bytes": 2540226,
+      "record_count": 1645
+    },
+    "diff_report": {
+      "path": "reports/diff_msdata_20260603.md",
+      "sha256": "6873235ec3e68f972144f1cb1d7e50cb0ca3cbd2cd4fbc4e368d470cb6661f89",
+      "size_bytes": 3984
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260603-run-26879241995",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260603-run-26879241995",
+    "asset_name": "raw_snapshot_20260603_run26879241995.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260603-run-26879241995"
+  }
+}
