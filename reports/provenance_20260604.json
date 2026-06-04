@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-06-04T10:20:15Z",
+  "report_date": "20260604",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "fce856350ec6f7ccb25ea5fdc3e47094d61d65b1"
+  },
+  "github": {
+    "run_id": "26945743294",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "388c6622276fbba480200bee9dc504184ef28dcfc02b64cf0103fe5702c70643",
+      "size_bytes": 141490,
+      "record_count": 575
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "bfe085fb54c6cade21999503e4af3ffd9a358829576cc874e8eaaa3968c7c555",
+      "size_bytes": 104949,
+      "record_count": 88
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "873d4242844f80446c90bebc629fd0744b270a12a3dbe5fc033fc7e6d9f288ca",
+      "size_bytes": 137075,
+      "record_count": 88
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "c4f0ca36e33a6da1dfee2543f6a4c56dd2acdecc5de0ed4136d726860b6e8840",
+      "file_count": 64,
+      "size_bytes": 10943915
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "4403c0160e6f9392405dfb79d757122bdcfb24c8e688283a6d2d93410de79cb3",
+      "size_bytes": 2540223,
+      "record_count": 1645
+    },
+    "diff_report": {
+      "path": "reports/diff_msdata_20260604.md",
+      "sha256": "6ef8da78cc5d2e4f8600508d29e4ba31d74a2bf692eb29ecb59f9959add4efa8",
+      "size_bytes": 2539
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260604-run-26945743294",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260604-run-26945743294",
+    "asset_name": "raw_snapshot_20260604_run26945743294.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260604-run-26945743294"
+  }
+}
