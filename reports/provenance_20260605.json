@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-06-05T10:23:39Z",
+  "report_date": "20260605",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "df7408af32454336e5e24bfce4689c811001c446"
+  },
+  "github": {
+    "run_id": "27009431103",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "85dc1da3df00b32f377b1d2a7c19e479b1f9b62df333e306742ee81fd7828fc3",
+      "size_bytes": 141493,
+      "record_count": 575
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "69157d6ab3699d03427108f7ba30cad075d720bc29dc164faddb821bb8b26549",
+      "size_bytes": 83795,
+      "record_count": 71
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "2a13a8bc4481113567824a33d28b18745b906353561cff2ef6b66a936e06c520",
+      "size_bytes": 109632,
+      "record_count": 71
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "f15bb4327103c63fbd0594898d82ae492f73e6c5f91a790bf2190a910ee834ce",
+      "file_count": 52,
+      "size_bytes": 8730354
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "dc6ec34f096b758115bea04a1c26abe5ad10bb7b520b1190aac8fc8c289ec7b1",
+      "size_bytes": 2543291,
+      "record_count": 1647
+    },
+    "diff_report": {
+      "path": "reports/diff_msdata_20260605.md",
+      "sha256": "2fbd809d64e06586463144a8613c7a88462c84e4b9dec3cf5d4a4ea493443164",
+      "size_bytes": 3000
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260605-run-27009431103",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260605-run-27009431103",
+    "asset_name": "raw_snapshot_20260605_run27009431103.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260605-run-27009431103"
+  }
+}
