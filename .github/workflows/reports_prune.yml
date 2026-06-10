@@ -1,0 +1,80 @@
+name: reports prune
+
+on:
+  schedule:
+    # 毎月1日 18:00 JST（09:00 UTC）
+    - cron: "0 9 1 * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "削除せず計画のみ表示する"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+
+      - name: Install deps
+        run: uv sync --dev
+
+      - name: Resolve mode
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "apply=" >> "$GITHUB_OUTPUT"
+          else
+            echo "apply=--apply" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prune expired reports
+        run: |
+          uv run python -m ms_data.reporting.prune_reports \
+            --manifest reports_manifest.yml \
+            ${{ steps.mode.outputs.apply }} \
+            --step-summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Detect changes
+        id: changes
+        run: |
+          if [ -n "$(git status --porcelain -- reports/)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create pull request
+        if: steps.changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          commit-message: "chore: 期限切れレポートを整理（reports prune）"
+          title: "chore: 期限切れレポートを整理（reports prune）"
+          body: |
+            reports_manifest.yml の prune 設定（max_age_days / keep_min）に基づき、
+            期限切れレポートを削除しました。
+
+            - 削除一覧は本 PR の diff と Actions の Step Summary を参照
+            - provenance / snapshot は Release アセットに恒久保存されているため復元可能
+            - 本 PR は自動マージ対象外です（人間が確認してマージしてください）
+          branch: "chore/reports-prune"
+          delete-branch: true
+          labels: |
+            reports-prune
+          add-paths: |
+            reports/
