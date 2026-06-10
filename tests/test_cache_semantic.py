@@ -4,7 +4,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from scripts.cache_http import CacheHTTP, CacheConfig, _extract_semantic_text
+from ms_data.net.cache_http import CacheHTTP, CacheConfig, _extract_semantic_text
 
 
 def _resp(

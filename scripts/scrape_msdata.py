@@ -43,8 +43,8 @@ from bs4 import BeautifulSoup, Tag
 
 from ms_data.core.ms_names import MS_NAME_WITH_LEVEL, extract_ms_base_name
 from ms_data.net.client import get_scraper_client
-from scripts.cache_http import CacheConfig, CacheHTTP
-from scripts.label_utils import (
+from ms_data.net.cache_http import CacheConfig, CacheHTTP
+from ms_data.core.labels import (
     FIELD_MAP,
     clean_text,
     normalize_row_label,

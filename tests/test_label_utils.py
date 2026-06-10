@@ -1,4 +1,4 @@
-from scripts.label_utils import clean_text, normalize_row_label, apply_key_aliases
+from ms_data.core.labels import clean_text, normalize_row_label, apply_key_aliases
 
 
 def test_clean_and_normalize():

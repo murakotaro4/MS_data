@@ -22,7 +22,7 @@ from typing import Any, Dict, Iterable, List
 from ms_data.core.json_io import load_json
 from ms_data.core.ms_names import MS_NAME_WITH_LEVEL
 from ms_data.core.paths import MSDATA_SCHEMA as SCHEMA_PATH
-from scripts.label_utils import KEY_ALIASES
+from ms_data.core.labels import KEY_ALIASES
 
 from jsonschema import Draft7Validator
 
