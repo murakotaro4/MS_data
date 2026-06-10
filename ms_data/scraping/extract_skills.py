@@ -4,8 +4,8 @@ atwiki の「スキル一覧表」から主要なシステム系スキル（EXAM
 構造化JSONを生成するたたき台。
 
 想定入出力（例）
-- 取得＆解析:  uv run python -m scripts.extract_skills all --out cache/skills.json --ttl 7d
-- 解析のみ:    uv run python -m scripts.extract_skills parse --in cache/html/pages-179-*.html --out cache/skills.json
+- 取得＆解析:  uv run python -m ms_data.scraping.extract_skills all --out cache/skills.json --ttl 7d
+- 解析のみ:    uv run python -m ms_data.scraping.extract_skills parse --in cache/html/pages-179-*.html --out cache/skills.json
 
 注意
 - HTML構造や文言の変更に弱い暫定実装です。対象スキルの bullet 主要数値を優先抽出します。
@@ -25,7 +25,7 @@ from bs4 import BeautifulSoup, Tag
 
 from ms_data.net.client import get_browser_client
 from ms_data.net.cache_http import CacheHTTP, CacheConfig
-from scripts.scrape_msdata import parse_ttl  # 軽量ユーティリティを流用
+from ms_data.scraping.scrape_msdata import parse_ttl  # 軽量ユーティリティを流用
 from ms_data.core.labels import clean_text
 
 

@@ -1,5 +1,5 @@
 import json
-from scripts.extract_skills import extract_skills_from_html, extract_skill_owners_from_html
+from ms_data.scraping.extract_skills import extract_skills_from_html, extract_skill_owners_from_html
 from bs4 import BeautifulSoup
 
 

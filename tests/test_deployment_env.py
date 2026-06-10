@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 
-import scripts.scrape_msdata as sm
+import ms_data.scraping.scrape_msdata as sm
 
 
 def test_parse_deployment_with_ids():

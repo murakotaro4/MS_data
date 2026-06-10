@@ -1,4 +1,4 @@
-import scripts.scrape_msdata as sm
+import ms_data.scraping.scrape_msdata as sm
 
 
 def test_to_int_extracts_head_integer():

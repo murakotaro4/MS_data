@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 import httpx
-import scripts.scrape_msdata as sm
+import ms_data.scraping.scrape_msdata as sm
 
 
 def _resp(html: str, status: int = 200, etag: str | None = None):

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from scripts.scrape_msdata import parse_details
+from ms_data.scraping.scrape_msdata import parse_details
 
 
 FIXTURES = Path(__file__).with_name("fixtures")

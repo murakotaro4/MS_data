@@ -1,6 +1,6 @@
 """fullst の points 処理に関するテスト（数値/ハイフン/空セル/ソート）"""
 
-import scripts.scrape_msdata as sm
+import ms_data.scraping.scrape_msdata as sm
 
 
 def _make_html_with_fullst(fullst_rows: str) -> str:

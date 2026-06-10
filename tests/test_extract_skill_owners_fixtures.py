@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from scripts.extract_skills import extract_skill_owners_rows_table
+from ms_data.scraping.extract_skills import extract_skill_owners_rows_table
 
 
 FIXTURES = Path(__file__).with_name("fixtures")
