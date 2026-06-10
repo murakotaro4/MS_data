@@ -640,7 +640,7 @@ def task_owners_table() -> int:
 
 def task_build_skills() -> int:
     return _run_python_module(
-        "scripts.build_skills",
+        "ms_data.skills.build_skills",
         "--in",
         _env_str("SKILLS_OUT", "cache/skills.json") or "cache/skills.json",
         "--out-catalog",
@@ -654,7 +654,7 @@ def task_build_skills() -> int:
 
 def task_build_param_skills() -> int:
     return _run_python_module(
-        "scripts.build_param_skills",
+        "ms_data.skills.build_param_skills",
         "--in",
         _env_str("SKILLS_TABLE_OUT", "cache/skills_table.json")
         or "cache/skills_table.json",
@@ -672,7 +672,7 @@ def task_build_param_skills() -> int:
 
 def task_build_owners_flat() -> int:
     return _run_python_module(
-        "scripts.build_owners_flat",
+        "ms_data.skills.build_owners_flat",
         "--in",
         _env_str("OWNERS_TABLE_OUT", "cache/owners_table.json")
         or "cache/owners_table.json",
@@ -703,7 +703,7 @@ def task_audit_skills() -> int:
 
 def task_preview_params() -> int:
     return _run_python_module(
-        "scripts.preview_params",
+        "ms_data.skills.preview_params",
         "--msdata",
         _env_str("MSDATA", "msData.json") or "msData.json",
         "--owners",

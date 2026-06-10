@@ -1,4 +1,4 @@
-from scripts.build_param_skills import build_params
+from ms_data.skills.build_param_skills import build_params
 
 
 def test_build_params_golden():

@@ -1,4 +1,4 @@
-from scripts.cleanup_auto_update_prs import (
+from ms_data.gh.cleanup_auto_update_prs import (
     parse_report_date,
     plan_cleanup,
     render_summary,

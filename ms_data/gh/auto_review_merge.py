@@ -15,7 +15,7 @@ from typing import Any
 from ms_data.gh.gh_json import login_of as _login
 from ms_data.gh.gh_json import parse_json_stream
 from ms_data.gh.outputs import append_step_summary, write_github_output
-from scripts.auto_review_gate import evaluate
+from ms_data.gh.auto_review_gate import evaluate
 
 
 JST = timezone(timedelta(hours=9))

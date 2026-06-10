@@ -1,4 +1,4 @@
-from scripts.auto_review_merge import (
+from ms_data.gh.auto_review_merge import (
     build_auto_review_report,
     find_latest_bot_comment,
     jst_report_date,

@@ -1,4 +1,4 @@
-from scripts.build_owners_flat import (
+from ms_data.skills.build_owners_flat import (
     build_audit,
     build_flat_owners,
     normalize_series_levels,
