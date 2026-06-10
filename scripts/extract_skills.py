@@ -24,9 +24,9 @@ import httpx
 from bs4 import BeautifulSoup, Tag
 
 from ms_data.net.client import get_browser_client
-from scripts.cache_http import CacheHTTP, CacheConfig
+from ms_data.net.cache_http import CacheHTTP, CacheConfig
 from scripts.scrape_msdata import parse_ttl  # 軽量ユーティリティを流用
-from scripts.label_utils import clean_text
+from ms_data.core.labels import clean_text
 
 
 # PC表示を強制して取得の安定性を上げる

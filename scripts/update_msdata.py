@@ -24,7 +24,7 @@ from typing import Any, Dict, Iterable, List, Tuple, TypedDict
 from ms_data.core.json_io import load_json
 from ms_data.core.ms_names import MS_NAME_WITH_LEVEL, normalize_ms_base_name
 from ms_data.core.paths import OFFICIAL_OVERRIDES_DIR
-from scripts.label_utils import apply_key_aliases
+from ms_data.core.labels import apply_key_aliases
 
 
 CANONICAL_ORDER = (

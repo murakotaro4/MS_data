@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List
 
-from scripts.label_utils import FIELD_MAP, clean_text
+from ms_data.core.labels import FIELD_MAP, clean_text
 
 # 監査から除外する normalized ラベル（データ項目ではないもの）
 EXCLUDE_LABELS = {"汎用", "強襲", "支援"}

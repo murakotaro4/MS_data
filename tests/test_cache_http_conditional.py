@@ -1,7 +1,7 @@
 import httpx
 from pathlib import Path
 
-from scripts.cache_http import CacheHTTP, CacheConfig
+from ms_data.net.cache_http import CacheHTTP, CacheConfig
 
 
 def _resp(html: str, status: int = 200, etag: str | None = None, last_modified: str | None = None):
