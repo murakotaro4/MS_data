@@ -1,4 +1,4 @@
-from scripts.auto_review_gate import _load_json, evaluate
+from ms_data.gh.auto_review_gate import _load_json, evaluate
 
 
 HEAD_SHA = "abc123"

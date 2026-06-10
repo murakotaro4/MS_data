@@ -1,4 +1,4 @@
-from scripts.send_gmail import parse_recipients
+from ms_data.notify.send_gmail import parse_recipients
 
 
 def test_parse_recipients_empty() -> None:

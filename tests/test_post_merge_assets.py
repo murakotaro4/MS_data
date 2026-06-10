@@ -1,6 +1,6 @@
 import pytest
 
-from scripts.post_merge_assets import resolve_assets, resolve_source_run_id
+from ms_data.gh.post_merge_assets import resolve_assets, resolve_source_run_id
 
 
 def test_resolve_assets_uses_checkout_reports_and_downloaded_snapshot(tmp_path):
