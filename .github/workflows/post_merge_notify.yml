@@ -70,7 +70,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m scripts.post_merge_assets \
+          python -m ms_data.gh.post_merge_assets \
             --head-ref "${HEAD_REF}" \
             --source-run-id "${SOURCE_RUN_ID_INPUT}" \
             --pr-body-env PR_BODY \
@@ -80,7 +80,7 @@ jobs:
 
       - name: Validate report contract (post-merge)
         run: |
-          uv run python -m scripts.validate_report_contract \
+          uv run python -m ms_data.validation.validate_report_contract \
             --mode post-merge \
             --manifest reports_manifest.yml \
             --report-date "${{ steps.report.outputs.report_date }}" \
@@ -189,7 +189,7 @@ jobs:
         if: steps.release.outputs.created == 'true' || github.run_attempt != '1' || (github.event_name == 'workflow_dispatch' && github.event.inputs.send_mail == 'true')
         run: |
           body_path="$RUNNER_TEMP/msdata_merged_mail.txt"
-          uv run python -m scripts.build_update_mail_body \
+          uv run python -m ms_data.reporting.build_update_mail_body \
             --report-date "${{ steps.report.outputs.report_date }}" \
             --result "マージ済み" \
             --changed "true" \
@@ -208,7 +208,7 @@ jobs:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           GMAIL_TO: ${{ secrets.GMAIL_TO }}
         run: |
-          uv run python -m scripts.send_gmail \
+          uv run python -m ms_data.notify.send_gmail \
             --subject "msData 更新反映通知 (${{ steps.report.outputs.report_date }})" \
             --body "${{ steps.mail_body.outputs.path }}" \
             --attach "msData.json"

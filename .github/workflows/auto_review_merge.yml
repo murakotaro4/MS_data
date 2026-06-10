@@ -54,7 +54,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          uv run python -m scripts.auto_review_merge resolve-target-pr \
+          uv run python -m ms_data.gh.auto_review_merge resolve-target-pr \
             --repo "${{ steps.prepare.outputs.repo }}" \
             --run-id "${{ steps.prepare.outputs.run_id }}" \
             --run-created-at "${{ steps.prepare.outputs.run_created_at }}" \
@@ -74,7 +74,7 @@ jobs:
       - name: Validate report contract (auto-review)
         if: steps.resolve.outputs.skip != 'true'
         run: |
-          uv run python -m scripts.validate_report_contract \
+          uv run python -m ms_data.validation.validate_report_contract \
             --mode auto-review \
             --manifest reports_manifest.yml \
             --report-date "${{ steps.resolve.outputs.report_date }}" \
@@ -86,7 +86,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          uv run python -m scripts.auto_review_merge trigger-review \
+          uv run python -m ms_data.gh.auto_review_merge trigger-review \
             --repo "${{ steps.prepare.outputs.repo }}" \
             --pr-number "${{ steps.resolve.outputs.pr }}" \
             --head-sha "${{ steps.resolve.outputs.head_sha }}" \
@@ -98,7 +98,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          uv run python -m scripts.auto_review_merge wait-for-review \
+          uv run python -m ms_data.gh.auto_review_merge wait-for-review \
             --repo "${{ steps.prepare.outputs.repo }}" \
             --pr-number "${{ steps.resolve.outputs.pr }}" \
             --head-sha "${{ steps.resolve.outputs.head_sha }}" \
@@ -117,7 +117,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          uv run python -m scripts.auto_review_merge check-gate \
+          uv run python -m ms_data.gh.auto_review_merge check-gate \
             --repo "${{ steps.prepare.outputs.repo }}" \
             --pr-number "${{ steps.resolve.outputs.pr }}" \
             --head-sha "${{ steps.resolve.outputs.head_sha }}" \
@@ -130,7 +130,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          uv run python -m scripts.auto_review_merge record-stop \
+          uv run python -m ms_data.gh.auto_review_merge record-stop \
             --repo "${{ steps.prepare.outputs.repo }}" \
             --pr-number "${{ steps.resolve.outputs.pr }}" \
             --head-sha "${{ steps.resolve.outputs.head_sha }}" \
@@ -177,7 +177,7 @@ jobs:
       - name: Write auto review report
         if: always() && steps.resolve.outputs.skip == 'false'
         run: |
-          uv run python -m scripts.auto_review_merge write-report \
+          uv run python -m ms_data.gh.auto_review_merge write-report \
             --report-date "${{ steps.resolve.outputs.report_date }}" \
             --run-id "${{ steps.prepare.outputs.run_id }}" \
             --pr-number "${{ steps.resolve.outputs.pr }}" \
@@ -206,7 +206,7 @@ jobs:
         if: always() && steps.resolve.outputs.skip == 'false'
         run: |
           test -f "reports/auto_review_${{ steps.resolve.outputs.report_date }}.json"
-          uv run python -m scripts.validate_generated_reports \
+          uv run python -m ms_data.validation.validate_generated_reports \
             --reports-dir reports \
             --schema-dir schema/reports
 

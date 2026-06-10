@@ -22,7 +22,7 @@ def test_post_merge_notify_builds_mail_body_from_diff_and_guard_reports():
         end="- name: Send merged msData mail",
     )
 
-    assert "uv run python -m scripts.build_update_mail_body" in block
+    assert "uv run python -m ms_data.reporting.build_update_mail_body" in block
     assert '--changed "true"' in block
     assert "--source-run-id" in block
     assert "--release-url" in block
@@ -39,7 +39,7 @@ def test_data_update_no_change_mail_keeps_detection_and_guard_context_only():
         end="- name: Send no-change mail",
     )
 
-    assert "uv run python -m scripts.build_update_mail_body" in block
+    assert "uv run python -m ms_data.reporting.build_update_mail_body" in block
     assert '--changed "false"' in block
     assert "--candidate-count" in block
     assert "--fast-path" in block
