@@ -4,7 +4,7 @@ index.json（atwiki一覧）と msData.json（既存データ）を突き合わ�
 名称の食い違い・表記差・属性/コスト不一致などを監査し、Markdownレポートを出力。
 
 使い方（例）
-- uv run python -m scripts.audit_index_vs_msdata --index cache/index.json --ms msData.json --out reports/index_ms_audit.md
+- uv run python -m ms_data.audit.audit_index_vs_msdata --index cache/index.json --ms msData.json --out reports/index_ms_audit.md
 
 出力内容（Markdown）
 - 件数サマリ

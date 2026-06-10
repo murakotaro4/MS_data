@@ -32,7 +32,7 @@ def _manifest() -> dict:
                 "id": "diff",
                 "type": "generated",
                 "path_patterns": ["reports/diff_msdata_*.md"],
-                "producer": ["scripts.report_msdata_diff"],
+                "producer": ["ms_data.reporting.report_msdata_diff"],
                 "consumers": ["workflow"],
                 "retention": "git",
             },

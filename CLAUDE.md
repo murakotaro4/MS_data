@@ -1,70 +1,11 @@
 # CLAUDE.md - MS_data プロジェクト設定
 
-## プロジェクト概要
-本リポジトリは `msData.json`（ゲーム内MS機体データ）を管理する Python プロジェクトです。
-atwiki からのスクレイピング、データ正規化、検証を行います。
+`msData.json`（バトオペ2の機体データ）を atwiki から取得・正規化・検証・自動更新する Python プロジェクトです。
 
-## 言語ポリシー
-- 日本語を原則とします（Issue/PR/コメント/ドキュメント/コミットメッセージ）
+**コマンド・データ仕様・抽出ルール・GitHub Actions 運用・コミット規約は、すべて [AGENTS.md](AGENTS.md) を単一の参照先とします。** 重複記載を避けるため、本ファイルには Claude 固有の注意のみを記載します。
 
-## ビルド・テストコマンド（uv）
-
-```bash
-# 環境作成
-uv venv
-
-# テスト
-uv run pytest -q
-
-# フォーマット/リンタ
-uv run black . && uv run ruff check .
-
-# 検証
-make validate          # 通常
-make validate-strict   # 厳格
-
-# 品質チェック一括
-make ci
-```
-
-## スクレイピング手順
-
-```bash
-# 一覧取得
-make scrape-index TTL=7d
-
-# 詳細取得
-make scrape-details TTL=7d RATE=1.0 LIMIT=0
-
-# 取り込み
-make import-details
-
-# 監査
-make audit-labels
-```
-
-## データ更新フロー（推奨）
-1. ブランチ作成: `git switch -c data/update-YYYYMMDD`
-2. 取得: `make scrape-details TTL=7d RATE=1.0 LIMIT=0`
-3. 取り込み: `make import-details`
-4. 検証: `make validate-strict`
-5. 差分確認: `git diff -- msData.json`
-6. コミット/PR
-
-## コーディング規約
-- JSON: 2スペース、UTF-8、LF、キーは `snake_case`
-- Python: インデント4スペース、型ヒント必須
-- 命名: ファイル/関数は lower_snake_case、クラスは CapWords
-
-## コミットメッセージ
-Conventional Commits を採用（日本語）:
-- `data:` データのみ変更
-- `feat:` 新機能
-- `fix:` バグ修正
-- `docs:` ドキュメント
-- `chore:` 雑務
-- `refactor:` リファクタリング
-- `test:` テスト
-
-## 参照
-詳細は `AGENTS.md` を参照してください。
+## Claude 向けの注意
+- 言語: 日本語を原則とします（Issue/PR/コメント/ドキュメント/コミットメッセージ）
+- 第一コマンド: `uv run python -m ms_data.tasks <target>`（品質チェック一括は `ci`）
+- 毎日 18:00 JST に自動更新パイプラインが稼働中。`msData.json` と `reports/` を手動で触る変更は自動更新 PR と競合し得るため注意
+- メール関連の値（`GMAIL_*`）は GitHub Secrets 経由のみ。ワークフローで `vars.` への変更や `echo` 出力をしない（public リポジトリのためログが公開される）

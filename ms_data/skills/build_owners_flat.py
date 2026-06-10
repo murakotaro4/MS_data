@@ -6,7 +6,7 @@ cache/owners_table.json（所持機体 逆引きの行データ）から、
 「スキル名 / スキルLv / 所有機体シリーズ / 機体レベル」をフラットに展開して出力。
 
 入力:
-- cache/owners_table.json  … scripts.extract_skills owners-table で生成
+- cache/owners_table.json  … ms_data.scraping.extract_skills owners-table で生成
 - msData.json              … 機体のレベル一覧を取得（シリーズ名→存在Lv）
 - data/skills_policy.json  … include_exact でスキル名をホワイトリスト
 
