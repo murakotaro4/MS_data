@@ -86,3 +86,14 @@ def test_plan_prune_iterates_entries(tmp_path: Path):
     manifest = {"version": 2, "entries": [_entry()]}
     actions = plan_prune(manifest, root=tmp_path, today="20260610")
     assert sum(1 for item in actions if item.action == "delete") == 1
+
+
+def test_overlapping_patterns_count_once(tmp_path: Path):
+    # 同一ファイルが複数パターンにマッチしても1件として扱う
+    _touch_reports(tmp_path, ["20250101", "20250102", "20250103"])
+    entry = _entry(
+        path_patterns=["reports/diff_msdata_*.md", "reports/diff_msdata_2025*.md"]
+    )
+    actions = plan_prune_entry(entry, root=tmp_path, today="20260610")
+    assert len(actions) == 3
+    assert sum(1 for item in actions if item.action == "delete") == 1

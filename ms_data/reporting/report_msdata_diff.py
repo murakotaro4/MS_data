@@ -3,7 +3,7 @@
 msData.json の差分レポートを Markdown で出力する。
 
 例:
-  uv run python scripts/report_msdata_diff.py --old msData.before.json --new msData.json --out reports/diff_msdata_20250115.md
+  uv run python -m ms_data.reporting.report_msdata_diff --old msData.before.json --new msData.json --out reports/diff_msdata_20250115.md
 """
 from __future__ import annotations
 

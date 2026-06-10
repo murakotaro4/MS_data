@@ -7,7 +7,7 @@
 - 目的: 本リポジトリは `msData.json`（バトオペ2の機体ステータス）を管理し、atwiki からの取得・正規化・検証・自動更新を行います。
 - 構成:
   - `ms_data/`: Python パッケージ本体
-    - `core/`: 共通ユーティリティ（json_io / paths / ms_names / env / labels）
+    - `core/`: 共通ユーティリティ（json_io / paths / ms_names / records / env / labels）
     - `net/`: HTTP クライアントとキャッシュ（client / cache_http）
     - `scraping/`: atwiki 取得（scrape_msdata / extract_skills）
     - `pipeline/`: 取り込み・正規化（update_msdata / jsonl_to_json / generate_provenance / restore_snapshot）
@@ -50,7 +50,7 @@
 - PC版のみの機体（index未収載）は例外として維持（監査では msData のみとして残る想定）。
 
 ## GitHub Actions 運用
-- 定期実行: `data update` は毎日 18:00 JST（cron `0 9 * * 1-6`、日曜はフル更新）で実行し、差分があれば `data/auto-update-YYYYMMDD` の PR を作成します。
+- 定期実行: `data update` は毎日 18:00 JST に実行（cron は月〜土 `0 9 * * 1-6` と日曜フル更新 `0 9 * * 0` の2本）で実行し、差分があれば `data/auto-update-YYYYMMDD` の PR を作成します。
 - 自動レビュー/マージ: `auto review merge` は `data update` 成功後の `workflow_run` で起動し、対象 PR に `@codex review` を自動実行。Codex のファイル指摘が 0 件なら自動マージします（同一 HEAD SHA では重複依頼を抑止）。
 - 対象PRの解決: `data/auto-update-YYYYMMDD`（workflow_run.created_at の JST 日付）を優先し、無ければ open な最新 `data/auto-update-*` にフォールバック。
 - dry-run: `data update` の `workflow_dispatch` で `dry_run=true` を指定すると、取得・監査・artifact 作成まで実行し PR 作成と通知は行いません。
@@ -58,13 +58,14 @@
 - レポート整理: `reports prune` が毎月1日 18:00 JST に実行され、`reports_manifest.yml` の `prune`（max_age_days / keep_min）に基づき期限切れレポートの削除 PR を作成します。この PR は自動マージ対象外のため人間がレビューしてマージします。
 - PRラベル: 自動更新 PR には `data-update` / `rollback-guard` / `official-overrides` / `atwiki-quality` を付与。
 - reports 運用SSOT: 命名規約・分類・保持方針は `reports_manifest.yml` が正。契約検証は `uv run python -m ms_data.validation.validate_report_contract`、生成物検証は `uv run python -m ms_data.tasks validate-generated-reports`。
+- 手動更新レポート: 手動でデータ更新した場合は `reports/msdata_update_YYYYMMDD.md` を `reports/msdata_update_template.md` に沿って作成（新規追加機体は主要パラメータを網羅、既存更新は変更前後の値を明記）。
 - 失敗時の挙動: Codex が応答しない、または指摘が 1 件以上ある場合は自動マージせず PR を残して手動対応。
 - Codexレビュー待ち: 既定 3 回まで試行。調整は repository variables の `CODEX_REVIEW_MAX_ATTEMPTS` / `CODEX_REVIEW_ATTEMPT_TIMEOUT_SECONDS` / `CODEX_REVIEW_POLL_SECONDS` / `CODEX_REVIEW_SETTLE_SECONDS`。
-- 通知: マージ後に `post merge notify` が Release アセット作成とメール送信を行います。本文は `reports/diff_msdata_YYYYMMDD.md`、添付は `msData.json`。idempotency キーは `source_run_id + head_ref`。
+- 通知: マージ後に `post merge notify` が Release アセット作成とメール送信を行います。本文は `reports/diff_msdata_YYYYMMDD.md` から生成、添付は `msData.json`。差分ゼロの定期実行時は `data update` から「差分なし」報告メールを送信。idempotency キーは `source_run_id + head_ref`。
 - メール秘匿運用（重要）: `GMAIL_ADDRESS` / `GMAIL_APP_PASSWORD` / `GMAIL_TO` は必ず GitHub **Secrets** 経由で渡します（public リポジトリではログが公開されるため、`vars.` への変更や `echo` でのデバッグ出力は禁止。Secrets はログで自動マスクされます）。`GMAIL_TO` はカンマ区切りで複数宛先可。値の参照は不可のため変更時は最終文字列で上書き。
 - 生成元追跡: 実行ごとに `reports/provenance_YYYYMMDD.json`（index/details/html のハッシュ・件数・source_run_id）を生成。
 - 巻き戻り対策: `reports/rollback_guard_YYYYMMDD.md` と `reports/official_overrides_audit_YYYYMMDD.md` を生成。protected rollback は自動更新を失敗させます。
-- 生データアーカイブ: 実行ごとに `raw_snapshot_*.tar.xz` を artifact（90日）へ、マージ後に Release tag `raw-snapshot-YYYYMMDD-run<run_id>` へ恒久保存。
+- 生データアーカイブ: 実行ごとに `raw_snapshot_*.tar.xz` を artifact（90日）へ、マージ後に Release tag `raw-snapshot-YYYYMMDD-run-<run_id>` へ恒久保存。
 - 復元手順: 対象コミットの provenance から `release.tag` を取得し、`uv run python -m ms_data.tasks restore-snapshot SNAPSHOT=... OUT_DIR=restore_tmp` で `cache/` と `reports/` を再構成（ファイルが HEAD から prune 済みでも `git log -- <path>` + `git show` で provenance 自体を辿れます）。復元CI: `verify-snapshot-restore`。
 - official_overrides 期限管理: 各 entry に `review_after` / `remove_after` を設定。期限到達時は `data update` が Step Summary に件数を出し、protected rollback 0 件なら Issue `official_overrides 期限確認` を作成/追記。スキーマは `schema/official_overrides.schema.json`（`MS名` / `values` / `stale_values` 必須）。
 - atwiki取得品質: `reports/atwiki_quality_YYYYMMDD.json` に HTTP 状態・304件数・失敗推定・レコード数・差分件数を記録。しきい値超過は warnings として PR 本文・Step Summary に警告（`ATWIKI_QUALITY_*` 変数で調整）。
