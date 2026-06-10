@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-import scripts.validate_msdata as vm
+import ms_data.validation.validate_msdata as vm
 
 
 def make_record(ms_name: str = "テスト機_LV1", **overrides):

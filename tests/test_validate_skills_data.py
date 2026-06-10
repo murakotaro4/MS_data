@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import scripts.validate_skills_data as vs
+import ms_data.validation.validate_skills_data as vs
 
 
 def test_validate_skills_data_main_accepts_committed_files():

@@ -111,16 +111,16 @@ def task_test() -> int:
 
 def task_validate() -> int:
     msdata = _env_str("MSDATA", "msData.json") or "msData.json"
-    return _run_python_module("scripts.validate_msdata", msdata)
+    return _run_python_module("ms_data.validation.validate_msdata", msdata)
 
 
 def task_validate_strict() -> int:
     msdata = _env_str("MSDATA", "msData.json") or "msData.json"
-    return _run_python_module("scripts.validate_msdata", msdata, "--fail-on-typo")
+    return _run_python_module("ms_data.validation.validate_msdata", msdata, "--fail-on-typo")
 
 
 def task_validate_skills() -> int:
-    return _run_python_module("scripts.validate_skills_data")
+    return _run_python_module("ms_data.validation.validate_skills_data")
 
 
 def task_update() -> int:
@@ -476,7 +476,7 @@ def task_restore_snapshot() -> int:
 
 def task_verify_snapshot_restore() -> int:
     return _run_python_module(
-        "scripts.verify_snapshot_restore",
+        "ms_data.validation.verify_snapshot_restore",
         "--root",
         _env_str("ROOT", ".") or ".",
     )
@@ -548,7 +548,7 @@ def task_audit_official_overrides() -> int:
 
 def task_validate_official_overrides_schema() -> int:
     return _run_python_module(
-        "scripts.validate_official_overrides_schema",
+        "ms_data.validation.validate_official_overrides_schema",
         "--overrides-dir",
         _env_str("OFFICIAL_OVERRIDES_DIR", "data/official_overrides")
         or "data/official_overrides",
@@ -744,12 +744,12 @@ def task_validate_report_contract() -> int:
         "--release-tag",
         _env_str("RELEASE_TAG", "") or "",
     ]
-    return _run_python_module("scripts.validate_report_contract", *args)
+    return _run_python_module("ms_data.validation.validate_report_contract", *args)
 
 
 def task_validate_generated_reports() -> int:
     return _run_python_module(
-        "scripts.validate_generated_reports",
+        "ms_data.validation.validate_generated_reports",
         "--reports-dir",
         _env_str("REPORTS_DIR", "reports") or "reports",
         "--schema-dir",

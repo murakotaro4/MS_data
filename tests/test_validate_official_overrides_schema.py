@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from scripts import validate_official_overrides_schema
+from ms_data.validation import validate_official_overrides_schema
 
 
 def _write_json(path, data):
