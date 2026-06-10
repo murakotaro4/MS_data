@@ -43,6 +43,6 @@ source = ["ms_data"]
 
 [tool.coverage.report]
 # 自動更新 PR の CI にも適用されるため、実測値（62%）より低く設定する
-fail_under = 64
+fail_under = 70
 show_missing = true
 skip_covered = true
