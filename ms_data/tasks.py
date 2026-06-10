@@ -109,6 +109,12 @@ def task_test() -> int:
     return _run_python_module("pytest", "-q")
 
 
+def task_test_cov() -> int:
+    return _run_python_module(
+        "pytest", "-q", "--cov=ms_data", "--cov-report=term-missing"
+    )
+
+
 def task_validate() -> int:
     msdata = _env_str("MSDATA", "msData.json") or "msData.json"
     return _run_python_module("ms_data.validation.validate_msdata", msdata)
@@ -142,7 +148,7 @@ def task_ci() -> int:
         "validate-official-overrides-schema",
         "verify-snapshot-restore",
         "lint",
-        "test",
+        "test-cov",
         "validate-strict",
         "validate-skills",
     ):
@@ -763,6 +769,7 @@ TASKS: dict[str, Callable[[], int]] = {
     "format": task_format,
     "lint": task_lint,
     "test": task_test,
+    "test-cov": task_test_cov,
     "validate": task_validate,
     "validate-strict": task_validate_strict,
     "validate-skills": task_validate_skills,
