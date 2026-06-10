@@ -8,8 +8,8 @@ import tarfile
 import tempfile
 from pathlib import Path
 
-from scripts import validate_msdata, validate_report_contract
 from ms_data.pipeline.restore_snapshot import restore_snapshot
+from ms_data.validation import validate_msdata, validate_report_contract
 
 
 REPORT_DATE = "20260531"
