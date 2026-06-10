@@ -17,7 +17,7 @@ def test_task_update_fast_skips_followup_steps_when_no_candidates(
 
     def fake_run_python_module(module: str, *args: str) -> int:
         calls.append((module, args))
-        if module == "scripts.scrape_msdata" and args[0] == "detect-changed":
+        if module == "ms_data.scraping.scrape_msdata" and args[0] == "detect-changed":
             _write_json(tmp_path / "cache/index_changed.json", [])
             _write_json(
                 tmp_path / "cache/index_changed_meta.json",
@@ -37,7 +37,7 @@ def test_task_update_fast_skips_followup_steps_when_no_candidates(
     assert rc == 0
     assert calls == [
         (
-            "scripts.scrape_msdata",
+            "ms_data.scraping.scrape_msdata",
             (
                 "index",
                 "--url",
@@ -49,7 +49,7 @@ def test_task_update_fast_skips_followup_steps_when_no_candidates(
             ),
         ),
         (
-            "scripts.scrape_msdata",
+            "ms_data.scraping.scrape_msdata",
             (
                 "detect-changed",
                 "--in",
@@ -83,7 +83,7 @@ def test_task_update_fast_runs_import_and_validate_when_candidates_exist(
 
     def fake_run_python_module(module: str, *args: str) -> int:
         calls.append((module, args))
-        if module == "scripts.scrape_msdata" and args[0] == "detect-changed":
+        if module == "ms_data.scraping.scrape_msdata" and args[0] == "detect-changed":
             _write_json(
                 tmp_path / "cache/index_changed.json",
                 [
@@ -106,7 +106,7 @@ def test_task_update_fast_runs_import_and_validate_when_candidates_exist(
                     "fallback_reason": "",
                 },
             )
-        if module == "scripts.scrape_msdata" and args[0] == "details":
+        if module == "ms_data.scraping.scrape_msdata" and args[0] == "details":
             details = tmp_path / "cache/details.jsonl"
             details.parent.mkdir(parents=True, exist_ok=True)
             details.write_text('{"MS名":"A_LV1"}\n', encoding="utf-8")
@@ -134,7 +134,7 @@ def test_task_update_fast_runs_import_and_validate_when_candidates_exist(
     assert validate_called["value"] is True
     assert calls == [
         (
-            "scripts.scrape_msdata",
+            "ms_data.scraping.scrape_msdata",
             (
                 "index",
                 "--url",
@@ -146,7 +146,7 @@ def test_task_update_fast_runs_import_and_validate_when_candidates_exist(
             ),
         ),
         (
-            "scripts.scrape_msdata",
+            "ms_data.scraping.scrape_msdata",
             (
                 "detect-changed",
                 "--in",
@@ -170,7 +170,7 @@ def test_task_update_fast_runs_import_and_validate_when_candidates_exist(
             ),
         ),
         (
-            "scripts.scrape_msdata",
+            "ms_data.scraping.scrape_msdata",
             (
                 "details",
                 "--in",
@@ -199,7 +199,7 @@ def test_task_update_fast_disables_changed_only_for_index_reasoned_candidates(
 
     def fake_run_python_module(module: str, *args: str) -> int:
         calls.append((module, args))
-        if module == "scripts.scrape_msdata" and args[0] == "detect-changed":
+        if module == "ms_data.scraping.scrape_msdata" and args[0] == "detect-changed":
             _write_json(
                 tmp_path / "cache/index_changed.json",
                 [
@@ -218,7 +218,7 @@ def test_task_update_fast_disables_changed_only_for_index_reasoned_candidates(
                     "fallback_reason": "",
                 },
             )
-        if module == "scripts.scrape_msdata" and args[0] == "details":
+        if module == "ms_data.scraping.scrape_msdata" and args[0] == "details":
             details = tmp_path / "cache/details.jsonl"
             details.parent.mkdir(parents=True, exist_ok=True)
             details.write_text('{"MS名":"A_LV1"}\n', encoding="utf-8")
@@ -232,7 +232,7 @@ def test_task_update_fast_disables_changed_only_for_index_reasoned_candidates(
 
     assert rc == 0
     detail_call = calls[-1]
-    assert detail_call[0] == "scripts.scrape_msdata"
+    assert detail_call[0] == "ms_data.scraping.scrape_msdata"
     assert detail_call[1][0] == "details"
     assert "--changed-only" not in detail_call[1]
 
@@ -258,7 +258,7 @@ def test_task_update_fast_disables_changed_only_in_no_network(
 
     def fake_run_python_module(module: str, *args: str) -> int:
         calls.append((module, args))
-        if module == "scripts.scrape_msdata" and args[0] == "detect-changed":
+        if module == "ms_data.scraping.scrape_msdata" and args[0] == "detect-changed":
             _write_json(
                 tmp_path / "cache/index_changed.json",
                 [{"name": "A", "change_reasons": ["recent_update"]}],
@@ -272,7 +272,7 @@ def test_task_update_fast_disables_changed_only_in_no_network(
                     "fallback_reason": "",
                 },
             )
-        if module == "scripts.scrape_msdata" and args[0] == "details":
+        if module == "ms_data.scraping.scrape_msdata" and args[0] == "details":
             details = tmp_path / "cache/details.jsonl"
             details.parent.mkdir(parents=True, exist_ok=True)
             details.write_text('{"MS名":"A_LV1"}\n', encoding="utf-8")
@@ -286,7 +286,7 @@ def test_task_update_fast_disables_changed_only_in_no_network(
 
     assert rc == 0
     detail_call = calls[-1]
-    assert detail_call[0] == "scripts.scrape_msdata"
+    assert detail_call[0] == "ms_data.scraping.scrape_msdata"
     assert detail_call[1][0] == "details"
     assert "--no-network" in detail_call[1]
     assert "--changed-only" not in detail_call[1]
@@ -299,7 +299,7 @@ def test_task_update_fast_fails_when_detect_changed_outputs_are_invalid(
     monkeypatch.chdir(tmp_path)
 
     def fake_run_python_module(module: str, *args: str) -> int:
-        if module == "scripts.scrape_msdata" and args[0] == "detect-changed":
+        if module == "ms_data.scraping.scrape_msdata" and args[0] == "detect-changed":
             path = tmp_path / "cache/index_changed_meta.json"
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("{invalid", encoding="utf-8")

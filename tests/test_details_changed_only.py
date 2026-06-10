@@ -4,7 +4,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-import scripts.scrape_msdata as sm
+import ms_data.scraping.scrape_msdata as sm
 
 
 def _resp(

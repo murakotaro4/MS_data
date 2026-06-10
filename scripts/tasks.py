@@ -166,7 +166,7 @@ def task_scrape_index() -> int:
         args.append("--no-network")
     if _env_flag("FORCE"):
         args.append("--force")
-    return _run_python_module("scripts.scrape_msdata", *args)
+    return _run_python_module("ms_data.scraping.scrape_msdata", *args)
 
 
 def task_scrape_details() -> int:
@@ -191,7 +191,7 @@ def task_scrape_details() -> int:
         args.append("--force")
     if _env_flag("CHANGED_ONLY"):
         args.append("--changed-only")
-    return _run_python_module("scripts.scrape_msdata", *args)
+    return _run_python_module("ms_data.scraping.scrape_msdata", *args)
 
 
 def task_scrape_all() -> int:
@@ -214,7 +214,7 @@ def task_scrape_all() -> int:
         args.append("--force")
     if _env_flag("CHANGED_ONLY"):
         args.append("--changed-only")
-    return _run_python_module("scripts.scrape_msdata", *args)
+    return _run_python_module("ms_data.scraping.scrape_msdata", *args)
 
 
 def task_detect_changed() -> int:
@@ -247,7 +247,7 @@ def task_detect_changed() -> int:
         args.extend(["--now", now_value])
     if _env_flag("FORCE_FULL"):
         args.append("--force-full")
-    return _run_python_module("scripts.scrape_msdata", *args)
+    return _run_python_module("ms_data.scraping.scrape_msdata", *args)
 
 
 def task_update_fast() -> int:
@@ -256,7 +256,7 @@ def task_update_fast() -> int:
     limit = str(_env_int("LIMIT", 0))
 
     rc = _run_python_module(
-        "scripts.scrape_msdata",
+        "ms_data.scraping.scrape_msdata",
         "index",
         "--url",
         _env_str("INDEX_URL", INDEX_URL) or INDEX_URL,
@@ -322,7 +322,7 @@ def task_update_fast() -> int:
         details_args.append("--changed-only")
 
     rc = _run_python_module(
-        "scripts.scrape_msdata",
+        "ms_data.scraping.scrape_msdata",
         *details_args,
     )
     if rc != 0:
@@ -372,7 +372,7 @@ def task_labels() -> int:
         args.append("--no-network")
     if _env_flag("FORCE"):
         args.append("--force")
-    return _run_python_module("scripts.scrape_msdata", *args)
+    return _run_python_module("ms_data.scraping.scrape_msdata", *args)
 
 
 def task_audit_labels() -> int:
@@ -603,7 +603,7 @@ def task_skills() -> int:
         args.append("--no-network")
     if _env_flag("FORCE"):
         args.append("--force")
-    return _run_python_module("scripts.extract_skills", *args)
+    return _run_python_module("ms_data.scraping.extract_skills", *args)
 
 
 def task_skills_table() -> int:
@@ -619,7 +619,7 @@ def task_skills_table() -> int:
         args.append("--no-network")
     if _env_flag("FORCE"):
         args.append("--force")
-    return _run_python_module("scripts.extract_skills", *args)
+    return _run_python_module("ms_data.scraping.extract_skills", *args)
 
 
 def task_owners_table() -> int:
@@ -635,7 +635,7 @@ def task_owners_table() -> int:
         args.append("--no-network")
     if _env_flag("FORCE"):
         args.append("--force")
-    return _run_python_module("scripts.extract_skills", *args)
+    return _run_python_module("ms_data.scraping.extract_skills", *args)
 
 
 def task_build_skills() -> int:
