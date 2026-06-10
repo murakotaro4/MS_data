@@ -1,4 +1,9 @@
 from ms_data.gh.auto_review_merge import (
+    _bool_text,
+    _head_ref,
+    _head_sha,
+    _int_or_none,
+    _positive_int,
     build_auto_review_report,
     find_latest_bot_comment,
     jst_report_date,
@@ -11,6 +16,20 @@ from ms_data.gh.auto_review_merge import (
 
 def test_jst_report_date_uses_workflow_run_created_at():
     assert jst_report_date("2026-05-31T09:05:00Z") == "20260531"
+
+
+def test_jst_report_date_naive_datetime_treated_as_utc():
+    # tzinfo なしは UTC とみなす（09:05 UTC -> 18:05 JST で同日）
+    assert jst_report_date("2026-05-31T09:05:00") == "20260531"
+    # 16:00 UTC -> 翌日 01:00 JST
+    assert jst_report_date("2026-05-31T16:00:00") == "20260601"
+
+
+def test_head_ref_and_sha_handle_malformed_items():
+    assert _head_ref({"head": None}) == ""
+    assert _head_sha({"head": None}) == ""
+    assert _head_ref({"head": {"ref": 123}}) == ""
+    assert _head_sha({"head": {"sha": 123}}) == ""
 
 
 def test_resolve_target_pr_prefers_source_run_id_marker():
@@ -96,6 +115,32 @@ def test_comment_markers_and_latest_bot_comment():
     assert find_latest_bot_comment(comments, marker)["id"] == 2
 
 
+def test_find_latest_bot_comment_returns_none_without_match():
+    assert find_latest_bot_comment([], review_marker("abc")) is None
+    other_user = [
+        {
+            "id": 1,
+            "created_at": "2026-05-31T09:00:00Z",
+            "user": {"login": "someone-else"},
+            "body": review_marker("abc"),
+        }
+    ]
+    assert find_latest_bot_comment(other_user, review_marker("abc")) is None
+
+
+def test_text_parsing_helpers():
+    assert _positive_int("5", 3) == 5
+    assert _positive_int("0", 3) == 3
+    assert _positive_int("abc", 3) == 3
+    assert _bool_text("TRUE") is True
+    assert _bool_text("1") is True
+    assert _bool_text("false") is False
+    assert _bool_text("") is False
+    assert _int_or_none(" 7 ") == 7
+    assert _int_or_none("") is None
+    assert _int_or_none("abc") is None
+
+
 def test_build_auto_review_report_records_no_response_stop():
     args = type(
         "Args",
@@ -171,3 +216,51 @@ def test_build_auto_review_report_records_merge_failure():
     assert report["merge_ok"] is True
     assert report["merged"] is False
     assert report["merge_outcome"] == "failure"
+
+
+def _report_args(**overrides):
+    values = {
+        "report_date": "20260531",
+        "run_id": "26709621743",
+        "pr_number": "97",
+        "head_ref": "data/auto-update-20260531",
+        "head_sha": "abc123",
+        "merge_ok": "true",
+        "merged": "",
+        "merge_outcome": "",
+        "stop_reason": "none",
+        "findings": "0",
+        "review_complete": "true",
+        "responded": "true",
+        "attempts_used": "1",
+        "max_attempts": "3",
+        "attempt_timeout_seconds": "420",
+        "poll_seconds": "30",
+        "settle_seconds": "60",
+        "response_attempt": "1",
+        "response_seconds": "90",
+        "trigger_comment_ids": "10",
+        "first_trigger_created_at": "2026-05-31T10:00:00Z",
+    }
+    values.update(overrides)
+    return type("Args", (), values)()
+
+
+def test_build_auto_review_report_records_merged():
+    report = build_auto_review_report(
+        _report_args(merged="true", merge_outcome="success", stop_reason="findings")
+    )
+
+    assert report["status"] == "merged"
+    # merged の場合は入力の stop_reason によらず none になる
+    assert report["stop_reason"] == "none"
+    assert report["merged"] is True
+
+
+def test_build_auto_review_report_records_merge_ready():
+    report = build_auto_review_report(_report_args())
+
+    assert report["status"] == "merge_ready"
+    assert report["stop_reason"] == "none"
+    assert report["merge_ok"] is True
+    assert report["merged"] is False
