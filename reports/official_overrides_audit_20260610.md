@@ -1,0 +1,265 @@
+# official_overrides 監査
+
+## サマリ
+
+- 対象値: 116
+- protected_by_override: 1
+- source_changed: 5
+- upstream_current: 110
+- review_due: 116
+- remove_due: 0
+
+## 期限確認
+
+review_after 到達値は再確認、remove_after 到達値は撤去可否を判断してください。
+| MS名 | 項目 | 期限状態 | review_after | remove_after | 状態 | override | 取得値 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Ex-Sガンダム_LV1 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 23000 | 23000 |
+| Ex-Sガンダム_LV1 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 23 | 23 |
+| Ex-Sガンダム_LV1 | 耐格闘補正 | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 15 | 15 |
+| Ex-Sガンダム_LV1 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 10 | 10 |
+| Ex-Sガンダム_LV1 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 22 | 22 |
+| Ex-Sガンダム_LV2 | 耐格闘補正 | review_due | 2026-06-07 | 2026-06-30 | source_changed | 15 | 20 |
+| Ex-Sガンダム_LV2 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | source_changed | 10 | 12 |
+| Ex-Sガンダム_LV3 | 耐格闘補正 | review_due | 2026-06-07 | 2026-06-30 | source_changed | 15 | 25 |
+| Ex-Sガンダム_LV3 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | source_changed | 10 | 14 |
+| アルス・ジャジャ_LV1 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 22000 | 22000 |
+| アルス・ジャジャ_LV1 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 11 | 11 |
+| アルス・ジャジャ_LV1 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 15 | 15 |
+| アルス・ジャジャ_LV1 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 17 | 17 |
+| アルス・ジャジャ_LV2 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 11 | 11 |
+| オーヴェロン_LV1 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 21 | 21 |
+| オーヴェロン_LV1 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 19 | 19 |
+| オーヴェロン_LV1 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 11 | 11 |
+| ガズアル_LV1 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 18000 | 18000 |
+| ガズアル_LV1 | スラスター | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 70 | 70 |
+| ガズアル_LV1 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 16 | 16 |
+| ガズアル_LV1 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 11 | 11 |
+| ガズアル_LV1 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 12 | 12 |
+| ガズアル_LV4 | スラスター | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 75 | 75 |
+| ガズエル_LV1 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 21000 | 21000 |
+| ガズエル_LV1 | スラスター | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 75 | 75 |
+| ガズエル_LV1 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 11 | 11 |
+| ガズエル_LV1 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 20 | 20 |
+| ガズエル_LV1 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 8 | 8 |
+| ガズエル_LV2 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 23500 | 23500 |
+| ガズエル_LV2 | スラスター | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 75 | 75 |
+| ガズエル_LV2 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 14 | 14 |
+| ガズエル_LV2 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 23 | 23 |
+| ガズエル_LV2 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 11 | 11 |
+| ガズエル_LV3 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 25000 | 25000 |
+| ガズエル_LV3 | スラスター | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 75 | 75 |
+| ガズエル_LV3 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 15 | 15 |
+| ガズエル_LV3 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 25 | 25 |
+| ガズエル_LV3 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 13 | 13 |
+| ガズエル_LV4 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 27500 | 27500 |
+| ガズエル_LV4 | スラスター | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 80 | 80 |
+| ガズエル_LV4 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 16 | 16 |
+| ガズエル_LV4 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 27 | 27 |
+| ガズエル_LV4 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 15 | 15 |
+| ガッシャ_LV1 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 17000 | 17000 |
+| ガッシャ_LV1 | スピード | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 120 | 120 |
+| ガッシャ_LV1 | スラスター | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 65 | 65 |
+| ガッシャ_LV1 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 6 | 6 |
+| ガッシャ_LV1 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 12 | 12 |
+| ガッシャ_LV1 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 9 | 9 |
+| ガッシャ_LV4 | スラスター | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 70 | 70 |
+| ガンキャノン重装型タイプD_LV1 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 16500 | 16500 |
+| ガンキャノン重装型タイプD_LV1 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 11 | 11 |
+| ガンキャノン重装型タイプD_LV1 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 9 | 9 |
+| ガンキャノン重装型タイプD_LV1 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 11 | 11 |
+| ガンキャノン重装型タイプD_LV2 | スラスター | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 55 | 55 |
+| ガンキャノン重装型タイプD_LV3 | スラスター | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 55 | 55 |
+| ガンキャノン重装型タイプD_LV4 | スラスター | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 60 | 60 |
+| ガンダムデルタカイ_LV1 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 22000 | 22000 |
+| ガンダムデルタカイ_LV1 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 18 | 18 |
+| ガンダムデルタカイ_LV1 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 18 | 18 |
+| ガンダムデルタカイ_LV1 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 16 | 16 |
+| ギラ・ズール（アンジェロ機）_LV1 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 18 | 18 |
+| ギラ・ズール（アンジェロ機）_LV1 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 10 | 10 |
+| ギラ・ズール（アンジェロ機）_LV1 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 20 | 20 |
+| ゲルググJ_LV1 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 18000 | 18000 |
+| ゲルググJ_LV1 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 12 | 12 |
+| ゲルググJ_LV1 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 8 | 8 |
+| ゲルググJ_LV1 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 15 | 15 |
+| ザクⅢ改_LV1 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 27000 | 27000 |
+| ザクⅢ改_LV1 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 18 | 18 |
+| ザクⅢ改_LV1 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 23 | 23 |
+| ザクⅢ改_LV1 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 10 | 10 |
+| ザクⅢ改_LV3 | HP | review_due | 2026-06-07 | 2026-06-30 | source_changed | 28500 | 32000 |
+| シナンジュ_LV1 | HP | review_due | 2026-06-07 | 2026-06-30 | protected_by_override | 27000 | 25000 |
+| ジェガン重装型_LV1 | スピード | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 125 | 125 |
+| ジェガン重装型_LV1 | スラスター | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 65 | 65 |
+| ジェガン重装型_LV1 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 17 | 17 |
+| ジェガン重装型_LV1 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 11 | 11 |
+| ジェガン重装型_LV1 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 16 | 16 |
+| ジェガン［エコーズ仕様］_LV1 | スピード | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 130 | 130 |
+| スーパーガンダム_LV1 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 15 | 15 |
+| スーパーガンダム_LV1 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 6 | 6 |
+| スーパーガンダム_LV1 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 22 | 22 |
+| ディジェ（CA）_LV1 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 28000 | 28000 |
+| ディジェ（CA）_LV1 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 18 | 18 |
+| ディジェ（CA）_LV1 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 19 | 19 |
+| ディジェ（CA）_LV1 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 19 | 19 |
+| ドム・トロピカルテストタイプ_LV1 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 14000 | 14000 |
+| ドム・トロピカルテストタイプ_LV1 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 11 | 11 |
+| ドム・トロピカルテストタイプ_LV1 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 12 | 12 |
+| ドム・トロピカルテストタイプ_LV1 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 4 | 4 |
+| ドム・ノーミーデス_LV2 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 24000 | 24000 |
+| ネロ_LV1 | スピード | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 135 | 135 |
+| ネロ_LV1 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 15 | 15 |
+| ネロ_LV1 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 17 | 17 |
+| ネロ_LV1 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 6 | 6 |
+| ネロ・トレーナー_LV1 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 18000 | 18000 |
+| ネロ・トレーナー_LV1 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 12 | 12 |
+| ネロ・トレーナー_LV1 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 19 | 19 |
+| ネロ・トレーナー_LV1 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 6 | 6 |
+| ネロ・トレーナー_LV2 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 20000 | 20000 |
+| ネロ・トレーナー_LV2 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 14 | 14 |
+| ネロ・トレーナー_LV2 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 21 | 21 |
+| ネロ・トレーナー_LV2 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 8 | 8 |
+| ハンマ・ハンマ_LV1 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 22000 | 22000 |
+| バイアラン・カスタム_LV1 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 23000 | 23000 |
+| バイアラン・カスタム_LV1 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 13 | 13 |
+| バイアラン・カスタム_LV1 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 21 | 21 |
+| バイアラン・カスタム_LV1 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 13 | 13 |
+| フェネクス【NT】_LV1 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 27000 | 27000 |
+| フェネクス【NT】_LV1 | スピード | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 135 | 135 |
+| フェネクス【NT】_LV2 | スピード | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 140 | 140 |
+| メッサーラ_LV1 | HP | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 25000 | 25000 |
+| 陸戦型ガンダム［WR装備］_LV1 | 中スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 8 | 8 |
+| 陸戦型ガンダム［WR装備］_LV1 | 近スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 5 | 5 |
+| 陸戦型ガンダム［WR装備］_LV1 | 遠スロット | review_due | 2026-06-07 | 2026-06-30 | upstream_current | 11 | 11 |
+
+## 撤去候補
+
+取得値が override と一致しているため、次回確認後に撤去候補です。
+| MS名 | 項目 | 状態 | 変更前 | 取得値 | 現在値 | override | stale |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Ex-Sガンダム_LV1 | HP | upstream_current | 23000 | 23000 | 23000 | 23000 | 21500 |
+| Ex-Sガンダム_LV1 | 中スロット | upstream_current | 23 | 23 | 23 | 23 | 22 |
+| Ex-Sガンダム_LV1 | 耐格闘補正 | upstream_current | 15 | 15 | 15 | 15 | 10 |
+| Ex-Sガンダム_LV1 | 近スロット | upstream_current | 10 | 10 | 10 | 10 | 5 |
+| Ex-Sガンダム_LV1 | 遠スロット | upstream_current | 22 | 22 | 22 | 22 | 21 |
+| アルス・ジャジャ_LV1 | HP | upstream_current | 22000 | 22000 | 22000 | 22000 | 20000 |
+| アルス・ジャジャ_LV1 | 中スロット | upstream_current | 11 | 11 | 11 | 11 | 10 |
+| アルス・ジャジャ_LV1 | 近スロット | upstream_current | 15 | 15 | 15 | 15 | 14 |
+| アルス・ジャジャ_LV1 | 遠スロット | upstream_current | 17 | 17 | 17 | 17 | 16 |
+| アルス・ジャジャ_LV2 | 中スロット | upstream_current | 11 | 11 | 11 | 11 | 10 |
+| オーヴェロン_LV1 | 中スロット | upstream_current | 21 | 21 | 21 | 21 | 20 |
+| オーヴェロン_LV1 | 近スロット | upstream_current | 19 | 19 | 19 | 19 | 18 |
+| オーヴェロン_LV1 | 遠スロット | upstream_current | 11 | 11 | 11 | 11 | 10 |
+| ガズアル_LV1 | HP | upstream_current | 18000 | 18000 | 18000 | 18000 | 16500 |
+| ガズアル_LV1 | スラスター | upstream_current | 70 | 70 | 70 | 70 | 65 |
+| ガズアル_LV1 | 中スロット | upstream_current | 16 | 16 | 16 | 16 | 15 |
+| ガズアル_LV1 | 近スロット | upstream_current | 11 | 11 | 11 | 11 | 10 |
+| ガズアル_LV1 | 遠スロット | upstream_current | 12 | 12 | 12 | 12 | 11 |
+| ガズアル_LV4 | スラスター | upstream_current | 75 | 75 | 75 | 75 | 70 |
+| ガズエル_LV1 | HP | upstream_current | 21000 | 21000 | 21000 | 21000 | 19000 |
+| ガズエル_LV1 | スラスター | upstream_current | 75 | 75 | 75 | 75 | 70 |
+| ガズエル_LV1 | 中スロット | upstream_current | 11 | 11 | 11 | 11 | 10 |
+| ガズエル_LV1 | 近スロット | upstream_current | 20 | 20 | 20 | 20 | 19 |
+| ガズエル_LV1 | 遠スロット | upstream_current | 8 | 8 | 8 | 8 | 7 |
+| ガズエル_LV2 | HP | upstream_current | 23500 | 23500 | 23500 | 23500 | 21000 |
+| ガズエル_LV2 | スラスター | upstream_current | 75 | 75 | 75 | 75 | 70 |
+| ガズエル_LV2 | 中スロット | upstream_current | 14 | 14 | 14 | 14 | 13 |
+| ガズエル_LV2 | 近スロット | upstream_current | 23 | 23 | 23 | 23 | 22 |
+| ガズエル_LV2 | 遠スロット | upstream_current | 11 | 11 | 11 | 11 | 10 |
+| ガズエル_LV3 | HP | upstream_current | 25000 | 25000 | 25000 | 25000 | 23000 |
+| ガズエル_LV3 | スラスター | upstream_current | 75 | 75 | 75 | 75 | 70 |
+| ガズエル_LV3 | 中スロット | upstream_current | 15 | 15 | 15 | 15 | 14 |
+| ガズエル_LV3 | 近スロット | upstream_current | 25 | 25 | 25 | 25 | 24 |
+| ガズエル_LV3 | 遠スロット | upstream_current | 13 | 13 | 13 | 13 | 12 |
+| ガズエル_LV4 | HP | upstream_current | 27500 | 27500 | 27500 | 27500 | 25000 |
+| ガズエル_LV4 | スラスター | upstream_current | 80 | 80 | 80 | 80 | 75 |
+| ガズエル_LV4 | 中スロット | upstream_current | 16 | 16 | 16 | 16 | 15 |
+| ガズエル_LV4 | 近スロット | upstream_current | 27 | 27 | 27 | 27 | 26 |
+| ガズエル_LV4 | 遠スロット | upstream_current | 15 | 15 | 15 | 15 | 14 |
+| ガッシャ_LV1 | HP | upstream_current | 17000 | 17000 | 17000 | 17000 | 15500 |
+| ガッシャ_LV1 | スピード | upstream_current | 120 | 120 | 120 | 120 | 115 |
+| ガッシャ_LV1 | スラスター | upstream_current | 65 | 65 | 65 | 65 | 60 |
+| ガッシャ_LV1 | 中スロット | upstream_current | 6 | 6 | 6 | 6 | 5 |
+| ガッシャ_LV1 | 近スロット | upstream_current | 12 | 12 | 12 | 12 | 11 |
+| ガッシャ_LV1 | 遠スロット | upstream_current | 9 | 9 | 9 | 9 | 8 |
+| ガッシャ_LV4 | スラスター | upstream_current | 70 | 70 | 70 | 70 | 65 |
+| ガンキャノン重装型タイプD_LV1 | HP | upstream_current | 16500 | 16500 | 16500 | 16500 | 15500 |
+| ガンキャノン重装型タイプD_LV1 | 中スロット | upstream_current | 11 | 11 | 11 | 11 | 10 |
+| ガンキャノン重装型タイプD_LV1 | 近スロット | upstream_current | 9 | 9 | 9 | 9 | 8 |
+| ガンキャノン重装型タイプD_LV1 | 遠スロット | upstream_current | 11 | 11 | 11 | 11 | 10 |
+| ガンキャノン重装型タイプD_LV2 | スラスター | upstream_current | 55 | 55 | 55 | 55 | 50 |
+| ガンキャノン重装型タイプD_LV3 | スラスター | upstream_current | 55 | 55 | 55 | 55 | 50 |
+| ガンキャノン重装型タイプD_LV4 | スラスター | upstream_current | 60 | 60 | 60 | 60 | 55 |
+| ガンダムデルタカイ_LV1 | HP | upstream_current | 22000 | 22000 | 22000 | 22000 | 18500 |
+| ガンダムデルタカイ_LV1 | 中スロット | upstream_current | 18 | 18 | 18 | 18 | 17 |
+| ガンダムデルタカイ_LV1 | 近スロット | upstream_current | 18 | 18 | 18 | 18 | 16 |
+| ガンダムデルタカイ_LV1 | 遠スロット | upstream_current | 16 | 16 | 16 | 16 | 15 |
+| ギラ・ズール（アンジェロ機）_LV1 | 中スロット | upstream_current | 18 | 18 | 18 | 18 | 17 |
+| ギラ・ズール（アンジェロ機）_LV1 | 近スロット | upstream_current | 10 | 10 | 10 | 10 | 8 |
+| ギラ・ズール（アンジェロ機）_LV1 | 遠スロット | upstream_current | 20 | 20 | 20 | 20 | 19 |
+| ゲルググJ_LV1 | HP | upstream_current | 18000 | 18000 | 18000 | 18000 | 17000 |
+| ゲルググJ_LV1 | 中スロット | upstream_current | 12 | 12 | 12 | 12 | 11 |
+| ゲルググJ_LV1 | 近スロット | upstream_current | 8 | 8 | 8 | 8 | 7 |
+| ゲルググJ_LV1 | 遠スロット | upstream_current | 15 | 15 | 15 | 15 | 14 |
+| ザクⅢ改_LV1 | HP | upstream_current | 27000 | 27000 | 27000 | 27000 | 23500 |
+| ザクⅢ改_LV1 | 中スロット | upstream_current | 18 | 18 | 18 | 18 | 17 |
+| ザクⅢ改_LV1 | 近スロット | upstream_current | 23 | 23 | 23 | 23 | 22 |
+| ザクⅢ改_LV1 | 遠スロット | upstream_current | 10 | 10 | 10 | 10 | 9 |
+| ジェガン重装型_LV1 | スピード | upstream_current | 125 | 125 | 125 | 125 | 120 |
+| ジェガン重装型_LV1 | スラスター | upstream_current | 65 | 65 | 65 | 65 | 60 |
+| ジェガン重装型_LV1 | 中スロット | upstream_current | 17 | 17 | 17 | 17 | 16 |
+| ジェガン重装型_LV1 | 近スロット | upstream_current | 11 | 11 | 11 | 11 | 9 |
+| ジェガン重装型_LV1 | 遠スロット | upstream_current | 16 | 16 | 16 | 16 | 15 |
+| ジェガン［エコーズ仕様］_LV1 | スピード | upstream_current | 130 | 130 | 130 | 130 | 125 |
+| スーパーガンダム_LV1 | 中スロット | upstream_current | 15 | 15 | 15 | 15 | 14 |
+| スーパーガンダム_LV1 | 近スロット | upstream_current | 6 | 6 | 6 | 6 | 5 |
+| スーパーガンダム_LV1 | 遠スロット | upstream_current | 22 | 22 | 22 | 22 | 21 |
+| ディジェ（CA）_LV1 | HP | upstream_current | 28000 | 28000 | 28000 | 28000 | 23000 |
+| ディジェ（CA）_LV1 | 中スロット | upstream_current | 18 | 18 | 18 | 18 | 16 |
+| ディジェ（CA）_LV1 | 近スロット | upstream_current | 19 | 19 | 19 | 19 | 18 |
+| ディジェ（CA）_LV1 | 遠スロット | upstream_current | 19 | 19 | 19 | 19 | 18 |
+| ドム・トロピカルテストタイプ_LV1 | HP | upstream_current | 14000 | 14000 | 14000 | 14000 | 12000 |
+| ドム・トロピカルテストタイプ_LV1 | 中スロット | upstream_current | 11 | 11 | 11 | 11 | 10 |
+| ドム・トロピカルテストタイプ_LV1 | 近スロット | upstream_current | 12 | 12 | 12 | 12 | 11 |
+| ドム・トロピカルテストタイプ_LV1 | 遠スロット | upstream_current | 4 | 4 | 4 | 4 | 3 |
+| ドム・ノーミーデス_LV2 | HP | upstream_current | 24000 | 24000 | 24000 | 24000 | 23000 |
+| ネロ_LV1 | スピード | upstream_current | 135 | 135 | 135 | 135 | 130 |
+| ネロ_LV1 | 中スロット | upstream_current | 15 | 15 | 15 | 15 | 13 |
+| ネロ_LV1 | 近スロット | upstream_current | 17 | 17 | 17 | 17 | 16 |
+| ネロ_LV1 | 遠スロット | upstream_current | 6 | 6 | 6 | 6 | 5 |
+| ネロ・トレーナー_LV1 | HP | upstream_current | 18000 | 18000 | 18000 | 18000 | 17000 |
+| ネロ・トレーナー_LV1 | 中スロット | upstream_current | 12 | 12 | 12 | 12 | 11 |
+| ネロ・トレーナー_LV1 | 近スロット | upstream_current | 19 | 19 | 19 | 19 | 18 |
+| ネロ・トレーナー_LV1 | 遠スロット | upstream_current | 6 | 6 | 6 | 6 | 5 |
+| ネロ・トレーナー_LV2 | HP | upstream_current | 20000 | 20000 | 20000 | 20000 | 18500 |
+| ネロ・トレーナー_LV2 | 中スロット | upstream_current | 14 | 14 | 14 | 14 | 12 |
+| ネロ・トレーナー_LV2 | 近スロット | upstream_current | 21 | 21 | 21 | 21 | 20 |
+| ネロ・トレーナー_LV2 | 遠スロット | upstream_current | 8 | 8 | 8 | 8 | 6 |
+| ハンマ・ハンマ_LV1 | HP | upstream_current | 22000 | 22000 | 22000 | 22000 | 20500 |
+| バイアラン・カスタム_LV1 | HP | upstream_current | 23000 | 23000 | 23000 | 23000 | 21000 |
+| バイアラン・カスタム_LV1 | 中スロット | upstream_current | 13 | 13 | 13 | 13 | 12 |
+| バイアラン・カスタム_LV1 | 近スロット | upstream_current | 21 | 21 | 21 | 21 | 20 |
+| バイアラン・カスタム_LV1 | 遠スロット | upstream_current | 13 | 13 | 13 | 13 | 12 |
+| フェネクス【NT】_LV1 | HP | upstream_current | 27000 | 27000 | 27000 | 27000 | 25000 |
+| フェネクス【NT】_LV1 | スピード | upstream_current | 135 | 135 | 135 | 135 | 130 |
+| フェネクス【NT】_LV2 | スピード | upstream_current | 140 | 140 | 140 | 140 | 135 |
+| メッサーラ_LV1 | HP | upstream_current | 25000 | 25000 | 25000 | 25000 | 22000 |
+| 陸戦型ガンダム［WR装備］_LV1 | 中スロット | upstream_current | 8 | 8 | 8 | 8 | 7 |
+| 陸戦型ガンダム［WR装備］_LV1 | 近スロット | upstream_current | 5 | 5 | 5 | 5 | 3 |
+| 陸戦型ガンダム［WR装備］_LV1 | 遠スロット | upstream_current | 11 | 11 | 11 | 11 | 10 |
+
+## 適用中
+
+| MS名 | 項目 | 状態 | 変更前 | 取得値 | 現在値 | override | stale |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| シナンジュ_LV1 | HP | protected_by_override | 27000 | 25000 | 27000 | 27000 | 25000 |
+
+## 要確認
+
+| MS名 | 項目 | 状態 | 変更前 | 取得値 | 現在値 | override | stale |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Ex-Sガンダム_LV2 | 耐格闘補正 | source_changed | 20 | 20 | 20 | 15 | 10 |
+| Ex-Sガンダム_LV2 | 近スロット | source_changed | 12 | 12 | 12 | 10 | 5 |
+| Ex-Sガンダム_LV3 | 耐格闘補正 | source_changed | 25 | 25 | 25 | 15 | 10 |
+| Ex-Sガンダム_LV3 | 近スロット | source_changed | 14 | 14 | 14 | 10 | 5 |
+| ザクⅢ改_LV3 | HP | source_changed | 32000 | 32000 | 32000 | 28500 | 23000 |
+
