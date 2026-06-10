@@ -1,6 +1,6 @@
 import json
 
-from scripts import update_msdata
+from ms_data.pipeline import update_msdata
 
 
 def test_normalize_record_assigns_wiki_url(monkeypatch):

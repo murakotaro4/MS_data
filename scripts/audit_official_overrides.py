@@ -13,7 +13,7 @@ from typing import Any
 from ms_data.core.records import load_records_by_name
 from ms_data.gh.outputs import append_step_summary, write_github_output
 from ms_data.reporting.rendering import value_text as _value_text
-from scripts import update_msdata
+from ms_data.pipeline import update_msdata
 
 
 JST = timezone(timedelta(hours=9))

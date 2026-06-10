@@ -2,7 +2,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from scripts import generate_provenance
+from ms_data.pipeline import generate_provenance
 
 
 def _write_json(path: Path, data: object) -> None:

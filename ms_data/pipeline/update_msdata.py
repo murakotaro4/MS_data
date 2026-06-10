@@ -9,8 +9,8 @@ msData.json 更新ユーティリティ（uv 前提）
 - 差分サマリを表示しつつ JSON を整形保存（UTF-8, 2スペース, ソートキー）
 
 使用例
-- 既存ファイルを正規化のみ（上書き）:  uv run python scripts/update_msdata.py -i
-- 新規データをマージして出力:         uv run python scripts/update_msdata.py -i path/to/new.json
+- 既存ファイルを正規化のみ（上書き）:  uv run python -m ms_data.pipeline.update_msdata -i
+- 新規データをマージして出力:         uv run python -m ms_data.pipeline.update_msdata -i path/to/new.json
 """
 from __future__ import annotations
 

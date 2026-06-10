@@ -3,7 +3,7 @@
 msData 更新時の生成元証跡（provenance）を JSON で出力する。
 
 例:
-  uv run python -m scripts.generate_provenance \
+  uv run python -m ms_data.pipeline.generate_provenance \
     --date 20260221 \
     --index cache/index.json \
     --details-jsonl cache/details.jsonl \

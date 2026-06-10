@@ -128,11 +128,11 @@ def task_update() -> int:
     input_path = _env_str("INPUT")
     if input_path:
         args.append(input_path)
-    return _run_python_module("scripts.update_msdata", *args)
+    return _run_python_module("ms_data.pipeline.update_msdata", *args)
 
 
 def task_normalize() -> int:
-    return _run_python_module("scripts.update_msdata", "-i")
+    return _run_python_module("ms_data.pipeline.update_msdata", "-i")
 
 
 def task_ci() -> int:
@@ -348,10 +348,10 @@ def task_import_details() -> int:
     details_json = (
         _env_str("DETAILS_JSON", "cache/details.json") or "cache/details.json"
     )
-    rc = _run_python_module("scripts.jsonl_to_json", details_jsonl, details_json)
+    rc = _run_python_module("ms_data.pipeline.jsonl_to_json", details_jsonl, details_json)
     if rc != 0:
         return rc
-    return _run_python_module("scripts.update_msdata", "-i", details_json)
+    return _run_python_module("ms_data.pipeline.update_msdata", "-i", details_json)
 
 
 def task_labels() -> int:
@@ -431,7 +431,7 @@ def task_provenance() -> int:
         "--artifact-retention-days",
         str(_env_int("ARTIFACT_RETENTION_DAYS", 90)),
     ]
-    return _run_python_module("scripts.generate_provenance", *args)
+    return _run_python_module("ms_data.pipeline.generate_provenance", *args)
 
 
 def task_snapshot() -> int:
@@ -466,7 +466,7 @@ def task_snapshot() -> int:
 
 def task_restore_snapshot() -> int:
     return _run_python_module(
-        "scripts.restore_snapshot",
+        "ms_data.pipeline.restore_snapshot",
         "--snapshot",
         _require_env("SNAPSHOT"),
         "--out-dir",

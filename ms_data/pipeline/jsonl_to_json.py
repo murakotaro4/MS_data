@@ -7,7 +7,7 @@ JSONLファイルをJSON配列に変換するユーティリティ（uv 前提�
 - エラーハンドリングと進捗表示を含む
 
 使用例
-- 変換: uv run python -m scripts.jsonl_to_json cache/details.jsonl cache/details.json
+- 変換: uv run python -m ms_data.pipeline.jsonl_to_json cache/details.jsonl cache/details.json
 """
 from __future__ import annotations
 
