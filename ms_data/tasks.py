@@ -252,6 +252,8 @@ def task_detect_changed() -> int:
         args.extend(["--now", now_value])
     if _env_flag("FORCE_FULL"):
         args.append("--force-full")
+    if _env_flag("REVALIDATE"):
+        args.append("--revalidate")
     return _run_python_module("ms_data.scraping.scrape_msdata", *args)
 
 

@@ -6,8 +6,11 @@ HTTP 取得のキャッシュ層（ETag/Last-Modified + TTL）。
 - URLごとに HTML とメタ情報（etag/last_modified/sha256 など）を保存
 - TTL内はキャッシュヒット、TTL超過時は条件付きGET（304で不更新）
 - 強制更新/オフラインモード対応
+- ネットワーク取得の統計（stats）とレート制限（min_interval_seconds）
 
 使用側は httpx.Client を渡す。保存先は `cache/html/` を既定とする。
+注意: atwiki は ETag/Last-Modified を返さない（2026-06 実測）ため、
+条件付きGETは送るが 304 は期待できない。負荷軽減は取得対象の絞り込みで行う。
 """
 from __future__ import annotations
 
@@ -18,6 +21,7 @@ import datetime as dt
 import hashlib
 import json
 import re
+import time
 import urllib.parse
 
 import httpx
@@ -30,6 +34,19 @@ class CacheConfig:
     ttl_seconds: int = 7 * 24 * 3600  # 7日
     no_network: bool = False
     force: bool = False
+    # ネットワーク取得の最小間隔（秒）。キャッシュヒット時は待機しない。
+    min_interval_seconds: float = 0.0
+
+
+def new_fetch_stats() -> Dict[str, int]:
+    return {
+        "network_requests": 0,
+        "status_200": 0,
+        "status_304": 0,
+        "failures": 0,
+        "body_bytes": 0,
+        "cache_hits": 0,
+    }
 
 
 def _slugify(text: str) -> str:
@@ -58,6 +75,27 @@ class CacheHTTP:
         self.client = client
         self.cfg = config or CacheConfig()
         self.cfg.root.mkdir(parents=True, exist_ok=True)
+        self.stats = new_fetch_stats()
+        self._last_request_monotonic: Optional[float] = None
+
+    def _wait_rate_limit(self) -> None:
+        if self.cfg.min_interval_seconds <= 0:
+            return
+        now = time.monotonic()
+        if self._last_request_monotonic is not None:
+            wait = self.cfg.min_interval_seconds - (now - self._last_request_monotonic)
+            if wait > 0:
+                time.sleep(wait)
+
+    def _request(self, url: str, headers: Dict[str, str]) -> httpx.Response:
+        self._wait_rate_limit()
+        self.stats["network_requests"] += 1
+        self._last_request_monotonic = time.monotonic()
+        try:
+            return self.client.get(url, headers=headers)
+        except Exception:
+            self.stats["failures"] += 1
+            raise
 
     def _paths(self, url: str) -> Tuple[Path, Path]:
         slug = url_to_slug(url)
@@ -109,9 +147,21 @@ class CacheHTTP:
         if (
             self.cfg.no_network or (ttl_ok and not self.cfg.force)
         ) and html_path.exists():
+            self.stats["cache_hits"] += 1
             text = html_path.read_text(encoding="utf-8")
-            if not meta.get("content_sha256"):
-                meta["content_sha256"] = self._sha256_text(text)
+            content_sha = self._sha256_text(text)
+            if (
+                meta.get("semantic_sha256")
+                and meta.get("content_sha256") == content_sha
+            ):
+                # 内容が前回保存時と同一なら、セマンティックハッシュの再計算
+                # （BeautifulSoup パース）を省略してそのまま返す。
+                # トレードオフ: 抽出アルゴリズム変更は TTL 失効か次回 200 取得まで
+                # 保存済み semantic_sha256 に反映されない（その時点で旧値と不一致
+                # になり semantic_changed=True として保守的に再処理される）
+                meta["semantic_changed"] = False
+                return text, meta
+            meta["content_sha256"] = content_sha
             # セマンティックハッシュを計算してメタに反映（コメント等を無視した本体の変化検出）
             prev_sem = meta.get("semantic_sha256")
             cur_sem = _semantic_sha256(text)
@@ -137,8 +187,14 @@ class CacheHTTP:
             if lm := meta.get("last_modified"):
                 headers["If-Modified-Since"] = lm
 
-        r = self.client.get(url, headers=headers)
+        r = self._request(url, headers)
+        if r.status_code == 304 and not html_path.exists():
+            # requests 系クライアントは 3xx で raise_for_status が例外を出さないため、
+            # 空ボディを 200 としてキャッシュしてしまう前に明示的に失敗させる
+            self.stats["failures"] += 1
+            raise RuntimeError("304 応答だがキャッシュHTMLが存在しない: " + url)
         if r.status_code == 304 and html_path.exists():
+            self.stats["status_304"] += 1
             # HTMLは既存を使う
             text = html_path.read_text(encoding="utf-8")
             prev_sem = meta.get("semantic_sha256")
@@ -163,7 +219,13 @@ class CacheHTTP:
             self._write_meta(meta_path, meta)
             return text, meta
 
-        r.raise_for_status()
+        try:
+            r.raise_for_status()
+        except Exception:
+            self.stats["failures"] += 1
+            raise
+        self.stats["status_200"] += 1
+        self.stats["body_bytes"] += len(r.content)
         text = r.text
         # 200: 新規または内容変更
         cur_sem = _semantic_sha256(text)

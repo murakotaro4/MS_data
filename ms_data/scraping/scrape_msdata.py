@@ -34,13 +34,14 @@ import os
 import re
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 from bs4 import BeautifulSoup, Tag
 
+from ms_data.core.json_io import load_json_or_default
 from ms_data.core.ms_names import MS_NAME_WITH_LEVEL, extract_ms_base_name
 from ms_data.net.client import get_scraper_client
 from ms_data.net.cache_http import CacheConfig, CacheHTTP
@@ -245,6 +246,7 @@ def select_changed_index_items(
     now: Optional[datetime] = None,
     freshness_window_seconds: int = 3600,
     force_full: bool = False,
+    revalidate: bool = False,
     min_age_coverage: float = 0.95,
     detail_fetch_state: Optional[Dict[str, Dict[str, Any]]] = None,
     stale_detail_seconds: Optional[int] = None,
@@ -263,6 +265,7 @@ def select_changed_index_items(
     )
 
     meta: Dict[str, Any] = {
+        "mode": "full" if force_full else ("revalidate" if revalidate else "fast"),
         "fast_path": True,
         "fallback_reason": "",
         "candidate_count": 0,
@@ -283,11 +286,101 @@ def select_changed_index_items(
         "reason_counts": {},
     }
 
+    def _identity_reasons(item: Dict[str, Any]) -> List[str]:
+        reasons: List[str] = []
+        name = item.get("name")
+        existing = previous_msdata_index.get(name) if isinstance(name, str) else None
+        if existing is None:
+            reasons.append("new_name")
+            return reasons
+        item_cost = item.get("cost")
+        if isinstance(item_cost, int) and existing.get("cost") != item_cost:
+            reasons.append("cost_changed")
+        item_attr = item.get("属性")
+        if (
+            isinstance(item_attr, str)
+            and item_attr
+            and existing.get("attr") != item_attr
+        ):
+            reasons.append("attr_changed")
+        current_url = item.get("url")
+        if (
+            isinstance(current_url, str)
+            and isinstance(existing.get("wiki_url"), str)
+            and existing.get("wiki_url") != current_url
+        ):
+            reasons.append("wiki_url_changed")
+        return reasons
+
+    def _stale_detail_reason(item: Dict[str, Any]) -> List[str]:
+        url = item.get("url")
+        if not (stale_detail_enabled and isinstance(url, str)):
+            return []
+        fetched_at = _detail_state_fetched_at(detail_fetch_state or {}, url)
+        if fetched_at is None:
+            return ["stale_detail_cache"]
+        detail_age_seconds = int(
+            max(0, (now_utc - fetched_at.astimezone(timezone.utc)).total_seconds())
+        )
+        if detail_age_seconds >= int(stale_detail_seconds or 0):
+            return ["stale_detail_cache"]
+        return []
+
+    def _finish(selected: List[Dict[str, Any]], reason_counts: Dict[str, int]):
+        meta["candidate_count"] = len(selected)
+        meta["reason_counts"] = reason_counts
+        return selected, meta
+
     if force_full:
         meta["fast_path"] = False
         meta["fallback_reason"] = "force_full"
         meta["candidate_count"] = total_count
         return items, meta
+
+    if revalidate:
+        # 週次再検証: 一覧ページの更新経過時間と前回詳細取得時刻を機体ごとに直接
+        # 比較し、前回取得後に更新された可能性のあるページだけを選ぶ。
+        # 前回プロビナンスに依存しないため、平日 fast 更新の失敗や取りこぼしを
+        # 週次で回復できる（atwiki が ETag 非対応のため 304 再検証の代替）。
+        meta["fast_path"] = False
+        if age_coverage < min_age_coverage:
+            meta["fallback_reason"] = "low_age_coverage"
+            meta["candidate_count"] = total_count
+            return items, meta
+        meta["fallback_reason"] = "revalidate"
+
+        selected: List[Dict[str, Any]] = []
+        reason_counts: Dict[str, int] = {}
+        for item in items:
+            reasons = _identity_reasons(item)
+            age_seconds = item.get("updated_age_seconds")
+            url = item.get("url")
+            fetched_at = (
+                _detail_state_fetched_at(detail_fetch_state or {}, url)
+                if isinstance(url, str)
+                else None
+            )
+            if age_seconds is None:
+                reasons.append("missing_age")
+            if fetched_at is None:
+                # 取得履歴なし（未取得 or 前回失敗）は必ず再取得。
+                # stale_detail_cache も None で発火するため重複計上を避けて省略
+                reasons.append("missing_fetch_history")
+            else:
+                if isinstance(age_seconds, int) and fetched_at.astimezone(
+                    timezone.utc
+                ) <= now_utc - timedelta(seconds=age_seconds):
+                    # ページの最終更新（の最遅推定時刻）が前回取得より新しい
+                    reasons.append("updated_since_fetch")
+                reasons.extend(_stale_detail_reason(item))
+
+            if reasons:
+                selected_item = dict(item)
+                selected_item["change_reasons"] = reasons
+                selected.append(selected_item)
+                for reason in reasons:
+                    reason_counts[reason] = reason_counts.get(reason, 0) + 1
+        return _finish(selected, reason_counts)
 
     if previous_generated_at is None:
         meta["fast_path"] = False
@@ -312,29 +405,7 @@ def select_changed_index_items(
     selected: List[Dict[str, Any]] = []
     reason_counts: Dict[str, int] = {}
     for item in items:
-        reasons: List[str] = []
-        name = item.get("name")
-        existing = previous_msdata_index.get(name) if isinstance(name, str) else None
-        if existing is None:
-            reasons.append("new_name")
-        else:
-            item_cost = item.get("cost")
-            if isinstance(item_cost, int) and existing.get("cost") != item_cost:
-                reasons.append("cost_changed")
-            item_attr = item.get("属性")
-            if (
-                isinstance(item_attr, str)
-                and item_attr
-                and existing.get("attr") != item_attr
-            ):
-                reasons.append("attr_changed")
-            current_url = item.get("url")
-            if (
-                isinstance(current_url, str)
-                and isinstance(existing.get("wiki_url"), str)
-                and existing.get("wiki_url") != current_url
-            ):
-                reasons.append("wiki_url_changed")
+        reasons = _identity_reasons(item)
 
         age_seconds = item.get("updated_age_seconds")
         if age_seconds is None:
@@ -342,20 +413,7 @@ def select_changed_index_items(
         elif age_seconds <= threshold_seconds:
             reasons.append("recent_update")
 
-        url = item.get("url")
-        if stale_detail_enabled and isinstance(url, str):
-            fetched_at = _detail_state_fetched_at(detail_fetch_state or {}, url)
-            if fetched_at is None:
-                reasons.append("stale_detail_cache")
-            else:
-                detail_age_seconds = int(
-                    max(
-                        0,
-                        (now_utc - fetched_at.astimezone(timezone.utc)).total_seconds(),
-                    )
-                )
-                if detail_age_seconds >= int(stale_detail_seconds or 0):
-                    reasons.append("stale_detail_cache")
+        reasons.extend(_stale_detail_reason(item))
 
         if reasons:
             selected_item = dict(item)
@@ -364,14 +422,57 @@ def select_changed_index_items(
             for reason in reasons:
                 reason_counts[reason] = reason_counts.get(reason, 0) + 1
 
-    meta["candidate_count"] = len(selected)
-    meta["reason_counts"] = reason_counts
-    return selected, meta
+    return _finish(selected, reason_counts)
 
 
 def get_client(timeout: float = 30.0) -> httpx.Client:
     # テストが本モジュール属性として monkeypatch するため、ラッパーとして残す
     return get_scraper_client(timeout)
+
+
+def write_fetch_stats(
+    path: Path,
+    phase: str,
+    stats: Dict[str, int],
+    *,
+    started_at: datetime,
+    duration_seconds: float,
+    reset: bool = False,
+) -> None:
+    """フェーズ別のネットワーク取得統計を JSON にマージ保存する。
+
+    atwiki への実負荷（リクエスト数・受信バイト数）を検証可能にするための計測。
+    同一実行内の index/details など複数フェーズを1ファイルに集約し、
+    totals を再計算する。body_bytes は Content-Encoding 展開後のボディ長
+    （実転送量は圧縮分だけ小さい。実行間の相対比較には影響しない）。
+    reset=True で前回実行のフェーズを破棄する（実行の先頭フェーズで指定し、
+    走らなかったフェーズの前回値が totals に混入するのを防ぐ）。
+    """
+    payload: Dict[str, Any] = {"phases": {}}
+    if not reset and path.exists():
+        existing = load_json_or_default(path, {})
+        if isinstance(existing, dict) and isinstance(existing.get("phases"), dict):
+            payload["phases"] = existing["phases"]
+
+    payload["phases"][phase] = {
+        **stats,
+        "started_at": _utc_iso(started_at),
+        "duration_seconds": round(duration_seconds, 3),
+    }
+    totals: Dict[str, Any] = {}
+    for entry in payload["phases"].values():
+        for key, value in entry.items():
+            if key == "started_at":
+                continue
+            if isinstance(value, (int, float)):
+                totals[key] = round(totals.get(key, 0) + value, 3)
+    payload["totals"] = totals
+    payload["generated_at"] = _utc_iso(datetime.now(timezone.utc))
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
 
 
 def parse_ttl(s: str) -> int:
@@ -1155,6 +1256,8 @@ def cmd_index(args: argparse.Namespace) -> int:
         ttl_seconds=parse_ttl(args.ttl), no_network=args.no_network, force=args.force
     )
     cache = CacheHTTP(client, cfg)
+    started_at = datetime.now(timezone.utc)
+    t_start = time.monotonic()
     text, _meta = cache.get(url)
     items = parse_index(text)
     out = Path(args.out)
@@ -1162,6 +1265,17 @@ def cmd_index(args: argparse.Namespace) -> int:
     with out.open("w", encoding="utf-8") as f:
         json.dump(items, f, ensure_ascii=False, indent=2)
         f.write("\n")
+    stats_out = getattr(args, "fetch_stats_out", "")
+    if stats_out:
+        # index は実行の先頭フェーズなので前回実行分をリセットする
+        write_fetch_stats(
+            Path(stats_out),
+            "index",
+            cache.stats,
+            started_at=started_at,
+            duration_seconds=time.monotonic() - t_start,
+            reset=True,
+        )
     print(f"index: {len(items)} items -> {out}")
     return 0
 
@@ -1177,7 +1291,11 @@ def cmd_details(args: argparse.Namespace) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     client = get_client()
     cfg = CacheConfig(
-        ttl_seconds=parse_ttl(args.ttl), no_network=args.no_network, force=args.force
+        ttl_seconds=parse_ttl(args.ttl),
+        no_network=args.no_network,
+        force=args.force,
+        # レート制限は実際のネットワーク取得時のみ適用（キャッシュヒットは待機しない）
+        min_interval_seconds=1.0 / max(args.rate, 0.1),
     )
     cache = CacheHTTP(client, cfg)
     detail_state_path = Path(
@@ -1185,19 +1303,13 @@ def cmd_details(args: argparse.Namespace) -> int:
     )
     detail_state = load_detail_fetch_state(detail_state_path)
     run_started_at = datetime.now(timezone.utc)
-    t_last = 0.0
+    t_start = time.monotonic()
     written = 0
     with out.open("w", encoding="utf-8") as f:
         for i, item in enumerate(data, 1):
             url = item.get("url")
             if not url:
                 continue
-            # rate limit
-            now = time.time()
-            wait = max(0.0, (t_last + 1.0 / max(args.rate, 0.1)) - now)
-            if wait:
-                time.sleep(wait)
-            t_last = time.time()
             try:
                 text, _meta = cache.get(url)
                 # 変更がなければスキップ（オプション）
@@ -1242,6 +1354,15 @@ def cmd_details(args: argparse.Namespace) -> int:
     write_detail_fetch_state(
         detail_state_path, detail_state, datetime.now(timezone.utc), run_started_at
     )
+    stats_out = getattr(args, "fetch_stats_out", "")
+    if stats_out:
+        write_fetch_stats(
+            Path(stats_out),
+            "details",
+            cache.stats,
+            started_at=run_started_at,
+            duration_seconds=time.monotonic() - t_start,
+        )
     print(f"details: wrote {written} records -> {out}")
     return 0
 
@@ -1257,11 +1378,24 @@ def cmd_all(args: argparse.Namespace) -> int:
         force=getattr(args, "force", False),
     )
     cache = CacheHTTP(client, cfg)
+    started_at = datetime.now(timezone.utc)
+    t_start = time.monotonic()
     text, _meta = cache.get(INDEX_URL)
     items = parse_index(text)
     tmp_index.write_text(
         json.dumps(items, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
+    fetch_stats_out = getattr(args, "fetch_stats_out", "")
+    if fetch_stats_out:
+        # index は実行の先頭フェーズなので前回実行分をリセットする
+        write_fetch_stats(
+            Path(fetch_stats_out),
+            "index",
+            cache.stats,
+            started_at=started_at,
+            duration_seconds=time.monotonic() - t_start,
+            reset=True,
+        )
     # details
     dargs = argparse.Namespace(
         input=str(tmp_index),
@@ -1275,6 +1409,7 @@ def cmd_all(args: argparse.Namespace) -> int:
         detail_fetch_state_out=getattr(
             args, "detail_fetch_state_out", "cache/detail_fetch_state.json"
         ),
+        fetch_stats_out=fetch_stats_out,
     )
     return cmd_details(dargs)
 
@@ -1320,10 +1455,12 @@ def cmd_detect_changed(args: argparse.Namespace) -> int:
         else datetime.now(timezone.utc)
     )
     stale_detail_days = getattr(args, "stale_detail_days", None)
+    revalidate = bool(getattr(args, "revalidate", False))
     detail_fetch_state: Optional[Dict[str, Dict[str, Any]]] = None
     stale_detail_seconds: Optional[int] = None
     if stale_detail_days is not None:
         stale_detail_seconds = int(float(stale_detail_days) * 86400)
+    if stale_detail_days is not None or revalidate:
         detail_fetch_state = load_detail_fetch_state(
             Path(
                 getattr(args, "detail_fetch_state", "")
@@ -1337,6 +1474,7 @@ def cmd_detect_changed(args: argparse.Namespace) -> int:
         now=now,
         freshness_window_seconds=parse_ttl(args.freshness_window),
         force_full=args.force_full,
+        revalidate=revalidate,
         min_age_coverage=float(args.min_age_coverage),
         detail_fetch_state=detail_fetch_state,
         stale_detail_seconds=stale_detail_seconds,
@@ -1384,6 +1522,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_idx.add_argument("--no-network", action="store_true")
     p_idx.add_argument("--force", action="store_true")
+    p_idx.add_argument(
+        "--fetch-stats-out",
+        default="cache/fetch_stats.json",
+        help="ネットワーク取得統計の出力先（空文字で無効化）",
+    )
     p_idx.set_defaults(func=cmd_index)
 
     p_det = sub.add_parser(
@@ -1406,6 +1549,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="セマンティック変化がないページをスキップ（コメント等の更新は無視）",
     )
+    p_det.add_argument(
+        "--fetch-stats-out",
+        default="cache/fetch_stats.json",
+        help="ネットワーク取得統計の出力先（空文字で無効化）",
+    )
     p_det.set_defaults(func=cmd_details)
 
     p_all = sub.add_parser("all", help="index→details を連続実行")
@@ -1422,6 +1570,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--changed-only",
         action="store_true",
         help="セマンティック変化がないページをスキップ（details と同じ挙動）",
+    )
+    p_all.add_argument(
+        "--fetch-stats-out",
+        default="cache/fetch_stats.json",
+        help="ネットワーク取得統計の出力先（空文字で無効化）",
     )
     p_all.set_defaults(func=cmd_all)
 
@@ -1442,6 +1595,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_detect.add_argument("--stale-detail-days", default="14")
     p_detect.add_argument("--min-age-coverage", type=float, default=0.95)
     p_detect.add_argument("--force-full", action="store_true")
+    p_detect.add_argument(
+        "--revalidate",
+        action="store_true",
+        help="一覧の更新経過と前回取得時刻を直接比較して再取得対象を選ぶ（週次再検証）",
+    )
     p_detect.add_argument("--now", default="")
     p_detect.set_defaults(func=cmd_detect_changed)
 
@@ -1457,22 +1615,17 @@ def build_parser() -> argparse.ArgumentParser:
             ttl_seconds=parse_ttl(args.ttl),
             no_network=args.no_network,
             force=args.force,
+            min_interval_seconds=1.0 / max(args.rate, 0.1),
         )
         cache = CacheHTTP(client, cfg)
         out = Path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
-        t_last = 0.0
         written = 0
         with out.open("w", encoding="utf-8") as f:
             for i, item in enumerate(data, 1):
                 url = item.get("url")
                 if not url:
                     continue
-                now = time.time()
-                wait = max(0.0, (t_last + 1.0 / max(args.rate, 0.1)) - now)
-                if wait:
-                    time.sleep(wait)
-                t_last = time.time()
                 try:
                     text, meta = cache.get(url)
                     soup = BeautifulSoup(text, "lxml")

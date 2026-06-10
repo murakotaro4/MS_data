@@ -3,7 +3,10 @@ name: data update
 on:
   schedule:
     - cron: "0 9 * * 1-6" # JST 18:00 (Mon-Sat fast update)
-    - cron: "0 9 * * 0" # JST 18:00 (Sunday full update)
+    # JST 18:00 日曜: 第1日曜は真の全量取得（キャッシュ無視）、
+    # それ以外の日曜は週次再検証（更新があったページのみ再取得; atwiki 負荷軽減）。
+    # 判定は Prepare ステップの UPDATE_MODE 算出を参照。
+    - cron: "0 9 * * 0" # JST 18:00 (Sunday: monthly true-full / weekly revalidate)
   workflow_dispatch:
     inputs:
       force_full:
@@ -11,6 +14,15 @@ on:
         required: false
         default: false
         type: boolean
+      mode:
+        description: "Update mode (auto=fast, full=true full scrape, revalidate=weekly revalidate)"
+        required: false
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - full
+          - revalidate
       dry_run:
         description: "Run update checks and upload reports without creating a PR"
         required: false
@@ -33,6 +45,9 @@ jobs:
       TTL: 1h
       RATE: 2.0
       LIMIT: 0
+      # 詳細キャッシュ陳腐化のしきい値（日）。月1の真全量（最大間隔35日）が
+      # 先にリセットするよう 40 日に設定し、平日 fast 更新での無駄な再取得を防ぐ
+      STALE_DETAIL_DAYS: 40
       ARTIFACT_RETENTION_DAYS: 90
       ATWIKI_QUALITY_MAX_FAILURE_RATE: ${{ vars.ATWIKI_QUALITY_MAX_FAILURE_RATE || '0.10' }}
       ATWIKI_QUALITY_MIN_DETAIL_RECORD_RATIO: ${{ vars.ATWIKI_QUALITY_MIN_DETAIL_RECORD_RATIO || '0.80' }}
@@ -55,16 +70,35 @@ jobs:
         run: |
           report_date="$(date +%Y%m%d)"
           dry_run="false"
-          full_update="false"
           if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.dry_run }}" == "true" ]]; then
             dry_run="true"
           fi
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.force_full }}" == "true" ]]; then
-            full_update="true"
+          # UPDATE_MODE: fast（平日差分）/ full（真全量・キャッシュ無視）/ revalidate（週次再検証）
+          update_mode="fast"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ "${{ github.event.inputs.force_full }}" == "true" || "${{ github.event.inputs.mode }}" == "full" ]]; then
+              update_mode="full"
+            elif [[ "${{ github.event.inputs.mode }}" == "revalidate" ]]; then
+              update_mode="revalidate"
+            fi
           fi
           if [[ "${{ github.event_name }}" == "schedule" && "${{ github.event.schedule }}" == "0 9 * * 0" ]]; then
+            # 第1日曜（JST）のみ真の全量取得。それ以外の日曜は週次再検証で
+            # atwiki への転送量を削減する（更新があったページのみ再取得）。
+            # 注意: 判定は実行時の日付に基づくため、失敗した第1日曜の run を
+            # 後日 re-run すると revalidate になる。その場合は workflow_dispatch の
+            # mode=full で手動補完すること
+            if (( $(date +%-d) <= 7 )); then
+              update_mode="full"
+            else
+              update_mode="revalidate"
+            fi
+          fi
+          full_update="false"
+          if [[ "${update_mode}" == "full" ]]; then
             full_update="true"
           fi
+          echo "UPDATE_MODE=${update_mode}" >> "$GITHUB_ENV"
           echo "REPORT_DATE=${report_date}" >> "$GITHUB_ENV"
           echo "HEAD_REF=data/auto-update-${report_date}" >> "$GITHUB_ENV"
           echo "DRY_RUN=${dry_run}" >> "$GITHUB_ENV"
@@ -126,13 +160,13 @@ jobs:
         run: |
           cp msData.json msData.before.json
           mkdir -p reports
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.force_full }}" == "true" ]]; then
+          if [[ "${UPDATE_MODE}" == "full" ]]; then
+            # 真の全量取得（月1）: キャッシュ・差分検出を使わず全ページ再取得
             export FORCE_FULL=1
             export FORCE=1
-          fi
-          if [[ "${{ github.event_name }}" == "schedule" && "${{ github.event.schedule }}" == "0 9 * * 0" ]]; then
-            export FORCE_FULL=1
-            export FORCE=1
+          elif [[ "${UPDATE_MODE}" == "revalidate" ]]; then
+            # 週次再検証: 一覧の更新経過と前回取得時刻の比較で対象を絞る
+            export REVALIDATE=1
           fi
           OFFICIAL_OVERRIDE_RAW_OUT=cache/msData.before_official_overrides.json \
           FAST_TTL="${TTL}" RATE="${RATE}" LIMIT="${LIMIT}" MSDATA=msData.json \
@@ -221,6 +255,8 @@ jobs:
               f.write(f"fallback_reason={meta.get('fallback_reason') or 'none'}\n")
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
               f.write("### Change Detection\n")
+              f.write(f"- update_mode: {os.environ.get('UPDATE_MODE', 'fast')}\n")
+              f.write(f"- mode: {meta.get('mode') or 'fast'}\n")
               f.write(f"- candidate_count: {int(meta.get('candidate_count', 0))}\n")
               f.write(f"- fast_path: {str(bool(meta.get('fast_path', False))).lower()}\n")
               f.write(f"- age_coverage: {meta.get('age_coverage', 0.0)}\n")

@@ -310,3 +310,41 @@ def test_task_update_fast_fails_when_detect_changed_outputs_are_invalid(
     rc = tasks.task_update_fast()
 
     assert rc == 1
+
+
+def test_task_detect_changed_passes_revalidate_flag(monkeypatch, tmp_path: Path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("REVALIDATE", "1")
+    calls = []
+
+    def fake_run_python_module(module: str, *args: str) -> int:
+        calls.append((module, args))
+        return 0
+
+    monkeypatch.setattr(tasks, "_run_python_module", fake_run_python_module)
+
+    rc = tasks.task_detect_changed()
+
+    assert rc == 0
+    assert calls[0][0] == "ms_data.scraping.scrape_msdata"
+    assert "--revalidate" in calls[0][1]
+    assert "--force-full" not in calls[0][1]
+
+
+def test_task_detect_changed_omits_revalidate_flag_by_default(
+    monkeypatch, tmp_path: Path
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("REVALIDATE", raising=False)
+    calls = []
+
+    def fake_run_python_module(module: str, *args: str) -> int:
+        calls.append((module, args))
+        return 0
+
+    monkeypatch.setattr(tasks, "_run_python_module", fake_run_python_module)
+
+    rc = tasks.task_detect_changed()
+
+    assert rc == 0
+    assert "--revalidate" not in calls[0][1]

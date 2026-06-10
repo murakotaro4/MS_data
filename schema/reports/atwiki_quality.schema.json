@@ -21,6 +21,26 @@
         "fallback_reason": {"type": "string"}
       }
     },
+    "fetch": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "totals": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "network_requests": {"type": "number", "minimum": 0},
+            "status_200": {"type": "number", "minimum": 0},
+            "status_304": {"type": "number", "minimum": 0},
+            "failures": {"type": "number", "minimum": 0},
+            "body_bytes": {"type": "number", "minimum": 0},
+            "cache_hits": {"type": "number", "minimum": 0},
+            "duration_seconds": {"type": "number", "minimum": 0}
+          }
+        },
+        "phases": {"type": "object"}
+      }
+    },
     "detail_fetch": {
       "type": "object",
       "required": ["attempted_url_count", "successful_url_count", "failed_url_count", "http_status_counts", "conditional_cache_hit_count", "cache_utilization"],
