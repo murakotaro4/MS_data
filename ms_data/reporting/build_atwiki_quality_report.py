@@ -12,7 +12,7 @@ from typing import Any
 
 from ms_data.core.json_io import load_json_or_default as _load_json
 from ms_data.gh.outputs import append_step_summary, write_github_output
-from scripts import report_msdata_diff
+from ms_data.reporting import report_msdata_diff
 
 
 def _count_jsonl(path: Path | None) -> int:

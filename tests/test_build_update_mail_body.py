@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from scripts import build_update_mail_body
+from ms_data.reporting import build_update_mail_body
 
 
 ROOT = Path(__file__).resolve().parents[1]

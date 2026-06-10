@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from scripts import detect_msdata_rollbacks, update_msdata
+from ms_data.audit import detect_msdata_rollbacks
+from ms_data.pipeline import update_msdata
 
 
 def test_zaku_iii_kai_lv3_official_override_prevents_known_hp_rollback():

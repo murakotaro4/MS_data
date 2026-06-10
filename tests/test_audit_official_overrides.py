@@ -1,6 +1,6 @@
 import json
 
-from scripts import audit_official_overrides
+from ms_data.audit import audit_official_overrides
 
 
 def _write_json(path, data):
