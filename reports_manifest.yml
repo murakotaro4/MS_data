@@ -23,7 +23,7 @@
       "id": "diff_msdata",
       "type": "generated",
       "path_patterns": ["reports/diff_msdata_*.md"],
-      "producer": ["scripts.report_msdata_diff", ".github/workflows/data_update.yml"],
+      "producer": ["ms_data.reporting.report_msdata_diff", ".github/workflows/data_update.yml"],
       "consumers": [".github/workflows/post_merge_notify.yml", "AGENTS.md"],
       "retention": "git"
     },
@@ -31,7 +31,7 @@
       "id": "provenance",
       "type": "generated",
       "path_patterns": ["reports/provenance_*.json"],
-      "producer": ["scripts.generate_provenance", "scripts.tasks snapshot", ".github/workflows/data_update.yml"],
+      "producer": ["scripts.generate_provenance", "ms_data.tasks snapshot", ".github/workflows/data_update.yml"],
       "consumers": [".github/workflows/post_merge_notify.yml", "AGENTS.md"],
       "retention": "git+release"
     },
@@ -39,7 +39,7 @@
       "id": "rollback_guard",
       "type": "generated",
       "path_patterns": ["reports/rollback_guard_*.md"],
-      "producer": ["scripts.detect_msdata_rollbacks", ".github/workflows/data_update.yml"],
+      "producer": ["ms_data.audit.detect_msdata_rollbacks", ".github/workflows/data_update.yml"],
       "consumers": [".github/workflows/data_update.yml", "human"],
       "retention": "git"
     },
@@ -47,7 +47,7 @@
       "id": "official_overrides_audit",
       "type": "generated",
       "path_patterns": ["reports/official_overrides_audit_*.md"],
-      "producer": ["scripts.audit_official_overrides", ".github/workflows/data_update.yml"],
+      "producer": ["ms_data.audit.audit_official_overrides", ".github/workflows/data_update.yml"],
       "consumers": [".github/workflows/data_update.yml", "human"],
       "retention": "git"
     },
@@ -55,7 +55,7 @@
       "id": "atwiki_quality",
       "type": "generated",
       "path_patterns": ["reports/atwiki_quality_*.json"],
-      "producer": ["scripts.build_atwiki_quality_report", ".github/workflows/data_update.yml"],
+      "producer": ["ms_data.reporting.build_atwiki_quality_report", ".github/workflows/data_update.yml"],
       "consumers": [".github/workflows/data_update.yml", ".github/workflows/post_merge_notify.yml", "human"],
       "retention": "git+artifact+release"
     },
@@ -63,7 +63,7 @@
       "id": "auto_review",
       "type": "generated",
       "path_patterns": ["reports/auto_review_*.json"],
-      "producer": ["scripts.auto_review_merge", ".github/workflows/auto_review_merge.yml"],
+      "producer": ["ms_data.gh.auto_review_merge", ".github/workflows/auto_review_merge.yml"],
       "consumers": [".github/workflows/auto_review_merge.yml", "human"],
       "retention": "artifact"
     },
@@ -71,7 +71,7 @@
       "id": "label_audit",
       "type": "generated",
       "path_patterns": ["reports/label_audit_*.md", "reports/label_audit_latest.md"],
-      "producer": ["scripts.audit_labels", "scripts.tasks audit-labels"],
+      "producer": ["ms_data.audit.audit_labels", "ms_data.tasks audit-labels"],
       "consumers": ["AGENTS.md", "reports/msdata_update_*.md"],
       "retention": "git"
     },
@@ -79,7 +79,7 @@
       "id": "index_ms_audit",
       "type": "generated",
       "path_patterns": ["reports/index_ms_audit_*.md"],
-      "producer": ["scripts.audit_index_vs_msdata", "scripts.tasks audit-index"],
+      "producer": ["ms_data.audit.audit_index_vs_msdata", "ms_data.tasks audit-index"],
       "consumers": ["AGENTS.md", "reports/msdata_update_*.md"],
       "retention": "git"
     },
@@ -95,7 +95,7 @@
       "id": "skills_audit",
       "type": "generated",
       "path_patterns": ["reports/skills_params_audit.json", "reports/owners_flat_audit.json", "reports/skill_owners_audit_*.md"],
-      "producer": ["scripts.build_param_skills", "scripts.build_owners_flat", "scripts.audit_skills"],
+      "producer": ["ms_data.skills.build_param_skills", "ms_data.skills.build_owners_flat", "ms_data.audit.audit_skills"],
       "consumers": ["AGENTS.md", "human"],
       "retention": "git"
     },

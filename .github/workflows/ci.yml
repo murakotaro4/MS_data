@@ -2,6 +2,8 @@ name: ci
 
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 permissions:
@@ -31,10 +33,10 @@ jobs:
         run: uv sync --dev
 
       - name: Validate reports contract allowlist
-        run: uv run python -m scripts.validate_report_contract --mode ci --manifest reports_manifest.yml --reports-dir reports
+        run: uv run python -m ms_data.validation.validate_report_contract --mode ci --manifest reports_manifest.yml --reports-dir reports
 
       - name: Run repository checks
-        run: uv run python -m scripts.tasks ci
+        run: uv run python -m ms_data.tasks ci
 
       - name: Run actionlint
         if: matrix.os == 'ubuntu-latest'

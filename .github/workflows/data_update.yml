@@ -76,7 +76,7 @@ jobs:
 
       - name: Validate report contract (naming)
         run: |
-          uv run python -m scripts.validate_report_contract \
+          uv run python -m ms_data.validation.validate_report_contract \
             --mode data-update \
             --manifest reports_manifest.yml \
             --report-date "${REPORT_DATE}" \
@@ -89,7 +89,7 @@ jobs:
             --release-tag "${RELEASE_TAG}"
 
       - name: Validate official overrides schema
-        run: uv run python -m scripts.tasks validate-official-overrides-schema
+        run: uv run python -m ms_data.tasks validate-official-overrides-schema
 
       - name: Restore previous detect state
         env:
@@ -136,12 +136,12 @@ jobs:
           fi
           OFFICIAL_OVERRIDE_RAW_OUT=cache/msData.before_official_overrides.json \
           FAST_TTL="${TTL}" RATE="${RATE}" LIMIT="${LIMIT}" MSDATA=msData.json \
-            uv run python -m scripts.tasks update-fast
+            uv run python -m ms_data.tasks update-fast
 
       - name: Run rollback guard
         run: |
           mkdir -p reports
-          uv run python -m scripts.detect_msdata_rollbacks \
+          uv run python -m ms_data.audit.detect_msdata_rollbacks \
             --old msData.before.json \
             --new msData.json \
             --out "reports/rollback_guard_${REPORT_DATE}.md"
@@ -150,7 +150,7 @@ jobs:
         name: Run official override audit
         run: |
           mkdir -p reports
-          uv run python -m scripts.audit_official_overrides \
+          uv run python -m ms_data.audit.audit_official_overrides \
             --before msData.before.json \
             --raw cache/msData.before_official_overrides.json \
             --current msData.json \
@@ -234,7 +234,7 @@ jobs:
           if [[ "${FULL_UPDATE}" == "true" ]]; then
             full_update_args+=(--full-update)
           fi
-          uv run python -m scripts.build_atwiki_quality_report \
+          uv run python -m ms_data.reporting.build_atwiki_quality_report \
             --report-date "${REPORT_DATE}" \
             --source-run-id "${GITHUB_RUN_ID}" \
             --before-msdata msData.before.json \
@@ -252,7 +252,7 @@ jobs:
           test -f "reports/rollback_guard_${REPORT_DATE}.md"
           test -f "reports/official_overrides_audit_${REPORT_DATE}.md"
           test -f "reports/atwiki_quality_${REPORT_DATE}.json"
-          uv run python -m scripts.validate_generated_reports \
+          uv run python -m ms_data.validation.validate_generated_reports \
             --reports-dir reports \
             --schema-dir schema/reports
 
@@ -276,7 +276,7 @@ jobs:
         if: github.event_name == 'schedule' && steps.changes.outputs.changed == 'false' && env.DRY_RUN != 'true'
         run: |
           body_path="$RUNNER_TEMP/msdata_no_change_mail.txt"
-          uv run python -m scripts.build_update_mail_body \
+          uv run python -m ms_data.reporting.build_update_mail_body \
             --report-date "${REPORT_DATE}" \
             --result "成功（差分なし）" \
             --changed "false" \
@@ -297,14 +297,14 @@ jobs:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           GMAIL_TO: ${{ secrets.GMAIL_TO }}
         run: |
-          uv run python -m scripts.send_gmail \
+          uv run python -m ms_data.notify.send_gmail \
             --subject "msData 定期更新実行報告（差分なし, ${{ env.REPORT_DATE }}）" \
             --body "${{ steps.no_change_mail.outputs.path }}"
 
       - name: Generate reports and snapshot
         if: steps.changes.outputs.changed == 'true'
         run: |
-          uv run python -m scripts.report_msdata_diff \
+          uv run python -m ms_data.reporting.report_msdata_diff \
             --old msData.before.json \
             --new msData.json \
             --out "reports/diff_msdata_${REPORT_DATE}.md" \
@@ -321,13 +321,13 @@ jobs:
           RATE="${RATE}" \
           LIMIT="${LIMIT}" \
           MSDATA=msData.json \
-          uv run python -m scripts.tasks snapshot
+          uv run python -m ms_data.tasks snapshot
 
       - name: Validate generated update reports
         if: steps.changes.outputs.changed == 'true'
         run: |
           test -f "reports/provenance_${REPORT_DATE}.json"
-          uv run python -m scripts.validate_generated_reports \
+          uv run python -m ms_data.validation.validate_generated_reports \
             --reports-dir reports \
             --schema-dir schema/reports
 
