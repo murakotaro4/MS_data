@@ -16,6 +16,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
+from ms_data.core import json_io
+
 # Markdown 特殊文字のエスケープ用正規表現
 _MD_ESCAPE = re.compile(r"([\\`*_\[\]()#+\-.!|<>])")
 
@@ -28,8 +30,7 @@ def _escape_md(s: str) -> str:
 def load_json(path: Path) -> Any:
     """JSON ファイルを読み込む。失敗時はエラーメッセージを表示して終了。"""
     try:
-        with path.open("r", encoding="utf-8") as f:
-            return json.load(f)
+        return json_io.load_json(path)
     except OSError as e:
         print(f"エラー: {path} を開けません: {e}", file=sys.stderr)
         raise SystemExit(1) from e

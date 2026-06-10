@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft7Validator
+
+from ms_data.core.json_io import load_json
 
 
 FILE_SCHEMAS = {
@@ -16,11 +17,6 @@ FILE_SCHEMAS = {
     Path("data/skills_params.json"): Path("schema/skills_params.schema.json"),
     Path("data/skill_owners_flat.json"): Path("schema/skill_owners_flat.schema.json"),
 }
-
-
-def load_json(path: Path) -> Any:
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
 
 
 def validate_against_schema(data: Any, schema_path: Path) -> list[str]:

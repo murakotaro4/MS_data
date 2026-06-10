@@ -29,7 +29,6 @@
 from __future__ import annotations
 
 import argparse
-import functools
 import json
 import os
 import re
@@ -42,6 +41,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import httpx
 from bs4 import BeautifulSoup, Tag
 
+from ms_data.core.ms_names import MS_NAME_WITH_LEVEL, extract_ms_base_name
+from ms_data.net.client import get_scraper_client
 from scripts.cache_http import CacheConfig, CacheHTTP
 from scripts.label_utils import (
     FIELD_MAP,
@@ -51,7 +52,6 @@ from scripts.label_utils import (
 
 ATWIKI_BASE = "https://w.atwiki.jp"
 INDEX_URL = "https://w.atwiki.jp/battle-operation2/pages/377.html"
-MS_NAME_WITH_LEVEL = re.compile(r"^(?P<base>.+)_LV(?P<level>\d+)$")
 PAGE_ID_RE = re.compile(r"/pages/(?P<page_id>\d+)\.html$")
 UPDATED_AGE_RE = re.compile(r"\((?P<value>\d+)(?P<unit>[mhd])\)\s*$")
 
@@ -82,13 +82,6 @@ def extract_updated_age(title: str) -> tuple[Optional[str], Optional[int]]:
     unit = match.group("unit")
     factor = {"m": 60, "h": 3600, "d": 86400}[unit]
     return f"{value}{unit}", value * factor
-
-
-def extract_ms_base_name(name: str) -> Optional[str]:
-    match = MS_NAME_WITH_LEVEL.match(name)
-    if not match:
-        return None
-    return match.group("base")
 
 
 def parse_iso_datetime(value: str) -> datetime:
@@ -377,22 +370,8 @@ def select_changed_index_items(
 
 
 def get_client(timeout: float = 30.0) -> httpx.Client:
-    headers = {"User-Agent": "msdata-scraper/0.1 (+https://github.com/; contact=local)"}
-    # Cloudflare対策: cloudscraper が利用可能な場合は優先して使う。
-    if os.getenv("MSDATA_HTTP_CLIENT", "cloudscraper").lower() == "cloudscraper":
-        try:
-            import cloudscraper
-
-            scraper = cloudscraper.create_scraper()
-            scraper.headers.update(headers)
-            scraper.request = functools.partial(scraper.request, timeout=timeout)
-            return scraper
-        except Exception as exc:  # cloudscraperが使えない場合は httpx へフォールバック
-            print(
-                f"[warn] cloudscraper unavailable, fallback to httpx: {exc}",
-                file=sys.stderr,
-            )
-    return httpx.Client(headers=headers, timeout=timeout, follow_redirects=True)
+    # テストが本モジュール属性として monkeypatch するため、ラッパーとして残す
+    return get_scraper_client(timeout)
 
 
 def parse_ttl(s: str) -> int:

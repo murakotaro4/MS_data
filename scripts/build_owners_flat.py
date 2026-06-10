@@ -20,19 +20,10 @@ cache/owners_table.json（所持機体 逆引きの行データ）から、
 
 import argparse
 import json
-import re
 from pathlib import Path
 from typing import Any, Dict, List, Set
 
-
-_RE_LV = re.compile(r"_LV(\d+)$")
-
-
-def ms_name_to_series_level(name: str) -> (str, int | None):
-    m = _RE_LV.search(name)
-    if not m:
-        return name, None
-    return name[: m.start()], int(m.group(1))
+from ms_data.core.ms_names import ms_name_to_series_level
 
 
 def load_series_levels(msdata_path: Path) -> Dict[str, Set[int]]:

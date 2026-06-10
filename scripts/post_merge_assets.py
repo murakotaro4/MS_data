@@ -9,6 +9,8 @@ import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from ms_data.gh import outputs as gh_outputs
+
 
 HEAD_REF_RE = re.compile(r"^data/auto-update-(\d{8})$")
 SOURCE_RUN_RE = re.compile(r"source_run_id[:=\s]*([0-9]+)")
@@ -99,9 +101,7 @@ def resolve_assets(
 
 
 def write_github_output(path: Path, assets: PostMergeAssets) -> None:
-    with path.open("a", encoding="utf-8") as f:
-        for key, value in asdict(assets).items():
-            f.write(f"{key}={value}\n")
+    gh_outputs.write_github_output(path, asdict(assets))
 
 
 def main(argv: list[str] | None = None) -> int:

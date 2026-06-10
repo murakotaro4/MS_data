@@ -3,19 +3,10 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-
-_RE_LV = re.compile(r"_LV(\d+)$")
-
-
-def ms_name_to_series_level(name: str) -> Tuple[str, int | None]:
-    m = _RE_LV.search(name)
-    if not m:
-        return name, None
-    return name[: m.start()], int(m.group(1))
+from ms_data.core.ms_names import ms_name_to_series_level
 
 
 def load_params(skills_params_path: Path) -> Dict[Tuple[str, int], Dict[str, Any]]:

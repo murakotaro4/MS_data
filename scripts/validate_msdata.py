@@ -14,25 +14,17 @@ msData.json 検証ユーティリティ（uv 前提）
 from __future__ import annotations
 
 import argparse
-import json
-import re
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
+from ms_data.core.json_io import load_json
+from ms_data.core.ms_names import MS_NAME_WITH_LEVEL
+from ms_data.core.paths import MSDATA_SCHEMA as SCHEMA_PATH
 from scripts.label_utils import KEY_ALIASES
 
 from jsonschema import Draft7Validator
-
-
-SCHEMA_PATH = Path("schema/msData.schema.json")
-MS_NAME_WITH_LEVEL = re.compile(r"^(?P<base>.+)_LV(?P<level>\d+)$")
-
-
-def load_json(path: Path) -> Any:
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
 
 
 def validate_schema(data: Any, schema_path: Path) -> List[str]:

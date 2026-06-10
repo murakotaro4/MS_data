@@ -23,6 +23,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import httpx
 from bs4 import BeautifulSoup, Tag
 
+from ms_data.net.client import get_browser_client
 from scripts.cache_http import CacheHTTP, CacheConfig
 from scripts.scrape_msdata import parse_ttl  # 軽量ユーティリティを流用
 from scripts.label_utils import clean_text
@@ -49,12 +50,8 @@ CORE_SKILLS = [
 
 
 def get_client(timeout: float = 30.0) -> httpx.Client:
-    headers = {
-        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Language": "ja,en-US;q=0.7,en;q=0.3",
-    }
-    return httpx.Client(headers=headers, timeout=timeout, follow_redirects=True)
+    # テストが本モジュール属性として monkeypatch するため、ラッパーとして残す
+    return get_browser_client(timeout)
 
 
 # ===============
