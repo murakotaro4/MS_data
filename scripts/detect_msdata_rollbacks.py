@@ -9,6 +9,8 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
+from ms_data.core.records import load_records_by_name as _load_records
+from ms_data.reporting.rendering import value_text as _value_text
 from scripts import update_msdata
 
 
@@ -29,30 +31,8 @@ NUMERIC_GUARD_FIELDS = {
 }
 
 
-def _load_records(path: Path) -> dict[str, dict[str, Any]]:
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(data, list):
-        raise ValueError(f"record file must be a JSON array: {path}")
-    records: dict[str, dict[str, Any]] = {}
-    for index, item in enumerate(data):
-        if not isinstance(item, dict):
-            raise ValueError(f"record must be an object: {path}#{index}")
-        name = item.get("MS名")
-        if isinstance(name, str) and name.strip():
-            records[name] = item
-    return records
-
-
 def _base_name(name: str) -> str:
     return re.sub(r"_LV\d+$", "", name)
-
-
-def _value_text(value: Any) -> str:
-    if value is None:
-        return ""
-    if isinstance(value, (dict, list)):
-        return json.dumps(value, ensure_ascii=False)
-    return str(value)
 
 
 def detect_protected_rollbacks(

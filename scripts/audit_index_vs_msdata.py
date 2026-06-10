@@ -16,15 +16,12 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import json
 import re
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
-
-def load_json(path: Path) -> Any:
-    return json.loads(path.read_text(encoding="utf-8"))
+from ms_data.core.json_io import load_json
 
 
 def extract_base_levels(ms_records: List[Dict[str, Any]]) -> Dict[str, List[int]]:

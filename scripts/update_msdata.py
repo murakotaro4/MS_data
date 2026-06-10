@@ -20,8 +20,11 @@ import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple, TypedDict
+
+from ms_data.core.json_io import load_json
+from ms_data.core.ms_names import MS_NAME_WITH_LEVEL, normalize_ms_base_name
+from ms_data.core.paths import OFFICIAL_OVERRIDES_DIR
 from scripts.label_utils import apply_key_aliases
-import re
 
 
 CANONICAL_ORDER = (
@@ -67,25 +70,12 @@ CANONICAL_ORDER = (
     "fullst",
 )
 
-MS_NAME_WITH_LEVEL = re.compile(r"^(.*)_LV(\d+)$")
-OFFICIAL_OVERRIDES_DIR = Path("data/official_overrides")
 OFFICIAL_OVERRIDE_VALUE_KEYS = set(CANONICAL_ORDER) - {"MS名"}
 
 
 class OfficialOverrideValue(TypedDict, total=False):
     value: Any
     stale_value: Any
-
-
-def normalize_ms_base_name(name: str) -> str:
-    out = name
-    out = out.replace("[", "［").replace("]", "］")
-    out = out.replace("III", "Ⅲ").replace("II", "Ⅱ")
-    out = re.sub(r"ZZ(?=ガンダム)", "ΖΖ", out)
-    out = re.sub(r"Z(?=ガンダム3号機)", "Ζ", out)
-    out = re.sub(r"Z(?=ガンダム)", "Ζ", out)
-    out = out.replace("Ｖ", "V")
-    return out
 
 
 def normalize_ms_name(name: str) -> str:
@@ -101,11 +91,6 @@ def extract_ms_base_name(name: str) -> str | None:
     if not m:
         return None
     return normalize_ms_base_name(m.group(1))
-
-
-def load_json(path: Path) -> Any:
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
 
 
 def load_index_url_map(path: Path) -> Dict[str, str]:

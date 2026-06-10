@@ -7,40 +7,12 @@ import json
 from pathlib import Path
 from typing import Any
 
+from ms_data.gh.gh_json import load_json_stream as _load_json
+from ms_data.gh.gh_json import login_of as _login
+
 
 CODEX_LOGINS = {"chatgpt-codex-connector[bot]", "chatgpt-codex-connector"}
 NO_ISSUES_PREFIX = "Codex Review: Didn't find any major issues."
-
-
-def _load_json(path: Path) -> Any:
-    text = path.read_text(encoding="utf-8").strip()
-    if not text:
-        return []
-
-    decoder = json.JSONDecoder()
-    values: list[Any] = []
-    index = 0
-    while index < len(text):
-        value, index = decoder.raw_decode(text, index)
-        values.append(value)
-        while index < len(text) and text[index].isspace():
-            index += 1
-
-    return _flatten_pages(values[0] if len(values) == 1 else values)
-
-
-def _flatten_pages(value: Any) -> Any:
-    if isinstance(value, list) and all(isinstance(page, list) for page in value):
-        return [item for page in value for item in page]
-    return value
-
-
-def _login(item: dict[str, Any]) -> str:
-    user = item.get("user")
-    if not isinstance(user, dict):
-        return ""
-    login = user.get("login")
-    return login if isinstance(login, str) else ""
 
 
 def _is_codex(item: dict[str, Any]) -> bool:

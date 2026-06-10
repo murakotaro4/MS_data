@@ -10,6 +10,9 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from ms_data.core.records import load_records_by_name
+from ms_data.gh.outputs import append_step_summary, write_github_output
+from ms_data.reporting.rendering import value_text as _value_text
 from scripts import update_msdata
 
 
@@ -19,17 +22,7 @@ JST = timezone(timedelta(hours=9))
 def _load_records(path: Path | None) -> dict[str, dict[str, Any]]:
     if path is None or not path.exists():
         return {}
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(data, list):
-        raise ValueError(f"record file must be a JSON array: {path}")
-    records: dict[str, dict[str, Any]] = {}
-    for index, item in enumerate(data):
-        if not isinstance(item, dict):
-            raise ValueError(f"record must be an object: {path}#{index}")
-        name = item.get("MS名")
-        if isinstance(name, str) and name.strip():
-            records[name] = item
-    return records
+    return load_records_by_name(path)
 
 
 def _classify(
@@ -182,14 +175,6 @@ def build_audit(
     return rows, counts, lifecycle_counts
 
 
-def _value_text(value: Any) -> str:
-    if value is None:
-        return ""
-    if isinstance(value, (dict, list)):
-        return json.dumps(value, ensure_ascii=False)
-    return str(value)
-
-
 def _append_table(lines: list[str], rows: list[dict[str, Any]]) -> None:
     lines.append("| MS名 | 項目 | 状態 | 変更前 | 取得値 | 現在値 | override | stale |")
     lines.append("| --- | --- | --- | --- | --- | --- | --- | --- |")
@@ -308,18 +293,12 @@ def _write_github_output(
             f"remove_due={lifecycle_counts.get('remove_due', 0)}"
         ),
     }
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as f:
-        for key, value in values.items():
-            f.write(f"{key}={value}\n")
+    write_github_output(path, values)
 
 
 def _append_step_summary(
     counts: Counter[str], lifecycle_counts: Counter[str], path: Path | None = None
 ) -> None:
-    summary_path = path or os.environ.get("GITHUB_STEP_SUMMARY")
-    if not summary_path:
-        return
     lines = [
         "### official_overrides 期限監査",
         f"- protected_rollback: {counts.get('protected_rollback', 0)}",
@@ -327,9 +306,7 @@ def _append_step_summary(
         f"- review_due: {lifecycle_counts.get('review_due', 0)}",
         f"- remove_due: {lifecycle_counts.get('remove_due', 0)}",
     ]
-    with Path(summary_path).open("a", encoding="utf-8") as f:
-        for line in lines:
-            f.write(f"{line}\n")
+    append_step_summary(lines, path)
 
 
 def main(argv: list[str] | None = None) -> int:

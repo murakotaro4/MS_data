@@ -3,18 +3,14 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from ms_data.core.json_io import load_json as _load_json
 from scripts import update_msdata
-
-
-def _load_json(path: Path) -> Any:
-    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _iter_override_files(directory: Path) -> list[Path]:

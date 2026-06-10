@@ -15,19 +15,14 @@ import argparse
 import collections
 import datetime as dt
 import json
-import re
 from pathlib import Path
 from typing import Any, Dict, List, Set, Tuple
 
-
-_RE_LV = re.compile(r"_LV(\d+)$")
+from ms_data.core.ms_names import ms_name_to_series_level
 
 
 def ms_name_to_series(ms_name: str) -> str:
-    m = _RE_LV.search(ms_name)
-    if m:
-        return ms_name[: m.start()]  # 末尾 _LVn を削除
-    return ms_name
+    return ms_name_to_series_level(ms_name)[0]
 
 
 def load_msdata(path: Path) -> List[Dict[str, Any]]:

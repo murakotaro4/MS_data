@@ -10,60 +10,16 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
+from ms_data.gh.gh_json import login_of as _login
+from ms_data.gh.gh_json import parse_json_stream
+from ms_data.gh.outputs import append_step_summary, write_github_output
 from scripts.auto_review_gate import evaluate
 
 
 JST = timezone(timedelta(hours=9))
 GITHUB_ACTIONS_BOT = "github-actions[bot]"
-
-
-def _flatten_pages(value: Any) -> Any:
-    if isinstance(value, list) and all(isinstance(page, list) for page in value):
-        return [item for page in value for item in page]
-    return value
-
-
-def parse_json_stream(text: str) -> Any:
-    text = text.strip()
-    if not text:
-        return []
-
-    decoder = json.JSONDecoder()
-    values: list[Any] = []
-    index = 0
-    while index < len(text):
-        value, index = decoder.raw_decode(text, index)
-        values.append(value)
-        while index < len(text) and text[index].isspace():
-            index += 1
-    return _flatten_pages(values[0] if len(values) == 1 else values)
-
-
-def write_github_output(path: Path, values: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as f:
-        for key, value in values.items():
-            f.write(f"{key}={'' if value is None else value}\n")
-
-
-def append_step_summary(lines: Iterable[str], path: Path | None = None) -> None:
-    summary_path = path or os.environ.get("GITHUB_STEP_SUMMARY")
-    if not summary_path:
-        return
-    target = Path(summary_path)
-    with target.open("a", encoding="utf-8") as f:
-        for line in lines:
-            f.write(f"{line}\n")
-
-
-def _login(item: dict[str, Any]) -> str:
-    user = item.get("user")
-    if not isinstance(user, dict):
-        return ""
-    login = user.get("login")
-    return login if isinstance(login, str) else ""
 
 
 def _head_ref(item: dict[str, Any]) -> str:

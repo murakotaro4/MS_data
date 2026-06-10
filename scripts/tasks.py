@@ -10,38 +10,18 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
+from ms_data.core.env import env_flag as _env_flag
+from ms_data.core.env import env_float as _env_float
+from ms_data.core.env import env_int as _env_int
+from ms_data.core.env import env_str as _env_str
+from ms_data.core.json_io import load_json as _load_json_file
+
 
 INDEX_URL = "https://w.atwiki.jp/battle-operation2/pages/377.html"
 
 
 def _today() -> str:
     return datetime.now().strftime("%Y%m%d")
-
-
-def _env_str(name: str, default: str | None = None) -> str | None:
-    value = os.getenv(name)
-    if value is None or value == "":
-        return default
-    return value
-
-
-def _env_int(name: str, default: int) -> int:
-    value = _env_str(name)
-    if value is None:
-        return default
-    return int(value)
-
-
-def _env_float(name: str, default: float) -> float:
-    value = _env_str(name)
-    if value is None:
-        return default
-    return float(value)
-
-
-def _env_flag(name: str) -> bool:
-    value = (_env_str(name, "") or "").strip().lower()
-    return value not in {"", "0", "false", "no", "off"}
 
 
 def _run(*args: str) -> int:
@@ -89,10 +69,6 @@ def _detail_fetch_state() -> str:
 
 def _fast_ttl() -> str:
     return _env_str("FAST_TTL", _env_str("TTL", "1h")) or "1h"
-
-
-def _load_json_file(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _can_use_changed_only(changed_index: list[dict], meta: dict) -> bool:

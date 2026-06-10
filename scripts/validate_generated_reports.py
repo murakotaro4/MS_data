@@ -10,16 +10,14 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
+from ms_data.core.json_io import load_json as _load_json
+
 
 JSON_SCHEMA_REPORTS = {
     "atwiki_quality_*.json": "atwiki_quality.schema.json",
     "provenance_*.json": "provenance.schema.json",
     "auto_review_*.json": "auto_review.schema.json",
 }
-
-
-def _load_json(path: Path) -> Any:
-    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _validate_json_report(path: Path, schema_path: Path) -> list[str]:

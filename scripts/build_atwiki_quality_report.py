@@ -10,13 +10,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from ms_data.core.json_io import load_json_or_default as _load_json
+from ms_data.gh.outputs import append_step_summary, write_github_output
 from scripts import report_msdata_diff
-
-
-def _load_json(path: Path | None, default: Any) -> Any:
-    if path is None or not path.exists():
-        return default
-    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _count_jsonl(path: Path | None) -> int:
@@ -134,17 +130,7 @@ def evaluate_quality_warnings(
     return warnings
 
 
-def _write_github_output(path: Path, values: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as f:
-        for key, value in values.items():
-            f.write(f"{key}={value}\n")
-
-
 def _append_step_summary(report: dict[str, Any], path: Path | None) -> None:
-    summary_path = path or os.environ.get("GITHUB_STEP_SUMMARY")
-    if not summary_path:
-        return
     warnings = report.get("warnings", [])
     detail_fetch = report["detail_fetch"]
     msdata_diff = report["msdata_diff"]
@@ -163,9 +149,7 @@ def _append_step_summary(report: dict[str, Any], path: Path | None) -> None:
     ]
     for warning in warnings:
         lines.append(f"- warning[{warning['id']}]: {warning['message']}")
-    with Path(summary_path).open("a", encoding="utf-8") as f:
-        for line in lines:
-            f.write(f"{line}\n")
+    append_step_summary(lines, path)
 
 
 def _warning_summary(warnings: list[dict[str, Any]]) -> str:
@@ -358,7 +342,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     warnings = report["warnings"]
     if args.github_output is not None:
-        _write_github_output(
+        write_github_output(
             args.github_output,
             {
                 "warning_count": len(warnings),
