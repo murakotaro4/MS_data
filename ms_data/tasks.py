@@ -110,9 +110,8 @@ def task_test() -> int:
 
 
 def task_test_cov() -> int:
-    return _run_python_module(
-        "pytest", "-q", "--cov=ms_data", "--cov-report=term-missing"
-    )
+    # 計測対象・レポート形式は pyproject.toml の [tool.coverage.*] に一元管理
+    return _run_python_module("pytest", "-q", "--cov")
 
 
 def task_validate() -> int:
