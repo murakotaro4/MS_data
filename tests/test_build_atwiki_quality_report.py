@@ -198,3 +198,78 @@ def test_build_atwiki_quality_report_warns_on_large_full_update(tmp_path):
     assert {warning["id"] for warning in report["warnings"]} == {
         "large_full_update_diff"
     }
+
+
+def test_build_atwiki_quality_report_embeds_fetch_stats(tmp_path):
+    index = tmp_path / "cache/index.json"
+    changed_index = tmp_path / "cache/index_changed.json"
+    changed_meta = tmp_path / "cache/index_changed_meta.json"
+    detail_fetch_state = tmp_path / "cache/detail_fetch_state.json"
+    details_json = tmp_path / "cache/details.json"
+    details_jsonl = tmp_path / "cache/details.jsonl"
+    fetch_stats = tmp_path / "cache/fetch_stats.json"
+
+    _write_json(index, [{"name": "A", "url": "https://example.test/a"}])
+    _write_json(changed_index, [])
+    _write_json(
+        changed_meta,
+        {"candidate_count": 0, "mode": "revalidate", "fallback_reason": "revalidate"},
+    )
+    _write_json(detail_fetch_state, {"items": {}})
+    _write_json(details_json, [])
+    details_jsonl.write_text("", encoding="utf-8")
+    _write_json(
+        fetch_stats,
+        {
+            "phases": {
+                "index": {"network_requests": 1, "status_200": 1, "body_bytes": 100},
+                "details": {"network_requests": 5, "status_200": 5, "body_bytes": 500},
+            },
+            "totals": {
+                "network_requests": 6,
+                "status_200": 6,
+                "body_bytes": 600,
+                "duration_seconds": 12.5,
+            },
+        },
+    )
+
+    report = build_report(
+        report_date="20260611",
+        source_run_id="12345",
+        index_path=index,
+        changed_index_path=changed_index,
+        changed_meta_path=changed_meta,
+        detail_fetch_state_path=detail_fetch_state,
+        details_json_path=details_json,
+        details_jsonl_path=details_jsonl,
+        before_msdata_path=None,
+        current_msdata_path=None,
+        fetch_stats_path=fetch_stats,
+    )
+
+    assert report["index"]["mode"] == "revalidate"
+    assert report["fetch"]["totals"]["network_requests"] == 6
+    assert report["fetch"]["totals"]["body_bytes"] == 600
+    assert set(report["fetch"]["phases"]) == {"index", "details"}
+
+
+def test_build_atwiki_quality_report_handles_missing_fetch_stats(tmp_path):
+    index = tmp_path / "cache/index.json"
+    _write_json(index, [])
+
+    report = build_report(
+        report_date="20260611",
+        source_run_id="12345",
+        index_path=index,
+        changed_index_path=tmp_path / "missing_changed.json",
+        changed_meta_path=tmp_path / "missing_meta.json",
+        detail_fetch_state_path=tmp_path / "missing_state.json",
+        details_json_path=tmp_path / "missing_details.json",
+        details_jsonl_path=tmp_path / "missing_details.jsonl",
+        before_msdata_path=None,
+        current_msdata_path=None,
+        fetch_stats_path=tmp_path / "missing_fetch_stats.json",
+    )
+
+    assert report["fetch"] == {"totals": {}, "phases": {}}

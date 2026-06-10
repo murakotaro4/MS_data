@@ -134,6 +134,7 @@ def _append_step_summary(report: dict[str, Any], path: Path | None) -> None:
     warnings = report.get("warnings", [])
     detail_fetch = report["detail_fetch"]
     msdata_diff = report["msdata_diff"]
+    fetch_totals = report.get("fetch", {}).get("totals", {})
     lines = [
         "### atwiki 取得品質",
         f"- warnings: {len(warnings)}",
@@ -147,6 +148,16 @@ def _append_step_summary(report: dict[str, Any], path: Path | None) -> None:
             f"~{msdata_diff['changed']}"
         ),
     ]
+    if fetch_totals:
+        lines.append(
+            "- fetch: "
+            f"requests={fetch_totals.get('network_requests', 0)} "
+            f"status_200={fetch_totals.get('status_200', 0)} "
+            f"status_304={fetch_totals.get('status_304', 0)} "
+            f"failures={fetch_totals.get('failures', 0)} "
+            f"body_bytes={fetch_totals.get('body_bytes', 0)} "
+            f"duration_seconds={fetch_totals.get('duration_seconds', 0)}"
+        )
     for warning in warnings:
         lines.append(f"- warning[{warning['id']}]: {warning['message']}")
     append_step_summary(lines, path)
@@ -170,6 +181,7 @@ def build_report(
     details_jsonl_path: Path,
     before_msdata_path: Path | None,
     current_msdata_path: Path | None,
+    fetch_stats_path: Path | None = None,
     full_update: bool = False,
     max_failure_rate: float = 0.10,
     min_detail_record_ratio: float = 0.80,
@@ -245,6 +257,12 @@ def build_report(
     details_json = _load_json(details_json_path, [])
     details_json_count = len(details_json) if isinstance(details_json, list) else 0
 
+    fetch_stats: dict[str, Any] = {}
+    if fetch_stats_path is not None:
+        loaded_stats = _load_json(fetch_stats_path, {})
+        if isinstance(loaded_stats, dict):
+            fetch_stats = loaded_stats
+
     report: dict[str, Any] = {
         "schema_version": "1",
         "report_date": report_date,
@@ -253,10 +271,15 @@ def build_report(
             "total_count": len(index_data),
             "candidate_count": candidate_count,
             "full_update": bool(full_update),
+            "mode": changed_meta.get("mode") or "fast",
             "fast_path": bool(changed_meta.get("fast_path", False)),
             "fallback_reason": changed_meta.get("fallback_reason") or "none",
             "age_coverage": changed_meta.get("age_coverage", 0.0),
             "reason_counts": changed_meta.get("reason_counts", {}),
+        },
+        "fetch": {
+            "totals": fetch_stats.get("totals", {}),
+            "phases": fetch_stats.get("phases", {}),
         },
         "detail_fetch": {
             "attempted_url_count": attempted_url_count,
@@ -310,6 +333,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--before-msdata", type=Path, default=None)
     parser.add_argument("--current-msdata", type=Path, default=Path("msData.json"))
+    parser.add_argument(
+        "--fetch-stats", type=Path, default=Path("cache/fetch_stats.json")
+    )
     parser.add_argument("--full-update", action="store_true")
     parser.add_argument("--max-failure-rate", type=float, default=0.10)
     parser.add_argument("--min-detail-record-ratio", type=float, default=0.80)
@@ -330,6 +356,7 @@ def main(argv: list[str] | None = None) -> int:
         details_jsonl_path=args.details_jsonl,
         before_msdata_path=args.before_msdata,
         current_msdata_path=args.current_msdata,
+        fetch_stats_path=args.fetch_stats,
         full_update=args.full_update,
         max_failure_rate=args.max_failure_rate,
         min_detail_record_ratio=args.min_detail_record_ratio,

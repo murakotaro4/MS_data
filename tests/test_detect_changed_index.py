@@ -506,6 +506,219 @@ def test_cmd_detect_changed_falls_back_when_generated_at_is_invalid(tmp_path: Pa
     assert meta["fallback_reason"] == "missing_previous_provenance"
 
 
+def test_select_changed_index_items_revalidate_selects_updated_since_fetch():
+    items = [
+        {
+            # 前回取得（5日前）より後に更新（2日前）→ 再取得対象
+            "name": "更新済み機",
+            "url": "https://w.atwiki.jp/battle-operation2/pages/1.html",
+            "cost": 300,
+            "属性": "汎用",
+            "updated_age_text": "2d",
+            "updated_age_seconds": 2 * 86400,
+        },
+        {
+            # 前回取得（5日前）より前の更新（30日前）→ スキップ
+            "name": "未更新機",
+            "url": "https://w.atwiki.jp/battle-operation2/pages/2.html",
+            "cost": 300,
+            "属性": "汎用",
+            "updated_age_text": "30d",
+            "updated_age_seconds": 30 * 86400,
+        },
+        {
+            # 取得履歴なし（前回失敗 or 新規）→ 再取得対象
+            "name": "取得履歴なし機",
+            "url": "https://w.atwiki.jp/battle-operation2/pages/3.html",
+            "cost": 300,
+            "属性": "汎用",
+            "updated_age_text": "30d",
+            "updated_age_seconds": 30 * 86400,
+        },
+    ]
+    msdata_index = {
+        name: {
+            "cost": 300,
+            "attr": "汎用",
+            "wiki_url": f"https://w.atwiki.jp/battle-operation2/pages/{i}.html",
+        }
+        for i, name in enumerate(["更新済み機", "未更新機", "取得履歴なし機"], start=1)
+    }
+
+    selected, meta = sm.select_changed_index_items(
+        items,
+        previous_generated_at=None,  # 前回プロビナンスに依存しない
+        previous_msdata_index=msdata_index,
+        now=sm.parse_iso_datetime("2026-06-11T09:00:00Z"),
+        revalidate=True,
+        min_age_coverage=0.95,
+        detail_fetch_state={
+            "https://w.atwiki.jp/battle-operation2/pages/1.html": {
+                "fetched_at": "2026-06-06T09:00:00Z"
+            },
+            "https://w.atwiki.jp/battle-operation2/pages/2.html": {
+                "fetched_at": "2026-06-06T09:00:00Z"
+            },
+        },
+    )
+
+    assert [item["name"] for item in selected] == ["更新済み機", "取得履歴なし機"]
+    assert selected[0]["change_reasons"] == ["updated_since_fetch"]
+    assert selected[1]["change_reasons"] == ["missing_fetch_history"]
+    assert meta["mode"] == "revalidate"
+    assert meta["fast_path"] is False
+    assert meta["fallback_reason"] == "revalidate"
+    assert meta["candidate_count"] == 2
+    assert meta["reason_counts"] == {
+        "updated_since_fetch": 1,
+        "missing_fetch_history": 1,
+    }
+
+
+def test_select_changed_index_items_revalidate_falls_back_on_low_age_coverage():
+    items = [
+        {"name": "A", "url": "https://example.test/1", "updated_age_seconds": None},
+        {"name": "B", "url": "https://example.test/2", "updated_age_seconds": None},
+    ]
+
+    selected, meta = sm.select_changed_index_items(
+        items,
+        previous_generated_at=None,
+        previous_msdata_index={},
+        now=sm.parse_iso_datetime("2026-06-11T09:00:00Z"),
+        revalidate=True,
+        min_age_coverage=0.95,
+        detail_fetch_state={},
+    )
+
+    assert selected == items
+    assert meta["fast_path"] is False
+    assert meta["fallback_reason"] == "low_age_coverage"
+    assert meta["candidate_count"] == 2
+
+
+def test_select_changed_index_items_revalidate_keeps_identity_checks():
+    items = [
+        {
+            "name": "コスト変更機",
+            "url": "https://w.atwiki.jp/battle-operation2/pages/1.html",
+            "cost": 500,
+            "属性": "汎用",
+            "updated_age_text": "30d",
+            "updated_age_seconds": 30 * 86400,
+        },
+    ]
+
+    selected, meta = sm.select_changed_index_items(
+        items,
+        previous_generated_at=None,
+        previous_msdata_index={
+            "コスト変更機": {
+                "cost": 450,
+                "attr": "汎用",
+                "wiki_url": "https://w.atwiki.jp/battle-operation2/pages/1.html",
+            }
+        },
+        now=sm.parse_iso_datetime("2026-06-11T09:00:00Z"),
+        revalidate=True,
+        min_age_coverage=0.95,
+        detail_fetch_state={
+            "https://w.atwiki.jp/battle-operation2/pages/1.html": {
+                "fetched_at": "2026-06-10T09:00:00Z"
+            }
+        },
+    )
+
+    assert [item["name"] for item in selected] == ["コスト変更機"]
+    assert selected[0]["change_reasons"] == ["cost_changed"]
+    assert meta["reason_counts"] == {"cost_changed": 1}
+
+
+def test_cmd_detect_changed_revalidate_mode(tmp_path: Path):
+    index_path = tmp_path / "cache/index.json"
+    out_path = tmp_path / "cache/index_changed.json"
+    meta_path = tmp_path / "cache/index_changed_meta.json"
+    msdata_path = tmp_path / "msData.json"
+    detail_state_path = tmp_path / "cache/detail_fetch_state.json"
+
+    _write_json(
+        index_path,
+        [
+            {
+                "name": "更新済み機",
+                "url": "https://w.atwiki.jp/battle-operation2/pages/1.html",
+                "cost": 300,
+                "属性": "汎用",
+                "updated_age_text": "1d",
+                "updated_age_seconds": 86400,
+            },
+            {
+                "name": "未更新機",
+                "url": "https://w.atwiki.jp/battle-operation2/pages/2.html",
+                "cost": 300,
+                "属性": "汎用",
+                "updated_age_text": "60d",
+                "updated_age_seconds": 60 * 86400,
+            },
+        ],
+    )
+    _write_json(
+        msdata_path,
+        [
+            {
+                "MS名": "更新済み機_LV1",
+                "コスト": 300,
+                "属性": "汎用",
+                "wiki_url": "https://w.atwiki.jp/battle-operation2/pages/1.html",
+            },
+            {
+                "MS名": "未更新機_LV1",
+                "コスト": 300,
+                "属性": "汎用",
+                "wiki_url": "https://w.atwiki.jp/battle-operation2/pages/2.html",
+            },
+        ],
+    )
+    _write_json(
+        detail_state_path,
+        {
+            "items": {
+                "https://w.atwiki.jp/battle-operation2/pages/1.html": {
+                    "fetched_at": "2026-06-01T09:00:00Z"
+                },
+                "https://w.atwiki.jp/battle-operation2/pages/2.html": {
+                    "fetched_at": "2026-06-01T09:00:00Z"
+                },
+            }
+        },
+    )
+
+    rc = sm.cmd_detect_changed(
+        argparse.Namespace(
+            input=str(index_path),
+            out=str(out_path),
+            meta_out=str(meta_path),
+            reports_dir=str(tmp_path / "reports"),
+            previous_provenance="",
+            msdata=str(msdata_path),
+            freshness_window="1h",
+            min_age_coverage=0.95,
+            force_full=False,
+            revalidate=True,
+            detail_fetch_state=str(detail_state_path),
+            now="2026-06-11T09:00:00Z",
+        )
+    )
+
+    assert rc == 0
+    selected = json.loads(out_path.read_text(encoding="utf-8"))
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    assert [item["name"] for item in selected] == ["更新済み機"]
+    assert meta["mode"] == "revalidate"
+    assert meta["fallback_reason"] == "revalidate"
+    assert meta["candidate_count"] == 1
+
+
 def test_select_changed_index_items_falls_back_when_age_coverage_is_low():
     items = [
         {"name": "A", "updated_age_seconds": None},
