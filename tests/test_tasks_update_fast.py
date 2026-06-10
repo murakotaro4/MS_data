@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-import scripts.tasks as tasks
+import ms_data.tasks as tasks
 
 
 def _write_json(path: Path, data: object) -> None:

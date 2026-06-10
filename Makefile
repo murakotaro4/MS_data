@@ -38,34 +38,34 @@ help:
 	@echo "  audit-skills      Audit owners vs msData.json -> reports/skill_owners_audit_*.md"
 
 setup:
-	uv run python -m scripts.tasks setup
+	uv run python -m ms_data.tasks setup
 
 format:
-	uv run python -m scripts.tasks format
+	uv run python -m ms_data.tasks format
 
 lint:
-	uv run python -m scripts.tasks lint
+	uv run python -m ms_data.tasks lint
 
 test:
-	uv run python -m scripts.tasks test
+	uv run python -m ms_data.tasks test
 
 validate:
-	MSDATA="$(MSDATA)" uv run python -m scripts.tasks validate
+	MSDATA="$(MSDATA)" uv run python -m ms_data.tasks validate
 
 validate-strict:
-	MSDATA="$(MSDATA)" uv run python -m scripts.tasks validate-strict
+	MSDATA="$(MSDATA)" uv run python -m ms_data.tasks validate-strict
 
 validate-skills:
-	uv run python -m scripts.tasks validate-skills
+	uv run python -m ms_data.tasks validate-skills
 
 update:
-	INPUT="$(INPUT)" uv run python -m scripts.tasks update
+	INPUT="$(INPUT)" uv run python -m ms_data.tasks update
 
 normalize:
-	uv run python -m scripts.tasks normalize
+	uv run python -m ms_data.tasks normalize
 
 ci:
-	uv run python -m scripts.tasks ci
+	uv run python -m ms_data.tasks ci
 
 TTL ?= 7d
 RATE ?= 2.0
@@ -77,59 +77,59 @@ PROVENANCE_OUT ?= reports/provenance_$(REPORT_DATE).json
 RAW_SNAPSHOT_FILE ?= raw_snapshot_$(REPORT_DATE)_runlocal.tar.xz
 
 scrape-index:
-	TTL="$(TTL)" NO_NET="$(NO_NET)" FORCE="$(FORCE)" uv run python -m scripts.tasks scrape-index
+	TTL="$(TTL)" NO_NET="$(NO_NET)" FORCE="$(FORCE)" uv run python -m ms_data.tasks scrape-index
 
 scrape-details:
-	TTL="$(TTL)" RATE="$(RATE)" LIMIT="$(LIMIT)" NO_NET="$(NO_NET)" FORCE="$(FORCE)" uv run python -m scripts.tasks scrape-details
+	TTL="$(TTL)" RATE="$(RATE)" LIMIT="$(LIMIT)" NO_NET="$(NO_NET)" FORCE="$(FORCE)" uv run python -m ms_data.tasks scrape-details
 
 scrape-all:
-	RATE="$(RATE)" LIMIT="$(LIMIT)" uv run python -m scripts.tasks scrape-all
+	RATE="$(RATE)" LIMIT="$(LIMIT)" uv run python -m ms_data.tasks scrape-all
 
 import-details:
-	uv run python -m scripts.tasks import-details
+	uv run python -m ms_data.tasks import-details
 
 labels:
-	TTL="$(TTL)" RATE="$(RATE)" LIMIT="$(LIMIT)" NO_NET="$(NO_NET)" FORCE="$(FORCE)" uv run python -m scripts.tasks labels
+	TTL="$(TTL)" RATE="$(RATE)" LIMIT="$(LIMIT)" NO_NET="$(NO_NET)" FORCE="$(FORCE)" uv run python -m ms_data.tasks labels
 
 audit-labels:
-	REPORT_DATE="$(REPORT_DATE)" uv run python -m scripts.tasks audit-labels
+	REPORT_DATE="$(REPORT_DATE)" uv run python -m ms_data.tasks audit-labels
 
 report-diff:
-	OLD="$(OLD)" NEW="$(NEW)" OUT="$(OUT)" uv run python -m scripts.tasks report-diff
+	OLD="$(OLD)" NEW="$(NEW)" OUT="$(OUT)" uv run python -m ms_data.tasks report-diff
 
 provenance:
-	REPORT_DATE="$(REPORT_DATE)" PROVENANCE_OUT="$(PROVENANCE_OUT)" MSDATA="$(MSDATA)" TTL="$(TTL)" RATE="$(RATE)" LIMIT="$(LIMIT)" uv run python -m scripts.tasks provenance
+	REPORT_DATE="$(REPORT_DATE)" PROVENANCE_OUT="$(PROVENANCE_OUT)" MSDATA="$(MSDATA)" TTL="$(TTL)" RATE="$(RATE)" LIMIT="$(LIMIT)" uv run python -m ms_data.tasks provenance
 
 snapshot:
-	REPORT_DATE="$(REPORT_DATE)" PROVENANCE_OUT="$(PROVENANCE_OUT)" RAW_SNAPSHOT_FILE="$(RAW_SNAPSHOT_FILE)" MSDATA="$(MSDATA)" TTL="$(TTL)" RATE="$(RATE)" LIMIT="$(LIMIT)" uv run python -m scripts.tasks snapshot
+	REPORT_DATE="$(REPORT_DATE)" PROVENANCE_OUT="$(PROVENANCE_OUT)" RAW_SNAPSHOT_FILE="$(RAW_SNAPSHOT_FILE)" MSDATA="$(MSDATA)" TTL="$(TTL)" RATE="$(RATE)" LIMIT="$(LIMIT)" uv run python -m ms_data.tasks snapshot
 
 # Index vs msData audit (names, presence, attr/cost)
 audit-index:
-	REPORT_DATE="$(REPORT_DATE)" MSDATA="$(MSDATA)" uv run python -m scripts.tasks audit-index
+	REPORT_DATE="$(REPORT_DATE)" MSDATA="$(MSDATA)" uv run python -m ms_data.tasks audit-index
 
 skills:
-	TTL="$(TTL)" NO_NET="$(NO_NET)" FORCE="$(FORCE)" uv run python -m scripts.tasks skills
+	TTL="$(TTL)" NO_NET="$(NO_NET)" FORCE="$(FORCE)" uv run python -m ms_data.tasks skills
 
 skills-table:
-	TTL="$(TTL)" NO_NET="$(NO_NET)" FORCE="$(FORCE)" uv run python -m scripts.tasks skills-table
+	TTL="$(TTL)" NO_NET="$(NO_NET)" FORCE="$(FORCE)" uv run python -m ms_data.tasks skills-table
 
 owners-table:
-	TTL="$(TTL)" NO_NET="$(NO_NET)" FORCE="$(FORCE)" uv run python -m scripts.tasks owners-table
+	TTL="$(TTL)" NO_NET="$(NO_NET)" FORCE="$(FORCE)" uv run python -m ms_data.tasks owners-table
 
 build-skills:
-	uv run python -m scripts.tasks build-skills
+	uv run python -m ms_data.tasks build-skills
 
 audit-skills:
-	MSDATA="$(MSDATA)" uv run python -m scripts.tasks audit-skills
+	MSDATA="$(MSDATA)" uv run python -m ms_data.tasks audit-skills
 
 build-param-skills:
-	uv run python -m scripts.tasks build-param-skills
+	uv run python -m ms_data.tasks build-param-skills
 
 build-owners-flat:
-	MSDATA="$(MSDATA)" uv run python -m scripts.tasks build-owners-flat
+	MSDATA="$(MSDATA)" uv run python -m ms_data.tasks build-owners-flat
 
 preview-params:
-	MSDATA="$(MSDATA)" uv run python -m scripts.tasks preview-params
+	MSDATA="$(MSDATA)" uv run python -m ms_data.tasks preview-params
 
 validate-report-contract:
-	MODE="$(MODE)" REPORT_DATE="$(REPORT_DATE)" SOURCE_RUN_ID="$(SOURCE_RUN_ID)" HEAD_REF="$(HEAD_REF)" DIFF_PATH="$(DIFF_PATH)" PROVENANCE_PATH="$(PROVENANCE_PATH)" ARTIFACT_NAME="$(ARTIFACT_NAME)" SNAPSHOT_FILE="$(SNAPSHOT_FILE)" RELEASE_TAG="$(RELEASE_TAG)" uv run python -m scripts.tasks validate-report-contract
+	MODE="$(MODE)" REPORT_DATE="$(REPORT_DATE)" SOURCE_RUN_ID="$(SOURCE_RUN_ID)" HEAD_REF="$(HEAD_REF)" DIFF_PATH="$(DIFF_PATH)" PROVENANCE_PATH="$(PROVENANCE_PATH)" ARTIFACT_NAME="$(ARTIFACT_NAME)" SNAPSHOT_FILE="$(SNAPSHOT_FILE)" RELEASE_TAG="$(RELEASE_TAG)" uv run python -m ms_data.tasks validate-report-contract
