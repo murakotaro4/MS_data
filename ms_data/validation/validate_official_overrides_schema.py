@@ -10,7 +10,7 @@ from typing import Any
 from jsonschema import Draft202012Validator, FormatChecker
 
 from ms_data.core.json_io import load_json as _load_json
-from scripts import update_msdata
+from ms_data.pipeline import update_msdata
 
 
 def _iter_override_files(directory: Path) -> list[Path]:

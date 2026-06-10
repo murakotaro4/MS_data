@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 
 from scripts import validate_msdata, validate_report_contract
-from scripts.restore_snapshot import restore_snapshot
+from ms_data.pipeline.restore_snapshot import restore_snapshot
 
 
 REPORT_DATE = "20260531"

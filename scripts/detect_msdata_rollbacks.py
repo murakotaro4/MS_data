@@ -11,7 +11,7 @@ from typing import Any
 
 from ms_data.core.records import load_records_by_name as _load_records
 from ms_data.reporting.rendering import value_text as _value_text
-from scripts import update_msdata
+from ms_data.pipeline import update_msdata
 
 
 NUMERIC_GUARD_FIELDS = {

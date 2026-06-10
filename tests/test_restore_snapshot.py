@@ -3,7 +3,7 @@ import tarfile
 
 import pytest
 
-from scripts.restore_snapshot import restore_snapshot
+from ms_data.pipeline.restore_snapshot import restore_snapshot
 
 
 def _add_text(archive, name, text):
