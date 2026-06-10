@@ -1,6 +1,6 @@
 import json
 
-from scripts import detect_msdata_rollbacks
+from ms_data.audit import detect_msdata_rollbacks
 
 
 def _write_json(path, data):

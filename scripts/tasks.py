@@ -378,7 +378,7 @@ def task_labels() -> int:
 def task_audit_labels() -> int:
     report_date = _report_date()
     return _run_python_module(
-        "scripts.audit_labels",
+        "ms_data.audit.audit_labels",
         "--in",
         _env_str("LABELS_OUT", "cache/labels_raw.jsonl") or "cache/labels_raw.jsonl",
         "--out",
@@ -388,7 +388,7 @@ def task_audit_labels() -> int:
 
 def task_report_diff() -> int:
     return _run_python_module(
-        "scripts.report_msdata_diff",
+        "ms_data.reporting.report_msdata_diff",
         "--old",
         _require_env("OLD"),
         "--new",
@@ -486,7 +486,7 @@ def task_audit_index() -> int:
     report_date = _report_date()
     msdata = _env_str("MSDATA", "msData.json") or "msData.json"
     return _run_python_module(
-        "scripts.audit_index_vs_msdata",
+        "ms_data.audit.audit_index_vs_msdata",
         "--index",
         _env_str("INDEX_OUT", "cache/index.json") or "cache/index.json",
         "--ms",
@@ -512,7 +512,7 @@ def task_rollback_guard() -> int:
     ]
     if _env_flag("FAIL_ON_PROTECTED_ROLLBACK"):
         args.append("--fail-on-protected-rollback")
-    return _run_python_module("scripts.detect_msdata_rollbacks", *args)
+    return _run_python_module("ms_data.audit.detect_msdata_rollbacks", *args)
 
 
 def task_audit_official_overrides() -> int:
@@ -543,7 +543,7 @@ def task_audit_official_overrides() -> int:
         args.append("--fail-on-protected-rollback")
     if _env_flag("FAIL_ON_REMOVE_DUE"):
         args.append("--fail-on-remove-due")
-    return _run_python_module("scripts.audit_official_overrides", *args)
+    return _run_python_module("ms_data.audit.audit_official_overrides", *args)
 
 
 def task_validate_official_overrides_schema() -> int:
@@ -561,7 +561,7 @@ def task_validate_official_overrides_schema() -> int:
 def task_atwiki_quality_report() -> int:
     report_date = _report_date()
     return _run_python_module(
-        "scripts.build_atwiki_quality_report",
+        "ms_data.reporting.build_atwiki_quality_report",
         "--report-date",
         report_date,
         "--source-run-id",
@@ -692,7 +692,7 @@ def task_build_owners_flat() -> int:
 
 def task_audit_skills() -> int:
     return _run_python_module(
-        "scripts.audit_skills",
+        "ms_data.audit.audit_skills",
         "--owners",
         _env_str("SKILL_OWNERS_OUT", "data/skill_owners.json")
         or "data/skill_owners.json",

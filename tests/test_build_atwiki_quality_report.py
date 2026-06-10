@@ -1,6 +1,6 @@
 import json
 
-from scripts.build_atwiki_quality_report import build_report
+from ms_data.reporting.build_atwiki_quality_report import build_report
 
 
 def _write_json(path, data):

@@ -1,7 +1,7 @@
 from datetime import datetime
 from textwrap import dedent
 
-from scripts.report_msdata_diff import build_report_lines
+from ms_data.reporting.report_msdata_diff import build_report_lines
 
 
 def test_build_report_lines_golden():
