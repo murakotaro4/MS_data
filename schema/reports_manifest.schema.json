@@ -71,7 +71,16 @@
             "items": { "type": "string" },
             "minItems": 1
           },
-          "retention": { "type": "string", "minLength": 1 }
+          "retention": { "type": "string", "minLength": 1 },
+          "prune": {
+            "type": "object",
+            "required": ["max_age_days"],
+            "properties": {
+              "max_age_days": { "type": "integer", "minimum": 1 },
+              "keep_min": { "type": "integer", "minimum": 0 }
+            },
+            "additionalProperties": false
+          }
         },
         "additionalProperties": false
       }
