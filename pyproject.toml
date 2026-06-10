@@ -17,6 +17,7 @@ dev = [
   "black~=24.0",
   "ruff~=0.6",
   "pytest~=8.0",
+  "pytest-cov~=6.0",
   "jsonschema~=4.22",
 ]
 
@@ -36,3 +37,12 @@ ignore = ["E402", "E501", "F401", "F541", "E741", "I001"]
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["ms_data"]
+
+[tool.coverage.report]
+# 自動更新 PR の CI にも適用されるため、実測値（62%）より低く設定する
+fail_under = 60
+show_missing = true
+skip_covered = true
