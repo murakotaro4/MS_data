@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-06-10T13:20:13Z",
+  "report_date": "20260610",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "df7408af32454336e5e24bfce4689c811001c446"
+  },
+  "github": {
+    "run_id": "27278551306",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "workflow_dispatch"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "ff669048d874b23549678a13eb030e5523a324830435e91f41ba0e4b4c3ba94d",
+      "size_bytes": 141533,
+      "record_count": 575
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "59f58fb98dfa48807f9b62f0060ef018ad58dced2542bb29a328f50e3f7b8c51",
+      "size_bytes": 1944472,
+      "record_count": 1646
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "7cce962ca8301e1015362c627c9ff33eb34336c6cd5cb357ed3de6c2b3ae73da",
+      "size_bytes": 2542144,
+      "record_count": 1646
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "b4c95b08e8b7fc0f59c6f36acf7b9de93eec17d3294a13284d7974390b546ac7",
+      "file_count": 1152,
+      "size_bytes": 181829811
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "510488dbf9dfd3bff56b1685f38f30c244745073110d376ead3557e75a3acfa0",
+      "size_bytes": 2543337,
+      "record_count": 1647
+    },
+    "diff_report": {
+      "path": "reports/diff_msdata_20260610.md",
+      "sha256": "45fd45a54c276296b8f37f7f04ab791fe08643766c36ec7b853559b8084b9339",
+      "size_bytes": 3179
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260610-run-27278551306",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260610-run-27278551306",
+    "asset_name": "raw_snapshot_20260610_run27278551306.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260610-run-27278551306"
+  }
+}
