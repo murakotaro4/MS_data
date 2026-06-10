@@ -2,7 +2,7 @@
 """
 skills_catalog.json / skill_owners.json の生成（たたき台）。
 
-入力: cache/skills.json（scripts/extract_skills.py の出力）
+入力: cache/skills.json（ms_data.scraping.extract_skills の出力）
 出力:
 - data/skills_catalog.json
 - data/skill_owners.json

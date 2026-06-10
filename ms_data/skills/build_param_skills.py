@@ -15,7 +15,7 @@ data/skills_params.json を生成するたたき台。
 除外
 - HP系（回復/継続ダメージ）や、よろけ/ロック/ステルス等の非ステータス項目
 
-入力: cache/skills_table.json（scripts/extract_skills.py の table 出力）
+入力: cache/skills_table.json（ms_data.scraping.extract_skills の table 出力）
 出力: data/skills_params.json
 """
 

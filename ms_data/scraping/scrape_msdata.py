@@ -10,16 +10,16 @@
 
 使い方例
 - 一覧のみ:
-  uv run python scripts/scrape_msdata.py index \
+  uv run python -m ms_data.scraping.scrape_msdata index \
       --url https://w.atwiki.jp/battle-operation2/pages/377.html \
       --out cache/index.json
 - 詳細スクレイプ:
-  uv run python scripts/scrape_msdata.py details \
+  uv run python -m ms_data.scraping.scrape_msdata details \
       --in cache/index.json \
       --out cache/details.jsonl \
       --rate 1.0
 - 一気通貫（出力JSONL）:
-  uv run python scripts/scrape_msdata.py all \
+  uv run python -m ms_data.scraping.scrape_msdata all \
       --out cache/details.jsonl
 
 注意

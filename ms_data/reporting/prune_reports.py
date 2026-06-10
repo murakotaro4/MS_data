@@ -63,9 +63,14 @@ def plan_prune_entry(
     entry_id = str(entry.get("id", ""))
     today_dt = _date_value(today)
 
+    # 複数パターンに重複マッチしても1件として扱う（keep_min の二重消費と二重削除を防ぐ）
+    seen: set[Path] = set()
     dated: list[tuple[str, Path]] = []
     for pattern in entry.get("path_patterns", []):
         for path in sorted(root.glob(str(pattern))):
+            if path in seen:
+                continue
+            seen.add(path)
             report_date = extract_report_date(path)
             if report_date is None:
                 continue

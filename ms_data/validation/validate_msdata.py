@@ -8,8 +8,8 @@ msData.json 検証ユーティリティ（uv 前提）
 - `MS名` の重複チェック
 
 使用例
-- 基本検証:          uv run python scripts/validate_msdata.py msData.json
-- 追加で別名をエラー扱い: uv run python scripts/validate_msdata.py msData.json --fail-on-typo
+- 基本検証:          uv run python -m ms_data.validation.validate_msdata msData.json
+- 追加で別名をエラー扱い: uv run python -m ms_data.validation.validate_msdata msData.json --fail-on-typo
 """
 from __future__ import annotations
 
