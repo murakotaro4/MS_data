@@ -84,7 +84,10 @@ jobs:
           fi
           if [[ "${{ github.event_name }}" == "schedule" && "${{ github.event.schedule }}" == "0 9 * * 0" ]]; then
             # 第1日曜（JST）のみ真の全量取得。それ以外の日曜は週次再検証で
-            # atwiki への転送量を削減する（更新があったページのみ再取得）
+            # atwiki への転送量を削減する（更新があったページのみ再取得）。
+            # 注意: 判定は実行時の日付に基づくため、失敗した第1日曜の run を
+            # 後日 re-run すると revalidate になる。その場合は workflow_dispatch の
+            # mode=full で手動補完すること
             if (( $(date +%-d) <= 7 )); then
               update_mode="full"
             else

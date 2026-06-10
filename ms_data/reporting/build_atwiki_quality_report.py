@@ -117,11 +117,13 @@ def evaluate_quality_warnings(
     changed_total = sum(
         int(msdata_diff.get(key, 0) or 0) for key in ("added", "removed", "changed")
     )
-    if bool(index.get("full_update")) and changed_total >= full_diff_warning_count:
+    # 週次再検証（revalidate）も日曜の広域更新なので、full と同様に大量差分を警告する
+    wide_update = bool(index.get("full_update")) or index.get("mode") == "revalidate"
+    if wide_update and changed_total >= full_diff_warning_count:
         warnings.append(
             _warning(
                 "large_full_update_diff",
-                "full更新の msData 差分件数がしきい値以上です。",
+                "full/再検証更新の msData 差分件数がしきい値以上です。",
                 observed=changed_total,
                 threshold=full_diff_warning_count,
             )

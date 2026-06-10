@@ -155,7 +155,10 @@ class CacheHTTP:
                 and meta.get("content_sha256") == content_sha
             ):
                 # 内容が前回保存時と同一なら、セマンティックハッシュの再計算
-                # （BeautifulSoup パース）を省略してそのまま返す
+                # （BeautifulSoup パース）を省略してそのまま返す。
+                # トレードオフ: 抽出アルゴリズム変更は TTL 失効か次回 200 取得まで
+                # 保存済み semantic_sha256 に反映されない（その時点で旧値と不一致
+                # になり semantic_changed=True として保守的に再処理される）
                 meta["semantic_changed"] = False
                 return text, meta
             meta["content_sha256"] = content_sha
@@ -185,6 +188,11 @@ class CacheHTTP:
                 headers["If-Modified-Since"] = lm
 
         r = self._request(url, headers)
+        if r.status_code == 304 and not html_path.exists():
+            # requests 系クライアントは 3xx で raise_for_status が例外を出さないため、
+            # 空ボディを 200 としてキャッシュしてしまう前に明示的に失敗させる
+            self.stats["failures"] += 1
+            raise RuntimeError("304 応答だがキャッシュHTMLが存在しない: " + url)
         if r.status_code == 304 and html_path.exists():
             self.stats["status_304"] += 1
             # HTMLは既存を使う

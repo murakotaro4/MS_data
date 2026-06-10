@@ -41,6 +41,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import httpx
 from bs4 import BeautifulSoup, Tag
 
+from ms_data.core.json_io import load_json_or_default
 from ms_data.core.ms_names import MS_NAME_WITH_LEVEL, extract_ms_base_name
 from ms_data.net.client import get_scraper_client
 from ms_data.net.cache_http import CacheConfig, CacheHTTP
@@ -362,14 +363,16 @@ def select_changed_index_items(
             if age_seconds is None:
                 reasons.append("missing_age")
             if fetched_at is None:
-                # 取得履歴なし（未取得 or 前回失敗）は必ず再取得
+                # 取得履歴なし（未取得 or 前回失敗）は必ず再取得。
+                # stale_detail_cache も None で発火するため重複計上を避けて省略
                 reasons.append("missing_fetch_history")
-            elif isinstance(age_seconds, int) and fetched_at.astimezone(
-                timezone.utc
-            ) <= now_utc - timedelta(seconds=age_seconds):
-                # ページの最終更新（の最遅推定時刻）が前回取得より新しい
-                reasons.append("updated_since_fetch")
-            reasons.extend(_stale_detail_reason(item))
+            else:
+                if isinstance(age_seconds, int) and fetched_at.astimezone(
+                    timezone.utc
+                ) <= now_utc - timedelta(seconds=age_seconds):
+                    # ページの最終更新（の最遅推定時刻）が前回取得より新しい
+                    reasons.append("updated_since_fetch")
+                reasons.extend(_stale_detail_reason(item))
 
             if reasons:
                 selected_item = dict(item)
@@ -434,21 +437,22 @@ def write_fetch_stats(
     *,
     started_at: datetime,
     duration_seconds: float,
+    reset: bool = False,
 ) -> None:
     """フェーズ別のネットワーク取得統計を JSON にマージ保存する。
 
     atwiki への実負荷（リクエスト数・受信バイト数）を検証可能にするための計測。
     同一実行内の index/details など複数フェーズを1ファイルに集約し、
-    totals を再計算する。
+    totals を再計算する。body_bytes は Content-Encoding 展開後のボディ長
+    （実転送量は圧縮分だけ小さい。実行間の相対比較には影響しない）。
+    reset=True で前回実行のフェーズを破棄する（実行の先頭フェーズで指定し、
+    走らなかったフェーズの前回値が totals に混入するのを防ぐ）。
     """
     payload: Dict[str, Any] = {"phases": {}}
-    if path.exists():
-        try:
-            existing = json.loads(path.read_text(encoding="utf-8"))
-            if isinstance(existing, dict) and isinstance(existing.get("phases"), dict):
-                payload["phases"] = existing["phases"]
-        except (OSError, json.JSONDecodeError):
-            pass
+    if not reset and path.exists():
+        existing = load_json_or_default(path, {})
+        if isinstance(existing, dict) and isinstance(existing.get("phases"), dict):
+            payload["phases"] = existing["phases"]
 
     payload["phases"][phase] = {
         **stats,
@@ -1263,12 +1267,14 @@ def cmd_index(args: argparse.Namespace) -> int:
         f.write("\n")
     stats_out = getattr(args, "fetch_stats_out", "")
     if stats_out:
+        # index は実行の先頭フェーズなので前回実行分をリセットする
         write_fetch_stats(
             Path(stats_out),
             "index",
             cache.stats,
             started_at=started_at,
             duration_seconds=time.monotonic() - t_start,
+            reset=True,
         )
     print(f"index: {len(items)} items -> {out}")
     return 0
@@ -1381,12 +1387,14 @@ def cmd_all(args: argparse.Namespace) -> int:
     )
     fetch_stats_out = getattr(args, "fetch_stats_out", "")
     if fetch_stats_out:
+        # index は実行の先頭フェーズなので前回実行分をリセットする
         write_fetch_stats(
             Path(fetch_stats_out),
             "index",
             cache.stats,
             started_at=started_at,
             duration_seconds=time.monotonic() - t_start,
+            reset=True,
         )
     # details
     dargs = argparse.Namespace(
@@ -1447,18 +1455,12 @@ def cmd_detect_changed(args: argparse.Namespace) -> int:
         else datetime.now(timezone.utc)
     )
     stale_detail_days = getattr(args, "stale_detail_days", None)
+    revalidate = bool(getattr(args, "revalidate", False))
     detail_fetch_state: Optional[Dict[str, Dict[str, Any]]] = None
     stale_detail_seconds: Optional[int] = None
     if stale_detail_days is not None:
         stale_detail_seconds = int(float(stale_detail_days) * 86400)
-        detail_fetch_state = load_detail_fetch_state(
-            Path(
-                getattr(args, "detail_fetch_state", "")
-                or "cache/detail_fetch_state.json"
-            )
-        )
-    revalidate = bool(getattr(args, "revalidate", False))
-    if revalidate and detail_fetch_state is None:
+    if stale_detail_days is not None or revalidate:
         detail_fetch_state = load_detail_fetch_state(
             Path(
                 getattr(args, "detail_fetch_state", "")

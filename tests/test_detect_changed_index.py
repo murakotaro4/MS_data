@@ -737,3 +737,58 @@ def test_select_changed_index_items_falls_back_when_age_coverage_is_low():
     assert selected == items
     assert meta["fast_path"] is False
     assert meta["fallback_reason"] == "low_age_coverage"
+
+
+def test_select_changed_index_items_revalidate_does_not_double_count_missing_history():
+    items = [
+        {
+            "name": "取得履歴なし機",
+            "url": "https://w.atwiki.jp/battle-operation2/pages/1.html",
+            "cost": 300,
+            "属性": "汎用",
+            "updated_age_text": "30d",
+            "updated_age_seconds": 30 * 86400,
+        }
+    ]
+
+    selected, meta = sm.select_changed_index_items(
+        items,
+        previous_generated_at=None,
+        previous_msdata_index={
+            "取得履歴なし機": {
+                "cost": 300,
+                "attr": "汎用",
+                "wiki_url": "https://w.atwiki.jp/battle-operation2/pages/1.html",
+            }
+        },
+        now=sm.parse_iso_datetime("2026-06-11T09:00:00Z"),
+        revalidate=True,
+        min_age_coverage=0.95,
+        detail_fetch_state={},
+        stale_detail_seconds=40 * 86400,  # 本番同様 stale 判定が有効でも二重計上しない
+    )
+
+    assert [item["name"] for item in selected] == ["取得履歴なし機"]
+    assert selected[0]["change_reasons"] == ["missing_fetch_history"]
+    assert meta["reason_counts"] == {"missing_fetch_history": 1}
+
+
+def test_select_changed_index_items_force_full_wins_over_revalidate():
+    items = [
+        {"name": "A", "url": "https://example.test/1", "updated_age_seconds": 86400},
+    ]
+
+    selected, meta = sm.select_changed_index_items(
+        items,
+        previous_generated_at=None,
+        previous_msdata_index={},
+        now=sm.parse_iso_datetime("2026-06-11T09:00:00Z"),
+        force_full=True,
+        revalidate=True,
+        detail_fetch_state={},
+    )
+
+    assert selected == items
+    assert meta["mode"] == "full"
+    assert meta["fallback_reason"] == "force_full"
+    assert meta["candidate_count"] == 1

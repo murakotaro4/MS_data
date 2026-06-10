@@ -273,3 +273,43 @@ def test_build_atwiki_quality_report_handles_missing_fetch_stats(tmp_path):
     )
 
     assert report["fetch"] == {"totals": {}, "phases": {}}
+
+
+def test_large_diff_warning_fires_for_revalidate_mode():
+    from ms_data.reporting.build_atwiki_quality_report import evaluate_quality_warnings
+
+    report = {
+        "index": {"full_update": False, "mode": "revalidate"},
+        "detail_fetch": {"attempted_url_count": 0, "failed_url_count": 0},
+        "details": {"jsonl_records": 0},
+        "msdata_diff": {"added": 150, "removed": 0, "changed": 100},
+    }
+
+    warnings = evaluate_quality_warnings(
+        report,
+        max_failure_rate=0.10,
+        min_detail_record_ratio=0.80,
+        full_diff_warning_count=200,
+    )
+
+    assert [w["id"] for w in warnings] == ["large_full_update_diff"]
+
+
+def test_large_diff_warning_not_fired_for_fast_mode():
+    from ms_data.reporting.build_atwiki_quality_report import evaluate_quality_warnings
+
+    report = {
+        "index": {"full_update": False, "mode": "fast"},
+        "detail_fetch": {"attempted_url_count": 0, "failed_url_count": 0},
+        "details": {"jsonl_records": 0},
+        "msdata_diff": {"added": 150, "removed": 0, "changed": 100},
+    }
+
+    warnings = evaluate_quality_warnings(
+        report,
+        max_failure_rate=0.10,
+        min_detail_record_ratio=0.80,
+        full_diff_warning_count=200,
+    )
+
+    assert warnings == []

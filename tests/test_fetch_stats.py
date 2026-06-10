@@ -182,3 +182,54 @@ def test_cmd_details_writes_fetch_stats(monkeypatch, tmp_path: Path):
     assert data["phases"]["details"]["status_200"] == 1
     assert data["phases"]["details"]["body_bytes"] == len(HTML.encode("utf-8"))
     assert data["phases"]["details"]["duration_seconds"] >= 0
+
+
+def test_write_fetch_stats_reset_discards_previous_run(tmp_path: Path):
+    from datetime import datetime, timezone
+
+    path = tmp_path / "fetch_stats.json"
+    started = datetime(2026, 6, 11, 9, 0, tzinfo=timezone.utc)
+
+    # 前回実行: index + details
+    sm.write_fetch_stats(
+        path,
+        "index",
+        {"network_requests": 1, "body_bytes": 100},
+        started_at=started,
+        duration_seconds=1.0,
+        reset=True,
+    )
+    sm.write_fetch_stats(
+        path,
+        "details",
+        {"network_requests": 600, "body_bytes": 999999},
+        started_at=started,
+        duration_seconds=300.0,
+    )
+
+    # 今回実行: index のみ（details が走らないケース）。reset で前回分を破棄
+    sm.write_fetch_stats(
+        path,
+        "index",
+        {"network_requests": 1, "body_bytes": 200},
+        started_at=started,
+        duration_seconds=2.0,
+        reset=True,
+    )
+
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert set(data["phases"]) == {"index"}  # 前回の details が混入しない
+    assert data["totals"]["network_requests"] == 1
+    assert data["totals"]["body_bytes"] == 200
+
+
+def test_304_without_cached_html_raises_and_counts_failure(tmp_path: Path):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(status_code=304)
+
+    cache = CacheHTTP(_client(handler), CacheConfig(root=tmp_path, ttl_seconds=0))
+    with pytest.raises(RuntimeError):
+        cache.get("https://example.test/page")
+    assert cache.stats["failures"] == 1
+    assert cache.stats["status_200"] == 0
+    assert cache.stats["status_304"] == 0

@@ -40,7 +40,7 @@
 - SSOT: index（`cache/index.json`）の `name` を真実のソースとし、詳細抽出の `MS名` も index 表記で固定（LVは `_LVn` を付与）。読み込み・マージ時にも index 準拠へ正規化します。
 - キャッシュ: `ms_data/net/cache_http.py`（TTL・If-None-Match/If-Modified-Since 対応）。保存先 `cache/html/<slug>.html` + `*.meta.json`。注意: atwiki は ETag/Last-Modified を返さない（2026-06 実測）ため 304 は期待できず、負荷軽減は取得対象の絞り込み（`detect-changed` / `REVALIDATE`）で行う。
 - レート制限: 既定 2.0 req/sec。atwiki への負荷を考慮し過度な緩和は避ける。待機は実際のネットワーク取得時のみ（キャッシュヒットは待機しない）。2回目以降は `NO_NET=1` でキャッシュのみ利用可。
-- 取得計測: 実行ごとに `cache/fetch_stats.json` へフェーズ別（index/details）のリクエスト数・200/304件数・失敗数・受信バイト数・所要秒数を記録。`reports/atwiki_quality_*.json` の `fetch` セクションに転記され、負荷削減の検証に使う。
+- 取得計測: 実行ごとに `cache/fetch_stats.json` へフェーズ別（index/details）のリクエスト数・200/304件数・失敗数・受信バイト数・所要秒数を記録。`reports/atwiki_quality_*.json` の `fetch` セクションに転記され、負荷削減の検証に使う。`body_bytes` は Content-Encoding 展開後のボディ長（実転送量は圧縮分小さい。実行間の相対比較には影響なし）。index フェーズ書き込み時に前回実行分をリセットする。
 - データ構造: 配列（各要素=MSの1レベル）。主キー相当は `MS名`（例: `XXX_LV1`）。
 - 必須項目: `MS名`, `属性`（汎用/強襲/支援）, `コスト`, `HP`, `スピード`, `スラスター`, `高速移動`, `射撃補正`, `格闘補正`, `耐ビーム補正`, `耐実弾補正`, `耐格闘補正`, `近/中/遠スロット`。旋回は anyOf（`旋回_地上_通常時` または `旋回_宇宙_通常時`）で宇宙専用機を許容。
 - 主な抽出・正規化ルール:
@@ -52,7 +52,7 @@
 - PC版のみの機体（index未収載）は例外として維持（監査では msData のみとして残る想定）。
 
 ## GitHub Actions 運用
-- 定期実行: `data update` は毎日 18:00 JST に実行（cron は月〜土 `0 9 * * 1-6` と日曜 `0 9 * * 0` の2本）で実行し、差分があれば `data/auto-update-YYYYMMDD` の PR を作成します。日曜は第1日曜（JST）のみ真の全量取得（`FORCE_FULL=1`+`FORCE=1`）、それ以外の日曜は週次再検証（`REVALIDATE=1`: 更新があったページのみ再取得）で atwiki への負荷を抑えます（判定は Prepare ステップの `UPDATE_MODE`）。`workflow_dispatch` の `mode` 入力（auto/full/revalidate）で手動指定も可能。
+- 定期実行: `data update` は毎日 18:00 JST に実行（cron は月〜土 `0 9 * * 1-6` と日曜 `0 9 * * 0` の2本）で実行し、差分があれば `data/auto-update-YYYYMMDD` の PR を作成します。日曜は第1日曜（JST）のみ真の全量取得（`FORCE_FULL=1`+`FORCE=1`）、それ以外の日曜は週次再検証（`REVALIDATE=1`: 更新があったページのみ再取得）で atwiki への負荷を抑えます（判定は Prepare ステップの `UPDATE_MODE`）。`workflow_dispatch` の `mode` 入力（auto/full/revalidate）で手動指定も可能。注意: 第1日曜判定は実行時の日付に基づくため、失敗した第1日曜の run を後日 re-run すると revalidate になります。その場合は `mode=full` の手動 dispatch で全量を補完してください（補完しなくても `STALE_DETAIL_DAYS` 超過後に平日更新が順次取り直す自己修復はあります）。
 - 自動レビュー/マージ: `auto review merge` は `data update` 成功後の `workflow_run` で起動し、対象 PR に `@codex review` を自動実行。Codex のファイル指摘が 0 件なら自動マージします（同一 HEAD SHA では重複依頼を抑止）。
 - 対象PRの解決: `data/auto-update-YYYYMMDD`（workflow_run.created_at の JST 日付）を優先し、無ければ open な最新 `data/auto-update-*` にフォールバック。
 - dry-run: `data update` の `workflow_dispatch` で `dry_run=true` を指定すると、取得・監査・artifact 作成まで実行し PR 作成と通知は行いません。
