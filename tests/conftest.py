@@ -27,7 +27,6 @@ class FakeGitHubClient:
         self.repo = repo
         self.responses: dict[str, Any] = {}
         self.posted_comments: list[tuple[str, str]] = []
-        self.calls: list[tuple[str, str]] = []
         self._comments_by_id: dict[str, dict[str, Any]] = {}
         self._next_comment_id = 1000
 
@@ -40,7 +39,6 @@ class FakeGitHubClient:
         headers: list[str] | None = None,
         paginate: bool = False,
     ) -> Any:
-        self.calls.append((endpoint, method))
         if method == "POST":
             comment = {
                 "id": self._next_comment_id,

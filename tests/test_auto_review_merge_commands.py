@@ -329,8 +329,9 @@ def _wait_argv(out, summary, *, max_attempts="2", settle="0"):
 
 
 def test_cmd_wait_for_review_responds_first_poll(
-    fake_gh, fake_time, read_github_output, tmp_path, monkeypatch
+    fake_time, read_github_output, tmp_path, monkeypatch
 ):
+    # collect_review_metrics をスタブするため fake_gh は不要（client は repo を保持するだけ）
     _script_metrics(monkeypatch, [_metrics(review_complete=True, terminal_count=1)])
     out = tmp_path / "out.txt"
     summary = tmp_path / "summary.md"
@@ -370,7 +371,7 @@ def test_cmd_wait_for_review_times_out_all_attempts(
 
 
 def test_cmd_wait_for_review_settle_sleep(
-    fake_gh, fake_time, read_github_output, tmp_path, monkeypatch
+    fake_time, read_github_output, tmp_path, monkeypatch
 ):
     _script_metrics(monkeypatch, [_metrics(review_complete=True, terminal_count=1)])
     out = tmp_path / "out.txt"
@@ -410,27 +411,29 @@ def test_cmd_wait_for_review_recovers_on_second_attempt(
     assert len(calls) == 3
 
 
+def _check_gate_argv(out, *, trigger_comment_ids="10"):
+    return [
+        "check-gate",
+        "--repo",
+        "owner/repo",
+        "--pr-number",
+        "97",
+        "--head-sha",
+        HEAD_SHA,
+        "--trigger-comment-ids",
+        trigger_comment_ids,
+        "--first-trigger-created-at",
+        "2026-05-31T10:00:00Z",
+        "--github-output",
+        str(out),
+    ]
+
+
 def test_cmd_check_gate_merge_ok(fake_gh, read_github_output, tmp_path):
     fake_gh.responses["/pulls/97/reviews"] = [_codex_review()]
     out = tmp_path / "out.txt"
 
-    rc = main(
-        [
-            "check-gate",
-            "--repo",
-            "owner/repo",
-            "--pr-number",
-            "97",
-            "--head-sha",
-            HEAD_SHA,
-            "--trigger-comment-ids",
-            "10, ,11",
-            "--first-trigger-created-at",
-            "2026-05-31T10:00:00Z",
-            "--github-output",
-            str(out),
-        ]
-    )
+    rc = main(_check_gate_argv(out, trigger_comment_ids="10, ,11"))
 
     assert rc == 0
     outputs = read_github_output(out)
@@ -444,23 +447,7 @@ def test_cmd_check_gate_findings_stop(fake_gh, read_github_output, tmp_path):
     fake_gh.responses["/pulls/97/comments"] = [_codex_finding()]
     out = tmp_path / "out.txt"
 
-    rc = main(
-        [
-            "check-gate",
-            "--repo",
-            "owner/repo",
-            "--pr-number",
-            "97",
-            "--head-sha",
-            HEAD_SHA,
-            "--trigger-comment-ids",
-            "10",
-            "--first-trigger-created-at",
-            "2026-05-31T10:00:00Z",
-            "--github-output",
-            str(out),
-        ]
-    )
+    rc = main(_check_gate_argv(out))
 
     assert rc == 0
     outputs = read_github_output(out)

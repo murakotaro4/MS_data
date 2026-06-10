@@ -34,6 +34,7 @@
   - ラベル監査: `labels LIMIT=0` → `audit-labels` / index監査: `audit-index`
 - 環境変数: `TTL`（キャッシュ既定7日）/ `RATE`（既定2.0 req/sec）/ `LIMIT`（0=全件）/ `NO_NET=1`（オフライン）/ `FORCE=1`（強制再取得）
 - フォーマット/リンタ/テスト: `uv run black .` / `uv run ruff check .` / `uv run pytest -q`
+- カバレッジ: `test-cov`（CI の `ci` ターゲットはこちらを実行）。`pyproject.toml` の `fail_under` を下回ると失敗します。閾値はテスト追加 PR ごとに「実測 -2pt」へ引き上げる運用（自動更新 PR の CI を巻き添えにしないため、実測より必ず低く保つ）
 
 ## スクレイピングとデータ仕様
 - SSOT: index（`cache/index.json`）の `name` を真実のソースとし、詳細抽出の `MS名` も index 表記で固定（LVは `_LVn` を付与）。読み込み・マージ時にも index 準拠へ正規化します。

@@ -1,5 +1,7 @@
 """audit_labels（ラベル揺らぎ監査）のテスト。"""
 
+import json
+
 from ms_data.audit.audit_labels import analyze, main
 from ms_data.core.labels import FIELD_MAP
 
@@ -40,17 +42,14 @@ def test_analyze_excludes_role_labels():
 
 def test_main_writes_report_skipping_broken_lines(tmp_path, capsys):
     src = tmp_path / "labels_raw.jsonl"
-    src.write_text(
-        "\n".join(
-            [
-                '{"raw_labels": ["' + KNOWN_LABEL + '"], '
-                '"normalized_labels": ["' + KNOWN_LABEL + '", "謎ラベル"]}',
-                "{broken json}",
-                "",
-            ]
-        ),
-        encoding="utf-8",
+    valid_line = json.dumps(
+        {
+            "raw_labels": [KNOWN_LABEL],
+            "normalized_labels": [KNOWN_LABEL, "謎ラベル"],
+        },
+        ensure_ascii=False,
     )
+    src.write_text("\n".join([valid_line, "{broken json}", ""]), encoding="utf-8")
     out = tmp_path / "label_audit.md"
 
     rc = main(["--in", str(src), "--out", str(out)])
