@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from scripts import validate_generated_reports
+from ms_data.validation import validate_generated_reports
 
 
 def _write_json(path: Path, data: object) -> None:
