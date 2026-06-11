@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+"""タスクランナー: `uv run python -m ms_data.tasks <target>` の実装。
+
+各 task_* 関数が1ターゲットに対応し、環境変数で入出力パスや動作を
+上書きできる（例: `MSDATA=path/to.json uv run python -m ms_data.tasks validate`）。
+ターゲット一覧は TASKS（または `tasks help`）を参照。
+実処理は各モジュールにあり、ここではサブプロセスとして起動するだけ。
+"""
 from __future__ import annotations
 
 import json
@@ -19,6 +26,34 @@ from ms_data.core.json_io import load_json as _load_json_file
 
 INDEX_URL = "https://w.atwiki.jp/battle-operation2/pages/377.html"
 
+# 既定パス・既定値（対応する環境変数で上書き可能）
+DEFAULT_MSDATA = "msData.json"  # MSDATA
+DEFAULT_TTL = "7d"  # TTL
+DEFAULT_INDEX_OUT = "cache/index.json"  # INDEX_OUT
+DEFAULT_DETAILS_OUT = "cache/details.jsonl"  # DETAILS_OUT
+DEFAULT_DETAILS_JSON = "cache/details.json"  # DETAILS_JSON
+DEFAULT_HTML_DIR = "cache/html"  # HTML_DIR
+DEFAULT_REPORTS_DIR = "reports"  # REPORTS_DIR
+DEFAULT_LABELS_OUT = "cache/labels_raw.jsonl"  # LABELS_OUT
+DEFAULT_OVERRIDES_DIR = "data/official_overrides"  # OFFICIAL_OVERRIDES_DIR
+DEFAULT_SKILLS_OUT = "cache/skills.json"  # SKILLS_OUT
+DEFAULT_SKILLS_TABLE_OUT = "cache/skills_table.json"  # SKILLS_TABLE_OUT
+DEFAULT_OWNERS_TABLE_OUT = "cache/owners_table.json"  # OWNERS_TABLE_OUT
+DEFAULT_SKILLS_POLICY = "data/skills_policy.json"  # SKILLS_POLICY
+DEFAULT_SKILL_OWNERS_OUT = "data/skill_owners.json"  # SKILL_OWNERS_OUT
+DEFAULT_SKILL_OWNERS_FLAT_OUT = "data/skill_owners_flat.json"  # SKILL_OWNERS_FLAT_OUT
+DEFAULT_SKILLS_PARAMS_OUT = "data/skills_params.json"  # SKILLS_PARAMS_OUT
+
+
+# ---------------------------------------------------------------------------
+# 共通ヘルパー
+# ---------------------------------------------------------------------------
+
+
+def _env(name: str, default: str) -> str:
+    """default 付き env_str の str 確定版（戻り値が None にならない）。"""
+    return _env_str(name, default) or default
+
 
 def _today() -> str:
     return datetime.now().strftime("%Y%m%d")
@@ -34,44 +69,58 @@ def _run_python_module(module: str, *args: str) -> int:
 
 
 def _require_env(name: str) -> str:
+    """必須の環境変数を取得する（未設定なら即終了）。"""
     value = _env_str(name)
     if value is None:
         raise SystemExit(f"ERROR: environment variable {name} is required")
     return value
 
 
+def _network_flags() -> list[str]:
+    """NO_NET / FORCE 環境変数をスクレイパー共通の CLI フラグに変換する。"""
+    flags: list[str] = []
+    if _env_flag("NO_NET"):
+        flags.append("--no-network")
+    if _env_flag("FORCE"):
+        flags.append("--force")
+    return flags
+
+
 def _report_date() -> str:
-    return _env_str("REPORT_DATE", _today()) or _today()
+    return _env("REPORT_DATE", _today())
 
 
 def _provenance_out() -> str:
-    return _env_str("PROVENANCE_OUT", f"reports/provenance_{_report_date()}.json") or ""
+    return _env("PROVENANCE_OUT", f"reports/provenance_{_report_date()}.json")
 
 
 def _raw_snapshot_file() -> str:
-    return (
-        _env_str("RAW_SNAPSHOT_FILE", f"raw_snapshot_{_report_date()}_runlocal.tar.xz")
-        or ""
-    )
+    return _env("RAW_SNAPSHOT_FILE", f"raw_snapshot_{_report_date()}_runlocal.tar.xz")
 
 
 def _changed_index_out() -> str:
-    return _env_str("CHANGED_INDEX_OUT", "cache/index_changed.json") or ""
+    return _env("CHANGED_INDEX_OUT", "cache/index_changed.json")
 
 
 def _changed_meta_out() -> str:
-    return _env_str("CHANGED_META_OUT", "cache/index_changed_meta.json") or ""
+    return _env("CHANGED_META_OUT", "cache/index_changed_meta.json")
 
 
 def _detail_fetch_state() -> str:
-    return _env_str("DETAIL_FETCH_STATE", "cache/detail_fetch_state.json") or ""
+    return _env("DETAIL_FETCH_STATE", "cache/detail_fetch_state.json")
 
 
 def _fast_ttl() -> str:
-    return _env_str("FAST_TTL", _env_str("TTL", "1h")) or "1h"
+    return _env("FAST_TTL", _env("TTL", "1h"))
 
 
 def _can_use_changed_only(changed_index: list[dict], meta: dict) -> bool:
+    """detect-changed の結果が --changed-only での詳細取得に安全かを判定する。
+
+    fast_path でない、または「更新があった」以外の理由（新規・コスト変更等）が
+    混ざっている場合は、セマンティック変化なしでもレコード再生成が必要なため
+    changed-only は使えない。
+    """
     if not bool(meta.get("fast_path", False)):
         return False
     changed_only_safe_reasons = {"recent_update"}
@@ -82,6 +131,11 @@ def _can_use_changed_only(changed_index: list[dict], meta: dict) -> bool:
         if set(reasons) - changed_only_safe_reasons:
             return False
     return True
+
+
+# ---------------------------------------------------------------------------
+# 開発ツール・品質チェック
+# ---------------------------------------------------------------------------
 
 
 def task_help() -> int:
@@ -114,35 +168,8 @@ def task_test_cov() -> int:
     return _run_python_module("pytest", "-q", "--cov")
 
 
-def task_validate() -> int:
-    msdata = _env_str("MSDATA", "msData.json") or "msData.json"
-    return _run_python_module("ms_data.validation.validate_msdata", msdata)
-
-
-def task_validate_strict() -> int:
-    msdata = _env_str("MSDATA", "msData.json") or "msData.json"
-    return _run_python_module(
-        "ms_data.validation.validate_msdata", msdata, "--fail-on-typo"
-    )
-
-
-def task_validate_skills() -> int:
-    return _run_python_module("ms_data.validation.validate_skills_data")
-
-
-def task_update() -> int:
-    args = ["-i"]
-    input_path = _env_str("INPUT")
-    if input_path:
-        args.append(input_path)
-    return _run_python_module("ms_data.pipeline.update_msdata", *args)
-
-
-def task_normalize() -> int:
-    return _run_python_module("ms_data.pipeline.update_msdata", "-i")
-
-
 def task_ci() -> int:
+    """品質チェック一括（lint / カバレッジ付きテスト / 各種検証）。"""
     for task_name in (
         "validate-report-contract",
         "validate-generated-reports",
@@ -159,20 +186,93 @@ def task_ci() -> int:
     return 0
 
 
+# ---------------------------------------------------------------------------
+# バリデーション
+# ---------------------------------------------------------------------------
+
+
+def task_validate() -> int:
+    return _run_python_module(
+        "ms_data.validation.validate_msdata", _env("MSDATA", DEFAULT_MSDATA)
+    )
+
+
+def task_validate_strict() -> int:
+    return _run_python_module(
+        "ms_data.validation.validate_msdata",
+        _env("MSDATA", DEFAULT_MSDATA),
+        "--fail-on-typo",
+    )
+
+
+def task_validate_skills() -> int:
+    return _run_python_module("ms_data.validation.validate_skills_data")
+
+
+def task_validate_official_overrides_schema() -> int:
+    return _run_python_module(
+        "ms_data.validation.validate_official_overrides_schema",
+        "--overrides-dir",
+        _env("OFFICIAL_OVERRIDES_DIR", DEFAULT_OVERRIDES_DIR),
+        "--schema",
+        _env("OFFICIAL_OVERRIDES_SCHEMA", "schema/official_overrides.schema.json"),
+    )
+
+
+def task_validate_report_contract() -> int:
+    return _run_python_module(
+        "ms_data.validation.validate_report_contract",
+        "--mode",
+        _env("MODE", "ci"),
+        "--manifest",
+        _env("REPORTS_MANIFEST", "reports_manifest.yml"),
+        "--reports-dir",
+        _env("REPORTS_DIR", DEFAULT_REPORTS_DIR),
+        "--report-date",
+        _env("REPORT_DATE", ""),
+        "--source-run-id",
+        _env("SOURCE_RUN_ID", ""),
+        "--head-ref",
+        _env("HEAD_REF", ""),
+        "--diff-path",
+        _env("DIFF_PATH", ""),
+        "--provenance-path",
+        _env("PROVENANCE_PATH", ""),
+        "--artifact-name",
+        _env("ARTIFACT_NAME", ""),
+        "--snapshot-file",
+        _env("SNAPSHOT_FILE", ""),
+        "--release-tag",
+        _env("RELEASE_TAG", ""),
+    )
+
+
+def task_validate_generated_reports() -> int:
+    return _run_python_module(
+        "ms_data.validation.validate_generated_reports",
+        "--reports-dir",
+        _env("REPORTS_DIR", DEFAULT_REPORTS_DIR),
+        "--schema-dir",
+        _env("REPORT_SCHEMA_DIR", "schema/reports"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# スクレイピング・差分検出
+# ---------------------------------------------------------------------------
+
+
 def task_scrape_index() -> int:
     args = [
         "index",
         "--url",
-        _env_str("INDEX_URL", INDEX_URL) or INDEX_URL,
+        _env("INDEX_URL", INDEX_URL),
         "--out",
-        _env_str("INDEX_OUT", "cache/index.json") or "cache/index.json",
+        _env("INDEX_OUT", DEFAULT_INDEX_OUT),
         "--ttl",
-        _env_str("TTL", "7d") or "7d",
+        _env("TTL", DEFAULT_TTL),
+        *_network_flags(),
     ]
-    if _env_flag("NO_NET"):
-        args.append("--no-network")
-    if _env_flag("FORCE"):
-        args.append("--force")
     return _run_python_module("ms_data.scraping.scrape_msdata", *args)
 
 
@@ -180,22 +280,19 @@ def task_scrape_details() -> int:
     args = [
         "details",
         "--in",
-        _env_str("DETAILS_IN", "cache/index.json") or "cache/index.json",
+        _env("DETAILS_IN", DEFAULT_INDEX_OUT),
         "--out",
-        _env_str("DETAILS_OUT", "cache/details.jsonl") or "cache/details.jsonl",
+        _env("DETAILS_OUT", DEFAULT_DETAILS_OUT),
         "--rate",
         str(_env_float("RATE", 2.0)),
         "--limit",
         str(_env_int("LIMIT", 0)),
         "--ttl",
-        _env_str("TTL", "7d") or "7d",
+        _env("TTL", DEFAULT_TTL),
         "--detail-fetch-state-out",
         _detail_fetch_state(),
+        *_network_flags(),
     ]
-    if _env_flag("NO_NET"):
-        args.append("--no-network")
-    if _env_flag("FORCE"):
-        args.append("--force")
     if _env_flag("CHANGED_ONLY"):
         args.append("--changed-only")
     return _run_python_module("ms_data.scraping.scrape_msdata", *args)
@@ -205,20 +302,17 @@ def task_scrape_all() -> int:
     args = [
         "all",
         "--out",
-        _env_str("DETAILS_OUT", "cache/details.jsonl") or "cache/details.jsonl",
+        _env("DETAILS_OUT", DEFAULT_DETAILS_OUT),
         "--rate",
         str(_env_float("RATE", 2.0)),
         "--limit",
         str(_env_int("LIMIT", 0)),
         "--ttl",
-        _env_str("TTL", "7d") or "7d",
+        _env("TTL", DEFAULT_TTL),
         "--detail-fetch-state-out",
         _detail_fetch_state(),
+        *_network_flags(),
     ]
-    if _env_flag("NO_NET"):
-        args.append("--no-network")
-    if _env_flag("FORCE"):
-        args.append("--force")
     if _env_flag("CHANGED_ONLY"):
         args.append("--changed-only")
     return _run_python_module("ms_data.scraping.scrape_msdata", *args)
@@ -228,21 +322,21 @@ def task_detect_changed() -> int:
     args = [
         "detect-changed",
         "--in",
-        _env_str("INDEX_OUT", "cache/index.json") or "cache/index.json",
+        _env("INDEX_OUT", DEFAULT_INDEX_OUT),
         "--out",
         _changed_index_out(),
         "--meta-out",
         _changed_meta_out(),
         "--reports-dir",
-        _env_str("REPORTS_DIR", "reports") or "reports",
+        _env("REPORTS_DIR", DEFAULT_REPORTS_DIR),
         "--msdata",
-        _env_str("MSDATA", "msData.json") or "msData.json",
+        _env("MSDATA", DEFAULT_MSDATA),
         "--freshness-window",
-        _env_str("FRESHNESS_WINDOW", "1h") or "1h",
+        _env("FRESHNESS_WINDOW", "1h"),
         "--detail-fetch-state",
         _detail_fetch_state(),
         "--stale-detail-days",
-        _env_str("STALE_DETAIL_DAYS", "14") or "14",
+        _env("STALE_DETAIL_DAYS", "14"),
         "--min-age-coverage",
         str(_env_float("MIN_AGE_COVERAGE", 0.95)),
     ]
@@ -260,6 +354,16 @@ def task_detect_changed() -> int:
 
 
 def task_update_fast() -> int:
+    """差分のみ取得する高速更新（毎日の自動更新が使う一気通貫フロー）。
+
+    流れ:
+    1. index 取得（FAST_TTL、既定 1h）
+    2. detect-changed で再取得候補を選定 → 候補ゼロなら終了
+    3. 候補理由がすべて recent_update なら --changed-only + TTL 0s で
+       詳細取得（セマンティック変化のないページはパースをスキップ）。
+       それ以外の理由が混ざる場合は通常取得
+    4. 取得結果があれば import-details → validate-strict
+    """
     ttl = _fast_ttl()
     rate = str(_env_float("RATE", 2.0))
     limit = str(_env_int("LIMIT", 0))
@@ -268,13 +372,12 @@ def task_update_fast() -> int:
         "ms_data.scraping.scrape_msdata",
         "index",
         "--url",
-        _env_str("INDEX_URL", INDEX_URL) or INDEX_URL,
+        _env("INDEX_URL", INDEX_URL),
         "--out",
-        _env_str("INDEX_OUT", "cache/index.json") or "cache/index.json",
+        _env("INDEX_OUT", DEFAULT_INDEX_OUT),
         "--ttl",
         ttl,
-        *(["--no-network"] if _env_flag("NO_NET") else []),
-        *(["--force"] if _env_flag("FORCE") else []),
+        *_network_flags(),
     )
     if rc != 0:
         return rc
@@ -315,7 +418,7 @@ def task_update_fast() -> int:
         "--in",
         _changed_index_out(),
         "--out",
-        _env_str("DETAILS_OUT", "cache/details.jsonl") or "cache/details.jsonl",
+        _env("DETAILS_OUT", DEFAULT_DETAILS_OUT),
         "--rate",
         rate,
         "--limit",
@@ -324,8 +427,7 @@ def task_update_fast() -> int:
         detail_ttl,
         "--detail-fetch-state-out",
         _detail_fetch_state(),
-        *(["--no-network"] if _env_flag("NO_NET") else []),
-        *(["--force"] if _env_flag("FORCE") else []),
+        *_network_flags(),
     ]
     if use_changed_only:
         details_args.append("--changed-only")
@@ -337,9 +439,7 @@ def task_update_fast() -> int:
     if rc != 0:
         return rc
 
-    details_jsonl = Path(
-        _env_str("DETAILS_OUT", "cache/details.jsonl") or "cache/details.jsonl"
-    )
+    details_jsonl = Path(_env("DETAILS_OUT", DEFAULT_DETAILS_OUT))
     if not details_jsonl.exists() or details_jsonl.stat().st_size == 0:
         print("update-fast: details output is empty, skip import/validate")
         return 0
@@ -350,13 +450,45 @@ def task_update_fast() -> int:
     return task_validate_strict()
 
 
+def task_labels() -> int:
+    args = [
+        "labels",
+        "--in",
+        _env("INDEX_OUT", DEFAULT_INDEX_OUT),
+        "--out",
+        _env("LABELS_OUT", DEFAULT_LABELS_OUT),
+        "--rate",
+        str(_env_float("RATE", 2.0)),
+        "--limit",
+        str(_env_int("LIMIT", 0)),
+        "--ttl",
+        _env("TTL", DEFAULT_TTL),
+        *_network_flags(),
+    ]
+    return _run_python_module("ms_data.scraping.scrape_msdata", *args)
+
+
+# ---------------------------------------------------------------------------
+# 取込・正規化
+# ---------------------------------------------------------------------------
+
+
+def task_update() -> int:
+    args = ["-i"]
+    input_path = _env_str("INPUT")
+    if input_path:
+        args.append(input_path)
+    return _run_python_module("ms_data.pipeline.update_msdata", *args)
+
+
+def task_normalize() -> int:
+    return _run_python_module("ms_data.pipeline.update_msdata", "-i")
+
+
 def task_import_details() -> int:
-    details_jsonl = (
-        _env_str("DETAILS_OUT", "cache/details.jsonl") or "cache/details.jsonl"
-    )
-    details_json = (
-        _env_str("DETAILS_JSON", "cache/details.json") or "cache/details.json"
-    )
+    """details.jsonl → details.json 変換 → msData.json へマージ。"""
+    details_jsonl = _env("DETAILS_OUT", DEFAULT_DETAILS_OUT)
+    details_json = _env("DETAILS_JSON", DEFAULT_DETAILS_JSON)
     rc = _run_python_module(
         "ms_data.pipeline.jsonl_to_json", details_jsonl, details_json
     )
@@ -365,36 +497,9 @@ def task_import_details() -> int:
     return _run_python_module("ms_data.pipeline.update_msdata", "-i", details_json)
 
 
-def task_labels() -> int:
-    args = [
-        "labels",
-        "--in",
-        _env_str("INDEX_OUT", "cache/index.json") or "cache/index.json",
-        "--out",
-        _env_str("LABELS_OUT", "cache/labels_raw.jsonl") or "cache/labels_raw.jsonl",
-        "--rate",
-        str(_env_float("RATE", 2.0)),
-        "--limit",
-        str(_env_int("LIMIT", 0)),
-        "--ttl",
-        _env_str("TTL", "7d") or "7d",
-    ]
-    if _env_flag("NO_NET"):
-        args.append("--no-network")
-    if _env_flag("FORCE"):
-        args.append("--force")
-    return _run_python_module("ms_data.scraping.scrape_msdata", *args)
-
-
-def task_audit_labels() -> int:
-    report_date = _report_date()
-    return _run_python_module(
-        "ms_data.audit.audit_labels",
-        "--in",
-        _env_str("LABELS_OUT", "cache/labels_raw.jsonl") or "cache/labels_raw.jsonl",
-        "--out",
-        _env_str("AUDIT_LABELS_OUT", f"reports/label_audit_{report_date}.md") or "",
-    )
+# ---------------------------------------------------------------------------
+# レポート・プロビナンス・スナップショット
+# ---------------------------------------------------------------------------
 
 
 def task_report_diff() -> int:
@@ -411,34 +516,31 @@ def task_report_diff() -> int:
 
 def task_provenance() -> int:
     report_date = _report_date()
-    msdata = _env_str("MSDATA", "msData.json") or "msData.json"
     args = [
         "--date",
         report_date,
         "--index",
-        _env_str("INDEX_OUT", "cache/index.json") or "cache/index.json",
+        _env("INDEX_OUT", DEFAULT_INDEX_OUT),
         "--details-jsonl",
-        _env_str("DETAILS_OUT", "cache/details.jsonl") or "cache/details.jsonl",
+        _env("DETAILS_OUT", DEFAULT_DETAILS_OUT),
         "--details-json",
-        _env_str("DETAILS_JSON", "cache/details.json") or "cache/details.json",
+        _env("DETAILS_JSON", DEFAULT_DETAILS_JSON),
         "--msdata",
-        msdata,
+        _env("MSDATA", DEFAULT_MSDATA),
         "--diff",
-        _env_str("DIFF_OUT", f"reports/diff_msdata_{report_date}.md")
-        or f"reports/diff_msdata_{report_date}.md",
+        _env("DIFF_OUT", f"reports/diff_msdata_{report_date}.md"),
         "--html-dir",
-        _env_str("HTML_DIR", "cache/html") or "cache/html",
+        _env("HTML_DIR", DEFAULT_HTML_DIR),
         "--out",
         _provenance_out(),
         "--ttl",
-        _env_str("TTL", "7d") or "7d",
+        _env("TTL", DEFAULT_TTL),
         "--rate",
         str(_env_float("RATE", 2.0)),
         "--limit",
         str(_env_int("LIMIT", 0)),
         "--artifact-name",
-        _env_str("RAW_ARTIFACT_NAME", f"raw-snapshot-{report_date}-run-local")
-        or f"raw-snapshot-{report_date}-run-local",
+        _env("RAW_ARTIFACT_NAME", f"raw-snapshot-{report_date}-run-local"),
         "--artifact-retention-days",
         str(_env_int("ARTIFACT_RETENTION_DAYS", 90)),
     ]
@@ -446,6 +548,7 @@ def task_provenance() -> int:
 
 
 def task_snapshot() -> int:
+    """プロビナンス生成後、取得物一式を tar.xz にアーカイブする。"""
     rc = task_provenance()
     if rc != 0:
         return rc
@@ -453,16 +556,13 @@ def task_snapshot() -> int:
     report_date = _report_date()
     snapshot_path = Path(_raw_snapshot_file())
     files = [
-        Path(_env_str("HTML_DIR", "cache/html") or "cache/html"),
-        Path(_env_str("INDEX_OUT", "cache/index.json") or "cache/index.json"),
-        Path(_env_str("DETAILS_OUT", "cache/details.jsonl") or "cache/details.jsonl"),
-        Path(_env_str("DETAILS_JSON", "cache/details.json") or "cache/details.json"),
+        Path(_env("HTML_DIR", DEFAULT_HTML_DIR)),
+        Path(_env("INDEX_OUT", DEFAULT_INDEX_OUT)),
+        Path(_env("DETAILS_OUT", DEFAULT_DETAILS_OUT)),
+        Path(_env("DETAILS_JSON", DEFAULT_DETAILS_JSON)),
         Path(_provenance_out()),
     ]
-    diff_path = Path(
-        _env_str("DIFF_OUT", f"reports/diff_msdata_{report_date}.md")
-        or f"reports/diff_msdata_{report_date}.md"
-    )
+    diff_path = Path(_env("DIFF_OUT", f"reports/diff_msdata_{report_date}.md"))
     if diff_path.exists():
         files.append(diff_path)
 
@@ -481,7 +581,7 @@ def task_restore_snapshot() -> int:
         "--snapshot",
         _require_env("SNAPSHOT"),
         "--out-dir",
-        _env_str("OUT_DIR", ".") or ".",
+        _env("OUT_DIR", "."),
     )
 
 
@@ -489,21 +589,65 @@ def task_verify_snapshot_restore() -> int:
     return _run_python_module(
         "ms_data.validation.verify_snapshot_restore",
         "--root",
-        _env_str("ROOT", ".") or ".",
+        _env("ROOT", "."),
+    )
+
+
+def task_atwiki_quality_report() -> int:
+    report_date = _report_date()
+    return _run_python_module(
+        "ms_data.reporting.build_atwiki_quality_report",
+        "--report-date",
+        report_date,
+        "--source-run-id",
+        _env("GITHUB_RUN_ID", "local"),
+        "--index",
+        _env("INDEX_OUT", DEFAULT_INDEX_OUT),
+        "--changed-index",
+        _changed_index_out(),
+        "--changed-meta",
+        _changed_meta_out(),
+        "--detail-fetch-state",
+        _detail_fetch_state(),
+        "--details-json",
+        _env("DETAILS_JSON", DEFAULT_DETAILS_JSON),
+        "--details-jsonl",
+        _env("DETAILS_OUT", DEFAULT_DETAILS_OUT),
+        "--before-msdata",
+        _env("BEFORE", "msData.before.json"),
+        "--current-msdata",
+        _env("MSDATA", DEFAULT_MSDATA),
+        "--out",
+        _env("ATWIKI_QUALITY_OUT", f"reports/atwiki_quality_{report_date}.json"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# 監査
+# ---------------------------------------------------------------------------
+
+
+def task_audit_labels() -> int:
+    report_date = _report_date()
+    return _run_python_module(
+        "ms_data.audit.audit_labels",
+        "--in",
+        _env("LABELS_OUT", DEFAULT_LABELS_OUT),
+        "--out",
+        _env("AUDIT_LABELS_OUT", f"reports/label_audit_{report_date}.md"),
     )
 
 
 def task_audit_index() -> int:
     report_date = _report_date()
-    msdata = _env_str("MSDATA", "msData.json") or "msData.json"
     return _run_python_module(
         "ms_data.audit.audit_index_vs_msdata",
         "--index",
-        _env_str("INDEX_OUT", "cache/index.json") or "cache/index.json",
+        _env("INDEX_OUT", DEFAULT_INDEX_OUT),
         "--ms",
-        msdata,
+        _env("MSDATA", DEFAULT_MSDATA),
         "--out",
-        _env_str("AUDIT_INDEX_OUT", f"reports/index_ms_audit_{report_date}.md") or "",
+        _env("AUDIT_INDEX_OUT", f"reports/index_ms_audit_{report_date}.md"),
     )
 
 
@@ -515,11 +659,9 @@ def task_rollback_guard() -> int:
         "--new",
         _require_env("NEW"),
         "--official-overrides-dir",
-        _env_str("OFFICIAL_OVERRIDES_DIR", "data/official_overrides")
-        or "data/official_overrides",
+        _env("OFFICIAL_OVERRIDES_DIR", DEFAULT_OVERRIDES_DIR),
         "--out",
-        _env_str("ROLLBACK_GUARD_OUT", f"reports/rollback_guard_{report_date}.md")
-        or f"reports/rollback_guard_{report_date}.md",
+        _env("ROLLBACK_GUARD_OUT", f"reports/rollback_guard_{report_date}.md"),
     ]
     if _env_flag("FAIL_ON_PROTECTED_ROLLBACK"):
         args.append("--fail-on-protected-rollback")
@@ -530,16 +672,14 @@ def task_audit_official_overrides() -> int:
     report_date = _report_date()
     args = [
         "--overrides-dir",
-        _env_str("OFFICIAL_OVERRIDES_DIR", "data/official_overrides")
-        or "data/official_overrides",
+        _env("OFFICIAL_OVERRIDES_DIR", DEFAULT_OVERRIDES_DIR),
         "--current",
-        _env_str("CURRENT", "msData.json") or "msData.json",
+        _env("CURRENT", DEFAULT_MSDATA),
         "--out",
-        _env_str(
+        _env(
             "OFFICIAL_OVERRIDES_AUDIT_OUT",
             f"reports/official_overrides_audit_{report_date}.md",
-        )
-        or f"reports/official_overrides_audit_{report_date}.md",
+        ),
     ]
     raw = _env_str("RAW")
     before = _env_str("BEFORE")
@@ -557,63 +697,30 @@ def task_audit_official_overrides() -> int:
     return _run_python_module("ms_data.audit.audit_official_overrides", *args)
 
 
-def task_validate_official_overrides_schema() -> int:
+def task_audit_skills() -> int:
     return _run_python_module(
-        "ms_data.validation.validate_official_overrides_schema",
-        "--overrides-dir",
-        _env_str("OFFICIAL_OVERRIDES_DIR", "data/official_overrides")
-        or "data/official_overrides",
-        "--schema",
-        _env_str("OFFICIAL_OVERRIDES_SCHEMA", "schema/official_overrides.schema.json")
-        or "schema/official_overrides.schema.json",
+        "ms_data.audit.audit_skills",
+        "--owners",
+        _env("SKILL_OWNERS_OUT", DEFAULT_SKILL_OWNERS_OUT),
+        "--msdata",
+        _env("MSDATA", DEFAULT_MSDATA),
     )
 
 
-def task_atwiki_quality_report() -> int:
-    report_date = _report_date()
-    return _run_python_module(
-        "ms_data.reporting.build_atwiki_quality_report",
-        "--report-date",
-        report_date,
-        "--source-run-id",
-        _env_str("GITHUB_RUN_ID", "local") or "local",
-        "--index",
-        _env_str("INDEX_OUT", "cache/index.json") or "cache/index.json",
-        "--changed-index",
-        _env_str("CHANGED_INDEX_OUT", "cache/index_changed.json")
-        or "cache/index_changed.json",
-        "--changed-meta",
-        _env_str("CHANGED_META_OUT", "cache/index_changed_meta.json")
-        or "cache/index_changed_meta.json",
-        "--detail-fetch-state",
-        _env_str("DETAIL_FETCH_STATE", "cache/detail_fetch_state.json")
-        or "cache/detail_fetch_state.json",
-        "--details-json",
-        _env_str("DETAILS_JSON", "cache/details.json") or "cache/details.json",
-        "--details-jsonl",
-        _env_str("DETAILS_OUT", "cache/details.jsonl") or "cache/details.jsonl",
-        "--before-msdata",
-        _env_str("BEFORE", "msData.before.json") or "msData.before.json",
-        "--current-msdata",
-        _env_str("MSDATA", "msData.json") or "msData.json",
-        "--out",
-        _env_str("ATWIKI_QUALITY_OUT", f"reports/atwiki_quality_{report_date}.json")
-        or f"reports/atwiki_quality_{report_date}.json",
-    )
+# ---------------------------------------------------------------------------
+# スキルデータ
+# ---------------------------------------------------------------------------
 
 
 def task_skills() -> int:
     args = [
         "all",
         "--out",
-        _env_str("SKILLS_OUT", "cache/skills.json") or "cache/skills.json",
+        _env("SKILLS_OUT", DEFAULT_SKILLS_OUT),
         "--ttl",
-        _env_str("TTL", "7d") or "7d",
+        _env("TTL", DEFAULT_TTL),
+        *_network_flags(),
     ]
-    if _env_flag("NO_NET"):
-        args.append("--no-network")
-    if _env_flag("FORCE"):
-        args.append("--force")
     return _run_python_module("ms_data.scraping.extract_skills", *args)
 
 
@@ -621,15 +728,11 @@ def task_skills_table() -> int:
     args = [
         "table",
         "--out",
-        _env_str("SKILLS_TABLE_OUT", "cache/skills_table.json")
-        or "cache/skills_table.json",
+        _env("SKILLS_TABLE_OUT", DEFAULT_SKILLS_TABLE_OUT),
         "--ttl",
-        _env_str("TTL", "7d") or "7d",
+        _env("TTL", DEFAULT_TTL),
+        *_network_flags(),
     ]
-    if _env_flag("NO_NET"):
-        args.append("--no-network")
-    if _env_flag("FORCE"):
-        args.append("--force")
     return _run_python_module("ms_data.scraping.extract_skills", *args)
 
 
@@ -637,15 +740,11 @@ def task_owners_table() -> int:
     args = [
         "owners-table",
         "--out",
-        _env_str("OWNERS_TABLE_OUT", "cache/owners_table.json")
-        or "cache/owners_table.json",
+        _env("OWNERS_TABLE_OUT", DEFAULT_OWNERS_TABLE_OUT),
         "--ttl",
-        _env_str("TTL", "7d") or "7d",
+        _env("TTL", DEFAULT_TTL),
+        *_network_flags(),
     ]
-    if _env_flag("NO_NET"):
-        args.append("--no-network")
-    if _env_flag("FORCE"):
-        args.append("--force")
     return _run_python_module("ms_data.scraping.extract_skills", *args)
 
 
@@ -653,13 +752,11 @@ def task_build_skills() -> int:
     return _run_python_module(
         "ms_data.skills.build_skills",
         "--in",
-        _env_str("SKILLS_OUT", "cache/skills.json") or "cache/skills.json",
+        _env("SKILLS_OUT", DEFAULT_SKILLS_OUT),
         "--out-catalog",
-        _env_str("SKILLS_CATALOG_OUT", "data/skills_catalog.json")
-        or "data/skills_catalog.json",
+        _env("SKILLS_CATALOG_OUT", "data/skills_catalog.json"),
         "--out-owners",
-        _env_str("SKILL_OWNERS_OUT", "data/skill_owners.json")
-        or "data/skill_owners.json",
+        _env("SKILL_OWNERS_OUT", DEFAULT_SKILL_OWNERS_OUT),
     )
 
 
@@ -667,17 +764,13 @@ def task_build_param_skills() -> int:
     return _run_python_module(
         "ms_data.skills.build_param_skills",
         "--in",
-        _env_str("SKILLS_TABLE_OUT", "cache/skills_table.json")
-        or "cache/skills_table.json",
+        _env("SKILLS_TABLE_OUT", DEFAULT_SKILLS_TABLE_OUT),
         "--out",
-        _env_str("SKILLS_PARAMS_OUT", "data/skills_params.json")
-        or "data/skills_params.json",
+        _env("SKILLS_PARAMS_OUT", DEFAULT_SKILLS_PARAMS_OUT),
         "--policy",
-        _env_str("SKILLS_POLICY", "data/skills_policy.json")
-        or "data/skills_policy.json",
+        _env("SKILLS_POLICY", DEFAULT_SKILLS_POLICY),
         "--audit-out",
-        _env_str("SKILLS_PARAMS_AUDIT_OUT", "reports/skills_params_audit.json")
-        or "reports/skills_params_audit.json",
+        _env("SKILLS_PARAMS_AUDIT_OUT", "reports/skills_params_audit.json"),
     )
 
 
@@ -685,30 +778,15 @@ def task_build_owners_flat() -> int:
     return _run_python_module(
         "ms_data.skills.build_owners_flat",
         "--in",
-        _env_str("OWNERS_TABLE_OUT", "cache/owners_table.json")
-        or "cache/owners_table.json",
+        _env("OWNERS_TABLE_OUT", DEFAULT_OWNERS_TABLE_OUT),
         "--msdata",
-        _env_str("MSDATA", "msData.json") or "msData.json",
+        _env("MSDATA", DEFAULT_MSDATA),
         "--policy",
-        _env_str("SKILLS_POLICY", "data/skills_policy.json")
-        or "data/skills_policy.json",
+        _env("SKILLS_POLICY", DEFAULT_SKILLS_POLICY),
         "--out",
-        _env_str("SKILL_OWNERS_FLAT_OUT", "data/skill_owners_flat.json")
-        or "data/skill_owners_flat.json",
+        _env("SKILL_OWNERS_FLAT_OUT", DEFAULT_SKILL_OWNERS_FLAT_OUT),
         "--audit-out",
-        _env_str("OWNERS_FLAT_AUDIT_OUT", "reports/owners_flat_audit.json")
-        or "reports/owners_flat_audit.json",
-    )
-
-
-def task_audit_skills() -> int:
-    return _run_python_module(
-        "ms_data.audit.audit_skills",
-        "--owners",
-        _env_str("SKILL_OWNERS_OUT", "data/skill_owners.json")
-        or "data/skill_owners.json",
-        "--msdata",
-        _env_str("MSDATA", "msData.json") or "msData.json",
+        _env("OWNERS_FLAT_AUDIT_OUT", "reports/owners_flat_audit.json"),
     )
 
 
@@ -716,55 +794,13 @@ def task_preview_params() -> int:
     return _run_python_module(
         "ms_data.skills.preview_params",
         "--msdata",
-        _env_str("MSDATA", "msData.json") or "msData.json",
+        _env("MSDATA", DEFAULT_MSDATA),
         "--owners",
-        _env_str("SKILL_OWNERS_FLAT_OUT", "data/skill_owners_flat.json")
-        or "data/skill_owners_flat.json",
+        _env("SKILL_OWNERS_FLAT_OUT", DEFAULT_SKILL_OWNERS_FLAT_OUT),
         "--params",
-        _env_str("SKILLS_PARAMS_OUT", "data/skills_params.json")
-        or "data/skills_params.json",
+        _env("SKILLS_PARAMS_OUT", DEFAULT_SKILLS_PARAMS_OUT),
         "--out",
-        _env_str("PREVIEW_PARAMS_OUT", "derived/ms_params_preview.json")
-        or "derived/ms_params_preview.json",
-    )
-
-
-def task_validate_report_contract() -> int:
-    mode = _env_str("MODE", "ci") or "ci"
-    args = [
-        "--mode",
-        mode,
-        "--manifest",
-        _env_str("REPORTS_MANIFEST", "reports_manifest.yml") or "reports_manifest.yml",
-        "--reports-dir",
-        _env_str("REPORTS_DIR", "reports") or "reports",
-        "--report-date",
-        _env_str("REPORT_DATE", "") or "",
-        "--source-run-id",
-        _env_str("SOURCE_RUN_ID", "") or "",
-        "--head-ref",
-        _env_str("HEAD_REF", "") or "",
-        "--diff-path",
-        _env_str("DIFF_PATH", "") or "",
-        "--provenance-path",
-        _env_str("PROVENANCE_PATH", "") or "",
-        "--artifact-name",
-        _env_str("ARTIFACT_NAME", "") or "",
-        "--snapshot-file",
-        _env_str("SNAPSHOT_FILE", "") or "",
-        "--release-tag",
-        _env_str("RELEASE_TAG", "") or "",
-    ]
-    return _run_python_module("ms_data.validation.validate_report_contract", *args)
-
-
-def task_validate_generated_reports() -> int:
-    return _run_python_module(
-        "ms_data.validation.validate_generated_reports",
-        "--reports-dir",
-        _env_str("REPORTS_DIR", "reports") or "reports",
-        "--schema-dir",
-        _env_str("REPORT_SCHEMA_DIR", "schema/reports") or "schema/reports",
+        _env("PREVIEW_PARAMS_OUT", "derived/ms_params_preview.json"),
     )
 
 
