@@ -11,7 +11,7 @@ import json
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List
+from collections.abc import Iterable
 
 from ms_data.core.labels import FIELD_MAP, clean_text
 
@@ -19,7 +19,7 @@ from ms_data.core.labels import FIELD_MAP, clean_text
 EXCLUDE_LABELS = {"汎用", "強襲", "支援"}
 
 
-def load_jsonl(path: Path) -> Iterable[Dict]:
+def load_jsonl(path: Path) -> Iterable[dict]:
     with path.open("r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -39,7 +39,7 @@ class Stats:
     unknown_norm: Counter
 
 
-def analyze(records: Iterable[Dict]) -> Stats:
+def analyze(records: Iterable[dict]) -> Stats:
     raw = Counter()
     norm = Counter()
     unknown = Counter()
@@ -87,7 +87,7 @@ def write_report(stats: Stats, out: Path) -> None:
         f.write("- 出力JSONのキー揺れは KEY_ALIASES で吸収（別モジュール）\n")
 
 
-def main(argv: List[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--in", dest="input", default="cache/labels_raw.jsonl")
     ap.add_argument("--out", dest="out", default="reports/label_audit_latest.md")

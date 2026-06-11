@@ -18,10 +18,10 @@ import argparse
 import json
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 
-def name_to_id(name: str) -> Optional[str]:
+def name_to_id(name: str) -> str | None:
     m = name.strip()
     # 代表的なマッピング
     table = {
@@ -49,14 +49,14 @@ def name_to_id(name: str) -> Optional[str]:
     return None
 
 
-def build_catalog(data: Dict[str, Any]) -> Dict[str, Any]:
-    out: List[Dict[str, Any]] = []
+def build_catalog(data: dict[str, Any]) -> dict[str, Any]:
+    out: list[dict[str, Any]] = []
     for s in data.get("skills", []):
         name = s.get("name") or ""
         sid = name_to_id(name)
         if not sid:
             continue
-        entry: Dict[str, Any] = {"id": sid, "name": name, "levels": []}
+        entry: dict[str, Any] = {"id": sid, "name": name, "levels": []}
         # levels
         for lv in s.get("levels", []) or []:
             entry["levels"].append(
@@ -69,7 +69,7 @@ def build_catalog(data: Dict[str, Any]) -> Dict[str, Any]:
                 }
             )
         # phases（あれば）
-        phases_out: List[Dict[str, Any]] = []
+        phases_out: list[dict[str, Any]] = []
         for ph in s.get("phases", []) or []:
             ph_name = ph.get("name") or ""
             ph_id = name_to_id(ph_name) or ""
@@ -95,9 +95,9 @@ def build_catalog(data: Dict[str, Any]) -> Dict[str, Any]:
     return {"skills": out}
 
 
-def build_owners(data: Dict[str, Any]) -> Dict[str, Any]:
+def build_owners(data: dict[str, Any]) -> dict[str, Any]:
     # skill_owners: [{name, level, owners: [series, ...]}]
-    acc: Dict[str, Dict[str, int]] = {}
+    acc: dict[str, dict[str, int]] = {}
     for it in data.get("skill_owners", []) or []:
         sid = name_to_id(it.get("name", ""))
         if not sid:
@@ -111,7 +111,7 @@ def build_owners(data: Dict[str, Any]) -> Dict[str, Any]:
             # 同一スキルのレベルが複数ある場合は最大値採用（暫定）
             acc[series][sid] = max(acc[series].get(sid, 0), lvl)
 
-    owners: List[Dict[str, Any]] = []
+    owners: list[dict[str, Any]] = []
     for series in sorted(acc.keys()):
         skills = [
             {"id": sid, "level": lvl}
@@ -122,9 +122,13 @@ def build_owners(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Build skills_catalog.json and skill_owners.json from cache/skills.json")
+    ap = argparse.ArgumentParser(
+        description="Build skills_catalog.json and skill_owners.json from cache/skills.json"
+    )
     ap.add_argument("--in", dest="input", default="cache/skills.json")
-    ap.add_argument("--out-catalog", dest="out_catalog", default="data/skills_catalog.json")
+    ap.add_argument(
+        "--out-catalog", dest="out_catalog", default="data/skills_catalog.json"
+    )
     ap.add_argument("--out-owners", dest="out_owners", default="data/skill_owners.json")
     args = ap.parse_args()
 
@@ -137,10 +141,14 @@ def main() -> int:
     owners = build_owners(data)
 
     Path(args.out_catalog).parent.mkdir(parents=True, exist_ok=True)
-    Path(args.out_catalog).write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    Path(args.out_catalog).write_text(
+        json.dumps(catalog, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
 
     Path(args.out_owners).parent.mkdir(parents=True, exist_ok=True)
-    Path(args.out_owners).write_text(json.dumps(owners, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    Path(args.out_owners).write_text(
+        json.dumps(owners, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
 
     print(f"wrote: {args.out_catalog}\nwrote: {args.out_owners}")
     return 0
@@ -148,4 +156,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

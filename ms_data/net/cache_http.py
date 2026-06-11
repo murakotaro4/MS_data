@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional, Tuple, List
 import datetime as dt
 import hashlib
 import json
@@ -38,7 +37,7 @@ class CacheConfig:
     min_interval_seconds: float = 0.0
 
 
-def new_fetch_stats() -> Dict[str, int]:
+def new_fetch_stats() -> dict[str, int]:
     return {
         "network_requests": 0,
         "status_200": 0,
@@ -69,14 +68,12 @@ def _now_utc() -> dt.datetime:
 
 
 class CacheHTTP:
-    def __init__(
-        self, client: httpx.Client, config: Optional[CacheConfig] = None
-    ) -> None:
+    def __init__(self, client: httpx.Client, config: CacheConfig | None = None) -> None:
         self.client = client
         self.cfg = config or CacheConfig()
         self.cfg.root.mkdir(parents=True, exist_ok=True)
         self.stats = new_fetch_stats()
-        self._last_request_monotonic: Optional[float] = None
+        self._last_request_monotonic: float | None = None
 
     def _wait_rate_limit(self) -> None:
         if self.cfg.min_interval_seconds <= 0:
@@ -87,7 +84,7 @@ class CacheHTTP:
             if wait > 0:
                 time.sleep(wait)
 
-    def _request(self, url: str, headers: Dict[str, str]) -> httpx.Response:
+    def _request(self, url: str, headers: dict[str, str]) -> httpx.Response:
         self._wait_rate_limit()
         self.stats["network_requests"] += 1
         self._last_request_monotonic = time.monotonic()
@@ -97,7 +94,7 @@ class CacheHTTP:
             self.stats["failures"] += 1
             raise
 
-    def _paths(self, url: str) -> Tuple[Path, Path]:
+    def _paths(self, url: str) -> tuple[Path, Path]:
         slug = url_to_slug(url)
         html = self.cfg.root / f"{slug}.html"
         meta = self.cfg.root / f"{slug}.meta.json"
@@ -108,19 +105,19 @@ class CacheHTTP:
         return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
     @staticmethod
-    def _read_meta(p: Path) -> Dict:
+    def _read_meta(p: Path) -> dict:
         try:
             return json.loads(p.read_text(encoding="utf-8"))
         except Exception:
             return {}
 
     @staticmethod
-    def _write_meta(p: Path, meta: Dict) -> None:
+    def _write_meta(p: Path, meta: dict) -> None:
         p.write_text(
             json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
 
-    def get(self, url: str) -> Tuple[str, Dict]:
+    def get(self, url: str) -> tuple[str, dict]:
         """キャッシュ対応のGET。戻り値は (text, meta)。
 
         meta には最低限以下を含める:
@@ -180,7 +177,7 @@ class CacheHTTP:
             raise RuntimeError("no-network かつキャッシュ未存在のため取得不可: " + url)
 
         # 条件付きGET
-        headers: Dict[str, str] = {}
+        headers: dict[str, str] = {}
         if not self.cfg.force:
             if et := meta.get("etag"):
                 headers["If-None-Match"] = et
@@ -316,7 +313,7 @@ def _extract_semantic_text(html: str) -> str:
     for tag in list(soup.find_all(True)):
         decompose_if_noise(tag)
 
-    parts: List[str] = []
+    parts: list[str] = []
 
     # タイトル
     if soup.title and soup.title.get_text():

@@ -14,7 +14,8 @@ import sys
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any
+from collections.abc import Iterable
 
 from ms_data.core import json_io
 
@@ -41,9 +42,9 @@ def load_json(path: Path) -> Any:
 
 def index_by_name(
     records: Iterable[Any],
-) -> Tuple[Dict[str, Dict[str, Any]], Counter[str], int]:
+) -> tuple[dict[str, dict[str, Any]], Counter[str], int]:
     """レコードを MS名 でインデックス化。重複カウンタと不正レコード数を返す。"""
-    indexed: Dict[str, Dict[str, Any]] = {}
+    indexed: dict[str, dict[str, Any]] = {}
     name_counts: Counter[str] = Counter()
     invalid_count = 0
     for rec in records:
@@ -59,7 +60,7 @@ def index_by_name(
     return indexed, name_counts, invalid_count
 
 
-def global_keys(records: Iterable[Dict[str, Any]]) -> set[str]:
+def global_keys(records: Iterable[dict[str, Any]]) -> set[str]:
     keys: set[str] = set()
     for rec in records:
         keys.update(rec.keys())
@@ -67,8 +68,8 @@ def global_keys(records: Iterable[Dict[str, Any]]) -> set[str]:
 
 
 def diff_summary(
-    old: Dict[str, Dict[str, Any]], new: Dict[str, Dict[str, Any]]
-) -> Tuple[int, int, int, int, int]:
+    old: dict[str, dict[str, Any]], new: dict[str, dict[str, Any]]
+) -> tuple[int, int, int, int, int]:
     """差分サマリを計算。直接辞書比較で json.dumps オーバーヘッドを回避。"""
     old_keys = set(old.keys())
     new_keys = set(new.keys())
@@ -80,8 +81,8 @@ def diff_summary(
 
 
 def diff_field_counts(
-    old: Dict[str, Dict[str, Any]], new: Dict[str, Dict[str, Any]]
-) -> Tuple[Counter[str], Counter[str], Counter[str]]:
+    old: dict[str, dict[str, Any]], new: dict[str, dict[str, Any]]
+) -> tuple[Counter[str], Counter[str], Counter[str]]:
     changed_fields: Counter[str] = Counter()
     added_fields: Counter[str] = Counter()
     removed_fields: Counter[str] = Counter()
@@ -102,12 +103,12 @@ def diff_field_counts(
     return changed_fields, added_fields, removed_fields
 
 
-def format_top(counter: Counter[str], limit: int = 20) -> List[str]:
+def format_top(counter: Counter[str], limit: int = 20) -> list[str]:
     items = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
     return [f"- {_escape_md(k)}: {v} 件" for k, v in items[:limit]]
 
 
-def format_list(items: Iterable[str], limit: int) -> Tuple[List[str], bool]:
+def format_list(items: Iterable[str], limit: int) -> tuple[list[str], bool]:
     data = list(items)
     truncated = len(data) > limit
     head = data[:limit]
@@ -124,20 +125,20 @@ _DELETED = _Sentinel()
 
 
 def get_changed_records_detail(
-    old: Dict[str, Dict[str, Any]], new: Dict[str, Dict[str, Any]]
-) -> List[Tuple[str, List[Tuple[str, str, Any, Any]]]]:
+    old: dict[str, dict[str, Any]], new: dict[str, dict[str, Any]]
+) -> list[tuple[str, list[tuple[str, str, Any, Any]]]]:
     """変更レコードの詳細を取得。
 
     戻り値: [(機体名, [(操作種別, 項目名, 旧値, 新値), ...]), ...]
     操作種別: "added" | "removed" | "changed"
     """
-    result: List[Tuple[str, List[Tuple[str, str, Any, Any]]]] = []
+    result: list[tuple[str, list[tuple[str, str, Any, Any]]]] = []
     common = set(old.keys()) & set(new.keys())
 
     for name in common:
         o = old[name]
         n = new[name]
-        changes: List[Tuple[str, str, Any, Any]] = []
+        changes: list[tuple[str, str, Any, Any]] = []
 
         o_keys = set(o.keys())
         n_keys = set(n.keys())
@@ -240,10 +241,10 @@ def fullst_point_text(item: Any) -> str:
 
 
 def indexed_fullst_items(
-    items: List[Any],
-) -> Dict[tuple[str, Any, int], tuple[int, Any]]:
+    items: list[Any],
+) -> dict[tuple[str, Any, int], tuple[int, Any]]:
     counts: Counter[tuple[str, Any]] = Counter()
-    indexed: Dict[tuple[str, Any, int], tuple[int, Any]] = {}
+    indexed: dict[tuple[str, Any, int], tuple[int, Any]] = {}
     for pos, item in enumerate(items, start=1):
         if isinstance(item, dict):
             name = str(item.get("name", ""))
@@ -256,13 +257,13 @@ def indexed_fullst_items(
     return indexed
 
 
-def fullst_detail_rows(old_val: Any, new_val: Any) -> List[List[str]]:
+def fullst_detail_rows(old_val: Any, new_val: Any) -> list[list[str]]:
     old_items = old_val if isinstance(old_val, list) else []
     new_items = new_val if isinstance(new_val, list) else []
     old_index = indexed_fullst_items(old_items)
     new_index = indexed_fullst_items(new_items)
     keys = list(old_index.keys()) + [key for key in new_index if key not in old_index]
-    rows: List[List[str]] = []
+    rows: list[list[str]] = []
     for name, level, occurrence in keys:
         old_pos, old_item = old_index.get((name, level, occurrence), ("", None))
         new_pos, new_item = new_index.get((name, level, occurrence), ("", None))
@@ -280,14 +281,14 @@ def fullst_detail_rows(old_val: Any, new_val: Any) -> List[List[str]]:
 
 
 def format_change_inline(
-    name: str, changes: List[Tuple[str, str, Any, Any]], max_items: int = 5
+    name: str, changes: list[tuple[str, str, Any, Any]], max_items: int = 5
 ) -> str:
     """変更内容をインライン形式でフォーマット。
 
     形式: '機体名: 項目 (旧 → 新), ...'
     max_items: 表示する項目数の上限（超過分は省略表示）
     """
-    parts: List[str] = []
+    parts: list[str] = []
     for op, field, old_val, new_val in changes[:max_items]:
         escaped_field = _escape_md(field)
         old_str = format_value(old_val)
@@ -325,7 +326,7 @@ def ms_level_sort_key(name: str) -> tuple[str, int, str]:
     return base_ms_name(name), lv, full_name
 
 
-def append_table(lines: List[str], headers: List[str], rows: List[List[str]]) -> None:
+def append_table(lines: list[str], headers: list[str], rows: list[list[str]]) -> None:
     lines.append("| " + " | ".join(headers) + " |")
     lines.append("| " + " | ".join("---" for _ in headers) + " |")
     if rows:
@@ -340,7 +341,7 @@ def append_table(lines: List[str], headers: List[str], rows: List[List[str]]) ->
 
 
 def append_counter_table(
-    lines: List[str], counter: Counter[str], limit: int = 20
+    lines: list[str], counter: Counter[str], limit: int = 20
 ) -> None:
     rows = [
         [_escape_md(key), str(count)]
@@ -349,7 +350,7 @@ def append_counter_table(
     append_table(lines, ["項目", "件数"], rows)
 
 
-def record_table_row(name: str, rec: Dict[str, Any]) -> List[str]:
+def record_table_row(name: str, rec: dict[str, Any]) -> list[str]:
     slots = [rec.get(key, "") for key in ("近スロット", "中スロット", "遠スロット")]
     slots_text = "" if all(v == "" for v in slots) else "/".join(str(v) for v in slots)
     return [
@@ -367,15 +368,15 @@ def record_table_row(name: str, rec: Dict[str, Any]) -> List[str]:
     ]
 
 
-def record_ms_table_row(name: str, rec: Dict[str, Any]) -> List[str]:
+def record_ms_table_row(name: str, rec: dict[str, Any]) -> list[str]:
     return [level_label(name), *record_table_row(name, rec)[1:]]
 
 
 def append_records_by_ms_table(
-    lines: List[str],
+    lines: list[str],
     title: str,
-    names: List[str],
-    records: Dict[str, Dict[str, Any]],
+    names: list[str],
+    records: dict[str, dict[str, Any]],
     list_limit: int,
 ) -> None:
     lines.append(f"## {title}")
@@ -416,8 +417,8 @@ def append_records_by_ms_table(
 
 
 def append_changed_records_table(
-    lines: List[str],
-    changed_records_detail: List[Tuple[str, List[Tuple[str, str, Any, Any]]]],
+    lines: list[str],
+    changed_records_detail: list[tuple[str, list[tuple[str, str, Any, Any]]]],
     list_limit: int,
 ) -> None:
     lines.append("## 変更レコード一覧")
@@ -438,8 +439,8 @@ def append_changed_records_table(
             (name, changes) for name, changes in shown if base_ms_name(name) == base
         ]
         group.sort(key=lambda x: level_sort_key(x[0]))
-        rows: List[List[str]] = []
-        fullst_details: List[Tuple[str, Any, Any]] = []
+        rows: list[list[str]] = []
+        fullst_details: list[tuple[str, Any, Any]] = []
         for name, changes in group:
             lv = level_label(name)
             for op, field, old_val, new_val in changes:
@@ -484,14 +485,14 @@ def append_changed_records_table(
 
 
 def build_report_lines(
-    old_list: List[Any],
-    new_list: List[Any],
+    old_list: list[Any],
+    new_list: list[Any],
     *,
     list_limit: int = 200,
     generated_at: datetime | None = None,
     old_label: str = "old",
     new_label: str = "new",
-    notes: List[str] | None = None,
+    notes: list[str] | None = None,
 ) -> tuple[list[str], str]:
     if not isinstance(old_list, list) or not isinstance(new_list, list):
         raise ValueError("old/new は配列(JSON)である必要があります。")
@@ -545,7 +546,7 @@ def build_report_lines(
     out_dt = now.strftime("%Y-%m-%d %H:%M:%S")
     summary = f"records: {old_count} -> {new_count} | +{added_count} -{removed_count} ~{changed_count}"
 
-    lines: List[str] = []
+    lines: list[str] = []
     lines.append(f"# msData 差分レポート ({out_date})")
     lines.append("")
     lines.append(f"- 生成日時: {out_dt}")
@@ -588,7 +589,7 @@ def build_report_lines(
     return lines, summary
 
 
-def main(argv: List[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--old", type=Path, required=True)
     ap.add_argument("--new", type=Path, required=True)

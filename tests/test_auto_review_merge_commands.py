@@ -249,9 +249,7 @@ def test_cmd_resolve_target_pr_writes_outputs(
     assert "Resolved PR #97" in capsys.readouterr().out
 
 
-def test_cmd_resolve_target_pr_skip_path(
-    fake_gh, read_github_output, tmp_path, capsys
-):
+def test_cmd_resolve_target_pr_skip_path(fake_gh, read_github_output, tmp_path, capsys):
     out = tmp_path / "out.txt"
 
     rc = main(

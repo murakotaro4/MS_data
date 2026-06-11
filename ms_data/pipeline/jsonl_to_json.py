@@ -15,13 +15,11 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import List, Any
+from typing import Any
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="JSONLファイルをJSON配列に変換"
-    )
+    parser = argparse.ArgumentParser(description="JSONLファイルをJSON配列に変換")
     parser.add_argument(
         "input",
         type=str,
@@ -43,7 +41,7 @@ def main() -> int:
         return 1
 
     # JSONLを読み込み
-    records: List[Any] = []
+    records: list[Any] = []
     try:
         with input_path.open("r", encoding="utf-8") as f:
             for line_num, line in enumerate(f, 1):
@@ -77,4 +75,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

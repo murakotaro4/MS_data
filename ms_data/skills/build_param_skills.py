@@ -23,7 +23,7 @@ import argparse
 import json
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 
 TARGET_KEYS = [
@@ -56,12 +56,12 @@ def _norm(s: str) -> str:
     )
 
 
-def _to_int(text: str) -> Optional[int]:
+def _to_int(text: str) -> int | None:
     m = re.search(r"([+\-]?\d+)", text)
     return int(m.group(1)) if m else None
 
 
-def _to_percent(text: str) -> Optional[int]:
+def _to_percent(text: str) -> int | None:
     m = re.search(r"([+\-]?\d+)\s*%", text)
     return int(m.group(1)) if m else None
 
@@ -74,13 +74,13 @@ def _mul_factor(pct: int, kind: str) -> float:
         return round(1.0 + (abs(pct) / 100.0), 6)
 
 
-def extract_param_effects(text: str) -> Dict[str, Any]:
+def extract_param_effects(text: str) -> dict[str, Any]:
     s = _norm(text)
-    effects: Dict[str, Any] = {}
+    effects: dict[str, Any] = {}
 
     # 行ごとに評価（ラベルの近傍の数値のみ採用）
     raw_lines = re.split(r"[\n\r]+", s)
-    lines: List[str] = []
+    lines: list[str] = []
     for ln in raw_lines:
         ln = ln.strip()
         if not ln:
@@ -162,14 +162,18 @@ def extract_param_effects(text: str) -> Dict[str, Any]:
     return effects
 
 
-def score_level(effects: Dict[str, Any]) -> int:
+def score_level(effects: dict[str, Any]) -> int:
     return len(effects.keys())
 
 
-def build_params(rows: List[Dict[str, Any]], policy: Optional[Dict[str, Any]] = None, audit: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def build_params(
+    rows: list[dict[str, Any]],
+    policy: dict[str, Any] | None = None,
+    audit: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     # skill -> level -> best effects
-    best: Dict[str, Dict[int, Dict[str, Any]]] = {}
-    best_score: Dict[str, Dict[int, int]] = {}
+    best: dict[str, dict[int, dict[str, Any]]] = {}
+    best_score: dict[str, dict[int, int]] = {}
 
     for r in rows:
         skill = r.get("skill") or ""
@@ -181,15 +185,23 @@ def build_params(rows: List[Dict[str, Any]], policy: Optional[Dict[str, Any]] = 
             if inc and skill not in inc:
                 # 監査: 除外だが数値含む？
                 if audit is not None:
-                    maybe = extract_param_effects((r.get("details_text") or "") + "\n" + (r.get("desc") or ""))
+                    maybe = extract_param_effects(
+                        (r.get("details_text") or "") + "\n" + (r.get("desc") or "")
+                    )
                     if maybe:
-                        audit.setdefault("excluded_param_rows", []).append({"skill": skill, "level": level, "effects": maybe})
+                        audit.setdefault("excluded_param_rows", []).append(
+                            {"skill": skill, "level": level, "effects": maybe}
+                        )
                 continue
             if exc and skill in exc:
                 if audit is not None:
-                    maybe = extract_param_effects((r.get("details_text") or "") + "\n" + (r.get("desc") or ""))
+                    maybe = extract_param_effects(
+                        (r.get("details_text") or "") + "\n" + (r.get("desc") or "")
+                    )
                     if maybe:
-                        audit.setdefault("excluded_param_rows", []).append({"skill": skill, "level": level, "effects": maybe})
+                        audit.setdefault("excluded_param_rows", []).append(
+                            {"skill": skill, "level": level, "effects": maybe}
+                        )
                 continue
         details = r.get("details_text") or ""
         effects = extract_param_effects(details)
@@ -205,7 +217,7 @@ def build_params(rows: List[Dict[str, Any]], policy: Optional[Dict[str, Any]] = 
             d1[level] = sc
             d2[level] = effects
 
-    skills_out: List[Dict[str, Any]] = []
+    skills_out: list[dict[str, Any]] = []
     for skill in sorted(best.keys()):
         levels = []
         for lvl in sorted(best[skill].keys()):
@@ -217,7 +229,9 @@ def build_params(rows: List[Dict[str, Any]], policy: Optional[Dict[str, Any]] = 
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Build parameter-change skills from table rows")
+    ap = argparse.ArgumentParser(
+        description="Build parameter-change skills from table rows"
+    )
     ap.add_argument("--in", dest="input", default="cache/skills_table.json")
     ap.add_argument("--out", dest="out", default="data/skills_params.json")
     ap.add_argument("--policy", dest="policy", default=None)
@@ -228,14 +242,18 @@ def main() -> int:
     pol = None
     if args.policy:
         pol = json.loads(Path(args.policy).read_text(encoding="utf-8"))
-    audit: Dict[str, Any] = {}
+    audit: dict[str, Any] = {}
     data = build_params(rows, pol, audit)
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-    Path(args.out).write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    Path(args.out).write_text(
+        json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     print(f"wrote: {args.out}")
     if args.audit_out:
         Path(args.audit_out).parent.mkdir(parents=True, exist_ok=True)
-        Path(args.audit_out).write_text(json.dumps(audit, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        Path(args.audit_out).write_text(
+            json.dumps(audit, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
         print(f"audit: {args.audit_out}")
     return 0
 

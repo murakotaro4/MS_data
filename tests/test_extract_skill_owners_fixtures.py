@@ -11,8 +11,12 @@ def load_fixture(name: str) -> str:
 
 
 def test_extract_skill_owners_rows_table_fixture():
-    data = extract_skill_owners_rows_table(load_fixture("extract_skill_owners_rowspan.html"))
-    rows = {(row["skill"], row["level"], row["role"]): row["owners"] for row in data["rows"]}
+    data = extract_skill_owners_rows_table(
+        load_fixture("extract_skill_owners_rowspan.html")
+    )
+    rows = {
+        (row["skill"], row["level"], row["role"]): row["owners"] for row in data["rows"]
+    }
 
     assert ("能力UP「EXAM」", 1, "強襲") in rows
     assert [owner["name"] for owner in rows[("能力UP「EXAM」", 1, "強襲")]] == [

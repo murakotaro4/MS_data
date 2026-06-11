@@ -16,7 +16,7 @@ import collections
 import datetime as dt
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any
 
 from ms_data.core.ms_names import ms_name_to_series_level
 
@@ -25,7 +25,7 @@ def ms_name_to_series(ms_name: str) -> str:
     return ms_name_to_series_level(ms_name)[0]
 
 
-def load_msdata(path: Path) -> List[Dict[str, Any]]:
+def load_msdata(path: Path) -> list[dict[str, Any]]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -39,7 +39,7 @@ def main() -> int:
     owners = json.loads(Path(args.owners).read_text(encoding="utf-8"))
     msdata = load_msdata(Path(args.msdata))
 
-    series_in_ms: Set[str] = set()
+    series_in_ms: set[str] = set()
     for rec in msdata:
         name = rec.get("MS名") or ""
         if not name:
@@ -47,8 +47,8 @@ def main() -> int:
         series_in_ms.add(ms_name_to_series(name))
 
     # unknown series
-    unknown: List[str] = []
-    owners_map: Dict[str, List[Dict[str, Any]]] = {}
+    unknown: list[str] = []
+    owners_map: dict[str, list[dict[str, Any]]] = {}
     for o in owners.get("owners", []):
         series = o.get("series") or ""
         if not series:
@@ -101,4 +101,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

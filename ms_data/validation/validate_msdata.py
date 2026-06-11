@@ -17,7 +17,8 @@ import argparse
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any
+from collections.abc import Iterable
 
 from ms_data.core.json_io import load_json
 from ms_data.core.ms_names import MS_NAME_WITH_LEVEL
@@ -27,7 +28,7 @@ from ms_data.core.labels import KEY_ALIASES
 from jsonschema import Draft7Validator
 
 
-def validate_schema(data: Any, schema_path: Path) -> List[str]:
+def validate_schema(data: Any, schema_path: Path) -> list[str]:
     schema = load_json(schema_path)
     v = Draft7Validator(schema)
     errors = [e.message for e in v.iter_errors(data)]
@@ -39,7 +40,7 @@ def load_allowed_keys(schema_path: Path) -> set[str]:
     return set(schema["items"]["properties"].keys())
 
 
-def find_typos(records: List[Dict[str, Any]]) -> Dict[str, int]:
+def find_typos(records: list[dict[str, Any]]) -> dict[str, int]:
     c = Counter()
     for r in records:
         for alias in KEY_ALIASES:
@@ -48,14 +49,14 @@ def find_typos(records: List[Dict[str, Any]]) -> Dict[str, int]:
     return dict(c)
 
 
-def find_duplicate_names(records: List[Dict[str, Any]]) -> Dict[str, int]:
+def find_duplicate_names(records: list[dict[str, Any]]) -> dict[str, int]:
     c = Counter(r.get("MS名") for r in records if isinstance(r.get("MS名"), str))
     return {k: v for k, v in c.items() if v > 1}
 
 
 def find_unknown_keys(
-    records: Iterable[Dict[str, Any]], allowed_keys: set[str]
-) -> Dict[str, int]:
+    records: Iterable[dict[str, Any]], allowed_keys: set[str]
+) -> dict[str, int]:
     counts: Counter[str] = Counter()
     for record in records:
         for key in record:
@@ -82,8 +83,8 @@ def _fullst_order_key(points: Any) -> int | None:
         return None
 
 
-def find_semantic_errors(records: Iterable[Dict[str, Any]]) -> List[str]:
-    errors: List[str] = []
+def find_semantic_errors(records: Iterable[dict[str, Any]]) -> list[str]:
+    errors: list[str] = []
     base_attrs: dict[str, set[str]] = defaultdict(set)
     base_urls: dict[str, set[str]] = defaultdict(set)
 
@@ -138,11 +139,15 @@ def find_semantic_errors(records: Iterable[Dict[str, Any]]) -> List[str]:
         if record.get("出撃_地上可") is False and any(
             key in record for key in ground_turn_keys
         ):
-            errors.append(f"{ms_name}: ground sortie is false but ground turn values exist")
+            errors.append(
+                f"{ms_name}: ground sortie is false but ground turn values exist"
+            )
         if record.get("出撃_宇宙可") is False and any(
             key in record for key in space_turn_keys
         ):
-            errors.append(f"{ms_name}: space sortie is false but space turn values exist")
+            errors.append(
+                f"{ms_name}: space sortie is false but space turn values exist"
+            )
 
     for base_name, attrs in sorted(base_attrs.items()):
         if len(attrs) > 1:
@@ -156,7 +161,7 @@ def find_semantic_errors(records: Iterable[Dict[str, Any]]) -> List[str]:
     return errors
 
 
-def main(argv: List[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("path", type=Path, nargs="?", default=Path("msData.json"))
     ap.add_argument("--schema", type=Path, default=SCHEMA_PATH)

@@ -19,7 +19,8 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Tuple, TypedDict
+from typing import Any, TypedDict
+from collections.abc import Iterable
 
 from ms_data.core.json_io import load_json
 from ms_data.core.ms_names import MS_NAME_WITH_LEVEL, normalize_ms_base_name
@@ -93,7 +94,7 @@ def extract_ms_base_name(name: str) -> str | None:
     return normalize_ms_base_name(m.group(1))
 
 
-def load_index_url_map(path: Path) -> Dict[str, str]:
+def load_index_url_map(path: Path) -> dict[str, str]:
     if not path.exists():
         return {}
     try:
@@ -102,7 +103,7 @@ def load_index_url_map(path: Path) -> Dict[str, str]:
         return {}
     if not isinstance(data, list):
         return {}
-    urls: Dict[str, str] = {}
+    urls: dict[str, str] = {}
     for entry in data:
         if not isinstance(entry, dict):
             continue
@@ -117,7 +118,7 @@ def load_index_url_map(path: Path) -> Dict[str, str]:
 INDEX_URL_MAP = load_index_url_map(Path("cache/index.json"))
 
 
-def normalize_record(rec: Dict[str, Any]) -> Dict[str, Any]:
+def normalize_record(rec: dict[str, Any]) -> dict[str, Any]:
     name = rec.get("MS名")
     if isinstance(name, str):
         normalized_name = normalize_ms_name(name)
@@ -191,7 +192,7 @@ def normalize_record(rec: Dict[str, Any]) -> Dict[str, Any]:
     return rec
 
 
-def iter_records_from_files(paths: Iterable[Path]) -> Iterable[Dict[str, Any]]:
+def iter_records_from_files(paths: Iterable[Path]) -> Iterable[dict[str, Any]]:
     for p in paths:
         data = load_json(p)
         if isinstance(data, list):
@@ -205,8 +206,8 @@ def iter_records_from_files(paths: Iterable[Path]) -> Iterable[Dict[str, Any]]:
             raise ValueError(f"Unsupported JSON structure in {p}")
 
 
-def merge_by_msname(records: Iterable[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
-    merged: Dict[str, Dict[str, Any]] = {}
+def merge_by_msname(records: Iterable[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    merged: dict[str, dict[str, Any]] = {}
     for rec in records:
         name = rec.get("MS名")
         if not isinstance(name, str):
@@ -218,7 +219,7 @@ def merge_by_msname(records: Iterable[Dict[str, Any]]) -> Dict[str, Dict[str, An
 
 def load_official_overrides(
     directory: Path = OFFICIAL_OVERRIDES_DIR,
-) -> Dict[str, Dict[str, OfficialOverrideValue]]:
+) -> dict[str, dict[str, OfficialOverrideValue]]:
     """公式調整由来の一時オーバーライドを読み込む。
 
     形式:
@@ -240,7 +241,7 @@ def load_official_overrides(
     if not directory.is_dir():
         raise ValueError(f"official overrides path is not a directory: {directory}")
 
-    overrides: Dict[str, Dict[str, OfficialOverrideValue]] = {}
+    overrides: dict[str, dict[str, OfficialOverrideValue]] = {}
     for path in sorted(directory.glob("*.json")):
         data = load_json(path)
         if not isinstance(data, dict):
@@ -301,8 +302,8 @@ def load_official_overrides(
 
 
 def apply_official_overrides(
-    records_by_name: Dict[str, Dict[str, Any]],
-    overrides: Dict[str, Dict[str, OfficialOverrideValue]],
+    records_by_name: dict[str, dict[str, Any]],
+    overrides: dict[str, dict[str, OfficialOverrideValue]],
 ) -> int:
     """既存/取得済みレコードへ公式オーバーライドを適用する。
 
@@ -328,7 +329,7 @@ def apply_official_overrides(
 
 
 def write_records_snapshot(
-    records_by_name: Dict[str, Dict[str, Any]],
+    records_by_name: dict[str, dict[str, Any]],
     out_path: Path,
     *,
     sort: bool = True,
@@ -343,8 +344,8 @@ def write_records_snapshot(
         f.write("\n")
 
 
-def sort_records(recs: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    def key(r: Dict[str, Any]) -> Tuple[int, str]:
+def sort_records(recs: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    def key(r: dict[str, Any]) -> tuple[int, str]:
         cost = r.get("コスト")
         if not isinstance(cost, int):
             cost = 0
@@ -354,9 +355,9 @@ def sort_records(recs: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return sorted(recs, key=key)
 
 
-def stable_key_order(d: Dict[str, Any]) -> Dict[str, Any]:
+def stable_key_order(d: dict[str, Any]) -> dict[str, Any]:
     # 書き出し時の見やすさのために、おおよそのキー順を揃える
-    ordered: Dict[str, Any] = {}
+    ordered: dict[str, Any] = {}
     for k in CANONICAL_ORDER:
         if k in d:
             ordered[k] = d[k]
@@ -365,7 +366,7 @@ def stable_key_order(d: Dict[str, Any]) -> Dict[str, Any]:
     return ordered
 
 
-def diff_summary(old: Dict[str, Dict[str, Any]], new: Dict[str, Dict[str, Any]]) -> str:
+def diff_summary(old: dict[str, dict[str, Any]], new: dict[str, dict[str, Any]]) -> str:
     old_keys = set(old.keys())
     new_keys = set(new.keys())
     added = new_keys - old_keys
@@ -380,7 +381,7 @@ def diff_summary(old: Dict[str, Dict[str, Any]], new: Dict[str, Dict[str, Any]])
     return f"records: {len(old_keys)} -> {len(new_keys)} | +{len(added)} -{len(removed)} ~{len(changed)}"
 
 
-def main(argv: List[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("inputs", nargs="*", type=Path, help="入力JSON（配列）複数可")
     ap.add_argument(
@@ -420,7 +421,7 @@ def main(argv: List[str] | None = None) -> int:
 
     out_path = args.output
 
-    base_records: List[Dict[str, Any]] = []
+    base_records: list[dict[str, Any]] = []
     if args.in_place and out_path.exists():
         try:
             base = load_json(out_path)
