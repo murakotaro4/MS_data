@@ -117,114 +117,103 @@ class CacheHTTP:
             json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
 
-    def get(self, url: str) -> tuple[str, dict]:
-        """キャッシュ対応のGET。戻り値は (text, meta)。
-
-        meta には最低限以下を含める:
-          - url, fetched_at (ISO8601 UTC), http_status
-          - etag, last_modified (あれば)
-          - content_sha256, size
-          - semantic_sha256, last_semantic_change_at, semantic_changed（追加）
-        """
-        html_path, meta_path = self._paths(url)
-        meta = self._read_meta(meta_path)
-
-        # TTL 判定
-        now = _now_utc()
-        fetched_at = None
-        ttl_ok = False
-        if meta.get("fetched_at"):
-            try:
-                fetched_at = dt.datetime.fromisoformat(meta["fetched_at"])
-                ttl_ok = (now - fetched_at).total_seconds() < self.cfg.ttl_seconds
-            except Exception:
-                ttl_ok = False
-
-        # オフライン or TTL内: キャッシュ優先（force は TTL 判定を無視）
-        if (
-            self.cfg.no_network or (ttl_ok and not self.cfg.force)
-        ) and html_path.exists():
-            self.stats["cache_hits"] += 1
-            text = html_path.read_text(encoding="utf-8")
-            content_sha = self._sha256_text(text)
-            if (
-                meta.get("semantic_sha256")
-                and meta.get("content_sha256") == content_sha
-            ):
-                # 内容が前回保存時と同一なら、セマンティックハッシュの再計算
-                # （BeautifulSoup パース）を省略してそのまま返す。
-                # トレードオフ: 抽出アルゴリズム変更は TTL 失効か次回 200 取得まで
-                # 保存済み semantic_sha256 に反映されない（その時点で旧値と不一致
-                # になり semantic_changed=True として保守的に再処理される）
-                meta["semantic_changed"] = False
-                return text, meta
-            meta["content_sha256"] = content_sha
-            # セマンティックハッシュを計算してメタに反映（コメント等を無視した本体の変化検出）
-            prev_sem = meta.get("semantic_sha256")
-            cur_sem = _semantic_sha256(text)
-            meta["semantic_sha256"] = cur_sem
-            # TTL内では取得していないため、変化フラグは False（初回は prev_sem が無くても False にする）
-            meta["semantic_changed"] = bool(prev_sem) and (prev_sem != cur_sem)
-            # last_semantic_change_at は TTL内では更新しない（読み取りのみ）
-            # ただし初回で semantic_sha256 が欠落していた場合は書き戻しておく
-            try:
-                self._write_meta(meta_path, meta)
-            except Exception:
-                pass
-            return text, meta
-
-        if self.cfg.no_network and not html_path.exists():
-            raise RuntimeError("no-network かつキャッシュ未存在のため取得不可: " + url)
-
-        # 条件付きGET
-        headers: dict[str, str] = {}
-        if not self.cfg.force:
-            if et := meta.get("etag"):
-                headers["If-None-Match"] = et
-            if lm := meta.get("last_modified"):
-                headers["If-Modified-Since"] = lm
-
-        r = self._request(url, headers)
-        if r.status_code == 304 and not html_path.exists():
-            # requests 系クライアントは 3xx で raise_for_status が例外を出さないため、
-            # 空ボディを 200 としてキャッシュしてしまう前に明示的に失敗させる
-            self.stats["failures"] += 1
-            raise RuntimeError("304 応答だがキャッシュHTMLが存在しない: " + url)
-        if r.status_code == 304 and html_path.exists():
-            self.stats["status_304"] += 1
-            # HTMLは既存を使う
-            text = html_path.read_text(encoding="utf-8")
-            prev_sem = meta.get("semantic_sha256")
-            cur_sem = _semantic_sha256(text)
-            semantic_changed = prev_sem != cur_sem
-            meta.update(
-                {
-                    "url": url,
-                    "fetched_at": now.isoformat(),
-                    "http_status": 304,
-                    "content_sha256": self._sha256_text(text),
-                    "size": len(text.encode("utf-8")),
-                    "semantic_sha256": cur_sem,
-                    "semantic_changed": semantic_changed,
-                    "last_semantic_change_at": (
-                        now.isoformat()
-                        if semantic_changed
-                        else meta.get("last_semantic_change_at")
-                    ),
-                }
-            )
-            self._write_meta(meta_path, meta)
-            return text, meta
-
+    def _is_ttl_ok(self, meta: dict, now: dt.datetime) -> bool:
+        """前回取得時刻が TTL 内かを判定する（時刻が読めない場合は失効扱い）。"""
+        if not meta.get("fetched_at"):
+            return False
         try:
-            r.raise_for_status()
+            fetched_at = dt.datetime.fromisoformat(meta["fetched_at"])
+            return (now - fetched_at).total_seconds() < self.cfg.ttl_seconds
         except Exception:
-            self.stats["failures"] += 1
-            raise
+            return False
+
+    def _serve_from_cache(
+        self, html_path: Path, meta_path: Path, meta: dict
+    ) -> tuple[str, dict]:
+        """キャッシュ済み HTML を返す（ネットワークなし）。
+
+        semantic_changed は「ネットワーク取得していない」ため原則 False。
+        ただし保存済み HTML が変わっていた（content_sha256 不一致）場合は
+        セマンティックハッシュを再計算し、前回値があり差があれば True。
+        初回（prev_sem なし）は False に倒す。
+        last_semantic_change_at はネットワーク経路でのみ更新する（ここでは
+        読み取りのみ）。semantic_sha256 が欠落していた場合の書き戻しは行う。
+        """
+        self.stats["cache_hits"] += 1
+        text = html_path.read_text(encoding="utf-8")
+        content_sha = self._sha256_text(text)
+        if meta.get("semantic_sha256") and meta.get("content_sha256") == content_sha:
+            # 内容が前回保存時と同一なら、セマンティックハッシュの再計算
+            # （BeautifulSoup パース）を省略してそのまま返す。
+            # トレードオフ: 抽出アルゴリズム変更は TTL 失効か次回 200 取得まで
+            # 保存済み semantic_sha256 に反映されない（その時点で旧値と不一致
+            # になり semantic_changed=True として保守的に再処理される）
+            meta["semantic_changed"] = False
+            return text, meta
+        meta["content_sha256"] = content_sha
+        # セマンティックハッシュを計算してメタに反映（コメント等を無視した本体の変化検出）
+        prev_sem = meta.get("semantic_sha256")
+        cur_sem = _semantic_sha256(text)
+        meta["semantic_sha256"] = cur_sem
+        meta["semantic_changed"] = bool(prev_sem) and (prev_sem != cur_sem)
+        try:
+            self._write_meta(meta_path, meta)
+        except Exception:
+            pass
+        return text, meta
+
+    def _serve_not_modified(
+        self,
+        url: str,
+        html_path: Path,
+        meta_path: Path,
+        meta: dict,
+        now: dt.datetime,
+    ) -> tuple[str, dict]:
+        """304 応答: 既存 HTML を使い、メタ情報のみ更新して返す。
+
+        semantic_changed は保存済みハッシュとの単純比較（初回でも prev=None と
+        cur の比較で True になり得る点が _serve_from_cache と異なる。
+        ネットワークで「未変更」を確認済みのため、差があれば抽出アルゴリズム
+        変更等の正当な差分として扱う）。
+        """
+        self.stats["status_304"] += 1
+        text = html_path.read_text(encoding="utf-8")
+        prev_sem = meta.get("semantic_sha256")
+        cur_sem = _semantic_sha256(text)
+        semantic_changed = prev_sem != cur_sem
+        meta.update(
+            {
+                "url": url,
+                "fetched_at": now.isoformat(),
+                "http_status": 304,
+                "content_sha256": self._sha256_text(text),
+                "size": len(text.encode("utf-8")),
+                "semantic_sha256": cur_sem,
+                "semantic_changed": semantic_changed,
+                "last_semantic_change_at": (
+                    now.isoformat()
+                    if semantic_changed
+                    else meta.get("last_semantic_change_at")
+                ),
+            }
+        )
+        self._write_meta(meta_path, meta)
+        return text, meta
+
+    def _store_response(
+        self,
+        url: str,
+        r: httpx.Response,
+        html_path: Path,
+        meta_path: Path,
+        meta: dict,
+        now: dt.datetime,
+    ) -> tuple[str, dict]:
+        """200 応答: 取得本文を保存し、メタ情報を作り直して返す。"""
         self.stats["status_200"] += 1
         self.stats["body_bytes"] += len(r.content)
         text = r.text
-        # 200: 新規または内容変更
         cur_sem = _semantic_sha256(text)
         prev_sem = meta.get("semantic_sha256")
         semantic_changed = prev_sem != cur_sem
@@ -247,6 +236,58 @@ class CacheHTTP:
         html_path.write_text(text, encoding="utf-8")
         self._write_meta(meta_path, meta_new)
         return text, meta_new
+
+    def get(self, url: str) -> tuple[str, dict]:
+        """キャッシュ対応のGET。戻り値は (text, meta)。
+
+        経路は3つ:
+        1. キャッシュ供給（オフライン or TTL内）: _serve_from_cache
+        2. 条件付きGET → 304: _serve_not_modified
+        3. 条件付きGET → 200: _store_response
+
+        meta には最低限以下を含める:
+          - url, fetched_at (ISO8601 UTC), http_status
+          - etag, last_modified (あれば)
+          - content_sha256, size
+          - semantic_sha256, last_semantic_change_at, semantic_changed（追加）
+        """
+        html_path, meta_path = self._paths(url)
+        meta = self._read_meta(meta_path)
+        now = _now_utc()
+        ttl_ok = self._is_ttl_ok(meta, now)
+
+        # オフライン or TTL内: キャッシュ優先（force は TTL 判定を無視）
+        if (
+            self.cfg.no_network or (ttl_ok and not self.cfg.force)
+        ) and html_path.exists():
+            return self._serve_from_cache(html_path, meta_path, meta)
+
+        if self.cfg.no_network and not html_path.exists():
+            raise RuntimeError("no-network かつキャッシュ未存在のため取得不可: " + url)
+
+        # 条件付きGET（atwiki は ETag/Last-Modified 非対応のため 304 は期待できない）
+        headers: dict[str, str] = {}
+        if not self.cfg.force:
+            if et := meta.get("etag"):
+                headers["If-None-Match"] = et
+            if lm := meta.get("last_modified"):
+                headers["If-Modified-Since"] = lm
+
+        r = self._request(url, headers)
+        if r.status_code == 304 and not html_path.exists():
+            # requests 系クライアントは 3xx で raise_for_status が例外を出さないため、
+            # 空ボディを 200 としてキャッシュしてしまう前に明示的に失敗させる
+            self.stats["failures"] += 1
+            raise RuntimeError("304 応答だがキャッシュHTMLが存在しない: " + url)
+        if r.status_code == 304 and html_path.exists():
+            return self._serve_not_modified(url, html_path, meta_path, meta, now)
+
+        try:
+            r.raise_for_status()
+        except Exception:
+            self.stats["failures"] += 1
+            raise
+        return self._store_response(url, r, html_path, meta_path, meta, now)
 
 
 # ==========================
