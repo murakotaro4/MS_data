@@ -16,6 +16,18 @@ def extract_ms_base_name(name: str) -> str | None:
     return match.group("base")
 
 
+def normalize_ms_name(name: str) -> str:
+    """ "ザクII_LV1" → "ザクⅡ_LV1"。LV 付き機体名の基底部を正規化する。
+
+    LV サフィックスが無い場合はそのまま返す。
+    """
+    match = MS_NAME_WITH_LEVEL.match(name)
+    if not match:
+        return name
+    base, lv = match.groups()
+    return f"{normalize_ms_base_name(base)}_LV{lv}"
+
+
 def normalize_ms_base_name(name: str) -> str:
     """表記揺れ（括弧・ローマ数字・ギリシャ文字 Z など）を正規化する。"""
     out = name
