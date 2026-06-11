@@ -8,7 +8,7 @@ import sys
 import tarfile
 from datetime import datetime
 from pathlib import Path
-from typing import Callable
+from collections.abc import Callable
 
 from ms_data.core.env import env_flag as _env_flag
 from ms_data.core.env import env_float as _env_float
@@ -121,7 +121,9 @@ def task_validate() -> int:
 
 def task_validate_strict() -> int:
     msdata = _env_str("MSDATA", "msData.json") or "msData.json"
-    return _run_python_module("ms_data.validation.validate_msdata", msdata, "--fail-on-typo")
+    return _run_python_module(
+        "ms_data.validation.validate_msdata", msdata, "--fail-on-typo"
+    )
 
 
 def task_validate_skills() -> int:
@@ -355,7 +357,9 @@ def task_import_details() -> int:
     details_json = (
         _env_str("DETAILS_JSON", "cache/details.json") or "cache/details.json"
     )
-    rc = _run_python_module("ms_data.pipeline.jsonl_to_json", details_jsonl, details_json)
+    rc = _run_python_module(
+        "ms_data.pipeline.jsonl_to_json", details_jsonl, details_json
+    )
     if rc != 0:
         return rc
     return _run_python_module("ms_data.pipeline.update_msdata", "-i", details_json)

@@ -18,7 +18,7 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import httpx
 from bs4 import BeautifulSoup, Tag
@@ -72,12 +72,12 @@ def _norm(s: str) -> str:
     )
 
 
-def _to_int_first(text: str) -> Optional[int]:
+def _to_int_first(text: str) -> int | None:
     m = re.search(r"-?\d+", text)
     return int(m.group(0)) if m else None
 
 
-def _percent_to_factor(text: str, sign: int = -1) -> Optional[float]:
+def _percent_to_factor(text: str, sign: int = -1) -> float | None:
     # sign: -1 for reductions like "-20%" -> 0.8; +1 reserved for increases if needed
     m = re.search(r"(\d+)%", text)
     if not m:
@@ -87,9 +87,9 @@ def _percent_to_factor(text: str, sign: int = -1) -> Optional[float]:
     return round(1.0 + (p / 100.0), 6)
 
 
-def _extract_activation(desc: str) -> Dict[str, Any]:
+def _extract_activation(desc: str) -> dict[str, Any]:
     t = _norm(desc)
-    act: Dict[str, Any] = {}
+    act: dict[str, Any] = {}
     if "タッチパッドを押す" in t or "任意発動" in t:
         act["type"] = "manual"
         act["trigger"] = "touchpad"
@@ -104,7 +104,7 @@ def _extract_activation(desc: str) -> Dict[str, Any]:
     return act
 
 
-def _extract_duration(text: str) -> Optional[int]:
+def _extract_duration(text: str) -> int | None:
     t = _norm(text)
     if "効果時間は無し" in t or "効果時間は、無し" in t or "効果時間は無し" in t:
         return None
@@ -118,18 +118,20 @@ def _extract_duration(text: str) -> Optional[int]:
     return None
 
 
-def _parse_grants(line: str) -> Optional[Dict[str, Any]]:
+def _parse_grants(line: str) -> dict[str, Any] | None:
     t = _norm(line)
     # 例: 緊急回避制御 Lv2 が付与 / Lv3 が付与
-    m = re.search(r"([A-Za-z0-9ぁ-んァ-ン一-龥・\-\[\]（）\(\)]+?)\s*Lv\s*(\d+)が付与", t)
+    m = re.search(
+        r"([A-Za-z0-9ぁ-んァ-ン一-龥・\-\[\]（）\(\)]+?)\s*Lv\s*(\d+)が付与", t
+    )
     if m:
         return {"skill": m.group(1).strip(), "level": int(m.group(2))}
     return None
 
 
-def _effects_from_lines(lines: List[str]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    effects: Dict[str, Any] = {}
-    aux: Dict[str, Any] = {}
+def _effects_from_lines(lines: list[str]) -> tuple[dict[str, Any], dict[str, Any]]:
+    effects: dict[str, Any] = {}
+    aux: dict[str, Any] = {}
     for raw in lines:
         if not raw:
             continue
@@ -188,10 +190,10 @@ def _effects_from_lines(lines: List[str]) -> Tuple[Dict[str, Any], Dict[str, Any
     return effects, aux
 
 
-def _split_lines(text: str) -> List[str]:
+def _split_lines(text: str) -> list[str]:
     t = _norm(text.replace("\r", "\n").replace("<br>", "\n").replace("<br/>", "\n"))
     # 「・」や改行でおおまかに分割
-    parts: List[str] = []
+    parts: list[str] = []
     for seg in re.split(r"[\n\r]+", t):
         seg = seg.strip()
         if not seg:
@@ -210,11 +212,11 @@ def _split_lines(text: str) -> List[str]:
 # ===============
 
 
-def extract_skills_from_html(html: str) -> Dict[str, Any]:
+def extract_skills_from_html(html: str) -> dict[str, Any]:
     soup = BeautifulSoup(html, "lxml")
-    skills: Dict[str, Dict[str, Any]] = {}
+    skills: dict[str, dict[str, Any]] = {}
 
-    cur_skill: Optional[str] = None
+    cur_skill: str | None = None
     for tr in soup.find_all("tr"):
         th = tr.find("th")
         if th and th.get_text():
@@ -234,8 +236,12 @@ def extract_skills_from_html(html: str) -> Dict[str, Any]:
         m_lv = re.search(r"LV\s*(\d+)", lv_txt, flags=re.IGNORECASE)
         level = int(m_lv.group(1)) if m_lv else 1
 
-        act = _extract_activation(desc_txt + "\n" + BeautifulSoup(details_txt, "lxml").get_text(" "))
-        duration = _extract_duration(BeautifulSoup(details_txt, "lxml").get_text(" ")) or _extract_duration(desc_txt)
+        act = _extract_activation(
+            desc_txt + "\n" + BeautifulSoup(details_txt, "lxml").get_text(" ")
+        )
+        duration = _extract_duration(
+            BeautifulSoup(details_txt, "lxml").get_text(" ")
+        ) or _extract_duration(desc_txt)
 
         details_plain = _norm(BeautifulSoup(details_txt, "lxml").get_text(" "))
         lines = _split_lines(details_txt)
@@ -255,10 +261,12 @@ def extract_skills_from_html(html: str) -> Dict[str, Any]:
         }
         rec.update(aux)
 
-        skills.setdefault(cur_skill, {"name": cur_skill, "levels": []})["levels"].append(rec)
+        skills.setdefault(cur_skill, {"name": cur_skill, "levels": []})[
+            "levels"
+        ].append(rec)
 
     # 後処理: NT-D 系の派生（覚醒）を phase として紐付け（簡易）
-    out_skills: List[Dict[str, Any]] = []
+    out_skills: list[dict[str, Any]] = []
     nt = None
     for _k in list(skills.keys()):
         if _k.startswith("能力UP「NT-D"):
@@ -270,8 +278,9 @@ def extract_skills_from_html(html: str) -> Dict[str, Any]:
             awaken.append(skills.pop(k))
     if nt and awaken:
         nt["phases"] = awaken
+
     # レベル配列のノイズ除去＋重複統合（同一 level は代表1件に絞る）
-    def score_level(lv: Dict[str, Any], idx: int) -> Tuple[int, int]:
+    def score_level(lv: dict[str, Any], idx: int) -> tuple[int, int]:
         eff = lv.get("effects") or {}
         score = 0
         score += len(eff.keys())
@@ -289,7 +298,7 @@ def extract_skills_from_html(html: str) -> Dict[str, Any]:
     for v in skills.values():
         levels = v.get("levels", [])
         # まず空（すべてNone/空）を除去
-        nonempty: List[Dict[str, Any]] = []
+        nonempty: list[dict[str, Any]] = []
         for lv in levels:
             if any(
                 [
@@ -303,7 +312,7 @@ def extract_skills_from_html(html: str) -> Dict[str, Any]:
             ):
                 nonempty.append(lv)
         # levelごとにベストを選ぶ
-        best_by_level: Dict[int, Tuple[Tuple[int, int], Dict[str, Any]]] = {}
+        best_by_level: dict[int, tuple[tuple[int, int], dict[str, Any]]] = {}
         for idx, lv in enumerate(nonempty):
             lvl = int(lv.get("level") or 0)
             sc = score_level(lv, idx)
@@ -324,13 +333,13 @@ def extract_skills_from_html(html: str) -> Dict[str, Any]:
 _RE_ANCHOR = re.compile(r"^(能力UP「[^」]+」)\s*LV(\d+)$")
 
 
-def extract_skill_owners_from_html(soup: BeautifulSoup) -> List[Dict[str, Any]]:
+def extract_skill_owners_from_html(soup: BeautifulSoup) -> list[dict[str, Any]]:
     """スキル逆引きテーブルから所持機体を収集（対象: 能力UP系）。
 
     形式例（th 内の <a id="能力UP「EXAM」LV1">...）を起点に、次のスキル見出しが来るまでの行の td 内リンクを収集。
     戻り: [{name, level, owners: [ms_name, ...]}]
     """
-    results: List[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
     # 1) アンカーを列挙
     anchors = []
     for a in soup.find_all("a"):
@@ -343,7 +352,9 @@ def extract_skill_owners_from_html(soup: BeautifulSoup) -> List[Dict[str, Any]]:
         name = m.group(1)
         level = int(m.group(2))
         # 対象スキルのみ
-        if not any(name.startswith(x.replace("】", "").replace("】", "")) for x in CORE_SKILLS):
+        if not any(
+            name.startswith(x.replace("】", "").replace("】", "")) for x in CORE_SKILLS
+        ):
             continue
         # th（スキル見出し）行を取得
         th = a.find_parent("th")
@@ -356,7 +367,7 @@ def extract_skill_owners_from_html(soup: BeautifulSoup) -> List[Dict[str, Any]]:
 
     # 2) 各アンカーから次アンカー直前までの td 内リンクを収集
     for idx, (name, level, tr) in enumerate(anchors):
-        owners: List[str] = []
+        owners: list[str] = []
         # 次のアンカー行（または表終端）まで前進
         stop_tr = anchors[idx + 1][2] if idx + 1 < len(anchors) else None
         # まず見出し行自身の td を走査
@@ -392,7 +403,7 @@ def extract_skill_owners_from_html(soup: BeautifulSoup) -> List[Dict[str, Any]]:
 # ==========================
 
 
-def _select_main_skill_table(soup: BeautifulSoup) -> Optional[Tag]:
+def _select_main_skill_table(soup: BeautifulSoup) -> Tag | None:
     """ページ内のうち、スキル一覧の“本体テーブル”と推定される table を返す。
 
     ヒューリスティック:
@@ -419,7 +430,7 @@ def _select_main_skill_table(soup: BeautifulSoup) -> Optional[Tag]:
     return best
 
 
-def extract_skill_rows_table(html: str) -> Dict[str, Any]:
+def extract_skill_rows_table(html: str) -> dict[str, Any]:
     """スキル一覧テーブルを“行”として抽出（スキル名/レベル/効果説明/詳細）。
 
     出力: { source, rows: [ {skill, level, desc, details_text, details_html} ] }
@@ -430,7 +441,7 @@ def extract_skill_rows_table(html: str) -> Dict[str, Any]:
     if not tbl:
         return {"source": SKILL_URL, "rows": []}
 
-    rows_out: List[Dict[str, Any]] = []
+    rows_out: list[dict[str, Any]] = []
     cur_skill = None
     cur_desc = None
     for tr in tbl.find_all("tr"):
@@ -486,7 +497,7 @@ def extract_skill_rows_table(html: str) -> Dict[str, Any]:
 # ==========================
 
 
-def _role_from_text(text: str) -> Optional[str]:
+def _role_from_text(text: str) -> str | None:
     if "強" in text:
         return "強襲"
     if "汎" in text:
@@ -496,8 +507,8 @@ def _role_from_text(text: str) -> Optional[str]:
     return None
 
 
-def _owner_links_from_cells(cells: List[Tag]) -> List[Dict[str, str]]:
-    owners: List[Dict[str, str]] = []
+def _owner_links_from_cells(cells: list[Tag]) -> list[dict[str, str]]:
+    owners: list[dict[str, str]] = []
     for td in cells:
         for anchor in td.find_all("a"):
             text = _norm(anchor.get_text(" "))
@@ -507,8 +518,8 @@ def _owner_links_from_cells(cells: List[Tag]) -> List[Dict[str, str]]:
     return owners
 
 
-def _candidate_owner_tables(soup: BeautifulSoup) -> List[Tag]:
-    candidates: List[Tag] = []
+def _candidate_owner_tables(soup: BeautifulSoup) -> list[Tag]:
+    candidates: list[Tag] = []
     for tbl in soup.find_all("table"):
         ok = False
         for anchor in tbl.find_all("a"):
@@ -528,7 +539,7 @@ def _candidate_owner_tables(soup: BeautifulSoup) -> List[Tag]:
     return candidates
 
 
-def _find_owner_section_tables(soup: BeautifulSoup) -> List[Tag]:
+def _find_owner_section_tables(soup: BeautifulSoup) -> list[Tag]:
     header = None
     for tag in soup.find_all(["h2", "h3", "h4"]):
         text = _norm(tag.get_text(" "))
@@ -539,7 +550,7 @@ def _find_owner_section_tables(soup: BeautifulSoup) -> List[Tag]:
     if not header:
         return _candidate_owner_tables(soup)
 
-    target_tables: List[Tag] = []
+    target_tables: list[Tag] = []
     cur = header
     while True:
         cur = cur.find_next_sibling()
@@ -553,8 +564,8 @@ def _find_owner_section_tables(soup: BeautifulSoup) -> List[Tag]:
     return target_tables or _candidate_owner_tables(soup)
 
 
-def _extract_owner_anchors(target_tables: List[Tag]) -> List[Tuple[str, int, Tag]]:
-    anchors: List[Tuple[str, int, Tag]] = []
+def _extract_owner_anchors(target_tables: list[Tag]) -> list[tuple[str, int, Tag]]:
+    anchors: list[tuple[str, int, Tag]] = []
     for tbl in target_tables:
         for anchor in tbl.find_all("a"):
             aid = (anchor.get("id") or "").strip()
@@ -572,14 +583,14 @@ def _extract_owner_anchors(target_tables: List[Tag]) -> List[Tuple[str, int, Tag
     return anchors
 
 
-def _collect_anchor_row_owners(tr: Tag) -> tuple[Optional[str], List[Dict[str, str]]]:
+def _collect_anchor_row_owners(tr: Tag) -> tuple[str | None, list[dict[str, str]]]:
     anchor_th = tr.find("th")
     role_th = anchor_th.find_next_sibling("th") if anchor_th else None
     role = _role_from_text(_norm(role_th.get_text(" "))) if role_th else None
     if not role or not role_th:
         return role, []
 
-    td_list: List[Tag] = []
+    td_list: list[Tag] = []
     td = role_th.find_next_sibling("td")
     if td:
         td_list.append(td)
@@ -590,9 +601,13 @@ def _collect_anchor_row_owners(tr: Tag) -> tuple[Optional[str], List[Dict[str, s
 
 
 def _collect_owner_block(
-    start_tr: Tag, stop_tr: Optional[Tag]
-) -> Dict[str, List[Dict[str, str]]]:
-    owners_by_role: Dict[str, List[Dict[str, str]]] = {"強襲": [], "汎用": [], "支援": []}
+    start_tr: Tag, stop_tr: Tag | None
+) -> dict[str, list[dict[str, str]]]:
+    owners_by_role: dict[str, list[dict[str, str]]] = {
+        "強襲": [],
+        "汎用": [],
+        "支援": [],
+    }
     current_role, line_owners = _collect_anchor_row_owners(start_tr)
     if current_role and line_owners:
         owners_by_role[current_role].extend(line_owners)
@@ -615,7 +630,7 @@ def _collect_owner_block(
     return owners_by_role
 
 
-def extract_skill_owners_rows_table(html: str) -> Dict[str, Any]:
+def extract_skill_owners_rows_table(html: str) -> dict[str, Any]:
     """ページ下部の『所持機体 逆引き一覧』セクションに限定して、行として厳格抽出する。
 
     出力: { source, rows: [ {skill, level, role, owners: [{name, href}], block_index} ] }
@@ -627,22 +642,25 @@ def extract_skill_owners_rows_table(html: str) -> Dict[str, Any]:
     if not target_tables:
         return {"source": SKILL_URL, "rows": []}
 
-    rows_out: List[Dict[str, Any]] = []
+    rows_out: list[dict[str, Any]] = []
     anchors = _extract_owner_anchors(target_tables)
 
     for idx, (name, level, tr) in enumerate(anchors):
         stop_tr = anchors[idx + 1][2] if (idx + 1 < len(anchors)) else None
         owners_by_role = _collect_owner_block(tr, stop_tr)
         for role, owners in owners_by_role.items():
-            rows_out.append({
-                "skill": name,
-                "level": level,
-                "role": role,
-                "owners": owners,
-                "block_index": idx,
-            })
+            rows_out.append(
+                {
+                    "skill": name,
+                    "level": level,
+                    "role": role,
+                    "owners": owners,
+                    "block_index": idx,
+                }
+            )
 
     return {"source": SKILL_URL, "rows": rows_out}
+
 
 # ===============
 # CLI
@@ -652,7 +670,10 @@ def extract_skill_owners_rows_table(html: str) -> Dict[str, Any]:
 def cmd_fetch(args: argparse.Namespace) -> int:
     ttl_sec = parse_ttl(args.ttl)
     client = get_client()
-    cache = CacheHTTP(client, CacheConfig(ttl_seconds=ttl_sec, no_network=args.no_network, force=args.force))
+    cache = CacheHTTP(
+        client,
+        CacheConfig(ttl_seconds=ttl_sec, no_network=args.no_network, force=args.force),
+    )
     html, meta = cache.get(args.url)
     print(json.dumps({"saved": True, "meta": meta}, ensure_ascii=False))
     return 0
@@ -666,7 +687,9 @@ def cmd_parse(args: argparse.Namespace) -> int:
     data = extract_skills_from_html(html)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    out.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     print(f"skills: wrote -> {out}")
     return 0
 
@@ -674,13 +697,18 @@ def cmd_parse(args: argparse.Namespace) -> int:
 def cmd_all(args: argparse.Namespace) -> int:
     ttl_sec = parse_ttl(args.ttl)
     client = get_client()
-    cache = CacheHTTP(client, CacheConfig(ttl_seconds=ttl_sec, no_network=args.no_network, force=args.force))
+    cache = CacheHTTP(
+        client,
+        CacheConfig(ttl_seconds=ttl_sec, no_network=args.no_network, force=args.force),
+    )
     html, meta = cache.get(args.url)
     data = extract_skills_from_html(html)
     data["fetched_at"] = meta.get("fetched_at")
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    out.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     print(f"skills: wrote -> {out}")
     return 0
 
@@ -688,19 +716,26 @@ def cmd_all(args: argparse.Namespace) -> int:
 def cmd_table(args: argparse.Namespace) -> int:
     ttl_sec = parse_ttl(args.ttl)
     client = get_client()
-    cache = CacheHTTP(client, CacheConfig(ttl_seconds=ttl_sec, no_network=args.no_network, force=args.force))
+    cache = CacheHTTP(
+        client,
+        CacheConfig(ttl_seconds=ttl_sec, no_network=args.no_network, force=args.force),
+    )
     html, meta = cache.get(args.url)
     data = extract_skill_rows_table(html)
     data["fetched_at"] = meta.get("fetched_at")
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    out.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     print(f"skills-table: wrote -> {out}")
     return 0
 
 
-def main(argv: Optional[List[str]] = None) -> int:
-    ap = argparse.ArgumentParser(description="Extract core system skills from atwiki skills list (prototype)")
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(
+        description="Extract core system skills from atwiki skills list (prototype)"
+    )
     sub = ap.add_subparsers(dest="cmd")
 
     p_fetch = sub.add_parser("fetch", help="Fetch HTML (cache-aware)")
@@ -711,7 +746,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_fetch.set_defaults(func=cmd_fetch)
 
     p_parse = sub.add_parser("parse", help="Parse HTML file into skills JSON")
-    p_parse.add_argument("--in", dest="input", required=True, help="Path to cached HTML")
+    p_parse.add_argument(
+        "--in", dest="input", required=True, help="Path to cached HTML"
+    )
     p_parse.add_argument("--out", dest="out", default="cache/skills.json")
     p_parse.set_defaults(func=cmd_parse)
 
@@ -723,7 +760,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_all.add_argument("--out", dest="out", default="cache/skills.json")
     p_all.set_defaults(func=cmd_all)
 
-    p_tbl = sub.add_parser("table", help="Extract strict table rows (skill, level, desc, details)")
+    p_tbl = sub.add_parser(
+        "table", help="Extract strict table rows (skill, level, desc, details)"
+    )
     p_tbl.add_argument("--url", default=SKILL_URL)
     p_tbl.add_argument("--ttl", default="7d")
     p_tbl.add_argument("--no-network", action="store_true")
@@ -731,16 +770,24 @@ def main(argv: Optional[List[str]] = None) -> int:
     p_tbl.add_argument("--out", dest="out", default="cache/skills_table.json")
     p_tbl.set_defaults(func=cmd_table)
 
-    p_otbl = sub.add_parser("owners-table", help="Extract 'owners reverse index' table rows")
+    p_otbl = sub.add_parser(
+        "owners-table", help="Extract 'owners reverse index' table rows"
+    )
     p_otbl.add_argument("--url", default=SKILL_URL)
     p_otbl.add_argument("--ttl", default="7d")
     p_otbl.add_argument("--no-network", action="store_true")
     p_otbl.add_argument("--force", action="store_true")
     p_otbl.add_argument("--out", dest="out", default="cache/owners_table.json")
+
     def _cmd_otbl(args):
         ttl_sec = parse_ttl(args.ttl)
         client = get_client()
-        cache = CacheHTTP(client, CacheConfig(ttl_seconds=ttl_sec, no_network=args.no_network, force=args.force))
+        cache = CacheHTTP(
+            client,
+            CacheConfig(
+                ttl_seconds=ttl_sec, no_network=args.no_network, force=args.force
+            ),
+        )
         html, meta = cache.get(args.url)
         data = extract_skill_owners_rows_table(html)
         # フォールバック: 抽出できない場合は curl で直取得（環境に curl がある前提）
@@ -758,9 +805,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         data["fetched_at"] = meta.get("fetched_at")
         out = Path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        out.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
         print(f"owners-table: wrote -> {out}")
         return 0
+
     p_otbl.set_defaults(func=_cmd_otbl)
 
     args = ap.parse_args(argv)

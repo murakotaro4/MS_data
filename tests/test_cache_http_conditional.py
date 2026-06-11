@@ -4,7 +4,12 @@ from pathlib import Path
 from ms_data.net.cache_http import CacheHTTP, CacheConfig
 
 
-def _resp(html: str, status: int = 200, etag: str | None = None, last_modified: str | None = None):
+def _resp(
+    html: str,
+    status: int = 200,
+    etag: str | None = None,
+    last_modified: str | None = None,
+):
     headers = {}
     if etag:
         headers["ETag"] = etag
@@ -22,7 +27,12 @@ def test_conditional_get_304_updates_meta(tmp_path: Path):
     def handler(request: httpx.Request) -> httpx.Response:
         calls["n"] += 1
         if calls["n"] == 1:
-            return _resp("<html><title>T</title><table><tr><th></th><th>LV1</th></tr><tr><th>機体HP</th><td>10000</td></tr></table></html>", status=200, etag="A", last_modified="X")
+            return _resp(
+                "<html><title>T</title><table><tr><th></th><th>LV1</th></tr><tr><th>機体HP</th><td>10000</td></tr></table></html>",
+                status=200,
+                etag="A",
+                last_modified="X",
+            )
         return _resp("", status=304)
 
     transport = httpx.MockTransport(handler)

@@ -41,7 +41,9 @@ def test_validate_msdata_main_accepts_valid_minimal_data(tmp_path):
 
 
 def test_find_unknown_keys_detects_unmapped_key():
-    unknown = vm.find_unknown_keys([make_record(謎キー=1)], vm.load_allowed_keys(vm.SCHEMA_PATH))
+    unknown = vm.find_unknown_keys(
+        [make_record(謎キー=1)], vm.load_allowed_keys(vm.SCHEMA_PATH)
+    )
     assert unknown == {"謎キー": 1}
 
 
@@ -138,4 +140,7 @@ def test_find_semantic_errors_detects_sortie_turn_contradiction():
             )
         ]
     )
-    assert any("ground sortie is false but ground turn values exist" in error for error in errors)
+    assert any(
+        "ground sortie is false but ground turn values exist" in error
+        for error in errors
+    )

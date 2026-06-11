@@ -19,13 +19,14 @@ import datetime as dt
 import re
 from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any
+from collections.abc import Iterable
 
 from ms_data.core.json_io import load_json
 
 
-def extract_base_levels(ms_records: List[Dict[str, Any]]) -> Dict[str, List[int]]:
-    bases: Dict[str, List[int]] = defaultdict(list)
+def extract_base_levels(ms_records: list[dict[str, Any]]) -> dict[str, list[int]]:
+    bases: dict[str, list[int]] = defaultdict(list)
     for r in ms_records:
         name = r.get("MS名")
         if not isinstance(name, str):
@@ -39,7 +40,7 @@ def extract_base_levels(ms_records: List[Dict[str, Any]]) -> Dict[str, List[int]
     return bases
 
 
-def normalize_towards_index(name: str) -> Tuple[str, List[str]]:
+def normalize_towards_index(name: str) -> tuple[str, list[str]]:
     """msData名を index 側の表記に近づける軽正規化を行い、適用ルールを返す。
 
     ルール:
@@ -48,7 +49,7 @@ def normalize_towards_index(name: str) -> Tuple[str, List[str]]:
     - 文脈限定Z → ギリシャ文字 Ζ（Zガンダム/ZZガンダム/同3号機…）
     - 全角Ｖ → 半角V（例: ゲルググ・Ｖ・キュアノス）
     """
-    rules: List[str] = []
+    rules: list[str] = []
     out = name
 
     # 1) [] → ［］
@@ -90,13 +91,15 @@ def normalize_towards_index(name: str) -> Tuple[str, List[str]]:
     return out, rules
 
 
-def audit(index_path: Path, ms_path: Path) -> Dict[str, Any]:
+def audit(index_path: Path, ms_path: Path) -> dict[str, Any]:
     idx_list = load_json(index_path)
     ms_list = load_json(ms_path)
     if not isinstance(idx_list, list) or not isinstance(ms_list, list):
         raise SystemExit("ERROR: inputs must be arrays")
 
-    idx_by_name: Dict[str, Dict[str, Any]] = {e["name"]: e for e in idx_list if isinstance(e, dict) and e.get("name")}
+    idx_by_name: dict[str, dict[str, Any]] = {
+        e["name"]: e for e in idx_list if isinstance(e, dict) and e.get("name")
+    }
     idx_names = set(idx_by_name.keys())
 
     ms_bases_levels = extract_base_levels([r for r in ms_list if isinstance(r, dict)])
@@ -107,7 +110,7 @@ def audit(index_path: Path, ms_path: Path) -> Dict[str, Any]:
     ms_only = sorted(ms_bases - idx_names)
 
     # attr/cost mismatches for names present in both (compare vs LV最小のレコードで代表)
-    rep_by_base: Dict[str, Dict[str, Any]] = {}
+    rep_by_base: dict[str, dict[str, Any]] = {}
     for base, levels in ms_bases_levels.items():
         min_lv = min(levels) if levels else None
         if min_lv is None:
@@ -119,8 +122,8 @@ def audit(index_path: Path, ms_path: Path) -> Dict[str, Any]:
                 rep_by_base[base] = r
                 break
 
-    attr_mismatches: List[Tuple[str, str, str]] = []
-    cost_mismatches: List[Tuple[str, int, int]] = []
+    attr_mismatches: list[tuple[str, str, str]] = []
+    cost_mismatches: list[tuple[str, int, int]] = []
     for name in sorted(idx_names & ms_bases):
         idx_attr = idx_by_name[name].get("属性")
         idx_cost = idx_by_name[name].get("cost")
@@ -129,12 +132,16 @@ def audit(index_path: Path, ms_path: Path) -> Dict[str, Any]:
         ms_cost = rep.get("コスト")
         if (idx_attr is not None) and (ms_attr is not None) and (idx_attr != ms_attr):
             attr_mismatches.append((name, str(idx_attr), str(ms_attr)))
-        if isinstance(idx_cost, int) and isinstance(ms_cost, int) and (idx_cost != ms_cost):
+        if (
+            isinstance(idx_cost, int)
+            and isinstance(ms_cost, int)
+            and (idx_cost != ms_cost)
+        ):
             cost_mismatches.append((name, int(idx_cost), int(ms_cost)))
 
     # ms-only names: try normalization to see if they actually match index after normalization
-    normalized_matches: List[Dict[str, Any]] = []
-    normalized_unmatched: List[Dict[str, Any]] = []
+    normalized_matches: list[dict[str, Any]] = []
+    normalized_unmatched: list[dict[str, Any]] = []
     for base in ms_only:
         norm, rules = normalize_towards_index(base)
         info = {
@@ -160,9 +167,9 @@ def audit(index_path: Path, ms_path: Path) -> Dict[str, Any]:
     }
 
 
-def render_markdown(result: Dict[str, Any]) -> str:
+def render_markdown(result: dict[str, Any]) -> str:
     now = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    lines: List[str] = []
+    lines: list[str] = []
     lines.append(f"# index vs msData 監査レポート")
     lines.append("")
     lines.append(f"generated at: {now}")
@@ -187,7 +194,11 @@ def render_markdown(result: Dict[str, Any]) -> str:
         lines.append("表記差のポイントを括弧内に記載しています。")
         for row in result["normalized_matches"]:
             lv = row["levels"]
-            rng = f"LV{lv[0]}-{lv[-1]}" if lv and len(lv) > 1 else (f"LV{lv[0]}" if lv else "-")
+            rng = (
+                f"LV{lv[0]}-{lv[-1]}"
+                if lv and len(lv) > 1
+                else (f"LV{lv[0]}" if lv else "-")
+            )
             rules = "/".join(row["rules"]) if row["rules"] else "(差分特定済み)"
             lines.append(f"- {row['ms_name']} → {row['norm_name']} | {rng} | {rules}")
         lines.append("")
@@ -197,9 +208,15 @@ def render_markdown(result: Dict[str, Any]) -> str:
         lines.append("index抽出漏れ等の可能性があります。")
         for row in result["normalized_unmatched"]:
             lv = row["levels"]
-            rng = f"LV{lv[0]}-{lv[-1]}" if lv and len(lv) > 1 else (f"LV{lv[0]}" if lv else "-")
+            rng = (
+                f"LV{lv[0]}-{lv[-1]}"
+                if lv and len(lv) > 1
+                else (f"LV{lv[0]}" if lv else "-")
+            )
             rules = "/".join(row["rules"]) if row["rules"] else "(差分特定済み)"
-            lines.append(f"- {row['ms_name']}（norm: {row['norm_name']}） | {rng} | {rules}")
+            lines.append(
+                f"- {row['ms_name']}（norm: {row['norm_name']}） | {rng} | {rules}"
+            )
         lines.append("")
 
     if result["attr_mismatches"] or result["cost_mismatches"]:
@@ -210,13 +227,19 @@ def render_markdown(result: Dict[str, Any]) -> str:
             lines.append(f"- コスト: {name}: index={i_cost} / msData={m_cost}")
         lines.append("")
 
-    if not (result["index_only"] or result["normalized_matches"] or result["normalized_unmatched"] or result["attr_mismatches"] or result["cost_mismatches"]):
+    if not (
+        result["index_only"]
+        or result["normalized_matches"]
+        or result["normalized_unmatched"]
+        or result["attr_mismatches"]
+        or result["cost_mismatches"]
+    ):
         lines.append("差分は検出されませんでした。")
 
     return "\n".join(lines) + "\n"
 
 
-def main(argv: List[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--index", type=Path, default=Path("cache/index.json"))
     ap.add_argument("--ms", type=Path, default=Path("msData.json"))
@@ -226,7 +249,10 @@ def main(argv: List[str] | None = None) -> int:
     res = audit(args.index, args.ms)
     out_path = args.out
     if out_path is None:
-        out_path = Path("reports") / f"index_ms_audit_{dt.datetime.now().strftime('%Y%m%d')}.md"
+        out_path = (
+            Path("reports")
+            / f"index_ms_audit_{dt.datetime.now().strftime('%Y%m%d')}.md"
+        )
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_text = render_markdown(res)
     out_path.write_text(out_text, encoding="utf-8")
@@ -236,4 +262,3 @@ def main(argv: List[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

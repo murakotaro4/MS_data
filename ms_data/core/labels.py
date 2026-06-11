@@ -11,7 +11,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 import re
 
 
@@ -32,7 +32,7 @@ def normalize_row_label(s: str) -> str:
 
 
 # 出力JSONのキー表記揺れ → 正規キー
-KEY_ALIASES: Dict[str, str] = {
+KEY_ALIASES: dict[str, str] = {
     "射撃補則": "射撃補正",
     "射撃補生": "射撃補正",
     "格闘補定": "格闘補正",
@@ -41,7 +41,7 @@ KEY_ALIASES: Dict[str, str] = {
 }
 
 
-def apply_key_aliases(rec: Dict[str, Any]) -> Dict[str, Any]:
+def apply_key_aliases(rec: dict[str, Any]) -> dict[str, Any]:
     """レコード内の別名キーを正規キーへ移し替える（既存優先）。"""
     for alias, target in KEY_ALIASES.items():
         if alias in rec and target not in rec:
@@ -53,7 +53,7 @@ def apply_key_aliases(rec: Dict[str, Any]) -> Dict[str, Any]:
 
 # atwiki の行見出し → 正規キー
 # 注意: まずは `clean_text` 後の原文を優先し、見つからなければ `normalize_row_label` 後で再照会する想定。
-FIELD_MAP: Dict[str, str] = {
+FIELD_MAP: dict[str, str] = {
     # 基本ステータス
     "Cost": "コスト",
     "機体HP": "HP",

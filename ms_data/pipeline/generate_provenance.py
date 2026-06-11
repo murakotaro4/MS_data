@@ -23,14 +23,12 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 
 def now_iso() -> str:
     return (
-        datetime.now(timezone.utc)
-        .isoformat(timespec="seconds")
-        .replace("+00:00", "Z")
+        datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
     )
 
 
@@ -82,8 +80,8 @@ def count_jsonl_records(path: Path) -> int:
     return count
 
 
-def file_entry(path: Path, record_count: int | None = None) -> Dict[str, Any]:
-    out: Dict[str, Any] = {
+def file_entry(path: Path, record_count: int | None = None) -> dict[str, Any]:
+    out: dict[str, Any] = {
         "path": str(path),
         "sha256": sha256_file(path),
         "size_bytes": path.stat().st_size,
@@ -93,7 +91,7 @@ def file_entry(path: Path, record_count: int | None = None) -> Dict[str, Any]:
     return out
 
 
-def dir_entry(path: Path) -> Dict[str, Any]:
+def dir_entry(path: Path) -> dict[str, Any]:
     file_count = 0
     total_bytes = 0
     for p in path.rglob("*"):
@@ -113,7 +111,7 @@ def require_exists(path: Path, label: str) -> None:
         raise FileNotFoundError(f"{label} が見つかりません: {path}")
 
 
-def build_provenance(args: argparse.Namespace) -> Dict[str, Any]:
+def build_provenance(args: argparse.Namespace) -> dict[str, Any]:
     index_path = Path(args.index)
     details_jsonl_path = Path(args.details_jsonl)
     details_json_path = Path(args.details_json)
@@ -154,9 +152,7 @@ def build_provenance(args: argparse.Namespace) -> Dict[str, Any]:
         else f"raw_snapshot_{args.date}_run{run_id}.tar.xz"
     )
     release_url = (
-        f"https://github.com/{repo}/releases/tag/{release_tag}"
-        if repo
-        else ""
+        f"https://github.com/{repo}/releases/tag/{release_tag}" if repo else ""
     )
 
     return {

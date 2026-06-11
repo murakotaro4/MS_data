@@ -65,16 +65,20 @@ def test_changed_only_with_two_urls(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(sm, "parse_details", fake_parse_details)
 
     out = tmp_path / "details.jsonl"
-    args = type("Args", (), {
-        "input": str(idx_path),
-        "out": str(out),
-        "rate": 100.0,
-        "limit": 0,
-        "ttl": "0s",
-        "no_network": False,
-        "force": False,
-        "changed_only": True,
-    })()
+    args = type(
+        "Args",
+        (),
+        {
+            "input": str(idx_path),
+            "out": str(out),
+            "rate": 100.0,
+            "limit": 0,
+            "ttl": "0s",
+            "no_network": False,
+            "force": False,
+            "changed_only": True,
+        },
+    )()
 
     # Run 1: both write -> 2 records
     rc1 = sm.cmd_details(args)

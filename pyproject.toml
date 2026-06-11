@@ -31,7 +31,8 @@ line-length = 88
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "W"]
+# UP006/UP007/UP035/UP045: typing.Dict/Optional 等の旧式表記を dict / X | None へ統一
+select = ["E", "F", "I", "W", "UP006", "UP007", "UP035", "UP045"]
 ignore = ["E402", "E501", "F401", "F541", "E741", "I001"]
 
 [tool.pytest.ini_options]

@@ -1,5 +1,8 @@
 import json
-from ms_data.scraping.extract_skills import extract_skills_from_html, extract_skill_owners_from_html
+from ms_data.scraping.extract_skills import (
+    extract_skills_from_html,
+    extract_skill_owners_from_html,
+)
 from bs4 import BeautifulSoup
 
 
@@ -110,7 +113,7 @@ def test_extract_skill_owners_from_html_min():
     """
     soup = BeautifulSoup(html, "lxml")
     owners = extract_skill_owners_from_html(soup)
-    d = { (o['name'], o['level']) : o['owners'] for o in owners }
+    d = {(o['name'], o['level']): o['owners'] for o in owners}
     assert ("能力UP「EXAM」", 1) in d
     assert "イフリート改" in d[("能力UP「EXAM」", 1)]
     assert any("ブルーディスティニー3号機" in x for x in d[("能力UP「EXAM」", 1)])
@@ -150,7 +153,9 @@ def test_dedupe_levels_keeps_best():
     """
     data = extract_skills_from_html(html)
     skills = data["skills"]
-    s = next((x for x in skills if x["name"].startswith("能力UP「簡易バイオセンサー")), None)
+    s = next(
+        (x for x in skills if x["name"].startswith("能力UP「簡易バイオセンサー")), None
+    )
     assert s is not None
     levels = s["levels"]
     # 重複は1つに絞られる

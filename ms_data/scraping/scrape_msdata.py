@@ -36,7 +36,7 @@ import sys
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import httpx
 from bs4 import BeautifulSoup, Tag
@@ -67,14 +67,14 @@ def absolute_url(href: str) -> str:
     return ATWIKI_BASE + "/" + href.lstrip("/")
 
 
-def extract_page_id(url: str) -> Optional[int]:
+def extract_page_id(url: str) -> int | None:
     match = PAGE_ID_RE.search(url)
     if not match:
         return None
     return int(match.group("page_id"))
 
 
-def extract_updated_age(title: str) -> tuple[Optional[str], Optional[int]]:
+def extract_updated_age(title: str) -> tuple[str | None, int | None]:
     title = clean_text(title)
     match = UPDATED_AGE_RE.search(title)
     if not match:
@@ -94,10 +94,10 @@ def parse_iso_datetime(value: str) -> datetime:
 
 def find_latest_provenance(
     reports_dir: Path,
-) -> tuple[Optional[Path], Optional[Dict[str, Any]]]:
-    latest_path: Optional[Path] = None
-    latest_data: Optional[Dict[str, Any]] = None
-    latest_generated_at: Optional[datetime] = None
+) -> tuple[Path | None, dict[str, Any] | None]:
+    latest_path: Path | None = None
+    latest_data: dict[str, Any] | None = None
+    latest_generated_at: datetime | None = None
     for path in sorted(reports_dir.glob("provenance_*.json")):
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
@@ -111,7 +111,7 @@ def find_latest_provenance(
     return latest_path, latest_data
 
 
-def load_msdata_base_index(path: Path) -> Dict[str, Dict[str, Any]]:
+def load_msdata_base_index(path: Path) -> dict[str, dict[str, Any]]:
     if not path.exists():
         return {}
     try:
@@ -121,7 +121,7 @@ def load_msdata_base_index(path: Path) -> Dict[str, Dict[str, Any]]:
     if not isinstance(data, list):
         return {}
 
-    result: Dict[str, Dict[str, Any]] = {}
+    result: dict[str, dict[str, Any]] = {}
     for record in data:
         if not isinstance(record, dict):
             continue
@@ -139,7 +139,7 @@ def load_msdata_base_index(path: Path) -> Dict[str, Dict[str, Any]]:
     return result
 
 
-def load_detail_fetch_state(path: Path) -> Dict[str, Dict[str, Any]]:
+def load_detail_fetch_state(path: Path) -> dict[str, dict[str, Any]]:
     if not path.exists():
         return {}
     try:
@@ -169,9 +169,9 @@ def _utc_iso(value: datetime) -> str:
 
 def write_detail_fetch_state(
     path: Path,
-    items: Dict[str, Dict[str, Any]],
+    items: dict[str, dict[str, Any]],
     generated_at: datetime,
-    run_started_at: Optional[datetime] = None,
+    run_started_at: datetime | None = None,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -186,11 +186,11 @@ def write_detail_fetch_state(
 
 
 def remember_detail_fetch(
-    detail_state: Dict[str, Dict[str, Any]],
+    detail_state: dict[str, dict[str, Any]],
     url: str,
-    item: Dict[str, Any],
-    meta: Dict[str, Any],
-    attempted_at: Optional[datetime] = None,
+    item: dict[str, Any],
+    meta: dict[str, Any],
+    attempted_at: datetime | None = None,
 ) -> None:
     fetched_at = meta.get("fetched_at")
     if not isinstance(fetched_at, str):
@@ -207,9 +207,9 @@ def remember_detail_fetch(
 
 
 def remember_detail_fetch_failure(
-    detail_state: Dict[str, Dict[str, Any]],
+    detail_state: dict[str, dict[str, Any]],
     url: str,
-    item: Dict[str, Any],
+    item: dict[str, Any],
     error: Exception,
     attempted_at: datetime,
 ) -> None:
@@ -224,8 +224,8 @@ def remember_detail_fetch_failure(
 
 
 def _detail_state_fetched_at(
-    detail_fetch_state: Dict[str, Dict[str, Any]], url: str
-) -> Optional[datetime]:
+    detail_fetch_state: dict[str, dict[str, Any]], url: str
+) -> datetime | None:
     entry = detail_fetch_state.get(url)
     if not isinstance(entry, dict):
         return None
@@ -239,18 +239,18 @@ def _detail_state_fetched_at(
 
 
 def select_changed_index_items(
-    items: List[Dict[str, Any]],
+    items: list[dict[str, Any]],
     *,
-    previous_generated_at: Optional[datetime],
-    previous_msdata_index: Dict[str, Dict[str, Any]],
-    now: Optional[datetime] = None,
+    previous_generated_at: datetime | None,
+    previous_msdata_index: dict[str, dict[str, Any]],
+    now: datetime | None = None,
     freshness_window_seconds: int = 3600,
     force_full: bool = False,
     revalidate: bool = False,
     min_age_coverage: float = 0.95,
-    detail_fetch_state: Optional[Dict[str, Dict[str, Any]]] = None,
-    stale_detail_seconds: Optional[int] = None,
-) -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    detail_fetch_state: dict[str, dict[str, Any]] | None = None,
+    stale_detail_seconds: int | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     now = now or datetime.now(timezone.utc)
     now_utc = now.astimezone(timezone.utc)
     total_count = len(items)
@@ -264,7 +264,7 @@ def select_changed_index_items(
         and stale_detail_seconds > 0
     )
 
-    meta: Dict[str, Any] = {
+    meta: dict[str, Any] = {
         "mode": "full" if force_full else ("revalidate" if revalidate else "fast"),
         "fast_path": True,
         "fallback_reason": "",
@@ -286,8 +286,8 @@ def select_changed_index_items(
         "reason_counts": {},
     }
 
-    def _identity_reasons(item: Dict[str, Any]) -> List[str]:
-        reasons: List[str] = []
+    def _identity_reasons(item: dict[str, Any]) -> list[str]:
+        reasons: list[str] = []
         name = item.get("name")
         existing = previous_msdata_index.get(name) if isinstance(name, str) else None
         if existing is None:
@@ -312,7 +312,7 @@ def select_changed_index_items(
             reasons.append("wiki_url_changed")
         return reasons
 
-    def _stale_detail_reason(item: Dict[str, Any]) -> List[str]:
+    def _stale_detail_reason(item: dict[str, Any]) -> list[str]:
         url = item.get("url")
         if not (stale_detail_enabled and isinstance(url, str)):
             return []
@@ -326,7 +326,7 @@ def select_changed_index_items(
             return ["stale_detail_cache"]
         return []
 
-    def _finish(selected: List[Dict[str, Any]], reason_counts: Dict[str, int]):
+    def _finish(selected: list[dict[str, Any]], reason_counts: dict[str, int]):
         meta["candidate_count"] = len(selected)
         meta["reason_counts"] = reason_counts
         return selected, meta
@@ -349,8 +349,8 @@ def select_changed_index_items(
             return items, meta
         meta["fallback_reason"] = "revalidate"
 
-        selected: List[Dict[str, Any]] = []
-        reason_counts: Dict[str, int] = {}
+        selected: list[dict[str, Any]] = []
+        reason_counts: dict[str, int] = {}
         for item in items:
             reasons = _identity_reasons(item)
             age_seconds = item.get("updated_age_seconds")
@@ -402,8 +402,8 @@ def select_changed_index_items(
     meta["elapsed_seconds"] = elapsed_seconds
     meta["threshold_seconds"] = threshold_seconds
 
-    selected: List[Dict[str, Any]] = []
-    reason_counts: Dict[str, int] = {}
+    selected: list[dict[str, Any]] = []
+    reason_counts: dict[str, int] = {}
     for item in items:
         reasons = _identity_reasons(item)
 
@@ -433,7 +433,7 @@ def get_client(timeout: float = 30.0) -> httpx.Client:
 def write_fetch_stats(
     path: Path,
     phase: str,
-    stats: Dict[str, int],
+    stats: dict[str, int],
     *,
     started_at: datetime,
     duration_seconds: float,
@@ -448,7 +448,7 @@ def write_fetch_stats(
     reset=True で前回実行のフェーズを破棄する（実行の先頭フェーズで指定し、
     走らなかったフェーズの前回値が totals に混入するのを防ぐ）。
     """
-    payload: Dict[str, Any] = {"phases": {}}
+    payload: dict[str, Any] = {"phases": {}}
     if not reset and path.exists():
         existing = load_json_or_default(path, {})
         if isinstance(existing, dict) and isinstance(existing.get("phases"), dict):
@@ -459,7 +459,7 @@ def write_fetch_stats(
         "started_at": _utc_iso(started_at),
         "duration_seconds": round(duration_seconds, 3),
     }
-    totals: Dict[str, Any] = {}
+    totals: dict[str, Any] = {}
     for entry in payload["phases"].values():
         for key, value in entry.items():
             if key == "started_at":
@@ -496,7 +496,7 @@ def parse_ttl(s: str) -> int:
     return val
 
 
-def to_int(text: str) -> Optional[int]:
+def to_int(text: str) -> int | None:
     if text is None:
         return None
     # 全角→半角、カンマや単位除去
@@ -512,7 +512,7 @@ def to_int(text: str) -> Optional[int]:
     return int(m.group(0)) if m else None
 
 
-def symbol_to_bool(s: str) -> Optional[bool]:
+def symbol_to_bool(s: str) -> bool | None:
     t = clean_text(s)
     # 記号/語を可否にマップ
     true_syms = {"◎", "◯", "○", "〇", "△", "可", "可能", "yes", "可○"}
@@ -529,7 +529,7 @@ def symbol_to_bool(s: str) -> Optional[bool]:
     return None
 
 
-def parse_deployment(soup: BeautifulSoup) -> Dict[str, Optional[bool]]:
+def parse_deployment(soup: BeautifulSoup) -> dict[str, bool | None]:
     """出撃可否（地上/宇宙）を推定して返す。
 
     - 優先: 「〜出撃のみ」系の明示文
@@ -538,7 +538,7 @@ def parse_deployment(soup: BeautifulSoup) -> Dict[str, Optional[bool]]:
     """
 
     def section_text(h: Tag) -> str:
-        parts: List[str] = []
+        parts: list[str] = []
         # 近傍の数要素を収集
         cur = h
         for _ in range(6):
@@ -548,7 +548,7 @@ def parse_deployment(soup: BeautifulSoup) -> Dict[str, Optional[bool]]:
             parts.append(cur.get_text(" ") if hasattr(cur, "get_text") else str(cur))
         return clean_text(" \n ".join(parts))
 
-    def scan_tables(h: Tag) -> Tuple[Optional[bool], Optional[bool]]:
+    def scan_tables(h: Tag) -> tuple[bool | None, bool | None]:
         gz = None
         uz = None
         # 近傍の最初のtableを数個まで探索
@@ -580,7 +580,7 @@ def parse_deployment(soup: BeautifulSoup) -> Dict[str, Optional[bool]]:
                                 uz = v if uz is None else uz
         return gz, uz
 
-    result: Dict[str, Optional[bool]] = {"出撃_地上可": None, "出撃_宇宙可": None}
+    result: dict[str, bool | None] = {"出撃_地上可": None, "出撃_宇宙可": None}
     # 0) atwiki 固有のIDにエンコードされているケース: label_sortie_{G|n}_{S|n}
     lab = soup.find(id=re.compile(r"^label_sortie_([GSn])_([GSn])$"))
     if lab and hasattr(lab, 'get'):
@@ -591,7 +591,7 @@ def parse_deployment(soup: BeautifulSoup) -> Dict[str, Optional[bool]]:
             result["出撃_宇宙可"] = True if s == 'S' else (False if s == 'n' else None)
             return result
     # 対象となる見出しを探す
-    headers: List[Tag] = []
+    headers: list[Tag] = []
     for hx in soup.find_all(["h2", "h3", "h4"]):
         txt = clean_text(hx.get_text(" "))
         if any(k in txt for k in ("出撃", "環境適正", "機体属性・出撃制限・環境適正")):
@@ -626,7 +626,7 @@ def parse_deployment(soup: BeautifulSoup) -> Dict[str, Optional[bool]]:
     return result
 
 
-def parse_env_suitability(soup: BeautifulSoup) -> Dict[str, bool]:
+def parse_env_suitability(soup: BeautifulSoup) -> dict[str, bool]:
     """環境適正（地上/宇宙/水中）を抽出。見つからないものは False。
 
     優先: atwiki 固有ID label_env_{G|n}_{S|n}(_{W|n})
@@ -646,7 +646,7 @@ def parse_env_suitability(soup: BeautifulSoup) -> Dict[str, bool]:
 
     # 2) テキスト/表（簡易フォールバック）
     def section_text(h: Tag) -> str:
-        parts: List[str] = []
+        parts: list[str] = []
         cur = h
         for _ in range(6):
             cur = cur.find_next_sibling()
@@ -655,7 +655,7 @@ def parse_env_suitability(soup: BeautifulSoup) -> Dict[str, bool]:
             parts.append(cur.get_text(" ") if hasattr(cur, "get_text") else str(cur))
         return clean_text(" \n ".join(parts))
 
-    headers: List[Tag] = []
+    headers: list[Tag] = []
     for hx in soup.find_all(["h2", "h3", "h4"]):
         txt = clean_text(hx.get_text(" "))
         if "環境適正" in txt or "機体属性・出撃制限・環境適正" in txt:
@@ -663,7 +663,7 @@ def parse_env_suitability(soup: BeautifulSoup) -> Dict[str, bool]:
     for h in headers:
         txt = section_text(h)
 
-        def find_bool(label: str) -> Optional[bool]:
+        def find_bool(label: str) -> bool | None:
             m = re.search(label + r"\s*[:：]\s*([^\s]+)", txt)
             if m:
                 return symbol_to_bool(m.group(1))
@@ -695,11 +695,11 @@ SECTION_IDS = [
 
 
 def append_index_items(
-    results: List[Dict[str, Any]],
+    results: list[dict[str, Any]],
     ul: Tag,
     *,
-    cost: Optional[int],
-    attr: Optional[str],
+    cost: int | None,
+    attr: str | None,
     seen_names: set[str],
 ) -> None:
     for a in ul.select("li > a[href]"):
@@ -722,9 +722,9 @@ def append_index_items(
         seen_names.add(name)
 
 
-def parse_index(html: str) -> List[Dict[str, Any]]:
+def parse_index(html: str) -> list[dict[str, Any]]:
     soup = BeautifulSoup(html, "lxml")
-    results: List[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
     seen_names: set[str] = set()
     for sec_id, attr in SECTION_IDS:
         sec = soup.find("div", id=sec_id)
@@ -763,7 +763,7 @@ def extract_title(soup: BeautifulSoup) -> str:
     return title.split(" - ")[0].strip()
 
 
-def levels_from_table(table: Tag) -> List[int]:
+def levels_from_table(table: Tag) -> list[int]:
     # 1) thead優先
     thead = table.find("thead")
     headers = []
@@ -779,7 +779,7 @@ def levels_from_table(table: Tag) -> List[int]:
             if any(re.search(r"LV\d+", t) for t in texts):
                 headers = texts
                 break
-    lv: List[int] = []
+    lv: list[int] = []
     for t in headers[1:]:  # 先頭列は項目名 or 属性名
         m = re.search(r"LV(\d+)", t, re.IGNORECASE)
         if m:
@@ -787,8 +787,8 @@ def levels_from_table(table: Tag) -> List[int]:
     return lv
 
 
-def expand_cells(cells: List[Tag], n_levels: int) -> List[Optional[str]]:
-    vals: List[Optional[str]] = []
+def expand_cells(cells: list[Tag], n_levels: int) -> list[str | None]:
+    vals: list[str | None] = []
     for td in cells:
         colspan = int(td.get("colspan", 1))
         txt = clean_text(td.get_text(" "))
@@ -801,7 +801,7 @@ def expand_cells(cells: List[Tag], n_levels: int) -> List[Optional[str]]:
     return vals
 
 
-def find_detail_table(soup: BeautifulSoup) -> tuple[Optional[Tag], Optional[Tag]]:
+def find_detail_table(soup: BeautifulSoup) -> tuple[Tag | None, Tag | None]:
     tbl_div = soup.find(id=re.compile(r"^table_(kyoushu|hanyou|sien)$"))
     table = tbl_div.find("table") if tbl_div else None
     if not table:
@@ -813,9 +813,9 @@ def find_detail_table(soup: BeautifulSoup) -> tuple[Optional[Tag], Optional[Tag]
 
 
 def build_base_records(
-    table: Tag, name: str, levels: List[int]
-) -> Dict[int, Dict[str, Any]]:
-    per_level: Dict[int, Dict[str, Any]] = {
+    table: Tag, name: str, levels: list[int]
+) -> dict[int, dict[str, Any]]:
+    per_level: dict[int, dict[str, Any]] = {
         lv: {"MS名": f"{name}_LV{lv}"} for lv in levels
     }
 
@@ -845,9 +845,9 @@ def build_base_records(
 
 
 def apply_parts_slots(
-    soup: BeautifulSoup, per_level: Dict[int, Dict[str, Any]], levels: List[int]
+    soup: BeautifulSoup, per_level: dict[int, dict[str, Any]], levels: list[int]
 ) -> None:
-    parts_table: Optional[Tag] = None
+    parts_table: Tag | None = None
     for h3 in soup.find_all("h3"):
         if "パーツスロット" in h3.get_text():
             parts_table = h3.find_next_sibling("table")
@@ -875,7 +875,7 @@ def apply_parts_slots(
                 per_level[lv][dst_key] = iv
 
 
-def infer_attr_from_table_div(tbl_div: Optional[Tag]) -> Optional[str]:
+def infer_attr_from_table_div(tbl_div: Tag | None) -> str | None:
     if not tbl_div or not isinstance(tbl_div, Tag):
         return None
     match = re.search(r"table_(kyoushu|hanyou|sien)", tbl_div.get("id", ""))
@@ -886,7 +886,7 @@ def infer_attr_from_table_div(tbl_div: Optional[Tag]) -> Optional[str]:
 
 
 def apply_attr(
-    per_level: Dict[int, Dict[str, Any]], levels: List[int], attr: Optional[str]
+    per_level: dict[int, dict[str, Any]], levels: list[int], attr: str | None
 ) -> None:
     if not attr:
         return
@@ -895,7 +895,7 @@ def apply_attr(
 
 
 def apply_deployment_and_env(
-    soup: BeautifulSoup, per_level: Dict[int, Dict[str, Any]], levels: List[int]
+    soup: BeautifulSoup, per_level: dict[int, dict[str, Any]], levels: list[int]
 ) -> None:
     dep = parse_deployment(soup)
     env = parse_env_suitability(soup)
@@ -907,7 +907,7 @@ def apply_deployment_and_env(
 
 
 def apply_deployment_fallbacks(
-    per_level: Dict[int, Dict[str, Any]], levels: List[int]
+    per_level: dict[int, dict[str, Any]], levels: list[int]
 ) -> None:
     for lv in levels:
         rec = per_level[lv]
@@ -926,7 +926,7 @@ def apply_deployment_fallbacks(
 
 
 def normalize_turn_values(
-    per_level: Dict[int, Dict[str, Any]], levels: List[int]
+    per_level: dict[int, dict[str, Any]], levels: list[int]
 ) -> None:
     for lv in levels:
         rec = per_level[lv]
@@ -945,8 +945,8 @@ def normalize_turn_values(
 
 
 def parse_fullst_by_ms_level(
-    soup: BeautifulSoup, ms_levels: List[int]
-) -> Dict[int, List[Dict[str, Any]]]:
+    soup: BeautifulSoup, ms_levels: list[int]
+) -> dict[int, list[dict[str, Any]]]:
     header = None
     for hx in soup.find_all(["h2", "h3"]):
         if "強化リスト情報" in clean_text(hx.get_text(" ")):
@@ -959,8 +959,8 @@ def parse_fullst_by_ms_level(
     if not table:
         return {}
 
-    rows: List[Tuple[str, int, str, Dict[int, int], set[int], set[int]]] = []
-    current_name: Optional[str] = None
+    rows: list[tuple[str, int, str, dict[int, int], set[int], set[int]]] = []
+    current_name: str | None = None
     section = "normal"
     for tr in table.find_all("tr"):
         row_text = clean_text(tr.get_text(" "))
@@ -973,7 +973,7 @@ def parse_fullst_by_ms_level(
         if not ths:
             continue
 
-        cand_names: List[str] = []
+        cand_names: list[str] = []
         for th in ths:
             txt = clean_text(th.get_text(" "))
             if not txt:
@@ -995,7 +995,7 @@ def parse_fullst_by_ms_level(
         if cand_names:
             current_name = cand_names[0]
 
-        fullst_lv: Optional[int] = None
+        fullst_lv: int | None = None
         for th in ths:
             txt = clean_text(th.get_text(" "))
             match = re.fullmatch(r"Lv(\d+)", txt, re.IGNORECASE)
@@ -1008,7 +1008,7 @@ def parse_fullst_by_ms_level(
             continue
 
         numeric_cells = tds[:-1] if len(tds) >= 1 else tds
-        points_by_ms: Dict[int, int] = {}
+        points_by_ms: dict[int, int] = {}
         present_ms_levels: set[int] = set()
         blocked_ms_levels: set[int] = set()
         for ms_lv in ms_levels:
@@ -1039,9 +1039,9 @@ def parse_fullst_by_ms_level(
             )
         )
 
-    by_ms_level: Dict[int, List[Dict[str, Any]]] = {lv: [] for lv in ms_levels}
+    by_ms_level: dict[int, list[dict[str, Any]]] = {lv: [] for lv in ms_levels}
     for ms_lv in ms_levels:
-        by_name: Dict[tuple[str, str], List[Tuple[int, Optional[int], bool]]] = {}
+        by_name: dict[tuple[str, str], list[tuple[int, int | None, bool]]] = {}
         for nm, flv, section, pmap, present_lvs, blocked_lvs in rows:
             pts = pmap.get(ms_lv)
             skip_fallback = False
@@ -1051,7 +1051,7 @@ def parse_fullst_by_ms_level(
                 continue
             by_name.setdefault((section, nm), []).append((flv, pts, skip_fallback))
 
-        items: List[Dict[str, Any]] = []
+        items: list[dict[str, Any]] = []
         for (section, nm), lst in by_name.items():
             lst_sorted = sorted(lst, key=lambda x: x[0])
             keep = []
@@ -1070,22 +1070,22 @@ def parse_fullst_by_ms_level(
     return {k: v for k, v in by_ms_level.items() if v}
 
 
-def fullst_sort_key(item: Dict[str, Any]) -> tuple[int, bool, int]:
+def fullst_sort_key(item: dict[str, Any]) -> tuple[int, bool, int]:
     name = str(item.get("name", ""))
     points = item.get("points")
     point_value = points if isinstance(points, int) else 0
     return (0 if name == "強行出撃" else 1, points is not None, point_value)
 
 
-def fullst_entry_key(item: Dict[str, Any]) -> tuple[Any, Any, Any]:
+def fullst_entry_key(item: dict[str, Any]) -> tuple[Any, Any, Any]:
     return item.get("_section"), item.get("name"), item.get("level")
 
 
-def fullst_section_name_key(item: Dict[str, Any]) -> tuple[Any, Any]:
+def fullst_section_name_key(item: dict[str, Any]) -> tuple[Any, Any]:
     return item.get("_section"), item.get("name")
 
 
-def copy_fullst_with_null_points(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def copy_fullst_with_null_points(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     copied = []
     for e in items:
         if not isinstance(e, dict) or e.get("_skip_fallback"):
@@ -1097,7 +1097,7 @@ def copy_fullst_with_null_points(items: List[Dict[str, Any]]) -> List[Dict[str, 
     return copied
 
 
-def strip_skip_fallback_entries(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def strip_skip_fallback_entries(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     stripped = []
     for e in items:
         if not isinstance(e, dict) or e.get("_skip_fallback"):
@@ -1113,7 +1113,7 @@ def strip_skip_fallback_entries(items: List[Dict[str, Any]]) -> List[Dict[str, A
     return stripped
 
 
-def public_fullst_entries(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def public_fullst_entries(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
         {"name": e.get("name"), "level": e.get("level"), "points": e.get("points")}
         for e in items
@@ -1122,8 +1122,8 @@ def public_fullst_entries(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 
 def merge_fullst_with_previous(
-    current: List[Dict[str, Any]], previous: List[Dict[str, Any]]
-) -> List[Dict[str, Any]]:
+    current: list[dict[str, Any]], previous: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     if not previous:
         return current
 
@@ -1145,11 +1145,11 @@ def merge_fullst_with_previous(
 
 
 def apply_fullst_fallback(
-    per_level: Dict[int, Dict[str, Any]],
-    levels: List[int],
-    fullst_by_lv: Dict[int, List[Dict[str, Any]]],
+    per_level: dict[int, dict[str, Any]],
+    levels: list[int],
+    fullst_by_lv: dict[int, list[dict[str, Any]]],
 ) -> None:
-    last_effective: List[Dict[str, Any]] = []
+    last_effective: list[dict[str, Any]] = []
     for lv in sorted(levels):
         current = fullst_by_lv.get(lv) or []
         use_current = bool(current)
@@ -1186,14 +1186,14 @@ BASE_REQUIRED = {
 FALLBACKABLE_REQUIRED_KEYS = {"スラスター"}
 
 
-def has_turn_value(rec: Dict[str, Any]) -> bool:
+def has_turn_value(rec: dict[str, Any]) -> bool:
     return ("旋回_地上_通常時" in rec) or ("旋回_宇宙_通常時" in rec)
 
 
 def apply_required_value_fallbacks(
-    per_level: Dict[int, Dict[str, Any]], levels: List[int]
+    per_level: dict[int, dict[str, Any]], levels: list[int]
 ) -> None:
-    last_values: Dict[str, Any] = {}
+    last_values: dict[str, Any] = {}
     for lv in sorted(levels):
         rec = per_level.get(lv)
         if not isinstance(rec, dict):
@@ -1212,8 +1212,8 @@ def apply_required_value_fallbacks(
 
 
 def filter_complete_records(
-    per_level: Dict[int, Dict[str, Any]]
-) -> Dict[int, Dict[str, Any]]:
+    per_level: dict[int, dict[str, Any]]
+) -> dict[int, dict[str, Any]]:
     return {
         lv: rec
         for lv, rec in per_level.items()
@@ -1221,7 +1221,7 @@ def filter_complete_records(
     }
 
 
-def parse_details(html: str) -> Dict[int, Dict[str, Any]]:
+def parse_details(html: str) -> dict[int, dict[str, Any]]:
     soup = BeautifulSoup(html, "lxml")
     name = extract_title(soup)
 
@@ -1421,8 +1421,8 @@ def cmd_detect_changed(args: argparse.Namespace) -> int:
         print("ERROR: input must be a JSON array", file=sys.stderr)
         return 2
 
-    previous_path: Optional[Path] = None
-    previous_data: Optional[Dict[str, Any]] = None
+    previous_path: Path | None = None
+    previous_data: dict[str, Any] | None = None
     if getattr(args, "previous_provenance", None):
         previous_path = Path(args.previous_provenance)
         if previous_path.exists():
@@ -1436,7 +1436,7 @@ def cmd_detect_changed(args: argparse.Namespace) -> int:
     else:
         previous_path, previous_data = find_latest_provenance(Path(args.reports_dir))
 
-    previous_generated_at: Optional[datetime] = None
+    previous_generated_at: datetime | None = None
     if isinstance(previous_data, dict) and isinstance(
         previous_data.get("generated_at"), str
     ):
@@ -1456,8 +1456,8 @@ def cmd_detect_changed(args: argparse.Namespace) -> int:
     )
     stale_detail_days = getattr(args, "stale_detail_days", None)
     revalidate = bool(getattr(args, "revalidate", False))
-    detail_fetch_state: Optional[Dict[str, Dict[str, Any]]] = None
-    stale_detail_seconds: Optional[int] = None
+    detail_fetch_state: dict[str, dict[str, Any]] | None = None
+    stale_detail_seconds: int | None = None
     if stale_detail_days is not None:
         stale_detail_seconds = int(float(stale_detail_days) * 86400)
     if stale_detail_days is not None or revalidate:
@@ -1631,8 +1631,8 @@ def build_parser() -> argparse.ArgumentParser:
                     soup = BeautifulSoup(text, "lxml")
                     # ステータス表の検出ロジックは parse_details と同じ方針
                     _tbl_div, table = find_detail_table(soup)
-                    raw_labels: List[str] = []
-                    normalized_labels: List[str] = []
+                    raw_labels: list[str] = []
+                    normalized_labels: list[str] = []
                     if table:
                         seen_raw = set()
                         seen_norm = set()
@@ -1681,7 +1681,7 @@ def build_parser() -> argparse.ArgumentParser:
     return ap
 
 
-def main(argv: List[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = build_parser()
     args = ap.parse_args(argv)
     return args.func(args)
