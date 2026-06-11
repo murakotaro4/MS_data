@@ -25,7 +25,7 @@ from bs4 import BeautifulSoup, Tag
 
 from ms_data.net.client import get_browser_client
 from ms_data.net.cache_http import CacheHTTP, CacheConfig
-from ms_data.scraping.scrape_msdata import parse_ttl  # 軽量ユーティリティを流用
+from ms_data.scraping.text_values import parse_ttl
 from ms_data.core.labels import clean_text
 
 
