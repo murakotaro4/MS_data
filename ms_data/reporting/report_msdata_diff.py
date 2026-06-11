@@ -261,7 +261,7 @@ def append_changed_records_table(
         append_table(lines, ["LV", "項目", "変更前", "変更後"], rows)
         lines.append("")
         for lv, old_val, new_val in fullst_details:
-            lines.append(f"{_escape_md(lv)} fullst 明細:")
+            lines.append(f"{_escape_md(lv)} fullst 明細（変更後No順）:")
             append_table(
                 lines,
                 [
