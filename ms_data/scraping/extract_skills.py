@@ -60,6 +60,7 @@ def get_client(timeout: float = 30.0) -> httpx.Client:
 
 
 def _norm(s: str) -> str:
+    """全角記号を半角へ寄せ、空白を正規化する（解析前の共通前処理）。"""
     return clean_text(
         s.replace("\u3000", " ")
         .replace("＋", "+")
@@ -73,11 +74,13 @@ def _norm(s: str) -> str:
 
 
 def _to_int_first(text: str) -> int | None:
+    """文字列中の最初の整数を取り出す。"""
     m = re.search(r"-?\d+", text)
     return int(m.group(0)) if m else None
 
 
 def _percent_to_factor(text: str, sign: int = -1) -> float | None:
+    """ "-20%" のような百分率を乗算係数に変換する（sign=-1 で軽減 → 0.8）。"""
     # sign: -1 for reductions like "-20%" -> 0.8; +1 reserved for increases if needed
     m = re.search(r"(\d+)%", text)
     if not m:
@@ -88,6 +91,7 @@ def _percent_to_factor(text: str, sign: int = -1) -> float | None:
 
 
 def _extract_activation(desc: str) -> dict[str, Any]:
+    """説明文から発動方式（手動/自動）と発動条件（HP閾値等）を推定する。"""
     t = _norm(desc)
     act: dict[str, Any] = {}
     if "タッチパッドを押す" in t or "任意発動" in t:
@@ -105,6 +109,7 @@ def _extract_activation(desc: str) -> dict[str, Any]:
 
 
 def _extract_duration(text: str) -> int | None:
+    """説明文から効果時間（秒）を推定する。「効果時間は無し」は None。"""
     t = _norm(text)
     if "効果時間は無し" in t or "効果時間は、無し" in t or "効果時間は無し" in t:
         return None
@@ -119,6 +124,7 @@ def _extract_duration(text: str) -> int | None:
 
 
 def _parse_grants(line: str) -> dict[str, Any] | None:
+    """「<スキル名> LvN が付与」形式の行を {skill, level} に変換する。"""
     t = _norm(line)
     # 例: 緊急回避制御 Lv2 が付与 / Lv3 が付与
     m = re.search(
@@ -130,6 +136,11 @@ def _parse_grants(line: str) -> dict[str, Any] | None:
 
 
 def _effects_from_lines(lines: list[str]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """詳細の箇条書きから数値補正（effects）と補助情報（aux）を抽出する。
+
+    effects: 射撃補正/スピード等の加算・スラスター消費等の乗算
+    aux: 継続ダメージ・回復量・無敵等のタグ
+    """
     effects: dict[str, Any] = {}
     aux: dict[str, Any] = {}
     for raw in lines:
@@ -191,6 +202,7 @@ def _effects_from_lines(lines: list[str]) -> tuple[dict[str, Any], dict[str, Any
 
 
 def _split_lines(text: str) -> list[str]:
+    """詳細セルの HTML/テキストを「・」と改行でおおまかな行に分割する。"""
     t = _norm(text.replace("\r", "\n").replace("<br>", "\n").replace("<br/>", "\n"))
     # 「・」や改行でおおまかに分割
     parts: list[str] = []
@@ -213,6 +225,12 @@ def _split_lines(text: str) -> list[str]:
 
 
 def extract_skills_from_html(html: str) -> dict[str, Any]:
+    """スキル一覧ページから CORE_SKILLS 対象の構造化データを抽出する。
+
+    行ごとに LV・説明・詳細を読み、効果/発動条件/効果時間を推定。
+    後処理で NT-D の覚醒フェーズ紐付けと、同一 LV の重複統合
+    （情報量スコアが最大の行を採用）を行う。
+    """
     soup = BeautifulSoup(html, "lxml")
     skills: dict[str, dict[str, Any]] = {}
 
@@ -498,6 +516,7 @@ def extract_skill_rows_table(html: str) -> dict[str, Any]:
 
 
 def _role_from_text(text: str) -> str | None:
+    """見出しセルの文言から属性（強襲/汎用/支援）を推定する。"""
     if "強" in text:
         return "強襲"
     if "汎" in text:
@@ -508,6 +527,7 @@ def _role_from_text(text: str) -> str | None:
 
 
 def _owner_links_from_cells(cells: list[Tag]) -> list[dict[str, str]]:
+    """td 群からリンク（機体名と href）を収集する。"""
     owners: list[dict[str, str]] = []
     for td in cells:
         for anchor in td.find_all("a"):
@@ -519,6 +539,7 @@ def _owner_links_from_cells(cells: list[Tag]) -> list[dict[str, str]]:
 
 
 def _candidate_owner_tables(soup: BeautifulSoup) -> list[Tag]:
+    """所持機体逆引きらしいテーブル（スキルアンカー + 属性行を持つ）を探す。"""
     candidates: list[Tag] = []
     for tbl in soup.find_all("table"):
         ok = False
@@ -540,6 +561,7 @@ def _candidate_owner_tables(soup: BeautifulSoup) -> list[Tag]:
 
 
 def _find_owner_section_tables(soup: BeautifulSoup) -> list[Tag]:
+    """「所持機体 逆引き」見出し直後のテーブル群を返す（見出しが無ければ推定）。"""
     header = None
     for tag in soup.find_all(["h2", "h3", "h4"]):
         text = _norm(tag.get_text(" "))
@@ -565,6 +587,7 @@ def _find_owner_section_tables(soup: BeautifulSoup) -> list[Tag]:
 
 
 def _extract_owner_anchors(target_tables: list[Tag]) -> list[tuple[str, int, Tag]]:
+    """逆引きテーブルからスキルアンカー（スキル名, LV, 見出し行）を列挙する。"""
     anchors: list[tuple[str, int, Tag]] = []
     for tbl in target_tables:
         for anchor in tbl.find_all("a"):
@@ -584,6 +607,7 @@ def _extract_owner_anchors(target_tables: list[Tag]) -> list[tuple[str, int, Tag
 
 
 def _collect_anchor_row_owners(tr: Tag) -> tuple[str | None, list[dict[str, str]]]:
+    """アンカー行自身から属性とその行の所持機体リンクを取り出す。"""
     anchor_th = tr.find("th")
     role_th = anchor_th.find_next_sibling("th") if anchor_th else None
     role = _role_from_text(_norm(role_th.get_text(" "))) if role_th else None
@@ -603,6 +627,7 @@ def _collect_anchor_row_owners(tr: Tag) -> tuple[str | None, list[dict[str, str]
 def _collect_owner_block(
     start_tr: Tag, stop_tr: Tag | None
 ) -> dict[str, list[dict[str, str]]]:
+    """アンカー行から次のアンカー直前までの所持機体を属性別に集める。"""
     owners_by_role: dict[str, list[dict[str, str]]] = {
         "強襲": [],
         "汎用": [],
@@ -668,6 +693,7 @@ def extract_skill_owners_rows_table(html: str) -> dict[str, Any]:
 
 
 def cmd_fetch(args: argparse.Namespace) -> int:
+    """スキル一覧ページを取得してキャッシュする。"""
     ttl_sec = parse_ttl(args.ttl)
     client = get_client()
     cache = CacheHTTP(
@@ -680,6 +706,7 @@ def cmd_fetch(args: argparse.Namespace) -> int:
 
 
 def cmd_parse(args: argparse.Namespace) -> int:
+    """キャッシュ済み HTML を解析して skills JSON を出力する。"""
     html_path = Path(args.input)
     if not html_path.exists():
         raise SystemExit(f"HTML not found: {html_path}")
@@ -695,6 +722,7 @@ def cmd_parse(args: argparse.Namespace) -> int:
 
 
 def cmd_all(args: argparse.Namespace) -> int:
+    """取得と解析を一気通貫で実行する。"""
     ttl_sec = parse_ttl(args.ttl)
     client = get_client()
     cache = CacheHTTP(
@@ -714,6 +742,7 @@ def cmd_all(args: argparse.Namespace) -> int:
 
 
 def cmd_table(args: argparse.Namespace) -> int:
+    """スキル一覧テーブルを行形式で厳格抽出する。"""
     ttl_sec = parse_ttl(args.ttl)
     client = get_client()
     cache = CacheHTTP(
