@@ -29,6 +29,7 @@ from jsonschema import Draft7Validator
 
 
 def validate_schema(data: Any, schema_path: Path) -> list[str]:
+    """JSON Schema 検証を行い、エラーメッセージのリストを返す。"""
     schema = load_json(schema_path)
     v = Draft7Validator(schema)
     errors = [e.message for e in v.iter_errors(data)]
@@ -36,11 +37,13 @@ def validate_schema(data: Any, schema_path: Path) -> list[str]:
 
 
 def load_allowed_keys(schema_path: Path) -> set[str]:
+    """スキーマが許容するレコードのキー集合を取り出す。"""
     schema = load_json(schema_path)
     return set(schema["items"]["properties"].keys())
 
 
 def find_typos(records: list[dict[str, Any]]) -> dict[str, int]:
+    """別名キー（KEY_ALIASES に登録された表記揺れ）の出現数を数える。"""
     c = Counter()
     for r in records:
         for alias in KEY_ALIASES:
@@ -50,6 +53,7 @@ def find_typos(records: list[dict[str, Any]]) -> dict[str, int]:
 
 
 def find_duplicate_names(records: list[dict[str, Any]]) -> dict[str, int]:
+    """重複する MS名 とその件数を返す。"""
     c = Counter(r.get("MS名") for r in records if isinstance(r.get("MS名"), str))
     return {k: v for k, v in c.items() if v > 1}
 
@@ -57,6 +61,7 @@ def find_duplicate_names(records: list[dict[str, Any]]) -> dict[str, int]:
 def find_unknown_keys(
     records: Iterable[dict[str, Any]], allowed_keys: set[str]
 ) -> dict[str, int]:
+    """スキーマに無いキーの出現数を数える。"""
     counts: Counter[str] = Counter()
     for record in records:
         for key in record:
@@ -66,6 +71,7 @@ def find_unknown_keys(
 
 
 def extract_base_name(name: str) -> str | None:
+    """ "ガンダム_LV3" → "ガンダム"（LV サフィックスが無ければ None）。"""
     match = MS_NAME_WITH_LEVEL.match(name)
     if not match:
         return None
@@ -73,6 +79,11 @@ def extract_base_name(name: str) -> str | None:
 
 
 def _fullst_order_key(points: Any) -> int | None:
+    """fullst の points を昇順検証用の整数に変換する。
+
+    None（引き継ぎ項目）は先頭扱いの -1、整数化できない値（bool 含む）は
+    不正値として None を返す。
+    """
     if points is None:
         return -1
     if isinstance(points, bool):
@@ -84,6 +95,13 @@ def _fullst_order_key(points: Any) -> int | None:
 
 
 def find_semantic_errors(records: Iterable[dict[str, Any]]) -> list[str]:
+    """スキーマでは表現できない意味的な整合性エラーを検出する。
+
+    検査項目:
+    - fullst の points が整数/null であること、昇順であること、重複が無いこと
+    - 出撃不可の側に旋回値が存在しないこと（地上/宇宙）
+    - 同一機体（基底名）の LV 間で属性・wiki_url が一致すること
+    """
     errors: list[str] = []
     base_attrs: dict[str, set[str]] = defaultdict(set)
     base_urls: dict[str, set[str]] = defaultdict(set)
