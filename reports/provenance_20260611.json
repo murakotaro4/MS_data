@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-06-11T13:57:07Z",
+  "report_date": "20260611",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "a64f218f78b526fde9115405c471709e155ca3f0"
+  },
+  "github": {
+    "run_id": "27352006065",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "workflow_dispatch"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "d9775a23fae59d464c505656e48bb851d835c89738aae1d639bf840a69221d73",
+      "size_bytes": 142048,
+      "record_count": 577
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "a97d47ddd2ed7379a1b7d64f0d2eaa4eb2bd1b924031770935edd79384c98940",
+      "size_bytes": 24761,
+      "record_count": 21
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "9507d2b160691ce45af8491f7ddef8ec1d1823c10017a66c1c56a443357d3c20",
+      "size_bytes": 32270,
+      "record_count": 21
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "dd3e61a8aa243af8bd3098c98e75191f5384ba3ef833fc6b1a39dd857b92a9f8",
+      "file_count": 16,
+      "size_bytes": 3021255
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "7ef976ab2124726d2ba2f70b160c71bb8d1196e5cab4077b1d17c5fcd8ba76a3",
+      "size_bytes": 2555106,
+      "record_count": 1655
+    },
+    "diff_report": {
+      "path": "reports/diff_msdata_20260611.md",
+      "sha256": "fe07e222ba048be4fcbcfb08f10ccdddbb631d1b4ed7c2a45860d86bf6584d4d",
+      "size_bytes": 2758
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260611-run-27352006065",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260611-run-27352006065",
+    "asset_name": "raw_snapshot_20260611_run27352006065.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260611-run-27352006065"
+  }
+}
