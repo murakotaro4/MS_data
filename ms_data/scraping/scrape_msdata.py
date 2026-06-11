@@ -58,11 +58,13 @@ from ms_data.net.client import get_scraper_client
 # 後方互換 re-export（テスト・兄弟モジュールが本モジュール属性として参照する）
 from ms_data.scraping.text_values import (
     ATWIKI_BASE,
+    COUNTER_TYPES,
     PAGE_ID_RE,
     UPDATED_AGE_RE,
     absolute_url,
     extract_page_id,
     extract_updated_age,
+    is_counter_placeholder,
     parse_iso_datetime,
     parse_ttl,
     symbol_to_bool,

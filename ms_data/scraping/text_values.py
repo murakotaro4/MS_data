@@ -19,6 +19,21 @@ UPDATED_AGE_RE = re.compile(r"\((?P<value>\d+)(?P<unit>[mhd])\)\s*$")
 # 時間単位の秒換算表（extract_updated_age / parse_ttl で共用）
 _SECONDS_PER_UNIT = {"s": 1, "m": 60, "h": 3600, "d": 86400}
 
+# カウンター欄に登場する既知の種別。未編集ページのテンプレートには
+# 候補がそのまま羅列されて残るため、placeholder 判定の語彙として使う。
+COUNTER_TYPES = frozenset(
+    {
+        "押し倒し",
+        "投げ",
+        "連打攻撃",
+        "水平射撃",
+        "蹴り飛ばし",
+        "連続格闘",
+        "膝蹴り",
+        "特殊",
+    }
+)
+
 
 def absolute_url(href: str) -> str:
     """atwiki 内の相対/プロトコル相対リンクを絶対 URL に変換する。"""
@@ -89,6 +104,22 @@ def to_int(text: str) -> int | None:
     )
     m = re.search(r"-?\d+", t)
     return int(m.group(0)) if m else None
+
+
+def is_counter_placeholder(text: str) -> bool:
+    """カウンター欄がテンプレートの候補羅列のまま（未記入）かを判定する。
+
+    正当な値は単一種別か「地上：押し倒し 宇宙：蹴り飛ばし」のような
+    接頭辞付きの組み合わせのみ。接頭辞（：/:）なしで既知の種別が
+    3 つ以上空白区切りで並ぶ場合はテンプレート未編集とみなす。
+    """
+    t = clean_text(text)
+    if "：" in t or ":" in t:
+        return False
+    tokens = t.split()
+    if len(tokens) < 3:
+        return False
+    return all(token in COUNTER_TYPES for token in tokens)
 
 
 def symbol_to_bool(s: str) -> bool | None:
