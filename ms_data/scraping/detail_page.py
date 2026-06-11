@@ -26,7 +26,11 @@ from bs4 import BeautifulSoup, Tag
 
 from ms_data.core.labels import FIELD_MAP, clean_text, normalize_row_label
 from ms_data.scraping.fullst import apply_fullst_fallback, parse_fullst_by_ms_level
-from ms_data.scraping.text_values import symbol_to_bool, to_int
+from ms_data.scraping.text_values import (
+    is_counter_placeholder,
+    symbol_to_bool,
+    to_int,
+)
 
 # 見出し直後のセクション本文として収集する近傍要素数の上限。
 # atwiki の見出し直下は数要素（p/div/table 程度）で次セクションに移るため
@@ -290,7 +294,12 @@ def build_base_records(
             if val is None:
                 continue
             if key_name in _TEXT_FIELDS:
-                per_level[lv][key_name] = clean_text(val)
+                text = clean_text(val)
+                # 新規作成ページではカウンター欄にテンプレートの候補羅列が
+                # 残っていることがあるため、未記入として空にする
+                if key_name == "カウンター" and is_counter_placeholder(text):
+                    text = ""
+                per_level[lv][key_name] = text
                 continue
 
             iv = to_int(val)
