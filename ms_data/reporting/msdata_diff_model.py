@@ -182,6 +182,13 @@ def fullst_detail_rows(old_val: Any, new_val: Any) -> list[list[str]]:
     old_index = indexed_fullst_items(old_items)
     new_index = indexed_fullst_items(new_items)
     keys = list(old_index.keys()) + [key for key in new_index if key not in old_index]
+    keys.sort(
+        key=lambda key: (
+            0 if key in new_index else 1,
+            new_index.get(key, old_index.get(key, (999, None)))[0],
+            old_index.get(key, (999, None))[0],
+        )
+    )
     rows: list[list[str]] = []
     for name, level, occurrence in keys:
         old_pos, old_item = old_index.get((name, level, occurrence), ("", None))

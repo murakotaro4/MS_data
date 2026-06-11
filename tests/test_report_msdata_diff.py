@@ -147,9 +147,51 @@ def test_fullst_change_has_detail_table():
     )
 
     assert "| LV2 | fullst | 2件 | 2件 |" in lines
-    assert "LV2 fullst 明細:" in lines
+    assert "LV2 fullst 明細（変更後No順）:" in lines
     assert (
         "| 変更前 No | 変更後 No | 名称 | Lv | 変更前 points | 変更後 points |"
     ) in lines
-    assert "| 1 | 2 | 強行出撃 | 1 | null | null |" in lines
     assert "| 2 | 1 | AD\\-PA | 1 | null | null |" in lines
+    assert "| 1 | 2 | 強行出撃 | 1 | null | null |" in lines
+    assert lines.index("| 2 | 1 | AD\\-PA | 1 | null | null |") < lines.index(
+        "| 1 | 2 | 強行出撃 | 1 | null | null |"
+    )
+
+
+def test_fullst_detail_table_uses_new_order_for_added_rows():
+    old = [
+        {
+            "MS名": "A_LV2",
+            "fullst": [
+                {"name": "耐格闘装甲補強", "level": 1, "points": 1580},
+                {"name": "シールド構造強化", "level": 4, "points": 3180},
+                {"name": "AD-PA", "level": 3, "points": 4740},
+            ],
+        },
+    ]
+    new = [
+        {
+            "MS名": "A_LV2",
+            "fullst": [
+                {"name": "シールド構造強化", "level": 1, "points": None},
+                {"name": "複合拡張パーツスロット", "level": 1, "points": None},
+                {"name": "AD-PA", "level": 1, "points": None},
+                {"name": "耐格闘装甲補強", "level": 1, "points": 1580},
+                {"name": "シールド構造強化", "level": 4, "points": 3180},
+                {"name": "AD-PA", "level": 3, "points": 4740},
+            ],
+        },
+    ]
+
+    lines, _ = build_report_lines(
+        old,
+        new,
+        generated_at=datetime(2026, 3, 7, 12, 34, 56),
+        list_limit=10,
+    )
+
+    added_first = "|  | 1 | シールド構造強化 | 1 |  | null |"
+    shifted_existing = "| 1 | 4 | 耐格闘装甲補強 | 1 | 1580 | 1580 |"
+    assert added_first in lines
+    assert shifted_existing in lines
+    assert lines.index(added_first) < lines.index(shifted_existing)
