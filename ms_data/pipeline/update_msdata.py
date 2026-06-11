@@ -19,13 +19,24 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Any
 from collections.abc import Iterable
 
 from ms_data.core.json_io import load_json
-from ms_data.core.ms_names import MS_NAME_WITH_LEVEL, normalize_ms_base_name
+from ms_data.core.ms_names import (
+    MS_NAME_WITH_LEVEL,
+    normalize_ms_base_name,
+    normalize_ms_name,
+)
 from ms_data.core.paths import OFFICIAL_OVERRIDES_DIR
 from ms_data.core.labels import apply_key_aliases
+
+# 後方互換 re-export（監査・検証モジュールとテストが本モジュール属性として参照）
+from ms_data.pipeline import official_overrides as _official_overrides
+from ms_data.pipeline.official_overrides import (
+    OfficialOverrideValue,
+    apply_official_overrides,
+)
 
 
 CANONICAL_ORDER = (
@@ -71,23 +82,47 @@ CANONICAL_ORDER = (
     "fullst",
 )
 
+# オーバーライドで指定可能な値キーの集合（MS名は識別子なので除外）
 OFFICIAL_OVERRIDE_VALUE_KEYS = set(CANONICAL_ORDER) - {"MS名"}
 
-
-class OfficialOverrideValue(TypedDict, total=False):
-    value: Any
-    stale_value: Any
-
-
-def normalize_ms_name(name: str) -> str:
-    m = MS_NAME_WITH_LEVEL.match(name)
-    if not m:
-        return name
-    base, lv = m.groups()
-    return f"{normalize_ms_base_name(base)}_LV{lv}"
+# 数値項目のうち None を「未取得」とみなして削除するキー（schema 適合のため）
+NULLABLE_INT_KEYS = {
+    "コスト",
+    "HP",
+    "スピード",
+    "スピード_変形時",
+    "スラスター",
+    "高速移動",
+    "高速移動_変形時",
+    "射撃補正",
+    "射撃補正_変形時",
+    "射撃補正_変身時",
+    "格闘補正",
+    "格闘補正_変形時",
+    "格闘補正_変身時",
+    "耐ビーム補正",
+    "耐実弾補正",
+    "耐格闘補正",
+    "近スロット",
+    "中スロット",
+    "遠スロット",
+    "旋回_地上_通常時",
+    "旋回_地上_変形時",
+    "旋回_宇宙_通常時",
+    "旋回_宇宙_変形時",
+    "旋回_変形時",
+    "再出撃時間",
+    "必要DP",
+    "必要リサイクルチケット",
+}
 
 
 def extract_ms_base_name(name: str) -> str | None:
+    """LV 付き機体名から正規化済みの基底名を取り出す。
+
+    注意: core.ms_names.extract_ms_base_name と異なり、基底名の表記揺れ
+    正規化（normalize_ms_base_name）まで行う。
+    """
     m = MS_NAME_WITH_LEVEL.match(name)
     if not m:
         return None
@@ -95,6 +130,7 @@ def extract_ms_base_name(name: str) -> str | None:
 
 
 def load_index_url_map(path: Path) -> dict[str, str]:
+    """cache/index.json から「正規化済み基底名 → wiki_url」の対応表を作る。"""
     if not path.exists():
         return {}
     try:
@@ -115,68 +151,62 @@ def load_index_url_map(path: Path) -> dict[str, str]:
     return urls
 
 
+# import 時に cache/index.json を読み込むモジュール状態。
+# テストが本モジュール属性として monkeypatch する前提のため、
+# 名前・初期化タイミングを変更しないこと。
 INDEX_URL_MAP = load_index_url_map(Path("cache/index.json"))
 
 
-def normalize_record(rec: dict[str, Any]) -> dict[str, Any]:
+def _normalize_name_and_url(rec: dict[str, Any]) -> None:
+    """MS名の表記揺れを正規化し、wiki_url 欠落を index 由来の値で補完する。
+
+    INDEX_URL_MAP はモジュール global 経由で参照する（テストが差し替えるため）。
+    """
     name = rec.get("MS名")
-    if isinstance(name, str):
-        normalized_name = normalize_ms_name(name)
-        rec["MS名"] = normalized_name
-        base_name = extract_ms_base_name(normalized_name)
-        if base_name and base_name in INDEX_URL_MAP and "wiki_url" not in rec:
-            rec["wiki_url"] = INDEX_URL_MAP[base_name]
-    # 別名キーを正規キーへ移し替え（既存が無い場合のみ）
-    rec = apply_key_aliases(rec)
-    # 数値項目で None は削除（schema適合のため）。
-    INT_KEYS = {
-        "コスト",
-        "HP",
-        "スピード",
-        "スピード_変形時",
-        "スラスター",
-        "高速移動",
-        "高速移動_変形時",
-        "射撃補正",
-        "射撃補正_変形時",
-        "射撃補正_変身時",
-        "格闘補正",
-        "格闘補正_変形時",
-        "格闘補正_変身時",
-        "耐ビーム補正",
-        "耐実弾補正",
-        "耐格闘補正",
-        "近スロット",
-        "中スロット",
-        "遠スロット",
-        "旋回_地上_通常時",
-        "旋回_地上_変形時",
-        "旋回_宇宙_通常時",
-        "旋回_宇宙_変形時",
-        "旋回_変形時",
-        "再出撃時間",
-        "必要DP",
-        "必要リサイクルチケット",
-    }
+    if not isinstance(name, str):
+        return
+    normalized_name = normalize_ms_name(name)
+    rec["MS名"] = normalized_name
+    base_name = extract_ms_base_name(normalized_name)
+    if base_name and base_name in INDEX_URL_MAP and "wiki_url" not in rec:
+        rec["wiki_url"] = INDEX_URL_MAP[base_name]
+
+
+def _drop_null_int_values(rec: dict[str, Any]) -> None:
+    """数値項目の None を「未取得」として削除する（schema 適合のため）。"""
     for k in list(rec.keys()):
-        if k in INT_KEYS and rec.get(k) is None:
+        if k in NULLABLE_INT_KEYS and rec.get(k) is None:
             rec.pop(k, None)
 
-    # 出撃可否のフォールバック推定（両方未設定の場合のみ）
-    if "出撃_地上可" not in rec and "出撃_宇宙可" not in rec:
-        has_g = "旋回_地上_通常時" in rec
-        has_s = "旋回_宇宙_通常時" in rec
-        if has_g and has_s:
-            rec["出撃_地上可"] = True
-            rec["出撃_宇宙可"] = True
-        elif has_g and not has_s:
-            rec["出撃_地上可"] = True
-            rec["出撃_宇宙可"] = False
-        elif has_s and not has_g:
-            rec["出撃_地上可"] = False
-            rec["出撃_宇宙可"] = True
 
-    # 回転値の補正: 宇宙専用/地上専用で片側のみ存在する場合、適切な側へ寄せる
+def _infer_deployment(rec: dict[str, Any]) -> None:
+    """出撃可否が両方未設定の場合、旋回値がどちら側にあるかで推定する。
+
+    scraping 側（detail_page.apply_deployment_fallbacks）にも同種の推定が
+    あるが、パイプライン二段の防御的重複として意図的に残している
+    （スクレイプを経ない手動投入レコードもここで補完される）。
+    """
+    if "出撃_地上可" in rec or "出撃_宇宙可" in rec:
+        return
+    has_g = "旋回_地上_通常時" in rec
+    has_s = "旋回_宇宙_通常時" in rec
+    if has_g and has_s:
+        rec["出撃_地上可"] = True
+        rec["出撃_宇宙可"] = True
+    elif has_g and not has_s:
+        rec["出撃_地上可"] = True
+        rec["出撃_宇宙可"] = False
+    elif has_s and not has_g:
+        rec["出撃_地上可"] = False
+        rec["出撃_宇宙可"] = True
+
+
+def _fix_turn_side(rec: dict[str, Any]) -> None:
+    """宇宙専用/地上専用機で誤った側に入った旋回値を正しいキーへ寄せる。
+
+    scraping 側（detail_page.normalize_turn_values）と同種の補正の
+    防御的重複（_infer_deployment と同じ理由）。
+    """
     g = rec.get("出撃_地上可")
     s = rec.get("出撃_宇宙可")
     if g is False and s is True:
@@ -189,10 +219,26 @@ def normalize_record(rec: dict[str, Any]) -> dict[str, Any]:
             rec["旋回_地上_通常時"] = rec.pop("旋回_宇宙_通常時")
         if "旋回_地上_変形時" not in rec and "旋回_宇宙_変形時" in rec:
             rec["旋回_地上_変形時"] = rec.pop("旋回_宇宙_変形時")
+
+
+def normalize_record(rec: dict[str, Any]) -> dict[str, Any]:
+    """取得レコード1件を msData の正規形に整える。
+
+    処理順序に依存関係があるため変更しないこと:
+    MS名正規化 → 別名キー適用 → None 数値の削除 → 出撃可否の推定 →
+    旋回キーの補正（出撃可否確定後でないと判定できない）。
+    """
+    _normalize_name_and_url(rec)
+    # 別名キーを正規キーへ移し替え（既存が無い場合のみ）
+    rec = apply_key_aliases(rec)
+    _drop_null_int_values(rec)
+    _infer_deployment(rec)
+    _fix_turn_side(rec)
     return rec
 
 
 def iter_records_from_files(paths: Iterable[Path]) -> Iterable[dict[str, Any]]:
+    """入力 JSON 群からレコードを正規化しながら順に取り出す。"""
     for p in paths:
         data = load_json(p)
         if isinstance(data, list):
@@ -207,6 +253,7 @@ def iter_records_from_files(paths: Iterable[Path]) -> Iterable[dict[str, Any]]:
 
 
 def merge_by_msname(records: Iterable[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """MS名をキーに後勝ちでマージする（同名は新しいレコードで置き換え）。"""
     merged: dict[str, dict[str, Any]] = {}
     for rec in records:
         name = rec.get("MS名")
@@ -220,112 +267,14 @@ def merge_by_msname(records: Iterable[dict[str, Any]]) -> dict[str, dict[str, An
 def load_official_overrides(
     directory: Path = OFFICIAL_OVERRIDES_DIR,
 ) -> dict[str, dict[str, OfficialOverrideValue]]:
-    """公式調整由来の一時オーバーライドを読み込む。
+    """公式調整オーバーライドを読み込む（後方互換の窓口）。
 
-    形式:
-    {
-      "schema_version": "1",
-      "active": true,
-      "overrides": [
-        {
-          "MS名": "ザクⅢ改_LV1",
-          "values": {"HP": 27000},
-          "stale_values": {"HP": 23500}
-        }
-      ]
-    }
+    実装は ms_data.pipeline.official_overrides。許容キー集合
+    （CANONICAL_ORDER 由来の OFFICIAL_OVERRIDE_VALUE_KEYS）を束ねて委譲する。
     """
-
-    if not directory.exists():
-        return {}
-    if not directory.is_dir():
-        raise ValueError(f"official overrides path is not a directory: {directory}")
-
-    overrides: dict[str, dict[str, OfficialOverrideValue]] = {}
-    for path in sorted(directory.glob("*.json")):
-        data = load_json(path)
-        if not isinstance(data, dict):
-            raise ValueError(f"official override file must be an object: {path}")
-        if data.get("active", True) is False:
-            continue
-        entries = data.get("overrides", data.get("records", []))
-        if not isinstance(entries, list):
-            raise ValueError(f"official override entries must be a list: {path}")
-
-        for index, entry in enumerate(entries):
-            if not isinstance(entry, dict):
-                raise ValueError(
-                    f"official override entry must be an object: {path}#{index}"
-                )
-            raw_name = entry.get("MS名")
-            if not isinstance(raw_name, str) or not raw_name.strip():
-                raise ValueError(
-                    f"official override entry missing MS名: {path}#{index}"
-                )
-            raw_values = entry.get("values")
-            if not isinstance(raw_values, dict) or not raw_values:
-                raise ValueError(
-                    f"official override entry values must be a non-empty object: "
-                    f"{path}#{index}"
-                )
-
-            values = apply_key_aliases(dict(raw_values))
-            invalid_keys = sorted(set(values) - OFFICIAL_OVERRIDE_VALUE_KEYS)
-            if invalid_keys:
-                raise ValueError(
-                    f"official override entry has invalid keys: {path}#{index} "
-                    f"{invalid_keys}"
-                )
-
-            raw_stale_values = entry.get("stale_values", {})
-            if not isinstance(raw_stale_values, dict):
-                raise ValueError(
-                    f"official override entry stale_values must be an object: "
-                    f"{path}#{index}"
-                )
-            stale_values = apply_key_aliases(dict(raw_stale_values))
-            invalid_stale_keys = sorted(set(stale_values) - set(values))
-            if invalid_stale_keys:
-                raise ValueError(
-                    f"official override stale_values must match values keys: "
-                    f"{path}#{index} {invalid_stale_keys}"
-                )
-
-            name = normalize_ms_name(raw_name)
-            target = overrides.setdefault(name, {})
-            for key, value in values.items():
-                spec: OfficialOverrideValue = {"value": value}
-                if key in stale_values:
-                    spec["stale_value"] = stale_values[key]
-                target[key] = spec
-    return overrides
-
-
-def apply_official_overrides(
-    records_by_name: dict[str, dict[str, Any]],
-    overrides: dict[str, dict[str, OfficialOverrideValue]],
-) -> int:
-    """既存/取得済みレコードへ公式オーバーライドを適用する。
-
-    指定された項目だけを書き換えるため、atwiki 側で更新済みの別項目は
-    通常どおり取り込まれる。
-    """
-
-    changed = 0
-    for name, values in overrides.items():
-        record = records_by_name.get(name)
-        if record is None:
-            continue
-        for key, spec in values.items():
-            value = spec["value"]
-            current = record.get(key)
-            if current == value:
-                continue
-            if "stale_value" in spec and current != spec["stale_value"]:
-                continue
-            record[key] = value
-            changed += 1
-    return changed
+    return _official_overrides.load_official_overrides(
+        directory, valid_value_keys=OFFICIAL_OVERRIDE_VALUE_KEYS
+    )
 
 
 def write_records_snapshot(
@@ -334,6 +283,7 @@ def write_records_snapshot(
     *,
     sort: bool = True,
 ) -> None:
+    """レコード群を msData.json と同じ整形ルールで書き出す。"""
     records = list(records_by_name.values())
     if sort:
         records = sort_records(records)
@@ -345,6 +295,8 @@ def write_records_snapshot(
 
 
 def sort_records(recs: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    """コスト昇順 → MS名昇順で並べ替える。"""
+
     def key(r: dict[str, Any]) -> tuple[int, str]:
         cost = r.get("コスト")
         if not isinstance(cost, int):
@@ -356,6 +308,7 @@ def sort_records(recs: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def stable_key_order(d: dict[str, Any]) -> dict[str, Any]:
+    """CANONICAL_ORDER に従ってキー順を揃える（未知キーは末尾にソート順）。"""
     # 書き出し時の見やすさのために、おおよそのキー順を揃える
     ordered: dict[str, Any] = {}
     for k in CANONICAL_ORDER:
@@ -367,6 +320,7 @@ def stable_key_order(d: dict[str, Any]) -> dict[str, Any]:
 
 
 def diff_summary(old: dict[str, dict[str, Any]], new: dict[str, dict[str, Any]]) -> str:
+    """更新前後のレコード数と追加/削除/変更件数の1行サマリを作る。"""
     old_keys = set(old.keys())
     new_keys = set(new.keys())
     added = new_keys - old_keys
