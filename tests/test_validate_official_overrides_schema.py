@@ -40,6 +40,18 @@ def test_validate_official_overrides_schema_accepts_valid_file(tmp_path):
     assert messages == []
 
 
+def test_validate_official_overrides_schema_accepts_empty_directory(tmp_path):
+    overrides_dir = tmp_path / "official_overrides"
+    overrides_dir.mkdir()
+
+    messages = validate_official_overrides_schema.validate(
+        overrides_dir=overrides_dir,
+        schema_path=_schema_path(),
+    )
+
+    assert messages == []
+
+
 def test_validate_official_overrides_schema_rejects_missing_stale_value(tmp_path):
     overrides_dir = tmp_path / "official_overrides"
     _write_json(

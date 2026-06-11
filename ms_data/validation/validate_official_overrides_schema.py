@@ -71,7 +71,7 @@ def validate(
     messages: list[str] = []
     files = _iter_override_files(overrides_dir)
     if not files:
-        messages.append(f"{overrides_dir}: no official override JSON files found")
+        # override は一時運用のため、全撤去後の空ディレクトリは定常状態として許容する
         return messages
 
     for path in files:

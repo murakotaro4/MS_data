@@ -70,6 +70,7 @@
 - 生データアーカイブ: 実行ごとに `raw_snapshot_*.tar.xz` を artifact（90日）へ、マージ後に Release tag `raw-snapshot-YYYYMMDD-run-<run_id>` へ恒久保存。
 - 復元手順: 対象コミットの provenance から `release.tag` を取得し、`uv run python -m ms_data.tasks restore-snapshot SNAPSHOT=... OUT_DIR=restore_tmp` で `cache/` と `reports/` を再構成（ファイルが HEAD から prune 済みでも `git log -- <path>` + `git show` で provenance 自体を辿れます）。復元CI: `verify-snapshot-restore`。
 - official_overrides 期限管理: 各 entry に `review_after` / `remove_after` を設定。期限到達時は `data update` が Step Summary に件数を出し、protected rollback 0 件なら Issue `official_overrides 期限確認` を作成/追記。スキーマは `schema/official_overrides.schema.json`（`MS名` / `values` / `stale_values` 必須）。
+- official_overrides 期限確認 Issue の対応手順（大規模調整のたびに繰り返す）: 監査レポートの状態別に、`upstream_current`（atwiki 反映済み）と `source_changed`（stale 不一致で不発化）は entry を撤去、`protected_by_override`（未反映）は存続させ `review_after` を延長。全 entry 撤去後はファイルごと削除する（ディレクトリは `.gitkeep` で維持。空でも `validate-official-overrides-schema` は OK）。例: Issue #113 → PR #145。
 - atwiki取得品質: `reports/atwiki_quality_YYYYMMDD.json` に HTTP 状態・304件数・失敗推定・レコード数・差分件数を記録。しきい値超過は warnings として PR 本文・Step Summary に警告（`ATWIKI_QUALITY_*` 変数で調整）。
 - CI runner: Windows は `windows-2025-vs2026` を明示使用。`windows-latest` へ戻す場合は GitHub の runner image 移行状況を確認。
 - 互換期間: レポート再編時は旧パスを最低 1 リリース周期維持し、参照 consumer が 0 かつ互換期間経過後に撤去。
