@@ -302,85 +302,113 @@ def cmd_trigger_review(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_wait_for_review(args: argparse.Namespace) -> int:
-    client = GitHubClient(args.repo)
-    max_attempts = _positive_int(args.max_attempts, 3)
-    attempt_timeout_seconds = _positive_int(args.attempt_timeout_seconds, 420)
-    poll_seconds = _positive_int(args.poll_seconds, 30)
-    settle_seconds = max(0, int(args.settle_seconds))
+def _ensure_attempt_trigger(
+    client: GitHubClient,
+    args: argparse.Namespace,
+    attempt: int,
+    max_attempts: int,
+    trigger_comment_ids: list[str],
+) -> None:
+    """試行回ごとのトリガーコメントを確保する（初回は既存コメントを使う）。
 
-    responded = False
-    response_attempt = ""
-    response_seconds = ""
-    trigger_comment_ids = [args.trigger_comment_id]
-    first_trigger_created_at = args.trigger_comment_created_at
-    started_at = time.monotonic()
+    2回目以降は再試行マーカー付きコメントを作成（既存なら再利用）し、
+    trigger_comment_ids に追記する。
+    """
+    if attempt == 1:
+        trigger_comment_id = args.trigger_comment_id
+        print(
+            f"Codex review attempt {attempt}/{max_attempts}: "
+            f"using initial trigger comment {trigger_comment_id}."
+        )
+        return
+    trigger_comment_id, _, created_new = ensure_review_comment(
+        client=client,
+        pr_number=args.pr_number,
+        marker=retry_marker(attempt, args.head_sha),
+    )
+    if trigger_comment_id not in trigger_comment_ids:
+        trigger_comment_ids.append(trigger_comment_id)
+    print(
+        f"Codex review attempt {attempt}/{max_attempts}: "
+        f"trigger_comment_id={trigger_comment_id}, "
+        f"created_new={str(created_new).lower()}."
+    )
 
-    for attempt in range(1, max_attempts + 1):
-        if attempt == 1:
-            trigger_comment_id = args.trigger_comment_id
-            print(
-                f"Codex review attempt {attempt}/{max_attempts}: "
-                f"using initial trigger comment {trigger_comment_id}."
-            )
-        else:
-            trigger_comment_id, _, created_new = ensure_review_comment(
-                client=client,
-                pr_number=args.pr_number,
-                marker=retry_marker(attempt, args.head_sha),
-            )
-            if trigger_comment_id not in trigger_comment_ids:
-                trigger_comment_ids.append(trigger_comment_id)
-            print(
-                f"Codex review attempt {attempt}/{max_attempts}: "
-                f"trigger_comment_id={trigger_comment_id}, "
-                f"created_new={str(created_new).lower()}."
-            )
 
-        attempt_started = time.monotonic()
-        deadline = attempt_started + attempt_timeout_seconds
-        while time.monotonic() < deadline:
-            metrics = collect_review_metrics(
-                client=client,
-                pr_number=args.pr_number,
-                head_sha=args.head_sha,
-                trigger_comment_ids=trigger_comment_ids,
-                since=first_trigger_created_at,
-            )
-            total_elapsed = int(time.monotonic() - started_at)
-            attempt_elapsed = int(time.monotonic() - attempt_started)
-            print(
-                "Codex response poll: "
-                f"attempt={attempt}/{max_attempts} "
-                f"attempt_elapsed={attempt_elapsed}s total_elapsed={total_elapsed}s "
-                f"reviews={metrics['review_count']} "
-                f"findings={metrics['finding_count']} "
-                f"reactions={metrics['reaction_count']} "
-                f"issue_comments={metrics['issue_comment_count']} "
-                f"no_issue_comments={metrics['no_issue_comment_count']} "
-                f"terminal={metrics['terminal_count']} "
-                f"review_complete={str(metrics['review_complete']).lower()}"
-            )
-            if metrics["review_complete"]:
-                responded = True
-                response_attempt = str(attempt)
-                response_seconds = str(total_elapsed)
-                if settle_seconds > 0:
-                    print(
-                        "Codex response detected. "
-                        f"Waiting {settle_seconds}s before gate re-check."
-                    )
-                    time.sleep(settle_seconds)
-                break
+def _poll_for_response(
+    client: GitHubClient,
+    args: argparse.Namespace,
+    *,
+    attempt: int,
+    max_attempts: int,
+    attempt_timeout_seconds: int,
+    poll_seconds: int,
+    settle_seconds: int,
+    trigger_comment_ids: list[str],
+    first_trigger_created_at: str,
+    started_at: float,
+) -> tuple[bool, str]:
+    """1試行分のポーリングループ。
 
-            sleep_seconds = min(poll_seconds, max(0, int(deadline - time.monotonic())))
-            if sleep_seconds <= 0:
-                break
-            time.sleep(sleep_seconds)
+    タイムアウトまで poll_seconds 間隔でレビュー応答を確認し、
+    応答を検知したら (True, 経過秒の文字列) を返す。検知できなければ
+    (False, "")。応答検知時は settle_seconds だけ待ってから返る
+    （ゲート再チェック前にコメントが出揃うのを待つ）。
+    """
+    attempt_started = time.monotonic()
+    deadline = attempt_started + attempt_timeout_seconds
+    while time.monotonic() < deadline:
+        metrics = collect_review_metrics(
+            client=client,
+            pr_number=args.pr_number,
+            head_sha=args.head_sha,
+            trigger_comment_ids=trigger_comment_ids,
+            since=first_trigger_created_at,
+        )
+        total_elapsed = int(time.monotonic() - started_at)
+        attempt_elapsed = int(time.monotonic() - attempt_started)
+        print(
+            "Codex response poll: "
+            f"attempt={attempt}/{max_attempts} "
+            f"attempt_elapsed={attempt_elapsed}s total_elapsed={total_elapsed}s "
+            f"reviews={metrics['review_count']} "
+            f"findings={metrics['finding_count']} "
+            f"reactions={metrics['reaction_count']} "
+            f"issue_comments={metrics['issue_comment_count']} "
+            f"no_issue_comments={metrics['no_issue_comment_count']} "
+            f"terminal={metrics['terminal_count']} "
+            f"review_complete={str(metrics['review_complete']).lower()}"
+        )
+        if metrics["review_complete"]:
+            if settle_seconds > 0:
+                print(
+                    "Codex response detected. "
+                    f"Waiting {settle_seconds}s before gate re-check."
+                )
+                time.sleep(settle_seconds)
+            return True, str(total_elapsed)
 
-        if responded:
+        sleep_seconds = min(poll_seconds, max(0, int(deadline - time.monotonic())))
+        if sleep_seconds <= 0:
             break
+        time.sleep(sleep_seconds)
+    return False, ""
 
+
+def _write_wait_outputs(
+    args: argparse.Namespace,
+    *,
+    responded: bool,
+    response_attempt: str,
+    response_seconds: str,
+    max_attempts: int,
+    attempt_timeout_seconds: int,
+    poll_seconds: int,
+    settle_seconds: int,
+    trigger_comment_ids: list[str],
+    first_trigger_created_at: str,
+) -> None:
+    """待機結果を GitHub Outputs と Step Summary に書き出す。"""
     attempts_used = response_attempt if responded else str(max_attempts)
     outputs = {
         "responded": str(responded).lower(),
@@ -412,6 +440,55 @@ def cmd_wait_for_review(args: argparse.Namespace) -> int:
         )
     summary.append(f"- trigger_comment_ids: {outputs['trigger_comment_ids']}")
     append_step_summary(summary, args.step_summary)
+
+
+def cmd_wait_for_review(args: argparse.Namespace) -> int:
+    """Codex のレビュー応答を待つ（最大 max_attempts 回、試行ごとに再トリガー）。"""
+    client = GitHubClient(args.repo)
+    max_attempts = _positive_int(args.max_attempts, 3)
+    attempt_timeout_seconds = _positive_int(args.attempt_timeout_seconds, 420)
+    poll_seconds = _positive_int(args.poll_seconds, 30)
+    settle_seconds = max(0, int(args.settle_seconds))
+
+    responded = False
+    response_attempt = ""
+    response_seconds = ""
+    trigger_comment_ids = [args.trigger_comment_id]
+    first_trigger_created_at = args.trigger_comment_created_at
+    started_at = time.monotonic()
+
+    for attempt in range(1, max_attempts + 1):
+        _ensure_attempt_trigger(
+            client, args, attempt, max_attempts, trigger_comment_ids
+        )
+        responded, response_seconds = _poll_for_response(
+            client,
+            args,
+            attempt=attempt,
+            max_attempts=max_attempts,
+            attempt_timeout_seconds=attempt_timeout_seconds,
+            poll_seconds=poll_seconds,
+            settle_seconds=settle_seconds,
+            trigger_comment_ids=trigger_comment_ids,
+            first_trigger_created_at=first_trigger_created_at,
+            started_at=started_at,
+        )
+        if responded:
+            response_attempt = str(attempt)
+            break
+
+    _write_wait_outputs(
+        args,
+        responded=responded,
+        response_attempt=response_attempt,
+        response_seconds=response_seconds,
+        max_attempts=max_attempts,
+        attempt_timeout_seconds=attempt_timeout_seconds,
+        poll_seconds=poll_seconds,
+        settle_seconds=settle_seconds,
+        trigger_comment_ids=trigger_comment_ids,
+        first_trigger_created_at=first_trigger_created_at,
+    )
     return 0
 
 
