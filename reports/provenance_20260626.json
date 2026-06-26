@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-06-26T10:07:02Z",
+  "report_date": "20260626",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "1299b88258217bd86a58ea5335b5801d1444d5e1"
+  },
+  "github": {
+    "run_id": "28231362480",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "725258231ecd4eac0226402db1a6736337ee0be352bd7e05bcbc13204dba6a3a",
+      "size_bytes": 142554,
+      "record_count": 579
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "62534b0c40468d06baeb33d85718f96524cef2680940d8a9eef2f6c9b1884ca7",
+      "size_bytes": 76591,
+      "record_count": 65
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "0ea6c3c3482bf829921f09d57e506bfab8a0c875611032e4ba9e070896345eaf",
+      "size_bytes": 100138,
+      "record_count": 65
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "b8648a8f324fe834fdd3db6d2e97142f106dcaad75dd0b1e4d1c8d5764af2bf3",
+      "file_count": 66,
+      "size_bytes": 10844878
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "cab2c4dc8d9d63a8bf0e7555830d610798a0e50da8b5e6f72f282d248acf3e95",
+      "size_bytes": 2565534,
+      "record_count": 1661
+    },
+    "diff_report": {
+      "path": "reports/diff_msdata_20260626.md",
+      "sha256": "64410d03b7a511c986d14e28c26a3096a418916aa8001053b663d7c683b5de55",
+      "size_bytes": 6858
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260626-run-28231362480",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260626-run-28231362480",
+    "asset_name": "raw_snapshot_20260626_run28231362480.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260626-run-28231362480"
+  }
+}
