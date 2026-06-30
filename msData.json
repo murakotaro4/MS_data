@@ -60911,32 +60911,32 @@
       {
         "name": "AD-FCS",
         "level": 1,
-        "points": null
+        "points": 440
       },
       {
         "name": "耐格闘装甲補強",
         "level": 1,
-        "points": null
+        "points": 890
       },
       {
         "name": "フレーム補強",
         "level": 1,
-        "points": null
+        "points": 1330
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 2230
       },
       {
         "name": "強化セキュリティ",
         "level": 1,
-        "points": null
+        "points": 4460
       },
       {
         "name": "AD-FCS",
         "level": 4,
-        "points": null
+        "points": 6690
       }
     ]
   },
@@ -73827,32 +73827,32 @@
       {
         "name": "AD-FCS",
         "level": 1,
-        "points": null
+        "points": 500
       },
       {
         "name": "耐格闘装甲補強",
         "level": 1,
-        "points": null
+        "points": 1000
       },
       {
         "name": "フレーム補強",
         "level": 1,
-        "points": null
+        "points": 1510
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 2520
       },
       {
         "name": "強化セキュリティ",
         "level": 1,
-        "points": null
+        "points": 5040
       },
       {
         "name": "AD-FCS",
         "level": 4,
-        "points": null
+        "points": 7560
       }
     ]
   },
@@ -86348,33 +86348,33 @@
     "fullst": [
       {
         "name": "AD-FCS",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 530
       },
       {
         "name": "耐格闘装甲補強",
         "level": 1,
-        "points": null
+        "points": 1070
       },
       {
         "name": "フレーム補強",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 1600
       },
       {
         "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 2680
       },
       {
         "name": "強化セキュリティ",
         "level": 1,
-        "points": null
+        "points": 5360
       },
       {
         "name": "AD-FCS",
         "level": 4,
-        "points": null
+        "points": 8040
       }
     ]
   },
