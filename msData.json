@@ -96024,6 +96024,21 @@
         "name": "フレーム補強",
         "level": 1,
         "points": 3150
+      },
+      {
+        "name": "複合拡張パーツスロット",
+        "level": 1,
+        "points": 3940
+      },
+      {
+        "name": "AD-FCS",
+        "level": 4,
+        "points": 7880
+      },
+      {
+        "name": "緊急射撃防御機構",
+        "level": 1,
+        "points": 11820
       }
     ]
   },
