@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-07-07T11:45:58Z",
+  "report_date": "20260707",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "22e58a30748fb4599b64cecc7547090dffa6a6f3"
+  },
+  "github": {
+    "run_id": "28863662010",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "e82ce619135cb2971ce2fcf78a8406168cbe08104010300fe5a6ab834820ccc0",
+      "size_bytes": 142866,
+      "record_count": 580
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "5b3c5f59ffe6db10fe2dee9688cc8ce6c155eceb1bc4d1380c986337a18f5943",
+      "size_bytes": 12609,
+      "record_count": 11
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "7be8e23c3d2a0fef5ed361d55f801a435c7b3610c6d8b72ab162392c3589954e",
+      "size_bytes": 16570,
+      "record_count": 11
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "c1577def5def81906ad8532d04322bf35e8737615c3bbfac3d27e04688124b1e",
+      "file_count": 10,
+      "size_bytes": 2042309
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "0f45dd5fd20df47630aac9b9792760358b46a8e19990dff85e54538ef8e849d9",
+      "size_bytes": 2570405,
+      "record_count": 1664
+    },
+    "diff_report": {
+      "path": "reports/diff_msdata_20260707.md",
+      "sha256": "3b8a235f1306f832e0fbe8a579956386068feb9b65e1b1f6356ec42f719aa40e",
+      "size_bytes": 1075
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260707-run-28863662010",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260707-run-28863662010",
+    "asset_name": "raw_snapshot_20260707_run28863662010.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260707-run-28863662010"
+  }
+}
