@@ -19,10 +19,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: cleanup-auto-update-prs
+  cancel-in-progress: false
+
 jobs:
   cleanup:
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
       issues: write
     runs-on: ubuntu-latest
