@@ -1,0 +1,52 @@
+name: notify failure
+
+on:
+  workflow_run:
+    workflows:
+      - data update
+      - auto review merge
+      - post merge notify
+      - cleanup auto update prs
+      - reports prune
+    types: [completed]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  notify:
+    if: >
+      contains(
+        fromJSON('["failure", "timed_out", "startup_failure", "action_required"]'),
+        github.event.workflow_run.conclusion
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: notify-failure-${{ github.event.workflow_run.name }}-${{ github.event.workflow_run.id }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Notify pipeline failure
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GMAIL_TO: ${{ secrets.GMAIL_TO }}
+          FAILED_WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          FAILED_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          FAILED_RUN_URL: ${{ github.event.workflow_run.html_url }}
+          FAILED_RUN_ID: ${{ github.event.workflow_run.id }}
+          FAILED_RUN_CREATED_AT: ${{ github.event.workflow_run.created_at }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m ms_data.gh.notify_failure \
+            --workflow-name "${FAILED_WORKFLOW_NAME}" \
+            --conclusion "${FAILED_CONCLUSION}" \
+            --run-url "${FAILED_RUN_URL}" \
+            --run-id "${FAILED_RUN_ID}" \
+            --created-at "${FAILED_RUN_CREATED_AT}" \
+            --repo "${GITHUB_REPOSITORY}"
