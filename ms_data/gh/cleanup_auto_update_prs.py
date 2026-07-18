@@ -168,9 +168,13 @@ def normalize_github_repo_url(url: str) -> str | None:
     return f"{parts[0]}/{parts[1]}".casefold()
 
 
-def fetch_origin_repo() -> str | None:
-    url = _run(["git", "remote", "get-url", "origin"])
-    return normalize_github_repo_url(url)
+def fetch_origin_repos() -> tuple[str | None, str | None]:
+    fetch_url = _run(["git", "remote", "get-url", "origin"])
+    push_url = _run(["git", "remote", "get-url", "--push", "origin"])
+    return (
+        normalize_github_repo_url(fetch_url),
+        normalize_github_repo_url(push_url),
+    )
 
 
 def _pull_state(pull: dict[str, Any]) -> str:
@@ -250,7 +254,8 @@ def cleanup_merged_branches(
         return []
 
     expected_repo = repo.strip().removesuffix(".git").casefold()
-    if fetch_origin_repo() != expected_repo:
+    fetch_repo, push_repo = fetch_origin_repos()
+    if fetch_repo != expected_repo or push_repo != expected_repo:
         return [
             BranchCleanupResult(branch, "skipped", "origin_mismatch")
             for branch in branches

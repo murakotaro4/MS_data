@@ -39,16 +39,20 @@ def _mock_gh(
     missing_branch_shas=None,
     delete_error=None,
     origin_url="https://github.com/owner/repo.git",
+    push_origin_url=None,
 ):
     calls = []
     branch_shas = branch_shas or {}
     missing_branch_shas = set(missing_branch_shas or [])
+    push_origin_url = push_origin_url or origin_url
 
     def fake_run(cmd):
         calls.append(cmd)
         endpoint = cmd[-1]
         if cmd == ["git", "remote", "get-url", "origin"]:
             return origin_url
+        if cmd == ["git", "remote", "get-url", "--push", "origin"]:
+            return push_origin_url
         if cmd[:2] == ["git", "push"]:
             if delete_error == "already_deleted":
                 raise subprocess.CalledProcessError(
@@ -387,4 +391,28 @@ def test_origin_mismatch_skips_all_candidates_without_push(monkeypatch):
     assert all(item.action == "skipped" for item in results)
     assert all(item.reason == "origin_mismatch" for item in results)
     assert calls.count(["git", "remote", "get-url", "origin"]) == 1
+    assert calls.count(["git", "remote", "get-url", "--push", "origin"]) == 1
+    assert not any(call[:2] == ["git", "push"] for call in calls)
+
+
+def test_push_origin_mismatch_skips_all_candidates_without_push(monkeypatch):
+    branch = "data/auto-update-20260702"
+    calls = _mock_gh(
+        monkeypatch,
+        branches=[branch],
+        pulls=[_branch_pull(1, branch, "MERGED")],
+        push_origin_url="git@github.com:other/repo.git",
+    )
+
+    results = cleanup_merged_branches("owner/repo", dry_run=False)
+
+    assert results == [
+        cleanup_auto_update_prs.BranchCleanupResult(
+            branch,
+            "skipped",
+            "origin_mismatch",
+        )
+    ]
+    assert calls.count(["git", "remote", "get-url", "origin"]) == 1
+    assert calls.count(["git", "remote", "get-url", "--push", "origin"]) == 1
     assert not any(call[:2] == ["git", "push"] for call in calls)
