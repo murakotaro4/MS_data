@@ -43,6 +43,7 @@ jobs:
         startsWith(github.event.inputs.head_ref, 'data/auto-update-')
       )
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       TZ: Asia/Tokyo
       HEAD_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.head_ref || github.event.pull_request.head.ref }}
