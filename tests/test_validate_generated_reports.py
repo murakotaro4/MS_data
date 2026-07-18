@@ -92,6 +92,25 @@ def test_validate_generated_reports_accepts_current_report_shapes(tmp_path: Path
         ),
         encoding="utf-8",
     )
+    (reports / "field_completeness_20260531.md").write_text(
+        "\n".join(
+            [
+                "# フィールド充足率監査",
+                "## サマリ",
+                "- missing_key: 0",
+                "- empty_value: 0",
+                "- pair_missing: 0",
+                "- suppressed: 0",
+                "- expired: 0",
+                "## missing_key",
+                "## empty_value",
+                "## pair_missing",
+                "## suppressed",
+                "## expired",
+            ]
+        ),
+        encoding="utf-8",
+    )
 
     assert validate_generated_reports.validate_reports(reports, schema_dir) == []
 
@@ -112,3 +131,21 @@ def test_validate_generated_reports_rejects_missing_required_json_field(
     messages = validate_generated_reports.validate_reports(reports, schema_dir)
 
     assert any("source_run_id" in message for message in messages)
+
+
+def test_validate_generated_reports_rejects_incomplete_field_completeness_report(
+    tmp_path: Path,
+):
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    (reports / "field_completeness_20260531.md").write_text(
+        "# フィールド充足率監査\n## サマリ\n- missing_key: 0\n",
+        encoding="utf-8",
+    )
+
+    messages = validate_generated_reports.validate_reports(
+        reports, Path("schema/reports")
+    )
+
+    assert any("- empty_value:" in message for message in messages)
+    assert any("## expired" in message for message in messages)

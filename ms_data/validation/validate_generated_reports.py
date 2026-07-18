@@ -83,6 +83,27 @@ def validate_reports(reports_dir: Path, schema_dir: Path) -> list[str]:
             )
         )
 
+    for path in sorted(reports_dir.glob("field_completeness_*.md")):
+        messages.extend(
+            _require_text(
+                path,
+                [
+                    "# フィールド充足率監査",
+                    "## サマリ",
+                    "- missing_key:",
+                    "- empty_value:",
+                    "- pair_missing:",
+                    "- suppressed:",
+                    "- expired:",
+                    "## missing_key",
+                    "## empty_value",
+                    "## pair_missing",
+                    "## suppressed",
+                    "## expired",
+                ],
+            )
+        )
+
     return messages
 
 
