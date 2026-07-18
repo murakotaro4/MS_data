@@ -1,16 +1,7 @@
-from pathlib import Path
-
 from ms_data.scraping.scrape_msdata import parse_details
 
 
-FIXTURES = Path(__file__).with_name("fixtures")
-
-
-def load_fixture(name: str) -> str:
-    return (FIXTURES / name).read_text(encoding="utf-8")
-
-
-def test_parse_details_space_only_fixture():
+def test_parse_details_space_only_fixture(load_fixture):
     per_level = parse_details(load_fixture("parse_details_space_only.html"))
 
     assert set(per_level) == {1}
@@ -24,7 +15,7 @@ def test_parse_details_space_only_fixture():
     assert rec["旋回_宇宙_通常時"] == 72
 
 
-def test_parse_details_transform_and_fullst_fixture():
+def test_parse_details_transform_and_fullst_fixture(load_fixture):
     per_level = parse_details(load_fixture("parse_details_transform_fullst.html"))
 
     assert set(per_level) == {1, 2}
@@ -44,7 +35,7 @@ def test_parse_details_transform_and_fullst_fixture():
     assert all(entry["points"] is None for entry in lv2["fullst"])
 
 
-def test_parse_details_tr5_sparse_fullst_keeps_lv4_record():
+def test_parse_details_tr5_sparse_fullst_keeps_lv4_record(load_fixture):
     per_level = parse_details(load_fixture("parse_details_tr5_sparse_fullst.html"))
 
     assert set(per_level) == {1, 2, 3, 4}

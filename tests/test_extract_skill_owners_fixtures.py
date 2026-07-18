@@ -1,16 +1,7 @@
-from pathlib import Path
-
 from ms_data.scraping.extract_skills import extract_skill_owners_rows_table
 
 
-FIXTURES = Path(__file__).with_name("fixtures")
-
-
-def load_fixture(name: str) -> str:
-    return (FIXTURES / name).read_text(encoding="utf-8")
-
-
-def test_extract_skill_owners_rows_table_fixture():
+def test_extract_skill_owners_rows_table_fixture(load_fixture):
     data = extract_skill_owners_rows_table(
         load_fixture("extract_skill_owners_rowspan.html")
     )
@@ -40,7 +31,7 @@ def test_extract_skill_owners_rows_table_fixture():
     )
 
 
-def test_owner_section_limits_tables_and_preserves_block_behavior():
+def test_owner_section_limits_tables_and_preserves_block_behavior(load_fixture):
     data = extract_skill_owners_rows_table(
         load_fixture("extract_skill_owners_section.html")
     )
@@ -67,7 +58,7 @@ def test_owner_section_limits_tables_and_preserves_block_behavior():
     assert {row["block_index"] for row in data["rows"]} == {0, 1}
 
 
-def test_candidate_owner_tables_fallback_without_section_heading():
+def test_candidate_owner_tables_fallback_without_section_heading(load_fixture):
     data = extract_skill_owners_rows_table(
         load_fixture("extract_skill_owners_fallback.html")
     )
@@ -85,7 +76,7 @@ def test_candidate_owner_tables_fallback_without_section_heading():
     )
 
 
-def test_no_candidate_owner_table_returns_empty_rows():
+def test_no_candidate_owner_table_returns_empty_rows(load_fixture):
     data = extract_skill_owners_rows_table(
         load_fixture("extract_skill_owners_empty.html")
     )
