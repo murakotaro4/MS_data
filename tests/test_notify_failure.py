@@ -188,6 +188,90 @@ def test_existing_open_issue_gets_comment_and_commands_are_injected():
     assert "body=" in calls[2][-1]
 
 
+def test_existing_open_duplicates_are_aggregated_and_closed():
+    calls = []
+
+    def runner(cmd):
+        calls.append(cmd)
+        endpoint = cmd[2] if len(cmd) > 2 else ""
+        if cmd[:3] == ["gh", "label", "create"]:
+            return ""
+        if endpoint.endswith(
+            "issues?state=open&labels=pipeline-failure&per_page=100"
+        ):
+            return json.dumps(
+                [
+                    {
+                        "number": 7,
+                        "state": "open",
+                        "title": "[pipeline-failure] data update",
+                        "labels": [{"name": "pipeline-failure"}],
+                        "body": "canonical previous failure",
+                    },
+                    {
+                        "number": 8,
+                        "state": "open",
+                        "title": "[pipeline-failure] data update",
+                        "labels": [{"name": "pipeline-failure"}],
+                        "body": "duplicate run 8 failure",
+                    },
+                    {
+                        "number": 9,
+                        "state": "open",
+                        "title": "[pipeline-failure] data update",
+                        "labels": [{"name": "pipeline-failure"}],
+                        "body": "duplicate run 9 failure",
+                    },
+                ]
+            )
+        if cmd[:2] == ["gh", "api"]:
+            return json.dumps({"id": 99})
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    assert _ensure_issue(runner) == ("deduplicated", 7)
+    assert not any(
+        cmd[:3] == ["gh", "api", "repos/owner/repo/issues"] for cmd in calls
+    )
+
+    canonical_comments = [
+        cmd[-1]
+        for cmd in calls
+        if cmd[:4]
+        == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
+    ]
+    assert len(canonical_comments) == 3
+    assert any(
+        "run_url: https://github.com/owner/repo/actions/runs/123" in body
+        for body in canonical_comments
+    )
+    assert any("Issue #8 から失敗情報を集約" in body for body in canonical_comments)
+    assert any("Issue #9 から失敗情報を集約" in body for body in canonical_comments)
+
+    for duplicate_number in (8, 9):
+        assert any(
+            cmd[:4]
+            == [
+                "gh",
+                "api",
+                f"repos/owner/repo/issues/{duplicate_number}/comments",
+                "-X",
+            ]
+            and "Issue #7 を正本として失敗情報を集約" in cmd[-1]
+            for cmd in calls
+        )
+        assert [
+            "gh",
+            "api",
+            f"repos/owner/repo/issues/{duplicate_number}",
+            "-X",
+            "PATCH",
+            "-f",
+            "state=closed",
+            "-f",
+            "state_reason=not_planned",
+        ] in calls
+
+
 def test_no_open_issue_creates_new_issue():
     runner, calls = _issue_runner([])
 
@@ -250,7 +334,7 @@ def test_created_issue_loses_race_then_comments_canonical_and_closes_duplicate()
     assert any(
         cmd[:4]
         == ["gh", "api", "repos/owner/repo/issues/8/comments", "-X"]
-        and "Issue #7 と同時作成で競合" in cmd[-1]
+        and "Issue #7 を正本として失敗情報を集約" in cmd[-1]
         for cmd in calls
     )
     assert [
@@ -334,7 +418,7 @@ def test_created_canonical_issue_closes_all_higher_number_duplicates():
                 f"repos/owner/repo/issues/{duplicate_number}/comments",
                 "-X",
             ]
-            and "Issue #7 と同時作成で競合" in cmd[-1]
+            and "Issue #7 を正本として失敗情報を集約" in cmd[-1]
             for cmd in calls
         )
         assert [

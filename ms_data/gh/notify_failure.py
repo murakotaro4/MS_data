@@ -171,6 +171,40 @@ def build_issue_aggregation_comment(duplicate: DuplicateIssue) -> str:
     return f"Issue #{duplicate.number} から失敗情報を集約します。\n\n{details}"
 
 
+def converge_duplicate_issues(
+    *,
+    repo: str,
+    resolution: IssueRaceResolution,
+    runner: GhRunner,
+) -> int:
+    """非正本の失敗情報を正本へ集約し、理由コメント後に全件閉じる。"""
+
+    for duplicate in resolution.duplicates:
+        gh_api_json(
+            f"repos/{repo}/issues/{resolution.canonical_number}/comments",
+            method="POST",
+            fields={"body": build_issue_aggregation_comment(duplicate)},
+            runner=runner,
+        )
+        duplicate_reason = (
+            f"Issue #{resolution.canonical_number} を正本として失敗情報を集約したため、"
+            f"重複した Issue #{duplicate.number} を閉じます。"
+        )
+        gh_api_json(
+            f"repos/{repo}/issues/{duplicate.number}/comments",
+            method="POST",
+            fields={"body": duplicate_reason},
+            runner=runner,
+        )
+        gh_api_json(
+            f"repos/{repo}/issues/{duplicate.number}",
+            method="PATCH",
+            fields={"state": "closed", "state_reason": "not_planned"},
+            runner=runner,
+        )
+    return len(resolution.duplicates)
+
+
 def _fetch_open_failure_issues(
     *,
     repo: str,
@@ -235,6 +269,18 @@ def ensure_failure_issue(
             fields={"body": body},
             runner=runner,
         )
+        resolution = resolve_issue_creation_race(
+            issues,
+            title=title,
+            created_number=number,
+        )
+        if resolution is not None:
+            converge_duplicate_issues(
+                repo=repo,
+                resolution=resolution,
+                runner=runner,
+            )
+            return "deduplicated", resolution.canonical_number
         return "commented", number
 
     created = gh_api_json(
@@ -256,29 +302,11 @@ def ensure_failure_issue(
         created_number=number,
     )
     if race_resolution is not None:
-        for duplicate in race_resolution.duplicates:
-            gh_api_json(
-                f"repos/{repo}/issues/{race_resolution.canonical_number}/comments",
-                method="POST",
-                fields={"body": build_issue_aggregation_comment(duplicate)},
-                runner=runner,
-            )
-            duplicate_reason = (
-                f"Issue #{race_resolution.canonical_number} と同時作成で競合したため、"
-                f"重複した Issue #{duplicate.number} を閉じます。"
-            )
-            gh_api_json(
-                f"repos/{repo}/issues/{duplicate.number}/comments",
-                method="POST",
-                fields={"body": duplicate_reason},
-                runner=runner,
-            )
-            gh_api_json(
-                f"repos/{repo}/issues/{duplicate.number}",
-                method="PATCH",
-                fields={"state": "closed", "state_reason": "not_planned"},
-                runner=runner,
-            )
+        converge_duplicate_issues(
+            repo=repo,
+            resolution=race_resolution,
+            runner=runner,
+        )
         return "deduplicated", race_resolution.canonical_number
     return "created", number
 
