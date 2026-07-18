@@ -105,6 +105,18 @@ def fake_time(monkeypatch) -> FakeTime:
 
 
 @pytest.fixture
+def load_fixture():
+    """tests/fixtures 配下の UTF-8 テキストを読み込む。"""
+
+    def _load_fixture(name: str) -> str:
+        return (Path(__file__).with_name("fixtures") / name).read_text(
+            encoding="utf-8"
+        )
+
+    return _load_fixture
+
+
+@pytest.fixture
 def read_github_output():
     """GITHUB_OUTPUT 形式（key=value 行、append モード）を dict に読む。"""
 

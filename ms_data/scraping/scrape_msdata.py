@@ -55,66 +55,29 @@ from ms_data.core.labels import clean_text, normalize_row_label
 from ms_data.net.cache_http import CacheConfig, CacheHTTP
 from ms_data.net.client import get_scraper_client
 
-# 後方互換 re-export（テスト・兄弟モジュールが本モジュール属性として参照する）
+# この facade がサポートする公開面（テスト・CLI が参照する名前）
+# 動的参照やリポジトリ外の互換は保証しない。
 from ms_data.scraping.text_values import (
-    ATWIKI_BASE,
-    COUNTER_TYPES,
-    PAGE_ID_RE,
-    UPDATED_AGE_RE,
-    absolute_url,
-    extract_page_id,
-    extract_updated_age,
     is_counter_placeholder,
     parse_iso_datetime,
     parse_ttl,
     symbol_to_bool,
     to_int,
 )
-from ms_data.scraping.index_page import (
-    SECTION_IDS,
-    append_index_items,
-    parse_index,
-)
+from ms_data.scraping.index_page import parse_index
 from ms_data.scraping.detail_page import (
-    BASE_REQUIRED,
-    FALLBACKABLE_REQUIRED_KEYS,
-    apply_attr,
-    apply_deployment_and_env,
-    apply_deployment_fallbacks,
-    apply_parts_slots,
-    apply_required_value_fallbacks,
     build_base_records,
-    expand_cells,
-    extract_title,
-    filter_complete_records,
     find_detail_table,
-    has_turn_value,
-    infer_attr_from_table_div,
-    levels_from_table,
-    normalize_turn_values,
     parse_deployment,
     parse_details,
     parse_env_suitability,
 )
-from ms_data.scraping.fullst import (
-    apply_fullst_fallback,
-    copy_fullst_with_null_points,
-    fullst_entry_key,
-    fullst_section_name_key,
-    fullst_sort_key,
-    merge_fullst_with_previous,
-    parse_fullst_by_ms_level,
-    public_fullst_entries,
-    strip_skip_fallback_entries,
-)
 from ms_data.scraping.change_detection import (
-    _detail_state_fetched_at,
     find_latest_provenance,
     load_msdata_base_index,
     select_changed_index_items,
 )
 from ms_data.scraping.fetch_state import (
-    _utc_iso,
     load_detail_fetch_state,
     remember_detail_fetch,
     remember_detail_fetch_failure,

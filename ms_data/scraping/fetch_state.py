@@ -25,7 +25,7 @@ def load_detail_fetch_state(path: Path) -> dict[str, dict[str, Any]]:
         return {}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
+    except (OSError, json.JSONDecodeError, ValueError):
         return {}
     if not isinstance(data, dict):
         return {}

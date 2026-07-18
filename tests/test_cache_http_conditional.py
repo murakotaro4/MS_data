@@ -49,3 +49,18 @@ def test_conditional_get_304_updates_meta(tmp_path: Path):
     # 304でも semantic_* が維持/再計算される
     assert meta2["semantic_sha256"] == meta1["semantic_sha256"]
     assert meta2.get("semantic_changed") is False
+
+
+def test_read_meta_missing_file_is_quiet_cache_miss(tmp_path: Path, capsys):
+    missing = tmp_path / "missing.meta.json"
+
+    assert CacheHTTP._read_meta(missing) == {}
+    assert capsys.readouterr().err == ""
+
+
+def test_read_meta_invalid_utf8_warns_and_falls_back(tmp_path: Path, capsys):
+    broken = tmp_path / "broken.meta.json"
+    broken.write_bytes(b"\xff")
+
+    assert CacheHTTP._read_meta(broken) == {}
+    assert "warning: failed to read cache metadata" in capsys.readouterr().err

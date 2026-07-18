@@ -3,21 +3,20 @@
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import subprocess
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from ms_data.core.dates import parse_yyyymmdd_jst, today_jst
+from ms_data.gh import gh_json
 from ms_data.gh.gh_json import run_gh
 
 
 HEAD_REF_RE = re.compile(r"^data/auto-update-(\d{8})$")
 AUTO_UPDATE_BRANCH_RE = re.compile(r"^data/auto-update-.+$")
-JST = timezone(timedelta(hours=9))
 
 
 @dataclass(frozen=True)
@@ -38,17 +37,9 @@ class BranchCleanupResult:
     current_sha: str = ""
 
 
-def today_jst() -> str:
-    return datetime.now(JST).strftime("%Y%m%d")
-
-
 def parse_report_date(head_ref: str) -> str | None:
     match = HEAD_REF_RE.match(head_ref)
     return match.group(1) if match else None
-
-
-def _date_value(yyyymmdd: str) -> datetime:
-    return datetime.strptime(yyyymmdd, "%Y%m%d").replace(tzinfo=JST)
 
 
 def plan_cleanup(
@@ -57,7 +48,7 @@ def plan_cleanup(
     today: str,
     keep_days: int,
 ) -> list[CleanupAction]:
-    today_dt = _date_value(today)
+    today_dt = parse_yyyymmdd_jst(today)
     actions: list[CleanupAction] = []
 
     for item in pulls:
@@ -67,7 +58,7 @@ def plan_cleanup(
         if report_date is None:
             continue
 
-        age_days = (today_dt - _date_value(report_date)).days
+        age_days = (today_dt - parse_yyyymmdd_jst(report_date)).days
         number = int(item.get("number") or 0)
         if report_date == today:
             action = "keep"
@@ -91,37 +82,36 @@ def plan_cleanup(
     return sorted(actions, key=lambda item: (item.report_date, item.number))
 
 
-def _run(cmd: list[str]) -> str:
-    return run_gh(cmd)
-
-
-def _gh_json(endpoint: str) -> Any:
-    text = _run(["gh", "api", endpoint])
-    return json.loads(text) if text.strip() else []
-
-
-def _gh_json_paginated(endpoint: str) -> list[dict[str, Any]]:
-    text = _run(["gh", "api", "--paginate", "--slurp", endpoint])
-    data = json.loads(text) if text.strip() else []
-    if not isinstance(data, list):
-        raise ValueError("GitHub paginated response must be a list")
-    pages = data if all(isinstance(page, list) for page in data) else [data]
-    return [item for page in pages for item in page if isinstance(item, dict)]
-
-
 def fetch_open_pulls(repo: str) -> list[dict[str, Any]]:
-    data = _gh_json(f"repos/{repo}/pulls?state=open&base=main&per_page=100")
+    data = gh_json.gh_api_json(
+        f"repos/{repo}/pulls?state=open&base=main&per_page=100",
+        runner=run_gh,
+    )
     if not isinstance(data, list):
         raise ValueError("GitHub pulls response must be a list")
     return data
 
 
 def fetch_all_pulls(repo: str) -> list[dict[str, Any]]:
-    return _gh_json_paginated(f"repos/{repo}/pulls?state=all&per_page=100")
+    data = gh_json.gh_api_json(
+        f"repos/{repo}/pulls?state=all&per_page=100",
+        paginate=True,
+        runner=run_gh,
+    )
+    if not isinstance(data, list):
+        raise ValueError("GitHub paginated response must be a list")
+    return [item for item in data if isinstance(item, dict)]
 
 
 def fetch_remote_branches(repo: str) -> list[str]:
-    branches = _gh_json_paginated(f"repos/{repo}/branches?per_page=100")
+    data = gh_json.gh_api_json(
+        f"repos/{repo}/branches?per_page=100",
+        paginate=True,
+        runner=run_gh,
+    )
+    if not isinstance(data, list):
+        raise ValueError("GitHub paginated response must be a list")
+    branches = [item for item in data if isinstance(item, dict)]
     return sorted(
         name
         for item in branches
@@ -131,14 +121,17 @@ def fetch_remote_branches(repo: str) -> list[str]:
 
 
 def fetch_default_branch(repo: str) -> str:
-    data = _gh_json(f"repos/{repo}")
+    data = gh_json.gh_api_json(f"repos/{repo}", runner=run_gh)
     if not isinstance(data, dict):
         raise ValueError("GitHub repository response must be an object")
     return str(data.get("default_branch") or "main")
 
 
 def fetch_branch_sha(repo: str, branch: str) -> str:
-    data = _gh_json(f"repos/{repo}/git/ref/heads/{branch}")
+    data = gh_json.gh_api_json(
+        f"repos/{repo}/git/ref/heads/{branch}",
+        runner=run_gh,
+    )
     if not isinstance(data, dict):
         raise ValueError("GitHub ref response must be an object")
     obj = data.get("object") if isinstance(data.get("object"), dict) else {}
@@ -169,8 +162,8 @@ def normalize_github_repo_url(url: str) -> str | None:
 
 
 def fetch_origin_repos() -> tuple[str | None, str | None]:
-    fetch_url = _run(["git", "remote", "get-url", "origin"])
-    push_url = _run(["git", "remote", "get-url", "--push", "origin"])
+    fetch_url = run_gh(["git", "remote", "get-url", "origin"])
+    push_url = run_gh(["git", "remote", "get-url", "--push", "origin"])
     return (
         normalize_github_repo_url(fetch_url),
         normalize_github_repo_url(push_url),
@@ -226,7 +219,7 @@ def _is_lease_failed(exc: subprocess.CalledProcessError) -> bool:
 
 def delete_remote_branch(branch: str, expected_sha: str) -> str:
     try:
-        _run(
+        run_gh(
             [
                 "git",
                 "push",
@@ -364,7 +357,7 @@ def close_pr(repo: str, action: CleanupAction) -> None:
         f"- reason: {action.reason}\n\n"
         f"<!-- auto-update-cleanup reason:{action.reason} head_ref:{action.head_ref} -->"
     )
-    _run(
+    run_gh(
         [
             "gh",
             "pr",

@@ -54,23 +54,27 @@ jobs:
 
       - name: No target PR found
         if: steps.resolve.outputs.skip == 'true'
+        env:
+          SKIP_REASON: ${{ steps.resolve.outputs.skip_reason }}
         run: |
           echo "Skip auto review merge: no target PR found for report_date=${{ steps.resolve.outputs.report_date }}."
           {
             echo "### Auto Review Merge"
             echo "- status: skipped"
-            echo "- reason: ${{ steps.resolve.outputs.skip_reason }}"
+            echo "- reason: $SKIP_REASON"
             echo "- report_date: ${{ steps.resolve.outputs.report_date }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Validate report contract (auto-review)
         if: steps.resolve.outputs.skip != 'true'
+        env:
+          HEAD_REF: ${{ steps.resolve.outputs.head_ref }}
         run: |
           uv run python -m ms_data.validation.validate_report_contract \
             --mode auto-review \
             --manifest reports_manifest.yml \
             --report-date "${{ steps.resolve.outputs.report_date }}" \
-            --head-ref "${{ steps.resolve.outputs.head_ref }}"
+            --head-ref "$HEAD_REF"
 
       - id: trigger
         name: Trigger Codex review
@@ -108,12 +112,13 @@ jobs:
         if: steps.resolve.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          TRIGGER_COMMENT_IDS: ${{ steps.wait.outputs.trigger_comment_ids }}
         run: |
           uv run python -m ms_data.gh.auto_review_merge check-gate \
             --repo "${{ steps.prepare.outputs.repo }}" \
             --pr-number "${{ steps.resolve.outputs.pr }}" \
             --head-sha "${{ steps.resolve.outputs.head_sha }}" \
-            --trigger-comment-ids "${{ steps.wait.outputs.trigger_comment_ids }}" \
+            --trigger-comment-ids "$TRIGGER_COMMENT_IDS" \
             --first-trigger-created-at "${{ steps.wait.outputs.first_trigger_created_at }}" \
             --github-output "$GITHUB_OUTPUT"
 
@@ -121,13 +126,15 @@ jobs:
         if: steps.resolve.outputs.skip != 'true' && steps.gate.outputs.merge_ok != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          FINDINGS: ${{ steps.gate.outputs.findings }}
+          STOP_REASON: ${{ steps.gate.outputs.stop_reason }}
         run: |
           uv run python -m ms_data.gh.auto_review_merge record-stop \
             --repo "${{ steps.prepare.outputs.repo }}" \
             --pr-number "${{ steps.resolve.outputs.pr }}" \
             --head-sha "${{ steps.resolve.outputs.head_sha }}" \
-            --findings "${{ steps.gate.outputs.findings }}" \
-            --stop-reason "${{ steps.gate.outputs.stop_reason }}" \
+            --findings "$FINDINGS" \
+            --stop-reason "$STOP_REASON" \
             --run-id "${{ steps.prepare.outputs.run_id }}" \
             --attempts-used "${{ steps.wait.outputs.attempts_used }}" \
             --max-attempts "${{ steps.wait.outputs.max_attempts }}" \
@@ -168,12 +175,17 @@ jobs:
 
       - name: Write auto review report
         if: always() && steps.resolve.outputs.skip == 'false'
+        env:
+          HEAD_REF: ${{ steps.resolve.outputs.head_ref }}
+          TRIGGER_COMMENT_IDS: ${{ steps.wait.outputs.trigger_comment_ids }}
+          FINDINGS: ${{ steps.gate.outputs.findings }}
+          STOP_REASON: ${{ steps.gate.outputs.stop_reason }}
         run: |
           uv run python -m ms_data.gh.auto_review_merge write-report \
             --report-date "${{ steps.resolve.outputs.report_date }}" \
             --run-id "${{ steps.prepare.outputs.run_id }}" \
             --pr-number "${{ steps.resolve.outputs.pr }}" \
-            --head-ref "${{ steps.resolve.outputs.head_ref }}" \
+            --head-ref "$HEAD_REF" \
             --head-sha "${{ steps.resolve.outputs.head_sha }}" \
             --responded "${{ steps.wait.outputs.responded }}" \
             --attempts-used "${{ steps.wait.outputs.attempts_used }}" \
@@ -183,14 +195,14 @@ jobs:
             --settle-seconds "${{ steps.wait.outputs.settle_seconds }}" \
             --response-attempt "${{ steps.wait.outputs.response_attempt }}" \
             --response-seconds "${{ steps.wait.outputs.response_seconds }}" \
-            --trigger-comment-ids "${{ steps.wait.outputs.trigger_comment_ids }}" \
+            --trigger-comment-ids "$TRIGGER_COMMENT_IDS" \
             --first-trigger-created-at "${{ steps.wait.outputs.first_trigger_created_at }}" \
-            --findings "${{ steps.gate.outputs.findings }}" \
+            --findings "$FINDINGS" \
             --review-complete "${{ steps.gate.outputs.review_complete }}" \
             --merge-ok "${{ steps.gate.outputs.merge_ok }}" \
             --merged "${{ steps.merge.outputs.merged }}" \
             --merge-outcome "${{ steps.merge.outcome }}" \
-            --stop-reason "${{ steps.gate.outputs.stop_reason }}" \
+            --stop-reason "$STOP_REASON" \
             --out "reports/auto_review_${{ steps.resolve.outputs.report_date }}.json" \
             --step-summary "$GITHUB_STEP_SUMMARY"
 

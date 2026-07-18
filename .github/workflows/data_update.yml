@@ -315,6 +315,8 @@ jobs:
       - id: no_change_mail
         name: Build no-change mail body
         if: github.event_name == 'schedule' && steps.changes.outputs.changed == 'false' && env.DRY_RUN != 'true'
+        env:
+          FALLBACK_REASON: ${{ steps.detection.outputs.fallback_reason }}
         run: |
           body_path="$RUNNER_TEMP/msdata_no_change_mail.txt"
           uv run python -m ms_data.reporting.build_update_mail_body \
@@ -324,7 +326,7 @@ jobs:
             --candidate-count "${{ steps.detection.outputs.candidate_count }}" \
             --fast-path "${{ steps.detection.outputs.fast_path }}" \
             --age-coverage "${{ steps.detection.outputs.age_coverage }}" \
-            --fallback-reason "${{ steps.detection.outputs.fallback_reason }}" \
+            --fallback-reason "$FALLBACK_REASON" \
             --run-id "${GITHUB_RUN_ID}" \
             --rollback-guard-path "reports/rollback_guard_${REPORT_DATE}.md" \
             --official-overrides-audit-path "reports/official_overrides_audit_${REPORT_DATE}.md" \

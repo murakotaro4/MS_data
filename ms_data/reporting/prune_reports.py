@@ -15,14 +15,13 @@ from __future__ import annotations
 import argparse
 import re
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from ms_data.core.dates import parse_yyyymmdd_jst, today_jst
 from ms_data.core.json_io import load_json
 from ms_data.gh.outputs import append_step_summary
 
-JST = timezone(timedelta(hours=9))
 REPORT_DATE_RE = re.compile(r"_(\d{8})\.[A-Za-z0-9.]+$")
 
 
@@ -41,14 +40,6 @@ def extract_report_date(path: Path) -> str | None:
     return match.group(1) if match else None
 
 
-def _date_value(yyyymmdd: str) -> datetime:
-    return datetime.strptime(yyyymmdd, "%Y%m%d").replace(tzinfo=JST)
-
-
-def today_jst() -> str:
-    return datetime.now(JST).strftime("%Y%m%d")
-
-
 def plan_prune_entry(
     entry: dict[str, Any],
     *,
@@ -61,7 +52,7 @@ def plan_prune_entry(
     max_age_days = int(prune["max_age_days"])
     keep_min = int(prune.get("keep_min", 0))
     entry_id = str(entry.get("id", ""))
-    today_dt = _date_value(today)
+    today_dt = parse_yyyymmdd_jst(today)
 
     # 複数パターンに重複マッチしても1件として扱う（keep_min の二重消費と二重削除を防ぐ）
     seen: set[Path] = set()
@@ -80,7 +71,7 @@ def plan_prune_entry(
     dated.sort(key=lambda item: (item[0], item[1].name), reverse=True)
     actions: list[PruneAction] = []
     for index, (report_date, path) in enumerate(dated):
-        age_days = (today_dt - _date_value(report_date)).days
+        age_days = (today_dt - parse_yyyymmdd_jst(report_date)).days
         if index < keep_min:
             action, reason = "keep", f"keep_min:{keep_min}"
         elif age_days > max_age_days:
