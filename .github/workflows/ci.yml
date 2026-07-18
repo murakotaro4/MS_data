@@ -30,10 +30,14 @@ jobs:
         run: |
           code=true
           if [[ "$EVENT_NAME" == "pull_request" ]] && [[ -n "$BASE_SHA" && -n "$HEAD_SHA" ]]; then
-            if changed_files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"; then
+            if changed_files="$(git diff --name-status --no-renames "$BASE_SHA" "$HEAD_SHA")"; then
               code=false
-              while IFS= read -r path; do
-                [[ -z "$path" ]] && continue
+              while IFS=$'\t' read -r status path; do
+                [[ -z "$status" && -z "$path" ]] && continue
+                if [[ -z "$status" || -z "$path" || "$status" == "D" ]]; then
+                  code=true
+                  break
+                fi
                 case "$path" in
                   reports/*|msData.json|*.md) ;;
                   *) code=true; break ;;
