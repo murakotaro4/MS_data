@@ -36,11 +36,13 @@ def _mock_gh(
     branches,
     pulls,
     branch_shas=None,
+    missing_branch_shas=None,
     delete_error=None,
     origin_url="https://github.com/owner/repo.git",
 ):
     calls = []
     branch_shas = branch_shas or {}
+    missing_branch_shas = set(missing_branch_shas or [])
 
     def fake_run(cmd):
         calls.append(cmd)
@@ -70,6 +72,12 @@ def _mock_gh(
             return json.dumps({"default_branch": "main"})
         if cmd[:2] == ["gh", "api"] and "/git/ref/heads/" in endpoint:
             branch = endpoint.split("/git/ref/heads/", 1)[1]
+            if branch in missing_branch_shas:
+                raise subprocess.CalledProcessError(
+                    1,
+                    cmd,
+                    stderr="gh: Not Found (HTTP 404)",
+                )
             return json.dumps({"object": {"sha": branch_shas.get(branch, "head-sha")}})
         raise AssertionError(f"unexpected gh command: {cmd}")
 
@@ -233,6 +241,60 @@ def test_merged_head_oid_mismatch_is_skipped(monkeypatch):
 
     assert results[0].action == "skipped"
     assert results[0].reason == "merged_head_oid_mismatch"
+
+
+def test_current_sha_in_multiple_merged_oids_is_deleted(monkeypatch):
+    branch = "data/auto-update-20260702"
+    calls = _mock_gh(
+        monkeypatch,
+        branches=[branch],
+        pulls=[
+            _branch_pull(1, branch, "MERGED", sha="old-sha"),
+            _branch_pull(2, branch, "MERGED", sha="current-sha"),
+        ],
+        branch_shas={branch: "current-sha"},
+    )
+
+    results = cleanup_merged_branches("owner/repo", dry_run=False)
+
+    assert results[0].action == "deleted"
+    assert results[0].reason == "deleted"
+    assert any(
+        call[:3]
+        == [
+            "git",
+            "push",
+            f"--force-with-lease=refs/heads/{branch}:current-sha",
+        ]
+        for call in calls
+    )
+
+
+def test_fetch_branch_sha_404_is_already_deleted_and_continues(monkeypatch):
+    missing_branch = "data/auto-update-20260702"
+    remaining_branch = "data/auto-update-20260703"
+    calls = _mock_gh(
+        monkeypatch,
+        branches=[missing_branch, remaining_branch],
+        pulls=[
+            _branch_pull(1, missing_branch, "MERGED"),
+            _branch_pull(2, remaining_branch, "MERGED"),
+        ],
+        missing_branch_shas={missing_branch},
+    )
+
+    results = cleanup_merged_branches("owner/repo", dry_run=False)
+
+    assert results[0] == cleanup_auto_update_prs.BranchCleanupResult(
+        missing_branch,
+        "deleted",
+        "already_deleted",
+    )
+    assert results[1].action == "deleted"
+    assert any(
+        call[:2] == ["git", "push"] and remaining_branch in call[-1]
+        for call in calls
+    )
 
 
 def test_closed_only_branch_is_skipped(monkeypatch):

@@ -211,6 +211,10 @@ def _is_already_deleted(exc: subprocess.CalledProcessError) -> bool:
     return "remote ref does not exist" in output or "remote ref not found" in output
 
 
+def _is_api_not_found(exc: subprocess.CalledProcessError) -> bool:
+    return re.search(r"\b404\b", _command_error_text(exc)) is not None
+
+
 def _is_lease_failed(exc: subprocess.CalledProcessError) -> bool:
     output = _command_error_text(exc)
     return "stale info" in output or "[rejected]" in output
@@ -308,8 +312,16 @@ def cleanup_merged_branches(
             )
             continue
 
-        current_sha = fetch_branch_sha(repo, branch)
-        if merged_oids != {current_sha}:
+        try:
+            current_sha = fetch_branch_sha(repo, branch)
+        except subprocess.CalledProcessError as exc:
+            if _is_api_not_found(exc):
+                results.append(
+                    BranchCleanupResult(branch, "deleted", "already_deleted")
+                )
+                continue
+            raise
+        if current_sha not in merged_oids:
             results.append(
                 BranchCleanupResult(
                     branch,
