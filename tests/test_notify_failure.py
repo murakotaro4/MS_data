@@ -68,31 +68,36 @@ def test_resolve_issue_creation_race_selects_lowest_number():
             "state": "open",
             "title": "[pipeline-failure] data update",
             "labels": [{"name": "pipeline-failure"}],
+            "body": "run 8 failure",
         },
         {
             "number": 7,
             "state": "open",
             "title": "[pipeline-failure] data update",
             "labels": [{"name": "pipeline-failure"}],
+            "body": "run 7 failure",
         },
     ]
 
-    assert (
-        resolve_issue_creation_race(
-            issues,
-            title="[pipeline-failure] data update",
-            created_number=8,
-        )
-        == 7
+    resolution = resolve_issue_creation_race(
+        issues,
+        title="[pipeline-failure] data update",
+        created_number=8,
     )
-    assert (
-        resolve_issue_creation_race(
-            issues,
-            title="[pipeline-failure] data update",
-            created_number=7,
-        )
-        is None
+    assert resolution is not None
+    assert resolution.canonical_number == 7
+    assert [(item.number, item.body) for item in resolution.duplicates] == [
+        (8, "run 8 failure")
+    ]
+
+    canonical_resolution = resolve_issue_creation_race(
+        issues,
+        title="[pipeline-failure] data update",
+        created_number=7,
     )
+    assert canonical_resolution is not None
+    assert canonical_resolution.canonical_number == 7
+    assert [item.number for item in canonical_resolution.duplicates] == [8]
 
 
 def test_failure_mail_body_contains_workflow_name_and_run_url():
@@ -216,12 +221,14 @@ def test_created_issue_loses_race_then_comments_canonical_and_closes_duplicate()
                         "state": "open",
                         "title": "[pipeline-failure] data update",
                         "labels": [{"name": "pipeline-failure"}],
+                        "body": "run 7 failure",
                     },
                     {
                         "number": 8,
                         "state": "open",
                         "title": "[pipeline-failure] data update",
                         "labels": [{"name": "pipeline-failure"}],
+                        "body": "run 8 failure",
                     },
                 ]
             )
@@ -236,7 +243,8 @@ def test_created_issue_loses_race_then_comments_canonical_and_closes_duplicate()
     assert any(
         cmd[:4]
         == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
-        and "run_url: https://github.com/owner/repo/actions/runs/123" in cmd[-1]
+        and "Issue #8 から失敗情報を集約" in cmd[-1]
+        and "run 8 failure" in cmd[-1]
         for cmd in calls
     )
     assert any(
@@ -256,6 +264,90 @@ def test_created_issue_loses_race_then_comments_canonical_and_closes_duplicate()
         "-f",
         "state_reason=not_planned",
     ] in calls
+
+
+def test_created_canonical_issue_closes_all_higher_number_duplicates():
+    calls = []
+    issue_list_count = 0
+
+    def runner(cmd):
+        nonlocal issue_list_count
+        calls.append(cmd)
+        endpoint = cmd[2] if len(cmd) > 2 else ""
+        if cmd[:3] == ["gh", "label", "create"]:
+            return ""
+        if endpoint.endswith(
+            "issues?state=open&labels=pipeline-failure&per_page=100"
+        ):
+            issue_list_count += 1
+            if issue_list_count == 1:
+                return "[]"
+            return json.dumps(
+                [
+                    {
+                        "number": 7,
+                        "state": "open",
+                        "title": "[pipeline-failure] data update",
+                        "labels": [{"name": "pipeline-failure"}],
+                        "body": "canonical run failure",
+                    },
+                    {
+                        "number": 8,
+                        "state": "open",
+                        "title": "[pipeline-failure] data update",
+                        "labels": [{"name": "pipeline-failure"}],
+                        "body": "duplicate run 8 failure",
+                    },
+                    {
+                        "number": 9,
+                        "state": "open",
+                        "title": "[pipeline-failure] data update",
+                        "labels": [{"name": "pipeline-failure"}],
+                        "body": "duplicate run 9 failure",
+                    },
+                ]
+            )
+        if cmd[:3] == ["gh", "api", "repos/owner/repo/issues"]:
+            return json.dumps({"number": 7})
+        if cmd[:2] == ["gh", "api"]:
+            return json.dumps({"id": 99})
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    assert _ensure_issue(runner) == ("deduplicated", 7)
+
+    canonical_comments = [
+        cmd[-1]
+        for cmd in calls
+        if cmd[:4]
+        == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
+    ]
+    assert len(canonical_comments) == 2
+    assert any("Issue #8 から失敗情報を集約" in body for body in canonical_comments)
+    assert any("Issue #9 から失敗情報を集約" in body for body in canonical_comments)
+
+    for duplicate_number in (8, 9):
+        assert any(
+            cmd[:4]
+            == [
+                "gh",
+                "api",
+                f"repos/owner/repo/issues/{duplicate_number}/comments",
+                "-X",
+            ]
+            and "Issue #7 と同時作成で競合" in cmd[-1]
+            for cmd in calls
+        )
+        assert [
+            "gh",
+            "api",
+            f"repos/owner/repo/issues/{duplicate_number}",
+            "-X",
+            "PATCH",
+            "-f",
+            "state=closed",
+            "-f",
+            "state_reason=not_planned",
+        ] in calls
 
 
 def test_cancelled_skips_mail_and_github():

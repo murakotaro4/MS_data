@@ -7,6 +7,7 @@ import os
 import sys
 import tempfile
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,18 @@ NOTIFY_CONCLUSIONS = frozenset(
 ISSUE_LABEL = "pipeline-failure"
 ISSUE_LABEL_COLOR = "B60205"
 MailSender = Callable[[str, str], None]
+
+
+@dataclass(frozen=True)
+class DuplicateIssue:
+    number: int
+    body: str
+
+
+@dataclass(frozen=True)
+class IssueRaceResolution:
+    canonical_number: int
+    duplicates: tuple[DuplicateIssue, ...]
 
 
 def should_notify(conclusion: str) -> bool:
@@ -126,15 +139,36 @@ def resolve_issue_creation_race(
     title: str,
     created_number: int,
     label: str = ISSUE_LABEL,
-) -> int | None:
-    """作成した Issue が競合時の非正本なら、正本の最小番号を返す。"""
+) -> IssueRaceResolution | None:
+    """競合する open Issue の正本と、閉じる全非正本を返す。"""
 
-    matches = _matching_open_issues(issues, title=title, label=label)
-    numbers = sorted({int(issue["number"]) for issue in matches})
+    matches = sorted(
+        _matching_open_issues(issues, title=title, label=label),
+        key=lambda issue: int(issue["number"]),
+    )
+    numbers = [int(issue["number"]) for issue in matches]
     if len(numbers) <= 1 or created_number not in numbers:
         return None
     canonical_number = numbers[0]
-    return canonical_number if created_number != canonical_number else None
+    duplicates = tuple(
+        DuplicateIssue(
+            number=int(issue["number"]),
+            body=str(issue.get("body") or ""),
+        )
+        for issue in matches
+        if int(issue["number"]) != canonical_number
+    )
+    return IssueRaceResolution(
+        canonical_number=canonical_number,
+        duplicates=duplicates,
+    )
+
+
+def build_issue_aggregation_comment(duplicate: DuplicateIssue) -> str:
+    """非正本 Issue の失敗情報を正本へ集約するコメントを組み立てる。"""
+
+    details = duplicate.body.strip() or "（重複 Issue の本文は空です）"
+    return f"Issue #{duplicate.number} から失敗情報を集約します。\n\n{details}"
 
 
 def _fetch_open_failure_issues(
@@ -216,35 +250,36 @@ def ensure_failure_issue(
         raise ValueError("Created GitHub Issue has no valid number")
 
     issues_after_create = _fetch_open_failure_issues(repo=repo, runner=runner)
-    canonical_number = resolve_issue_creation_race(
+    race_resolution = resolve_issue_creation_race(
         issues_after_create,
         title=title,
         created_number=number,
     )
-    if canonical_number is not None:
-        gh_api_json(
-            f"repos/{repo}/issues/{canonical_number}/comments",
-            method="POST",
-            fields={"body": body},
-            runner=runner,
-        )
-        duplicate_reason = (
-            f"Issue #{canonical_number} と同時作成で競合したため、"
-            f"重複した Issue #{number} を閉じます。"
-        )
-        gh_api_json(
-            f"repos/{repo}/issues/{number}/comments",
-            method="POST",
-            fields={"body": duplicate_reason},
-            runner=runner,
-        )
-        gh_api_json(
-            f"repos/{repo}/issues/{number}",
-            method="PATCH",
-            fields={"state": "closed", "state_reason": "not_planned"},
-            runner=runner,
-        )
-        return "deduplicated", canonical_number
+    if race_resolution is not None:
+        for duplicate in race_resolution.duplicates:
+            gh_api_json(
+                f"repos/{repo}/issues/{race_resolution.canonical_number}/comments",
+                method="POST",
+                fields={"body": build_issue_aggregation_comment(duplicate)},
+                runner=runner,
+            )
+            duplicate_reason = (
+                f"Issue #{race_resolution.canonical_number} と同時作成で競合したため、"
+                f"重複した Issue #{duplicate.number} を閉じます。"
+            )
+            gh_api_json(
+                f"repos/{repo}/issues/{duplicate.number}/comments",
+                method="POST",
+                fields={"body": duplicate_reason},
+                runner=runner,
+            )
+            gh_api_json(
+                f"repos/{repo}/issues/{duplicate.number}",
+                method="PATCH",
+                fields={"state": "closed", "state_reason": "not_planned"},
+                runner=runner,
+            )
+        return "deduplicated", race_resolution.canonical_number
     return "created", number
 
 
