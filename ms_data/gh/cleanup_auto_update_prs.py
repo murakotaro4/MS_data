@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from ms_data.gh.gh_json import run_gh
 
@@ -147,6 +148,31 @@ def fetch_branch_sha(repo: str, branch: str) -> str:
     return sha
 
 
+def normalize_github_repo_url(url: str) -> str | None:
+    value = url.strip()
+    scp_match = re.fullmatch(r"(?:[^@/:]+@)?github\.com:(?P<path>[^?#]+)", value)
+    if scp_match:
+        path = scp_match.group("path")
+    else:
+        parsed = urlparse(value)
+        if (parsed.hostname or "").casefold() != "github.com":
+            return None
+        path = parsed.path
+
+    path = path.strip("/")
+    if path.casefold().endswith(".git"):
+        path = path[:-4]
+    parts = path.split("/")
+    if len(parts) != 2 or not all(parts):
+        return None
+    return f"{parts[0]}/{parts[1]}".casefold()
+
+
+def fetch_origin_repo() -> str | None:
+    url = _run(["git", "remote", "get-url", "origin"])
+    return normalize_github_repo_url(url)
+
+
 def _pull_state(pull: dict[str, Any]) -> str:
     if pull.get("merged_at") or pull.get("mergedAt"):
         return "MERGED"
@@ -215,6 +241,17 @@ def cleanup_merged_branches(
     *,
     dry_run: bool,
 ) -> list[BranchCleanupResult]:
+    branches = fetch_remote_branches(repo)
+    if not branches:
+        return []
+
+    expected_repo = repo.strip().removesuffix(".git").casefold()
+    if fetch_origin_repo() != expected_repo:
+        return [
+            BranchCleanupResult(branch, "skipped", "origin_mismatch")
+            for branch in branches
+        ]
+
     default_branch = fetch_default_branch(repo)
     pulls = fetch_all_pulls(repo)
     results: list[BranchCleanupResult] = []
@@ -228,7 +265,7 @@ def cleanup_merged_branches(
         _base_ref(pull) for pull in pulls if _pull_state(pull) == "OPEN"
     }
 
-    for branch in fetch_remote_branches(repo):
+    for branch in branches:
         if branch == default_branch:
             results.append(BranchCleanupResult(branch, "skipped", "default_branch"))
             continue

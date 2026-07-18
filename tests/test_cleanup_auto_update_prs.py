@@ -30,13 +30,23 @@ def _branch_pull(number, branch, state, *, sha="head-sha", base="main"):
     }
 
 
-def _mock_gh(monkeypatch, *, branches, pulls, branch_shas=None, delete_error=None):
+def _mock_gh(
+    monkeypatch,
+    *,
+    branches,
+    pulls,
+    branch_shas=None,
+    delete_error=None,
+    origin_url="https://github.com/owner/repo.git",
+):
     calls = []
     branch_shas = branch_shas or {}
 
     def fake_run(cmd):
         calls.append(cmd)
         endpoint = cmd[-1]
+        if cmd == ["git", "remote", "get-url", "origin"]:
+            return origin_url
         if cmd[:2] == ["git", "push"]:
             if delete_error == "already_deleted":
                 raise subprocess.CalledProcessError(
@@ -139,6 +149,18 @@ def test_gh_json_rejects_concatenated_documents(monkeypatch):
 
     with pytest.raises(json.JSONDecodeError, match="Extra data"):
         cleanup_auto_update_prs._gh_json("repos/owner/repo/pulls")
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://github.com/Owner/Repo.git",
+        "git@github.com:Owner/Repo.git",
+        "ssh://git@github.com/Owner/Repo.git",
+    ],
+)
+def test_normalize_github_repo_url(url):
+    assert cleanup_auto_update_prs.normalize_github_repo_url(url) == "owner/repo"
 
 
 def test_eligible_merged_branch_is_deleted(monkeypatch):
@@ -283,3 +305,24 @@ def test_lease_failure_is_skipped(monkeypatch):
 
     assert results[0].action == "skipped"
     assert results[0].reason == "lease_failed"
+
+
+def test_origin_mismatch_skips_all_candidates_without_push(monkeypatch):
+    branches = [
+        "data/auto-update-20260702",
+        "data/auto-update-20260703",
+    ]
+    calls = _mock_gh(
+        monkeypatch,
+        branches=branches,
+        pulls=[_branch_pull(1, branches[0], "MERGED")],
+        origin_url="git@github.com:other/repo.git",
+    )
+
+    results = cleanup_merged_branches("owner/repo", dry_run=False)
+
+    assert [item.branch for item in results] == branches
+    assert all(item.action == "skipped" for item in results)
+    assert all(item.reason == "origin_mismatch" for item in results)
+    assert calls.count(["git", "remote", "get-url", "origin"]) == 1
+    assert not any(call[:2] == ["git", "push"] for call in calls)
