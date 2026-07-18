@@ -78,6 +78,18 @@ def test_detects_missing_required_key(tmp_path: Path):
     assert "| テスト機_LV1 | HP | missing_key |" in report.read_text(encoding="utf-8")
 
 
+@pytest.mark.parametrize("field", ["属性", "コスト"])
+def test_detects_missing_additional_required_key(tmp_path: Path, field: str):
+    record = _record()
+    del record[field]
+
+    _, report = _run(tmp_path, [record])
+
+    text = report.read_text(encoding="utf-8")
+    assert "- missing_key: 1" in text
+    assert f"| テスト機_LV1 | {field} | missing_key |" in text
+
+
 def test_detects_empty_rarity(tmp_path: Path):
     record = _record()
     record["レアリティ"] = ""
