@@ -36,7 +36,7 @@ REQUIRED_KEYS = frozenset(
         "出撃_宇宙可",
     }
 )
-NON_EMPTY_KEYS = frozenset({"レアリティ", "格闘判定力"})
+NON_EMPTY_KEYS = frozenset({"レアリティ", "カウンター", "格闘判定力"})
 PAIR_RULES = (("旋回_地上_通常時", "旋回_宇宙_通常時"),)
 IGNORED_FIELD_MARKERS = ("_変形時", "_変身時")
 CATEGORIES = (

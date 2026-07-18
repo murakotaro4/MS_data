@@ -87,6 +87,17 @@ def test_detects_empty_rarity(tmp_path: Path):
     assert "- empty_value: 1" in report.read_text(encoding="utf-8")
 
 
+def test_detects_empty_counter(tmp_path: Path):
+    record = _record()
+    record["カウンター"] = ""
+
+    _, report = _run(tmp_path, [record])
+
+    text = report.read_text(encoding="utf-8")
+    assert "- empty_value: 1" in text
+    assert "| テスト機_LV1 | カウンター | empty_value |" in text
+
+
 @pytest.mark.parametrize("rank_value", ["", None])
 def test_empty_rank_without_dp_is_allowed(tmp_path: Path, rank_value: object):
     record = _record()
