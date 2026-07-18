@@ -3,6 +3,18 @@ import pytest
 from ms_data.scraping import change_detection, fetch_state
 
 
+@pytest.mark.parametrize(
+    "loader",
+    [
+        change_detection.load_msdata_base_index,
+        fetch_state.load_detail_fetch_state,
+    ],
+)
+def test_missing_state_files_are_quiet_fallbacks(tmp_path, capsys, loader):
+    assert loader(tmp_path / "missing.json") == {}
+    assert capsys.readouterr().err == ""
+
+
 def test_find_latest_provenance_skips_broken_json(tmp_path):
     broken = tmp_path / "provenance_20260719.json"
     broken.write_text("{broken", encoding="utf-8")

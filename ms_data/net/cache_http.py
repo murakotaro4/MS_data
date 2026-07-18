@@ -107,8 +107,13 @@ class CacheHTTP:
 
     @staticmethod
     def _read_meta(p: Path) -> dict:
+        if not p.exists():
+            return {}
         try:
             return json.loads(p.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            # exists() 後に削除された場合も通常のキャッシュミスとして扱う。
+            return {}
         except Exception as exc:
             print(f"warning: failed to read cache metadata {p}: {exc}", file=sys.stderr)
             return {}

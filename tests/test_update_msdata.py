@@ -417,6 +417,34 @@ def test_update_main_warns_and_uses_default_for_broken_base_json(tmp_path, capsy
     assert "warning: failed to load base data" in capsys.readouterr().err
 
 
+def test_update_main_warns_and_uses_default_for_invalid_utf8_base(
+    tmp_path, capsys
+):
+    msdata = tmp_path / "msData.json"
+    incoming = tmp_path / "details.json"
+    msdata.write_bytes(b"\xff")
+    incoming.write_text(
+        json.dumps([{"MS名": "テスト機_LV1", "HP": 10000}], ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    rc = update_msdata.main(
+        [
+            "--in-place",
+            "--output",
+            str(msdata),
+            "--no-official-overrides",
+            str(incoming),
+        ]
+    )
+
+    assert rc == 0
+    assert json.loads(msdata.read_text(encoding="utf-8")) == [
+        {"MS名": "テスト機_LV1", "HP": 10000}
+    ]
+    assert "warning: failed to load base data" in capsys.readouterr().err
+
+
 def test_update_main_does_not_swallow_base_programming_error(
     tmp_path, monkeypatch
 ):

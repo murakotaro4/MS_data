@@ -379,7 +379,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.in_place and out_path.exists():
         try:
             base = load_json(out_path)
-        except (OSError, json.JSONDecodeError) as exc:
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             print(
                 f"warning: failed to load base data from {out_path}: {exc}",
                 file=sys.stderr,
