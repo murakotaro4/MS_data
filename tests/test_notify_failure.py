@@ -7,6 +7,7 @@ from ms_data.gh.notify_failure import (
     ensure_failure_issue,
     find_open_issue,
     notify_failure,
+    resolve_issue_creation_race,
     should_notify,
 )
 
@@ -57,6 +58,40 @@ def test_find_open_issue_returns_none_without_open_match():
 
     assert (
         find_open_issue(issues, title="[pipeline-failure] data update") is None
+    )
+
+
+def test_resolve_issue_creation_race_selects_lowest_number():
+    issues = [
+        {
+            "number": 8,
+            "state": "open",
+            "title": "[pipeline-failure] data update",
+            "labels": [{"name": "pipeline-failure"}],
+        },
+        {
+            "number": 7,
+            "state": "open",
+            "title": "[pipeline-failure] data update",
+            "labels": [{"name": "pipeline-failure"}],
+        },
+    ]
+
+    assert (
+        resolve_issue_creation_race(
+            issues,
+            title="[pipeline-failure] data update",
+            created_number=8,
+        )
+        == 7
+    )
+    assert (
+        resolve_issue_creation_race(
+            issues,
+            title="[pipeline-failure] data update",
+            created_number=7,
+        )
+        is None
     )
 
 
@@ -156,6 +191,71 @@ def test_no_open_issue_creates_new_issue():
     assert create_call[:4] == ["gh", "api", "repos/owner/repo/issues", "-X"]
     assert "title=[pipeline-failure] data update" in create_call
     assert "labels[]=pipeline-failure" in create_call
+
+
+def test_created_issue_loses_race_then_comments_canonical_and_closes_duplicate():
+    calls = []
+    issue_list_count = 0
+
+    def runner(cmd):
+        nonlocal issue_list_count
+        calls.append(cmd)
+        endpoint = cmd[2] if len(cmd) > 2 else ""
+        if cmd[:3] == ["gh", "label", "create"]:
+            return ""
+        if endpoint.endswith(
+            "issues?state=open&labels=pipeline-failure&per_page=100"
+        ):
+            issue_list_count += 1
+            if issue_list_count == 1:
+                return "[]"
+            return json.dumps(
+                [
+                    {
+                        "number": 7,
+                        "state": "open",
+                        "title": "[pipeline-failure] data update",
+                        "labels": [{"name": "pipeline-failure"}],
+                    },
+                    {
+                        "number": 8,
+                        "state": "open",
+                        "title": "[pipeline-failure] data update",
+                        "labels": [{"name": "pipeline-failure"}],
+                    },
+                ]
+            )
+        if cmd[:3] == ["gh", "api", "repos/owner/repo/issues"]:
+            return json.dumps({"number": 8})
+        if cmd[:2] == ["gh", "api"]:
+            return json.dumps({"id": 99})
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    assert _ensure_issue(runner) == ("deduplicated", 7)
+
+    assert any(
+        cmd[:4]
+        == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
+        and "run_url: https://github.com/owner/repo/actions/runs/123" in cmd[-1]
+        for cmd in calls
+    )
+    assert any(
+        cmd[:4]
+        == ["gh", "api", "repos/owner/repo/issues/8/comments", "-X"]
+        and "Issue #7 と同時作成で競合" in cmd[-1]
+        for cmd in calls
+    )
+    assert [
+        "gh",
+        "api",
+        "repos/owner/repo/issues/8",
+        "-X",
+        "PATCH",
+        "-f",
+        "state=closed",
+        "-f",
+        "state_reason=not_planned",
+    ] in calls
 
 
 def test_cancelled_skips_mail_and_github():

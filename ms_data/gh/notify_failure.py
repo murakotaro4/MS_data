@@ -89,6 +89,25 @@ def _label_names(issue: dict[str, Any]) -> set[str]:
     return names
 
 
+def _matching_open_issues(
+    issues: list[dict[str, Any]],
+    *,
+    title: str,
+    label: str = ISSUE_LABEL,
+) -> list[dict[str, Any]]:
+    return [
+        issue
+        for issue in issues
+        if (
+            issue.get("state") == "open"
+            and issue.get("title") == title
+            and label in _label_names(issue)
+            and "pull_request" not in issue
+            and int(issue.get("number") or 0) > 0
+        )
+    ]
+
+
 def find_open_issue(
     issues: list[dict[str, Any]],
     *,
@@ -97,15 +116,40 @@ def find_open_issue(
 ) -> dict[str, Any] | None:
     """同タイトル・同ラベルの open Issue を返す。closed と PR は除外する。"""
 
-    for issue in issues:
-        if (
-            issue.get("state") == "open"
-            and issue.get("title") == title
-            and label in _label_names(issue)
-            and "pull_request" not in issue
-        ):
-            return issue
-    return None
+    matches = _matching_open_issues(issues, title=title, label=label)
+    return min(matches, key=lambda issue: int(issue["number"])) if matches else None
+
+
+def resolve_issue_creation_race(
+    issues: list[dict[str, Any]],
+    *,
+    title: str,
+    created_number: int,
+    label: str = ISSUE_LABEL,
+) -> int | None:
+    """作成した Issue が競合時の非正本なら、正本の最小番号を返す。"""
+
+    matches = _matching_open_issues(issues, title=title, label=label)
+    numbers = sorted({int(issue["number"]) for issue in matches})
+    if len(numbers) <= 1 or created_number not in numbers:
+        return None
+    canonical_number = numbers[0]
+    return canonical_number if created_number != canonical_number else None
+
+
+def _fetch_open_failure_issues(
+    *,
+    repo: str,
+    runner: GhRunner,
+) -> list[dict[str, Any]]:
+    issues = gh_api_json(
+        f"repos/{repo}/issues?state=open&labels={ISSUE_LABEL}&per_page=100",
+        paginate=True,
+        runner=runner,
+    )
+    if not isinstance(issues, list):
+        raise ValueError("GitHub issues response must be a list")
+    return issues
 
 
 def ensure_failure_issue(
@@ -137,13 +181,7 @@ def ensure_failure_issue(
     )
 
     title = issue_title(workflow_name)
-    issues = gh_api_json(
-        f"repos/{repo}/issues?state=open&labels={ISSUE_LABEL}&per_page=100",
-        paginate=True,
-        runner=runner,
-    )
-    if not isinstance(issues, list):
-        raise ValueError("GitHub issues response must be a list")
+    issues = _fetch_open_failure_issues(repo=repo, runner=runner)
 
     body = build_failure_details(
         workflow_name=workflow_name,
@@ -176,6 +214,37 @@ def ensure_failure_issue(
     number = int(created.get("number") or 0)
     if number <= 0:
         raise ValueError("Created GitHub Issue has no valid number")
+
+    issues_after_create = _fetch_open_failure_issues(repo=repo, runner=runner)
+    canonical_number = resolve_issue_creation_race(
+        issues_after_create,
+        title=title,
+        created_number=number,
+    )
+    if canonical_number is not None:
+        gh_api_json(
+            f"repos/{repo}/issues/{canonical_number}/comments",
+            method="POST",
+            fields={"body": body},
+            runner=runner,
+        )
+        duplicate_reason = (
+            f"Issue #{canonical_number} と同時作成で競合したため、"
+            f"重複した Issue #{number} を閉じます。"
+        )
+        gh_api_json(
+            f"repos/{repo}/issues/{number}/comments",
+            method="POST",
+            fields={"body": duplicate_reason},
+            runner=runner,
+        )
+        gh_api_json(
+            f"repos/{repo}/issues/{number}",
+            method="PATCH",
+            fields={"state": "closed", "state_reason": "not_planned"},
+            runner=runner,
+        )
+        return "deduplicated", canonical_number
     return "created", number
 
 

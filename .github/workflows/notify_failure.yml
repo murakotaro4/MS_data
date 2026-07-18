@@ -29,8 +29,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: ./.github/actions/setup-uv-env
-
       - name: Notify pipeline failure
         env:
           GH_TOKEN: ${{ github.token }}
@@ -45,7 +43,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          uv run python -m ms_data.gh.notify_failure \
+          python3 -m ms_data.gh.notify_failure \
             --workflow-name "${FAILED_WORKFLOW_NAME}" \
             --conclusion "${FAILED_CONCLUSION}" \
             --run-url "${FAILED_RUN_URL}" \
