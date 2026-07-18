@@ -1,6 +1,6 @@
 """auto_review_merge の GitHubClient / cmd_* サブコマンドのテスト。
 
-GitHubClient 自体は subprocess.run のパッチで、cmd_* は conftest の
+GitHubClient 自体は gh_json.subprocess.run のパッチで、cmd_* は conftest の
 FakeGitHubClient / FakeTime 注入で検証する（実 gh CLI は一切呼ばない）。
 """
 
@@ -8,6 +8,7 @@ import json
 from types import SimpleNamespace
 
 from ms_data.gh import auto_review_merge
+from ms_data.gh import gh_json
 from ms_data.gh.auto_review_merge import (
     GitHubClient,
     collect_review_metrics,
@@ -63,7 +64,7 @@ def _script_metrics(monkeypatch, script: list[dict]) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# 層A: GitHubClient（subprocess.run パッチ）
+# 層A: GitHubClient（gh_json.subprocess.run パッチ）
 # ---------------------------------------------------------------------------
 
 
@@ -74,7 +75,7 @@ def test_api_json_builds_get_command(monkeypatch):
         captured["cmd"] = cmd
         return SimpleNamespace(stdout='[{"id": 1}]')
 
-    monkeypatch.setattr(auto_review_merge.subprocess, "run", fake_run)
+    monkeypatch.setattr(gh_json.subprocess, "run", fake_run)
     client = GitHubClient("owner/repo")
     result = client.api_json(
         "repos/owner/repo/pulls",
@@ -100,7 +101,7 @@ def test_api_json_post_with_fields(monkeypatch):
         captured["cmd"] = cmd
         return SimpleNamespace(stdout='{"id": 5}')
 
-    monkeypatch.setattr(auto_review_merge.subprocess, "run", fake_run)
+    monkeypatch.setattr(gh_json.subprocess, "run", fake_run)
     client = GitHubClient("owner/repo")
     result = client.post_issue_comment("97", "hello")
 
@@ -120,7 +121,7 @@ def test_api_json_parses_paginated_stream(monkeypatch):
     def fake_run(cmd, **kwargs):
         return SimpleNamespace(stdout='[{"id": 1}]\n[{"id": 2}]')
 
-    monkeypatch.setattr(auto_review_merge.subprocess, "run", fake_run)
+    monkeypatch.setattr(gh_json.subprocess, "run", fake_run)
     client = GitHubClient("owner/repo")
 
     assert client.issue_comments("97") == [{"id": 1}, {"id": 2}]
@@ -133,7 +134,7 @@ def test_issue_comment_fetches_detail(monkeypatch):
         captured["cmd"] = cmd
         return SimpleNamespace(stdout='{"id": 42}')
 
-    monkeypatch.setattr(auto_review_merge.subprocess, "run", fake_run)
+    monkeypatch.setattr(gh_json.subprocess, "run", fake_run)
     client = GitHubClient("owner/repo")
 
     assert client.issue_comment("42") == {"id": 42}
