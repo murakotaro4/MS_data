@@ -55,16 +55,7 @@ jobs:
         with:
           ref: ${{ env.MERGE_COMMIT_SHA }}
 
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
-
-      - uses: astral-sh/setup-uv@v8.1.0
-        with:
-          enable-cache: true
-
-      - name: Install deps
-        run: uv sync --dev
+      - uses: ./.github/actions/setup-uv-env
 
       - id: report
         name: Resolve report file
