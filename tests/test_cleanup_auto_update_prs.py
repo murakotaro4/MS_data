@@ -48,7 +48,6 @@ def _mock_gh(
 
     def fake_run(cmd):
         calls.append(cmd)
-        endpoint = cmd[-1]
         if cmd == ["git", "remote", "get-url", "origin"]:
             return origin_url
         if cmd == ["git", "remote", "get-url", "--push", "origin"]:
@@ -67,11 +66,13 @@ def _mock_gh(
                     stderr="! [rejected] (stale info)",
                 )
             return ""
-        if cmd[:4] == ["gh", "api", "--paginate", "--slurp"]:
+        if cmd[:2] == ["gh", "api"] and "--paginate" in cmd:
+            endpoint = cmd[2]
             if "/branches?" in endpoint:
-                return json.dumps([[{"name": name} for name in branches]])
+                return json.dumps([{"name": name} for name in branches])
             if "/pulls?" in endpoint:
-                return json.dumps([pulls])
+                return json.dumps(pulls)
+        endpoint = cmd[-1]
         if cmd[:2] == ["gh", "api"] and endpoint == "repos/owner/repo":
             return json.dumps({"default_branch": "main"})
         if cmd[:2] == ["gh", "api"] and "/git/ref/heads/" in endpoint:
@@ -85,7 +86,7 @@ def _mock_gh(
             return json.dumps({"object": {"sha": branch_shas.get(branch, "head-sha")}})
         raise AssertionError(f"unexpected gh command: {cmd}")
 
-    monkeypatch.setattr(cleanup_auto_update_prs, "_run", fake_run)
+    monkeypatch.setattr(cleanup_auto_update_prs, "run_gh", fake_run)
     return calls
 
 
@@ -152,15 +153,17 @@ def test_render_summary_includes_branch_cleanup_results():
     assert "| data/auto-update-20260703 |  | skipped | no_pr |" in text
 
 
-def test_gh_json_rejects_concatenated_documents(monkeypatch):
+def test_fetch_all_pulls_parses_concatenated_paginated_json(monkeypatch):
     monkeypatch.setattr(
         cleanup_auto_update_prs,
-        "_run",
+        "run_gh",
         lambda cmd: '[{"id": 1}]\n[{"id": 2}]',
     )
 
-    with pytest.raises(json.JSONDecodeError, match="Extra data"):
-        cleanup_auto_update_prs._gh_json("repos/owner/repo/pulls")
+    assert cleanup_auto_update_prs.fetch_all_pulls("owner/repo") == [
+        {"id": 1},
+        {"id": 2},
+    ]
 
 
 @pytest.mark.parametrize(
