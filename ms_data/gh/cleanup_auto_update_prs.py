@@ -1,10 +1,11 @@
-"""古い data/auto-update-* PR を整理する。"""
+"""古い data/auto-update-* PR と残留リモートブランチを整理する。"""
 
 from __future__ import annotations
 
 import argparse
 import json
 import re
+import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -14,6 +15,7 @@ from ms_data.gh.gh_json import run_gh
 
 
 HEAD_REF_RE = re.compile(r"^data/auto-update-(\d{8})$")
+AUTO_UPDATE_BRANCH_RE = re.compile(r"^data/auto-update-.+$")
 JST = timezone(timedelta(hours=9))
 
 
@@ -25,6 +27,14 @@ class CleanupAction:
     age_days: int
     action: str
     reason: str
+
+
+@dataclass(frozen=True)
+class BranchCleanupResult:
+    branch: str
+    action: str
+    reason: str
+    current_sha: str = ""
 
 
 def today_jst() -> str:
@@ -89,11 +99,184 @@ def _gh_json(endpoint: str) -> Any:
     return json.loads(text) if text.strip() else []
 
 
+def _gh_json_paginated(endpoint: str) -> list[dict[str, Any]]:
+    text = _run(["gh", "api", "--paginate", "--slurp", endpoint])
+    data = json.loads(text) if text.strip() else []
+    if not isinstance(data, list):
+        raise ValueError("GitHub paginated response must be a list")
+    pages = data if all(isinstance(page, list) for page in data) else [data]
+    return [item for page in pages for item in page if isinstance(item, dict)]
+
+
 def fetch_open_pulls(repo: str) -> list[dict[str, Any]]:
     data = _gh_json(f"repos/{repo}/pulls?state=open&base=main&per_page=100")
     if not isinstance(data, list):
         raise ValueError("GitHub pulls response must be a list")
     return data
+
+
+def fetch_all_pulls(repo: str) -> list[dict[str, Any]]:
+    return _gh_json_paginated(f"repos/{repo}/pulls?state=all&per_page=100")
+
+
+def fetch_remote_branches(repo: str) -> list[str]:
+    branches = _gh_json_paginated(f"repos/{repo}/branches?per_page=100")
+    return sorted(
+        name
+        for item in branches
+        if (name := str(item.get("name") or ""))
+        and AUTO_UPDATE_BRANCH_RE.fullmatch(name)
+    )
+
+
+def fetch_default_branch(repo: str) -> str:
+    data = _gh_json(f"repos/{repo}")
+    if not isinstance(data, dict):
+        raise ValueError("GitHub repository response must be an object")
+    return str(data.get("default_branch") or "main")
+
+
+def fetch_branch_sha(repo: str, branch: str) -> str:
+    data = _gh_json(f"repos/{repo}/git/ref/heads/{branch}")
+    if not isinstance(data, dict):
+        raise ValueError("GitHub ref response must be an object")
+    obj = data.get("object") if isinstance(data.get("object"), dict) else {}
+    sha = str(obj.get("sha") or "")
+    if not sha:
+        raise ValueError(f"GitHub ref response has no SHA: {branch}")
+    return sha
+
+
+def _pull_state(pull: dict[str, Any]) -> str:
+    if pull.get("merged_at") or pull.get("mergedAt"):
+        return "MERGED"
+    return str(pull.get("state") or "").upper()
+
+
+def _head_ref(pull: dict[str, Any]) -> str:
+    head = pull.get("head") if isinstance(pull.get("head"), dict) else {}
+    return str(pull.get("headRefName") or head.get("ref") or "")
+
+
+def _base_ref(pull: dict[str, Any]) -> str:
+    base = pull.get("base") if isinstance(pull.get("base"), dict) else {}
+    return str(pull.get("baseRefName") or base.get("ref") or "")
+
+
+def _head_oid(pull: dict[str, Any]) -> str:
+    head = pull.get("head") if isinstance(pull.get("head"), dict) else {}
+    return str(pull.get("headRefOid") or head.get("sha") or "")
+
+
+def _head_belongs_to_repo(pull: dict[str, Any], repo: str) -> bool:
+    head = pull.get("head") if isinstance(pull.get("head"), dict) else {}
+    head_repo = head.get("repo") if isinstance(head.get("repo"), dict) else {}
+    full_name = str(head_repo.get("full_name") or "")
+    return not full_name or full_name == repo
+
+
+def _is_404(exc: subprocess.CalledProcessError) -> bool:
+    output = f"{exc.stdout or ''}\n{exc.stderr or ''}".lower()
+    return "404" in output or "not found" in output
+
+
+def delete_remote_branch(repo: str, branch: str) -> str:
+    try:
+        _run(
+            [
+                "gh",
+                "api",
+                "-X",
+                "DELETE",
+                f"repos/{repo}/git/refs/heads/{branch}",
+            ]
+        )
+    except subprocess.CalledProcessError as exc:
+        if _is_404(exc):
+            return "already_deleted"
+        raise
+    return "deleted"
+
+
+def cleanup_merged_branches(
+    repo: str,
+    *,
+    dry_run: bool,
+) -> list[BranchCleanupResult]:
+    default_branch = fetch_default_branch(repo)
+    pulls = fetch_all_pulls(repo)
+    results: list[BranchCleanupResult] = []
+
+    open_heads = {
+        _head_ref(pull)
+        for pull in pulls
+        if _pull_state(pull) == "OPEN" and _head_belongs_to_repo(pull, repo)
+    }
+    open_bases = {
+        _base_ref(pull) for pull in pulls if _pull_state(pull) == "OPEN"
+    }
+
+    for branch in fetch_remote_branches(repo):
+        if branch == default_branch:
+            results.append(BranchCleanupResult(branch, "skipped", "default_branch"))
+            continue
+        if branch in open_heads:
+            results.append(BranchCleanupResult(branch, "skipped", "open_pr_head"))
+            continue
+        if branch in open_bases:
+            results.append(BranchCleanupResult(branch, "skipped", "open_pr_base"))
+            continue
+
+        branch_pulls = [
+            pull
+            for pull in pulls
+            if _head_ref(pull) == branch and _head_belongs_to_repo(pull, repo)
+        ]
+        if not branch_pulls:
+            results.append(BranchCleanupResult(branch, "skipped", "no_pr"))
+            continue
+
+        states = {_pull_state(pull) for pull in branch_pulls}
+        if not states.issubset({"MERGED", "CLOSED"}):
+            states_text = ",".join(sorted(states)) or "unknown"
+            results.append(
+                BranchCleanupResult(
+                    branch,
+                    "skipped",
+                    f"non_terminal_pr:{states_text}",
+                )
+            )
+            continue
+
+        current_sha = fetch_branch_sha(repo, branch)
+        merged_oids = {
+            _head_oid(pull)
+            for pull in branch_pulls
+            if _pull_state(pull) == "MERGED"
+        }
+        if merged_oids and merged_oids != {current_sha}:
+            results.append(
+                BranchCleanupResult(
+                    branch,
+                    "skipped",
+                    "merged_head_oid_mismatch",
+                    current_sha,
+                )
+            )
+            continue
+
+        if dry_run:
+            results.append(
+                BranchCleanupResult(branch, "planned", "eligible", current_sha)
+            )
+            continue
+
+        delete_reason = delete_remote_branch(repo, branch)
+        results.append(
+            BranchCleanupResult(branch, "deleted", delete_reason, current_sha)
+        )
+
+    return results
 
 
 def close_pr(repo: str, action: CleanupAction) -> None:
@@ -119,7 +302,13 @@ def close_pr(repo: str, action: CleanupAction) -> None:
     )
 
 
-def render_summary(actions: list[CleanupAction], *, dry_run: bool) -> str:
+def render_summary(
+    actions: list[CleanupAction],
+    *,
+    dry_run: bool,
+    branch_results: list[BranchCleanupResult] | None = None,
+) -> str:
+    branch_results = branch_results or []
     close_count = sum(1 for item in actions if item.action == "close")
     keep_count = sum(1 for item in actions if item.action == "keep")
     lines = [
@@ -137,6 +326,27 @@ def render_summary(actions: list[CleanupAction], *, dry_run: bool) -> str:
         lines.append(
             f"| #{item.number} | {item.head_ref} | {item.report_date} | "
             f"{item.age_days} | {item.action} | {item.reason} |"
+        )
+    deleted_count = sum(1 for item in branch_results if item.action == "deleted")
+    planned_count = sum(1 for item in branch_results if item.action == "planned")
+    skipped_count = sum(1 for item in branch_results if item.action == "skipped")
+    lines.extend(
+        [
+            "",
+            "### Auto Update Branch Cleanup",
+            f"- deleted: {deleted_count}",
+            f"- planned: {planned_count}",
+            f"- skipped: {skipped_count}",
+            "",
+            "| branch | current_sha | action | reason |",
+            "| --- | --- | --- | --- |",
+        ]
+    )
+    if not branch_results:
+        lines.append("| なし |  |  |  |")
+    for item in branch_results:
+        lines.append(
+            f"| {item.branch} | {item.current_sha} | {item.action} | {item.reason} |"
         )
     return "\n".join(lines) + "\n"
 
@@ -170,7 +380,16 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(f"keep PR #{action.number} {action.head_ref}: {action.reason}")
 
-    summary = render_summary(actions, dry_run=args.dry_run)
+    branch_results = cleanup_merged_branches(args.repo, dry_run=args.dry_run)
+    for result in branch_results:
+        prefix = "[dry-run] " if result.action == "planned" else ""
+        print(f"{prefix}{result.action} branch {result.branch}: {result.reason}")
+
+    summary = render_summary(
+        actions,
+        dry_run=args.dry_run,
+        branch_results=branch_results,
+    )
     print(summary, end="")
     write_step_summary(summary, args.step_summary)
     return 0
