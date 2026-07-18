@@ -379,12 +379,16 @@ def main(argv: list[str] | None = None) -> int:
     if args.in_place and out_path.exists():
         try:
             base = load_json(out_path)
+        except (OSError, json.JSONDecodeError) as exc:
+            print(
+                f"warning: failed to load base data from {out_path}: {exc}",
+                file=sys.stderr,
+            )
+        else:
             if isinstance(base, list):
                 base_records = [
                     normalize_record(dict(e)) for e in base if isinstance(e, dict)
                 ]
-        except Exception:
-            pass
 
     new_records = list(iter_records_from_files(args.inputs)) if args.inputs else []
     merged_old = merge_by_msname(base_records)

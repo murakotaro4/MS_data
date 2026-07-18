@@ -37,7 +37,7 @@ def find_latest_provenance(
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
             generated_at = parse_iso_datetime(str(data["generated_at"]))
-        except Exception:
+        except (OSError, json.JSONDecodeError, ValueError):
             continue
         if latest_generated_at is None or generated_at > latest_generated_at:
             latest_generated_at = generated_at
@@ -56,7 +56,7 @@ def load_msdata_base_index(path: Path) -> dict[str, dict[str, Any]]:
         return {}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
+    except (OSError, json.JSONDecodeError, ValueError):
         return {}
     if not isinstance(data, list):
         return {}

@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from ms_data.pipeline import update_msdata
 
 
@@ -387,3 +389,51 @@ def test_load_official_overrides_normalizes_names_and_stale_values(tmp_path):
             "HP": {"value": 27000, "stale_value": 23500},
         }
     }
+
+
+def test_update_main_warns_and_uses_default_for_broken_base_json(tmp_path, capsys):
+    msdata = tmp_path / "msData.json"
+    incoming = tmp_path / "details.json"
+    msdata.write_text("{broken", encoding="utf-8")
+    incoming.write_text(
+        json.dumps([{"MS名": "テスト機_LV1", "HP": 10000}], ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    rc = update_msdata.main(
+        [
+            "--in-place",
+            "--output",
+            str(msdata),
+            "--no-official-overrides",
+            str(incoming),
+        ]
+    )
+
+    assert rc == 0
+    assert json.loads(msdata.read_text(encoding="utf-8")) == [
+        {"MS名": "テスト機_LV1", "HP": 10000}
+    ]
+    assert "warning: failed to load base data" in capsys.readouterr().err
+
+
+def test_update_main_does_not_swallow_base_programming_error(
+    tmp_path, monkeypatch
+):
+    msdata = tmp_path / "msData.json"
+    msdata.write_text("[]", encoding="utf-8")
+    monkeypatch.setattr(
+        update_msdata,
+        "load_json",
+        lambda path: (_ for _ in ()).throw(TypeError("bad base")),
+    )
+
+    with pytest.raises(TypeError, match="bad base"):
+        update_msdata.main(
+            [
+                "--in-place",
+                "--output",
+                str(msdata),
+                "--no-official-overrides",
+            ]
+        )

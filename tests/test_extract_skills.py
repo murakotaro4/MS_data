@@ -1,9 +1,14 @@
 import json
+import subprocess
+
+import pytest
+from bs4 import BeautifulSoup
+
+from ms_data.scraping import extract_skills
 from ms_data.scraping.extract_skills import (
     extract_skills_from_html,
     extract_skill_owners_from_html,
 )
-from bs4 import BeautifulSoup
 
 
 def test_extract_exam_lv1_basic():
@@ -163,3 +168,77 @@ def test_dedupe_levels_keeps_best():
     eff = levels[0]["effects"]
     # 効果キー数が多い方（6キーある方）が残る（格闘補正＋10の方）
     assert eff.get("格闘補正", {}).get("value") == 10
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        FileNotFoundError("curl not found"),
+        subprocess.CalledProcessError(7, ["curl", "-sL", "https://example.test"]),
+    ],
+)
+def test_owners_table_curl_failure_warns_and_continues(
+    tmp_path, monkeypatch, capsys, error
+):
+    output = tmp_path / "owners.json"
+    calls = []
+    monkeypatch.setattr(extract_skills, "get_client", lambda: object())
+    monkeypatch.setattr(
+        extract_skills.CacheHTTP,
+        "get",
+        lambda self, url: ("<html></html>", {"fetched_at": "2026-07-19T00:00:00Z"}),
+    )
+    monkeypatch.setattr(
+        extract_skills,
+        "extract_skill_owners_rows_table",
+        lambda html: {"rows": []},
+    )
+
+    def fail_curl(*args, **kwargs):
+        calls.append((args, kwargs))
+        raise error
+
+    monkeypatch.setattr(extract_skills.subprocess, "check_output", fail_curl)
+
+    rc = extract_skills.main(
+        [
+            "owners-table",
+            "--url",
+            "https://example.test",
+            "--out",
+            str(output),
+        ]
+    )
+
+    assert rc == 0
+    assert json.loads(output.read_text(encoding="utf-8"))["rows"] == []
+    assert calls == [
+        ((["curl", "-sL", "https://example.test"],), {"text": True})
+    ]
+    assert "warning: curl fallback failed:" in capsys.readouterr().err
+
+
+def test_owners_table_curl_programming_error_is_not_swallowed(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(extract_skills, "get_client", lambda: object())
+    monkeypatch.setattr(
+        extract_skills.CacheHTTP,
+        "get",
+        lambda self, url: ("<html></html>", {}),
+    )
+    monkeypatch.setattr(
+        extract_skills,
+        "extract_skill_owners_rows_table",
+        lambda html: {"rows": []},
+    )
+    monkeypatch.setattr(
+        extract_skills.subprocess,
+        "check_output",
+        lambda *args, **kwargs: (_ for _ in ()).throw(TypeError("bad call")),
+    )
+
+    with pytest.raises(TypeError, match="bad call"):
+        extract_skills.main(
+            ["owners-table", "--out", str(tmp_path / "owners.json")]
+        )

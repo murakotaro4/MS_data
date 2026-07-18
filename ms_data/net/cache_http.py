@@ -20,6 +20,7 @@ import datetime as dt
 import hashlib
 import json
 import re
+import sys
 import time
 import urllib.parse
 
@@ -108,7 +109,8 @@ class CacheHTTP:
     def _read_meta(p: Path) -> dict:
         try:
             return json.loads(p.read_text(encoding="utf-8"))
-        except Exception:
+        except Exception as exc:
+            print(f"warning: failed to read cache metadata {p}: {exc}", file=sys.stderr)
             return {}
 
     @staticmethod
@@ -124,7 +126,8 @@ class CacheHTTP:
         try:
             fetched_at = dt.datetime.fromisoformat(meta["fetched_at"])
             return (now - fetched_at).total_seconds() < self.cfg.ttl_seconds
-        except Exception:
+        except Exception as exc:
+            print(f"warning: invalid cache fetched_at: {exc}", file=sys.stderr)
             return False
 
     def _serve_from_cache(
@@ -158,8 +161,11 @@ class CacheHTTP:
         meta["semantic_changed"] = bool(prev_sem) and (prev_sem != cur_sem)
         try:
             self._write_meta(meta_path, meta)
-        except Exception:
-            pass
+        except Exception as exc:
+            print(
+                f"warning: failed to update cache metadata {meta_path}: {exc}",
+                file=sys.stderr,
+            )
         return text, meta
 
     def _serve_not_modified(
@@ -321,15 +327,23 @@ def _extract_semantic_text(html: str) -> str:
         txt = ""
         try:
             txt = tag.get_text(" ")
-        except Exception:
-            pass
+        except Exception as exc:
+            print(f"warning: failed to read semantic tag text: {exc}", file=sys.stderr)
         try:
             cls = tag.get("class", []) or []
-        except Exception:
+        except Exception as exc:
+            print(
+                f"warning: failed to read semantic tag classes: {exc}",
+                file=sys.stderr,
+            )
             cls = []
         try:
             ident = ((tag.get("id") or "") + " " + " ".join(cls)).lower()
-        except Exception:
+        except Exception as exc:
+            print(
+                f"warning: failed to build semantic tag identifier: {exc}",
+                file=sys.stderr,
+            )
             ident = ""
         if re.search(
             r"comment|plugin[_-]?comment|bbs|lastmod|recent|counter|sns|social|tweet|footer|foot",
