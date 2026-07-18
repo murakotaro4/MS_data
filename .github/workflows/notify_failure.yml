@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     concurrency:
-      group: notify-failure-${{ github.event.workflow_run.name }}
+      group: notify-failure-${{ github.event.workflow_run.name }}-${{ github.event.workflow_run.id }}
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v6
