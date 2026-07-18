@@ -71,34 +71,42 @@ jobs:
             --github-output "$GITHUB_OUTPUT"
 
       - name: Validate report contract (post-merge)
+        env:
+          SOURCE_RUN_ID: ${{ steps.report.outputs.source_run_id }}
+          ARTIFACT_NAME: ${{ steps.report.outputs.artifact_name }}
+          SNAPSHOT_FILE: ${{ steps.report.outputs.snapshot_file }}
+          RELEASE_TAG: ${{ steps.report.outputs.release_tag }}
         run: |
           uv run python -m ms_data.validation.validate_report_contract \
             --mode post-merge \
             --manifest reports_manifest.yml \
             --report-date "${{ steps.report.outputs.report_date }}" \
-            --source-run-id "${{ steps.report.outputs.source_run_id }}" \
+            --source-run-id "$SOURCE_RUN_ID" \
             --head-ref "${HEAD_REF}" \
             --diff-path "${{ steps.report.outputs.report_path }}" \
             --provenance-path "${{ steps.report.outputs.provenance_path }}" \
-            --artifact-name "${{ steps.report.outputs.artifact_name }}" \
-            --snapshot-file "${{ steps.report.outputs.snapshot_file }}" \
-            --release-tag "${{ steps.report.outputs.release_tag }}"
+            --artifact-name "$ARTIFACT_NAME" \
+            --snapshot-file "$SNAPSHOT_FILE" \
+            --release-tag "$RELEASE_TAG"
 
       - name: Download raw snapshot artifact
         env:
           GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ steps.report.outputs.source_run_id }}
+          ARTIFACT_NAME: ${{ steps.report.outputs.artifact_name }}
+          SNAPSHOT_ASSET_PATH: ${{ steps.report.outputs.snapshot_asset_path }}
         shell: bash
         run: |
           set -euo pipefail
           rm -rf release_assets
           mkdir -p release_assets
-          gh run download "${{ steps.report.outputs.source_run_id }}" \
+          gh run download "$SOURCE_RUN_ID" \
             --repo "${GITHUB_REPOSITORY}" \
-            --name "${{ steps.report.outputs.artifact_name }}" \
+            --name "$ARTIFACT_NAME" \
             --dir release_assets
 
-          if [[ ! -f "${{ steps.report.outputs.snapshot_asset_path }}" ]]; then
-            echo "スナップショットファイルが見つかりません: ${{ steps.report.outputs.snapshot_asset_path }}" >&2
+          if [[ ! -f "$SNAPSHOT_ASSET_PATH" ]]; then
+            echo "スナップショットファイルが見つかりません: $SNAPSHOT_ASSET_PATH" >&2
             find release_assets -maxdepth 4 -type f -print || true
             exit 1
           fi
@@ -107,20 +115,25 @@ jobs:
         name: Publish raw snapshot release
         env:
           GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ steps.report.outputs.source_run_id }}
+          ARTIFACT_NAME: ${{ steps.report.outputs.artifact_name }}
+          SNAPSHOT_FILE: ${{ steps.report.outputs.snapshot_file }}
+          RELEASE_TAG: ${{ steps.report.outputs.release_tag }}
+          SNAPSHOT_ASSET_PATH: ${{ steps.report.outputs.snapshot_asset_path }}
         shell: bash
         run: |
           set -euo pipefail
 
-          tag="${{ steps.report.outputs.release_tag }}"
-          title="raw snapshot ${{ steps.report.outputs.report_date }} (run ${{ steps.report.outputs.source_run_id }})"
+          tag="$RELEASE_TAG"
+          title="raw snapshot ${{ steps.report.outputs.report_date }} (run $SOURCE_RUN_ID)"
           created="false"
           notes=$(
             cat <<EOF
           自動保存された生データスナップショットです。
 
-          - source_run_id: ${{ steps.report.outputs.source_run_id }}
-          - source_artifact: ${{ steps.report.outputs.artifact_name }}
-          - snapshot: ${{ steps.report.outputs.snapshot_file }}
+          - source_run_id: $SOURCE_RUN_ID
+          - source_artifact: $ARTIFACT_NAME
+          - snapshot: $SNAPSHOT_FILE
           EOF
           )
 
@@ -133,7 +146,7 @@ jobs:
           fi
 
           gh release upload "${tag}" \
-            "${{ steps.report.outputs.snapshot_asset_path }}" \
+            "$SNAPSHOT_ASSET_PATH" \
             --repo "${GITHUB_REPOSITORY}" \
             --clobber
 
@@ -179,13 +192,15 @@ jobs:
       - id: mail_body
         name: Build merged msData mail body
         if: steps.release.outputs.created == 'true' || github.run_attempt != '1' || (github.event_name == 'workflow_dispatch' && github.event.inputs.send_mail == 'true')
+        env:
+          SOURCE_RUN_ID: ${{ steps.report.outputs.source_run_id }}
         run: |
           body_path="$RUNNER_TEMP/msdata_merged_mail.txt"
           uv run python -m ms_data.reporting.build_update_mail_body \
             --report-date "${{ steps.report.outputs.report_date }}" \
             --result "マージ済み" \
             --changed "true" \
-            --source-run-id "${{ steps.report.outputs.source_run_id }}" \
+            --source-run-id "$SOURCE_RUN_ID" \
             --release-url "${{ steps.release.outputs.release_url }}" \
             --diff-path "${{ steps.report.outputs.report_path }}" \
             --rollback-guard-path "${{ steps.report.outputs.rollback_guard_path }}" \
