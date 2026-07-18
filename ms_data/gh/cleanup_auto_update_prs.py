@@ -175,25 +175,37 @@ def _head_belongs_to_repo(pull: dict[str, Any], repo: str) -> bool:
     return not full_name or full_name == repo
 
 
-def _is_404(exc: subprocess.CalledProcessError) -> bool:
+def _command_error_text(exc: subprocess.CalledProcessError) -> str:
     output = f"{exc.stdout or ''}\n{exc.stderr or ''}".lower()
-    return "404" in output or "not found" in output
+    return output
 
 
-def delete_remote_branch(repo: str, branch: str) -> str:
+def _is_already_deleted(exc: subprocess.CalledProcessError) -> bool:
+    output = _command_error_text(exc)
+    return "remote ref does not exist" in output or "remote ref not found" in output
+
+
+def _is_lease_failed(exc: subprocess.CalledProcessError) -> bool:
+    output = _command_error_text(exc)
+    return "stale info" in output or "[rejected]" in output
+
+
+def delete_remote_branch(branch: str, expected_sha: str) -> str:
     try:
         _run(
             [
-                "gh",
-                "api",
-                "-X",
-                "DELETE",
-                f"repos/{repo}/git/refs/heads/{branch}",
+                "git",
+                "push",
+                f"--force-with-lease=refs/heads/{branch}:{expected_sha}",
+                "origin",
+                f":refs/heads/{branch}",
             ]
         )
     except subprocess.CalledProcessError as exc:
-        if _is_404(exc):
+        if _is_already_deleted(exc):
             return "already_deleted"
+        if _is_lease_failed(exc):
+            return "lease_failed"
         raise
     return "deleted"
 
@@ -248,13 +260,19 @@ def cleanup_merged_branches(
             )
             continue
 
-        current_sha = fetch_branch_sha(repo, branch)
         merged_oids = {
             _head_oid(pull)
             for pull in branch_pulls
             if _pull_state(pull) == "MERGED"
         }
-        if merged_oids and merged_oids != {current_sha}:
+        if not merged_oids:
+            results.append(
+                BranchCleanupResult(branch, "skipped", "closed_only_no_merged")
+            )
+            continue
+
+        current_sha = fetch_branch_sha(repo, branch)
+        if merged_oids != {current_sha}:
             results.append(
                 BranchCleanupResult(
                     branch,
@@ -271,7 +289,12 @@ def cleanup_merged_branches(
             )
             continue
 
-        delete_reason = delete_remote_branch(repo, branch)
+        delete_reason = delete_remote_branch(branch, current_sha)
+        if delete_reason == "lease_failed":
+            results.append(
+                BranchCleanupResult(branch, "skipped", delete_reason, current_sha)
+            )
+            continue
         results.append(
             BranchCleanupResult(branch, "deleted", delete_reason, current_sha)
         )

@@ -30,13 +30,27 @@ def _branch_pull(number, branch, state, *, sha="head-sha", base="main"):
     }
 
 
-def _mock_gh(monkeypatch, *, branches, pulls, branch_shas=None, delete_404=False):
+def _mock_gh(monkeypatch, *, branches, pulls, branch_shas=None, delete_error=None):
     calls = []
     branch_shas = branch_shas or {}
 
     def fake_run(cmd):
         calls.append(cmd)
         endpoint = cmd[-1]
+        if cmd[:2] == ["git", "push"]:
+            if delete_error == "already_deleted":
+                raise subprocess.CalledProcessError(
+                    1,
+                    cmd,
+                    stderr="error: unable to delete: remote ref does not exist",
+                )
+            if delete_error == "lease_failed":
+                raise subprocess.CalledProcessError(
+                    1,
+                    cmd,
+                    stderr="! [rejected] (stale info)",
+                )
+            return ""
         if cmd[:4] == ["gh", "api", "--paginate", "--slurp"]:
             if "/branches?" in endpoint:
                 return json.dumps([[{"name": name} for name in branches]])
@@ -44,14 +58,6 @@ def _mock_gh(monkeypatch, *, branches, pulls, branch_shas=None, delete_404=False
                 return json.dumps([pulls])
         if cmd[:2] == ["gh", "api"] and endpoint == "repos/owner/repo":
             return json.dumps({"default_branch": "main"})
-        if cmd[:4] == ["gh", "api", "-X", "DELETE"]:
-            if delete_404:
-                raise subprocess.CalledProcessError(
-                    1,
-                    cmd,
-                    stderr="HTTP 404: Not Found",
-                )
-            return ""
         if cmd[:2] == ["gh", "api"] and "/git/ref/heads/" in endpoint:
             branch = endpoint.split("/git/ref/heads/", 1)[1]
             return json.dumps({"object": {"sha": branch_shas.get(branch, "head-sha")}})
@@ -147,7 +153,13 @@ def test_eligible_merged_branch_is_deleted(monkeypatch):
 
     assert results[0].action == "deleted"
     assert results[0].reason == "deleted"
-    assert ["gh", "api", "-X", "DELETE", f"repos/owner/repo/git/refs/heads/{branch}"] in calls
+    assert [
+        "git",
+        "push",
+        f"--force-with-lease=refs/heads/{branch}:head-sha",
+        "origin",
+        f":refs/heads/{branch}",
+    ] in calls
 
 
 @pytest.mark.parametrize(
@@ -201,6 +213,21 @@ def test_merged_head_oid_mismatch_is_skipped(monkeypatch):
     assert results[0].reason == "merged_head_oid_mismatch"
 
 
+def test_closed_only_branch_is_skipped(monkeypatch):
+    branch = "data/auto-update-20260702"
+    calls = _mock_gh(
+        monkeypatch,
+        branches=[branch],
+        pulls=[_branch_pull(1, branch, "CLOSED")],
+    )
+
+    results = cleanup_merged_branches("owner/repo", dry_run=False)
+
+    assert results[0].action == "skipped"
+    assert results[0].reason == "closed_only_no_merged"
+    assert not any(call[:2] == ["git", "push"] for call in calls)
+
+
 def test_non_auto_update_branch_is_not_enumerated_as_candidate(monkeypatch):
     calls = _mock_gh(
         monkeypatch,
@@ -225,19 +252,34 @@ def test_dry_run_never_calls_delete(monkeypatch):
     results = cleanup_merged_branches("owner/repo", dry_run=True)
 
     assert results[0].action == "planned"
-    assert not any("DELETE" in call for call in calls)
+    assert not any(call[:2] == ["git", "push"] for call in calls)
 
 
-def test_delete_404_is_success(monkeypatch):
+def test_missing_remote_ref_is_success(monkeypatch):
     branch = "data/auto-update-20260702"
     _mock_gh(
         monkeypatch,
         branches=[branch],
         pulls=[_branch_pull(1, branch, "MERGED")],
-        delete_404=True,
+        delete_error="already_deleted",
     )
 
     results = cleanup_merged_branches("owner/repo", dry_run=False)
 
     assert results[0].action == "deleted"
     assert results[0].reason == "already_deleted"
+
+
+def test_lease_failure_is_skipped(monkeypatch):
+    branch = "data/auto-update-20260702"
+    _mock_gh(
+        monkeypatch,
+        branches=[branch],
+        pulls=[_branch_pull(1, branch, "MERGED")],
+        delete_error="lease_failed",
+    )
+
+    results = cleanup_merged_branches("owner/repo", dry_run=False)
+
+    assert results[0].action == "skipped"
+    assert results[0].reason == "lease_failed"
