@@ -17,6 +17,8 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -641,15 +643,18 @@ def main(argv: list[str] | None = None) -> int:
         # フォールバック: 抽出できない場合は curl で直取得（環境に curl がある前提）
         if not data.get("rows"):
             try:
-                import shlex
-                import subprocess
-
-                cmd = f"curl -sL {shlex.quote(args.url)}"
-                raw = subprocess.check_output(cmd, shell=True, text=True)
+                raw = subprocess.check_output(
+                    ["curl", "-sL", args.url], text=True, encoding="utf-8"
+                )
                 data = extract_skill_owners_rows_table(raw)
                 data["fetched_by"] = "curl"
-            except Exception:
-                pass
+            except (
+                FileNotFoundError,
+                subprocess.CalledProcessError,
+                OSError,
+                UnicodeDecodeError,
+            ) as exc:
+                print(f"warning: curl fallback failed: {exc}", file=sys.stderr)
         data["fetched_at"] = meta.get("fetched_at")
         out = Path(args.out)
         out.parent.mkdir(parents=True, exist_ok=True)
