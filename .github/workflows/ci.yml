@@ -48,6 +48,15 @@ jobs:
       - name: Validate reports contract allowlist
         run: uv run python -m ms_data.validation.validate_report_contract --mode ci --manifest reports_manifest.yml --reports-dir reports
 
+      - name: Validate msData.json
+        run: uv run python -m ms_data.tasks validate-strict
+
+      - name: Validate generated reports
+        run: |
+          uv run python -m ms_data.validation.validate_generated_reports \
+            --reports-dir reports \
+            --schema-dir schema/reports
+
   checks:
     needs: changes
     if: needs.changes.outputs.code == 'true'
