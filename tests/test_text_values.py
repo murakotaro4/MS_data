@@ -10,11 +10,16 @@ from ms_data.scraping.text_values import (
     extract_page_id,
     extract_updated_age,
     is_counter_placeholder,
+    normalize_symbol_text,
     parse_iso_datetime,
     parse_ttl,
     symbol_to_bool,
     to_int,
 )
+
+
+def test_normalize_symbol_text_normalizes_fullwidth_symbols_and_whitespace():
+    assert normalize_symbol_text("　＋－％：，（ ）\n") == "+-%:,( )"
 
 
 @pytest.mark.parametrize(

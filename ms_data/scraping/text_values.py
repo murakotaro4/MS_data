@@ -35,6 +35,20 @@ COUNTER_TYPES = frozenset(
 )
 
 
+def normalize_symbol_text(s: str) -> str:
+    """全角記号を半角へ寄せ、空白を正規化する（解析前の共通前処理）。"""
+    return clean_text(
+        s.replace("\u3000", " ")
+        .replace("＋", "+")
+        .replace("－", "-")
+        .replace("％", "%")
+        .replace("：", ":")
+        .replace("，", ",")
+        .replace("（", "(")
+        .replace("）", ")")
+    )
+
+
 def absolute_url(href: str) -> str:
     """atwiki 内の相対/プロトコル相対リンクを絶対 URL に変換する。"""
     if href.startswith("//"):
