@@ -22,11 +22,42 @@ def test_find_latest_provenance_skips_broken_json(tmp_path):
     assert change_detection.find_latest_provenance(tmp_path) == (None, None)
 
 
-def test_find_latest_provenance_does_not_swallow_programming_errors(tmp_path):
+@pytest.mark.parametrize(
+    "payload",
+    ["{}", "[]", '{"generated_at": null}', '{"generated_at": 123}'],
+)
+def test_find_latest_provenance_skips_invalid_shapes(tmp_path, payload):
     invalid_shape = tmp_path / "provenance_20260719.json"
-    invalid_shape.write_text("[]", encoding="utf-8")
+    invalid_shape.write_text(payload, encoding="utf-8")
 
-    with pytest.raises(TypeError):
+    assert change_detection.find_latest_provenance(tmp_path) == (None, None)
+
+
+def test_find_latest_provenance_skips_invalid_shape_and_uses_valid_file(tmp_path):
+    (tmp_path / "provenance_20260718.json").write_text("{}", encoding="utf-8")
+    valid = tmp_path / "provenance_20260719.json"
+    valid.write_text(
+        '{"generated_at": "2026-07-19T00:00:00Z"}', encoding="utf-8"
+    )
+
+    path, data = change_detection.find_latest_provenance(tmp_path)
+
+    assert path == valid
+    assert data == {"generated_at": "2026-07-19T00:00:00Z"}
+
+
+def test_find_latest_provenance_does_not_swallow_parser_programming_errors(
+    tmp_path, monkeypatch
+):
+    provenance = tmp_path / "provenance_20260719.json"
+    provenance.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(
+        change_detection.json,
+        "loads",
+        lambda text: (_ for _ in ()).throw(TypeError("bad parser call")),
+    )
+
+    with pytest.raises(TypeError, match="bad parser call"):
         change_detection.find_latest_provenance(tmp_path)
 
 

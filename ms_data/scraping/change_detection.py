@@ -36,8 +36,16 @@ def find_latest_provenance(
     for path in sorted(reports_dir.glob("provenance_*.json")):
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
-            generated_at = parse_iso_datetime(str(data["generated_at"]))
         except (OSError, json.JSONDecodeError, ValueError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        generated_at_value = data.get("generated_at")
+        if not isinstance(generated_at_value, str):
+            continue
+        try:
+            generated_at = parse_iso_datetime(generated_at_value)
+        except (TypeError, ValueError):
             continue
         if latest_generated_at is None or generated_at > latest_generated_at:
             latest_generated_at = generated_at
