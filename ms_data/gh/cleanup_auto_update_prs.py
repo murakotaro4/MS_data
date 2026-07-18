@@ -6,18 +6,17 @@ import argparse
 import re
 import subprocess
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from ms_data.core.dates import parse_yyyymmdd_jst, today_jst
 from ms_data.gh import gh_json
 from ms_data.gh.gh_json import run_gh
 
 
 HEAD_REF_RE = re.compile(r"^data/auto-update-(\d{8})$")
 AUTO_UPDATE_BRANCH_RE = re.compile(r"^data/auto-update-.+$")
-JST = timezone(timedelta(hours=9))
 
 
 @dataclass(frozen=True)
@@ -38,17 +37,9 @@ class BranchCleanupResult:
     current_sha: str = ""
 
 
-def today_jst() -> str:
-    return datetime.now(JST).strftime("%Y%m%d")
-
-
 def parse_report_date(head_ref: str) -> str | None:
     match = HEAD_REF_RE.match(head_ref)
     return match.group(1) if match else None
-
-
-def _date_value(yyyymmdd: str) -> datetime:
-    return datetime.strptime(yyyymmdd, "%Y%m%d").replace(tzinfo=JST)
 
 
 def plan_cleanup(
@@ -57,7 +48,7 @@ def plan_cleanup(
     today: str,
     keep_days: int,
 ) -> list[CleanupAction]:
-    today_dt = _date_value(today)
+    today_dt = parse_yyyymmdd_jst(today)
     actions: list[CleanupAction] = []
 
     for item in pulls:
@@ -67,7 +58,7 @@ def plan_cleanup(
         if report_date is None:
             continue
 
-        age_days = (today_dt - _date_value(report_date)).days
+        age_days = (today_dt - parse_yyyymmdd_jst(report_date)).days
         number = int(item.get("number") or 0)
         if report_date == today:
             action = "keep"
