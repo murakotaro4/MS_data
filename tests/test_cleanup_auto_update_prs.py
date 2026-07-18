@@ -1,3 +1,8 @@
+import json
+
+import pytest
+
+from ms_data.gh import cleanup_auto_update_prs
 from ms_data.gh.cleanup_auto_update_prs import (
     parse_report_date,
     plan_cleanup,
@@ -47,3 +52,14 @@ def test_render_summary_includes_dry_run_counts():
     assert "- dry_run: true" in text
     assert "- close: 1" in text
     assert "| #3 | data/auto-update-20260527 |" in text
+
+
+def test_gh_json_rejects_concatenated_documents(monkeypatch):
+    monkeypatch.setattr(
+        cleanup_auto_update_prs,
+        "_run",
+        lambda cmd: '[{"id": 1}]\n[{"id": 2}]',
+    )
+
+    with pytest.raises(json.JSONDecodeError, match="Extra data"):
+        cleanup_auto_update_prs._gh_json("repos/owner/repo/pulls")

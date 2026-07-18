@@ -5,11 +5,12 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+
+from ms_data.gh.gh_json import run_gh
 
 
 HEAD_REF_RE = re.compile(r"^data/auto-update-(\d{8})$")
@@ -80,14 +81,7 @@ def plan_cleanup(
 
 
 def _run(cmd: list[str]) -> str:
-    result = subprocess.run(
-        cmd,
-        check=True,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    return result.stdout
+    return run_gh(cmd)
 
 
 def _gh_json(endpoint: str) -> Any:

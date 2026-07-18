@@ -5,15 +5,14 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import subprocess
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from ms_data.gh.gh_json import gh_api_json, run_gh
 from ms_data.gh.gh_json import login_of as _login
-from ms_data.gh.gh_json import parse_json_stream
 from ms_data.gh.outputs import append_step_summary, write_github_output
 from ms_data.gh.auto_review_gate import evaluate
 
@@ -138,14 +137,7 @@ class GitHubClient:
     repo: str
 
     def _run(self, args: list[str]) -> str:
-        result = subprocess.run(
-            args,
-            check=True,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        return result.stdout
+        return run_gh(args)
 
     def api_json(
         self,
@@ -156,16 +148,14 @@ class GitHubClient:
         headers: list[str] | None = None,
         paginate: bool = False,
     ) -> Any:
-        cmd = ["gh", "api", endpoint]
-        if method != "GET":
-            cmd.extend(["-X", method])
-        if paginate:
-            cmd.append("--paginate")
-        for header in headers or []:
-            cmd.extend(["-H", header])
-        for key, value in (fields or {}).items():
-            cmd.extend(["-f", f"{key}={value}"])
-        return parse_json_stream(self._run(cmd))
+        return gh_api_json(
+            endpoint,
+            method=method,
+            fields=fields,
+            headers=headers,
+            paginate=paginate,
+            runner=self._run,
+        )
 
     def issue_comments(self, pr_number: str) -> list[dict[str, Any]]:
         return self.api_json(

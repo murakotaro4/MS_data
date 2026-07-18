@@ -7,8 +7,24 @@
 from __future__ import annotations
 
 import json
+import subprocess
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+
+
+GhRunner = Callable[[list[str]], str]
+
+
+def run_gh(args: list[str]) -> str:
+    result = subprocess.run(
+        args,
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    return result.stdout
 
 
 def flatten_pages(value: Any) -> Any:
@@ -31,6 +47,27 @@ def parse_json_stream(text: str) -> Any:
         while index < len(text) and text[index].isspace():
             index += 1
     return flatten_pages(values[0] if len(values) == 1 else values)
+
+
+def gh_api_json(
+    endpoint: str,
+    *,
+    method: str = "GET",
+    fields: dict[str, str] | None = None,
+    headers: list[str] | None = None,
+    paginate: bool = False,
+    runner: GhRunner = run_gh,
+) -> Any:
+    cmd = ["gh", "api", endpoint]
+    if method != "GET":
+        cmd.extend(["-X", method])
+    if paginate:
+        cmd.append("--paginate")
+    for header in headers or []:
+        cmd.extend(["-H", header])
+    for key, value in (fields or {}).items():
+        cmd.extend(["-f", f"{key}={value}"])
+    return parse_json_stream(runner(cmd))
 
 
 def load_json_stream(path: Path) -> Any:
