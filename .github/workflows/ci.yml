@@ -10,7 +10,65 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      code: ${{ steps.changes.outputs.code }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect code changes
+        id: changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          code=true
+          if [[ "$EVENT_NAME" == "pull_request" ]] && [[ -n "$BASE_SHA" && -n "$HEAD_SHA" ]]; then
+            if changed_files="$(git diff --name-status --no-renames "$BASE_SHA" "$HEAD_SHA")"; then
+              code=false
+              while IFS=$'\t' read -r status path; do
+                [[ -z "$status" && -z "$path" ]] && continue
+                if [[ -z "$status" || -z "$path" || "$status" == "D" ]]; then
+                  code=true
+                  break
+                fi
+                case "$path" in
+                  # tests/ が fixture として直接参照するレポート。テスト側の参照を変えたらここも更新
+                  reports/diff_msdata_20260601.md|reports/rollback_guard_20260601.md|reports/official_overrides_audit_20260601.md)
+                    code=true
+                    break
+                    ;;
+                  reports/*|msData.json|*.md) ;;
+                  *) code=true; break ;;
+                esac
+              done <<< "$changed_files"
+            fi
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+      - uses: ./.github/actions/setup-uv-env
+
+      - name: Validate reports contract allowlist
+        run: uv run python -m ms_data.validation.validate_report_contract --mode ci --manifest reports_manifest.yml --reports-dir reports
+
+      - name: Validate msData.json
+        run: uv run python -m ms_data.tasks validate-strict
+
+      - name: Validate generated reports
+        run: |
+          uv run python -m ms_data.validation.validate_generated_reports \
+            --reports-dir reports \
+            --schema-dir schema/reports
+
   checks:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -23,9 +81,6 @@ jobs:
       - uses: actions/checkout@v6
 
       - uses: ./.github/actions/setup-uv-env
-
-      - name: Validate reports contract allowlist
-        run: uv run python -m ms_data.validation.validate_report_contract --mode ci --manifest reports_manifest.yml --reports-dir reports
 
       - name: Run repository checks
         run: uv run python -m ms_data.tasks ci
