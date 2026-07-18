@@ -175,6 +175,7 @@ def test_dedupe_levels_keeps_best():
     [
         FileNotFoundError("curl not found"),
         subprocess.CalledProcessError(7, ["curl", "-sL", "https://example.test"]),
+        UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte"),
     ],
 )
 def test_owners_table_curl_failure_warns_and_continues(
@@ -213,7 +214,10 @@ def test_owners_table_curl_failure_warns_and_continues(
     assert rc == 0
     assert json.loads(output.read_text(encoding="utf-8"))["rows"] == []
     assert calls == [
-        ((["curl", "-sL", "https://example.test"],), {"text": True})
+        (
+            (["curl", "-sL", "https://example.test"],),
+            {"text": True, "encoding": "utf-8"},
+        )
     ]
     assert "warning: curl fallback failed:" in capsys.readouterr().err
 

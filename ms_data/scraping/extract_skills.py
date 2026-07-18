@@ -644,11 +644,16 @@ def main(argv: list[str] | None = None) -> int:
         if not data.get("rows"):
             try:
                 raw = subprocess.check_output(
-                    ["curl", "-sL", args.url], text=True
+                    ["curl", "-sL", args.url], text=True, encoding="utf-8"
                 )
                 data = extract_skill_owners_rows_table(raw)
                 data["fetched_by"] = "curl"
-            except (FileNotFoundError, subprocess.CalledProcessError, OSError) as exc:
+            except (
+                FileNotFoundError,
+                subprocess.CalledProcessError,
+                OSError,
+                UnicodeDecodeError,
+            ) as exc:
                 print(f"warning: curl fallback failed: {exc}", file=sys.stderr)
         data["fetched_at"] = meta.get("fetched_at")
         out = Path(args.out)
