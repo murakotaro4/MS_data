@@ -697,6 +697,28 @@ def task_audit_official_overrides() -> int:
     return _run_python_module("ms_data.audit.audit_official_overrides", *args)
 
 
+def task_audit_field_completeness() -> int:
+    report_date = _report_date()
+    reports_dir = _env("REPORTS_DIR", DEFAULT_REPORTS_DIR)
+    args = [
+        "--msdata",
+        _env("MSDATA", DEFAULT_MSDATA),
+        "--allowlist",
+        _env(
+            "FIELD_COMPLETENESS_ALLOWLIST",
+            "data/field_completeness_allowlist.json",
+        ),
+        "--out",
+        f"{reports_dir}/field_completeness_{report_date}.md",
+    ]
+    today = _env_str("TODAY")
+    if today:
+        args.extend(["--today", today])
+    if _env_flag("FAIL_ON_FINDINGS"):
+        args.append("--fail-on-findings")
+    return _run_python_module("ms_data.audit.audit_field_completeness", *args)
+
+
 def task_audit_skills() -> int:
     return _run_python_module(
         "ms_data.audit.audit_skills",
@@ -833,6 +855,7 @@ TASKS: dict[str, Callable[[], int]] = {
     "audit-index": task_audit_index,
     "rollback-guard": task_rollback_guard,
     "audit-official-overrides": task_audit_official_overrides,
+    "audit-field-completeness": task_audit_field_completeness,
     "validate-official-overrides-schema": task_validate_official_overrides_schema,
     "atwiki-quality-report": task_atwiki_quality_report,
     "skills": task_skills,

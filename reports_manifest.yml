@@ -101,6 +101,26 @@
       }
     },
     {
+      "id": "field_completeness",
+      "type": "generated",
+      "path_patterns": [
+        "reports/field_completeness_*.md"
+      ],
+      "producer": [
+        "ms_data.audit.audit_field_completeness",
+        ".github/workflows/data_update.yml"
+      ],
+      "consumers": [
+        ".github/workflows/data_update.yml",
+        "human"
+      ],
+      "retention": "git",
+      "prune": {
+        "max_age_days": 90,
+        "keep_min": 10
+      }
+    },
+    {
       "id": "atwiki_quality",
       "type": "generated",
       "path_patterns": [
