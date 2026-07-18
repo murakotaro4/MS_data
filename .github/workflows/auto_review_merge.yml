@@ -23,6 +23,7 @@ jobs:
     if: >
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     env:
       CODEX_REVIEW_MAX_ATTEMPTS: ${{ vars.CODEX_REVIEW_MAX_ATTEMPTS || '3' }}
       CODEX_REVIEW_ATTEMPT_TIMEOUT_SECONDS: ${{ vars.CODEX_REVIEW_ATTEMPT_TIMEOUT_SECONDS || '420' }}
