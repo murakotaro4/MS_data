@@ -1,6 +1,6 @@
 # reports インデックス
 
-`reports_manifest.yml` に基づく `reports` の参照入口です。
+`reports_manifest.json` に基づく `reports` の参照入口です。
 
 ## generated
 - `diff_msdata_YYYYMMDD.md` : 日次の msData 差分

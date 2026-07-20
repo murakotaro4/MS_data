@@ -1,4 +1,4 @@
-"""reports_manifest.yml の prune 設定に基づき、期限切れレポートを削除する。
+"""reports_manifest.json の prune 設定に基づき、期限切れレポートを削除する。
 
 - 対象: manifest の entries のうち `prune` を持つエントリの path_patterns
 - ファイル名の `_YYYYMMDD` から日付を判定。日付を持たないファイルは対象外
@@ -6,8 +6,8 @@
 - 既定は dry-run（計画の表示のみ）。実際に削除するには --apply を指定
 
 使用例:
-  uv run python -m ms_data.reporting.prune_reports --manifest reports_manifest.yml
-  uv run python -m ms_data.reporting.prune_reports --manifest reports_manifest.yml --apply
+  uv run python -m ms_data.reporting.prune_reports --manifest reports_manifest.json
+  uv run python -m ms_data.reporting.prune_reports --manifest reports_manifest.json --apply
 """
 
 from __future__ import annotations
@@ -126,7 +126,7 @@ def render_summary(actions: list[PruneAction], *, applied: bool) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--manifest", type=Path, default=Path("reports_manifest.yml"))
+    parser.add_argument("--manifest", type=Path, default=Path("reports_manifest.json"))
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--today", default=today_jst())
     parser.add_argument(

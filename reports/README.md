@@ -1,7 +1,7 @@
 # reports ディレクトリ運用ガイド
 
 このディレクトリは、生成レポートと手動レポートを共存させる領域です。  
-運用のSSOTはリポジトリ直下の `reports_manifest.yml` です。
+運用のSSOTはリポジトリ直下の `reports_manifest.json` です。
 
 ## 分類
 - `generated`: スクリプト/Workflowが生成する成果物
@@ -20,5 +20,5 @@
   - 互換期間（1リリース周期）を経過
 
 ## CI検証
-- CIの `reports` 検証は `reports_manifest.yml` の allowlist に対して実行します。
+- CIの `reports` 検証は `reports_manifest.json` の allowlist に対して実行します。
 - `manual` タイプのパスは生成物と別枠で allowlist に照合します（失敗時は stderr に `report file not listed in manifest allowlist:` と違反パスが出ます）。

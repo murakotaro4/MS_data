@@ -156,7 +156,7 @@ def verify(root: Path) -> None:
                 "--mode",
                 "post-merge",
                 "--manifest",
-                str(root / "reports_manifest.yml"),
+                str(root / "reports_manifest.json"),
                 "--report-date",
                 REPORT_DATE,
                 "--source-run-id",

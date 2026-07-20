@@ -11,7 +11,7 @@
 - `tests/`: ユニットテスト
 - `schema/`: JSON Schema（`msData.schema.json` ほか）
 - `data/`: スキル定義・公式調整オーバーライド（SSOT）
-- `reports/`: 生成レポート（保持方針は `reports_manifest.yml`）
+- `reports/`: 生成レポート（保持方針は `reports_manifest.json`）
 - `msData.json`: データ本体
 
 ## セットアップ

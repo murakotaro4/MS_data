@@ -72,7 +72,7 @@ jobs:
         run: |
           uv run python -m ms_data.validation.validate_report_contract \
             --mode auto-review \
-            --manifest reports_manifest.yml \
+            --manifest reports_manifest.json \
             --report-date "${{ steps.resolve.outputs.report_date }}" \
             --head-ref "$HEAD_REF"
 

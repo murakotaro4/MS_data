@@ -21,7 +21,7 @@
   - `tests/`: ユニットテスト
   - `schema/`: JSON Schema
   - `data/`: スキル定義・公式調整オーバーライド（SSOT）
-  - `reports/`: 生成レポート（保持方針は `reports_manifest.yml` が SSOT）
+  - `reports/`: 生成レポート（保持方針は `reports_manifest.json` が SSOT）
 
 ## ビルド・テスト・開発コマンド（uv）
 - 環境作成: `uv venv` → `uv sync --dev`。実行は基本 `uv run <cmd>`。
@@ -57,9 +57,9 @@
 - 対象PRの解決: `data/auto-update-YYYYMMDD`（workflow_run.created_at の JST 日付）を優先し、無ければ open な最新 `data/auto-update-*` にフォールバック。
 - dry-run: `data update` の `workflow_dispatch` で `dry_run=true` を指定すると、取得・監査・artifact 作成まで実行し PR 作成と通知は行いません。
 - 古いPR整理: `cleanup auto update prs` が毎日 20:30 JST に実行され、`keep_days` 超過の open PR を close（head ブランチも削除）。
-- レポート整理: `reports prune` が毎月1日 18:00 JST に実行され、`reports_manifest.yml` の `prune`（max_age_days / keep_min）に基づき期限切れレポートの削除 PR を作成します。この PR は自動マージ対象外のため人間がレビューしてマージします。
+- レポート整理: `reports prune` が毎月1日 18:00 JST に実行され、`reports_manifest.json` の `prune`（max_age_days / keep_min）に基づき期限切れレポートの削除 PR を作成します。この PR は自動マージ対象外のため人間がレビューしてマージします。
 - PRラベル: 自動更新 PR には `data-update` / `rollback-guard` / `official-overrides` / `atwiki-quality` を付与。
-- reports 運用SSOT: 命名規約・分類・保持方針は `reports_manifest.yml` が正。契約検証は `uv run python -m ms_data.validation.validate_report_contract`、生成物検証は `uv run python -m ms_data.tasks validate-generated-reports`。
+- reports 運用SSOT: 命名規約・分類・保持方針は `reports_manifest.json` が正。契約検証は `uv run python -m ms_data.validation.validate_report_contract`、生成物検証は `uv run python -m ms_data.tasks validate-generated-reports`。
 - 手動更新レポート: 手動でデータ更新した場合は `reports/msdata_update_YYYYMMDD.md` を `reports/msdata_update_template.md` に沿って作成（新規追加機体は主要パラメータを網羅、既存更新は変更前後の値を明記）。
 - 失敗時の挙動: Codex が応答しない、または指摘が 1 件以上ある場合は自動マージせず PR を残して手動対応。
 - Codexレビュー待ち: 既定 3 回まで試行。調整は repository variables の `CODEX_REVIEW_MAX_ATTEMPTS` / `CODEX_REVIEW_ATTEMPT_TIMEOUT_SECONDS` / `CODEX_REVIEW_POLL_SECONDS` / `CODEX_REVIEW_SETTLE_SECONDS`。

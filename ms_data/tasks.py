@@ -225,7 +225,7 @@ def task_validate_report_contract() -> int:
         "--mode",
         _env("MODE", "ci"),
         "--manifest",
-        _env("REPORTS_MANIFEST", "reports_manifest.yml"),
+        _env("REPORTS_MANIFEST", "reports_manifest.json"),
         "--reports-dir",
         _env("REPORTS_DIR", DEFAULT_REPORTS_DIR),
         "--report-date",
