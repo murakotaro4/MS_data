@@ -1,7 +1,7 @@
 {
-  "version": 2,
+  "version": 3,
   "compatibility": {
-    "legacy_path_support": true,
+    "legacy_path_support": false,
     "min_release_cycles": 1,
     "retirement_criteria": [
       "legacy consumer count is 0",
@@ -11,8 +11,8 @@
   "naming": {
     "report_date_format": "YYYYMMDD",
     "head_ref_pattern": "data/auto-update-{report_date}",
-    "diff_pattern": "reports/diff_msdata_{report_date}.md",
-    "provenance_pattern": "reports/provenance_{report_date}.json",
+    "diff_pattern": "reports/{report_year}/{report_month}/diff_msdata_{report_date}.md",
+    "provenance_pattern": "reports/{report_year}/{report_month}/provenance_{report_date}.json",
     "artifact_pattern": "raw-snapshot-{report_date}-run-{source_run_id}",
     "snapshot_pattern": "raw_snapshot_{report_date}_run{source_run_id}.tar.xz",
     "release_tag_pattern": "raw-snapshot-{report_date}-run-{source_run_id}",
@@ -23,6 +23,7 @@
       "id": "diff_msdata",
       "type": "generated",
       "path_patterns": [
+        "reports/*/*/diff_msdata_*.md",
         "reports/diff_msdata_*.md"
       ],
       "producer": [
@@ -43,6 +44,7 @@
       "id": "provenance",
       "type": "generated",
       "path_patterns": [
+        "reports/*/*/provenance_*.json",
         "reports/provenance_*.json"
       ],
       "producer": [
@@ -64,6 +66,7 @@
       "id": "rollback_guard",
       "type": "generated",
       "path_patterns": [
+        "reports/*/*/rollback_guard_*.md",
         "reports/rollback_guard_*.md"
       ],
       "producer": [
@@ -84,6 +87,7 @@
       "id": "official_overrides_audit",
       "type": "generated",
       "path_patterns": [
+        "reports/*/*/official_overrides_audit_*.md",
         "reports/official_overrides_audit_*.md"
       ],
       "producer": [
@@ -104,6 +108,7 @@
       "id": "field_completeness",
       "type": "generated",
       "path_patterns": [
+        "reports/*/*/field_completeness_*.md",
         "reports/field_completeness_*.md"
       ],
       "producer": [
@@ -124,6 +129,7 @@
       "id": "atwiki_quality",
       "type": "generated",
       "path_patterns": [
+        "reports/*/*/atwiki_quality_*.json",
         "reports/atwiki_quality_*.json"
       ],
       "producer": [
@@ -161,6 +167,7 @@
       "id": "label_audit",
       "type": "generated",
       "path_patterns": [
+        "reports/*/*/label_audit_*.md",
         "reports/label_audit_*.md",
         "reports/label_audit_latest.md"
       ],
@@ -170,7 +177,7 @@
       ],
       "consumers": [
         "AGENTS.md",
-        "reports/msdata_update_*.md"
+        "reports/*/*/msdata_update_*.md"
       ],
       "retention": "git",
       "prune": {
@@ -182,6 +189,7 @@
       "id": "index_ms_audit",
       "type": "generated",
       "path_patterns": [
+        "reports/*/*/index_ms_audit_*.md",
         "reports/index_ms_audit_*.md"
       ],
       "producer": [
@@ -190,7 +198,7 @@
       ],
       "consumers": [
         "AGENTS.md",
-        "reports/msdata_update_*.md"
+        "reports/*/*/msdata_update_*.md"
       ],
       "retention": "git",
       "prune": {
@@ -202,6 +210,7 @@
       "id": "msdata_update",
       "type": "manual",
       "path_patterns": [
+        "reports/*/*/msdata_update_*.md",
         "reports/msdata_update_*.md",
         "reports/msdata_update_template.md"
       ],
@@ -220,6 +229,7 @@
       "path_patterns": [
         "reports/skills_params_audit.json",
         "reports/owners_flat_audit.json",
+        "reports/*/*/skill_owners_audit_*.md",
         "reports/skill_owners_audit_*.md"
       ],
       "producer": [

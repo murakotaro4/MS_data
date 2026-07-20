@@ -90,12 +90,19 @@ jobs:
           if [[ "${update_mode}" == "full" ]]; then
             full_update="true"
           fi
+          reports_month_dir="reports/${report_date:0:4}/${report_date:4:2}"
           echo "UPDATE_MODE=${update_mode}" >> "$GITHUB_ENV"
           echo "REPORT_DATE=${report_date}" >> "$GITHUB_ENV"
           echo "HEAD_REF=data/auto-update-${report_date}" >> "$GITHUB_ENV"
           echo "DRY_RUN=${dry_run}" >> "$GITHUB_ENV"
           echo "FULL_UPDATE=${full_update}" >> "$GITHUB_ENV"
-          echo "PROVENANCE_FILE=reports/provenance_${report_date}.json" >> "$GITHUB_ENV"
+          echo "REPORTS_MONTH_DIR=${reports_month_dir}" >> "$GITHUB_ENV"
+          echo "DIFF_FILE=${reports_month_dir}/diff_msdata_${report_date}.md" >> "$GITHUB_ENV"
+          echo "PROVENANCE_FILE=${reports_month_dir}/provenance_${report_date}.json" >> "$GITHUB_ENV"
+          echo "ROLLBACK_FILE=${reports_month_dir}/rollback_guard_${report_date}.md" >> "$GITHUB_ENV"
+          echo "OVERRIDES_AUDIT_FILE=${reports_month_dir}/official_overrides_audit_${report_date}.md" >> "$GITHUB_ENV"
+          echo "QUALITY_FILE=${reports_month_dir}/atwiki_quality_${report_date}.json" >> "$GITHUB_ENV"
+          echo "FIELD_COMPLETENESS_FILE=${reports_month_dir}/field_completeness_${report_date}.md" >> "$GITHUB_ENV"
           echo "RAW_ARTIFACT_NAME=raw-snapshot-${report_date}-run-${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
           echo "RAW_SNAPSHOT_FILE=raw_snapshot_${report_date}_run${GITHUB_RUN_ID}.tar.xz" >> "$GITHUB_ENV"
           echo "RELEASE_TAG=raw-snapshot-${report_date}-run-${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
@@ -108,7 +115,7 @@ jobs:
             --report-date "${REPORT_DATE}" \
             --source-run-id "${GITHUB_RUN_ID}" \
             --head-ref "${HEAD_REF}" \
-            --diff-path "reports/diff_msdata_${REPORT_DATE}.md" \
+            --diff-path "${DIFF_FILE}" \
             --provenance-path "${PROVENANCE_FILE}" \
             --artifact-name "${RAW_ARTIFACT_NAME}" \
             --snapshot-file "${RAW_SNAPSHOT_FILE}" \
@@ -151,7 +158,7 @@ jobs:
       - name: Fetch and import
         run: |
           cp msData.json msData.before.json
-          mkdir -p reports
+          mkdir -p "${REPORTS_MONTH_DIR}"
           if [[ "${UPDATE_MODE}" == "full" ]]; then
             # 真の全量取得（月1）: キャッシュ・差分検出を使わず全ページ再取得
             export FORCE_FULL=1
@@ -166,20 +173,20 @@ jobs:
 
       - name: Run rollback guard
         run: |
-          mkdir -p reports
+          mkdir -p "${REPORTS_MONTH_DIR}"
           uv run python -m ms_data.audit.detect_msdata_rollbacks \
             --old msData.before.json \
             --new msData.json \
-            --out "reports/rollback_guard_${REPORT_DATE}.md"
+            --out "${ROLLBACK_FILE}"
 
       - id: field_completeness
         name: Run field completeness audit
         run: |
-          mkdir -p reports
+          mkdir -p "${REPORTS_MONTH_DIR}"
           uv run python -m ms_data.audit.audit_field_completeness \
             --msdata msData.json \
             --allowlist data/field_completeness_allowlist.json \
-            --out "reports/field_completeness_${REPORT_DATE}.md" \
+            --out "${FIELD_COMPLETENESS_FILE}" \
             --today "${REPORT_DATE}" \
             --github-output "$GITHUB_OUTPUT" \
             --step-summary "$GITHUB_STEP_SUMMARY"
@@ -187,12 +194,12 @@ jobs:
       - id: official_overrides_audit
         name: Run official override audit
         run: |
-          mkdir -p reports
+          mkdir -p "${REPORTS_MONTH_DIR}"
           uv run python -m ms_data.audit.audit_official_overrides \
             --before msData.before.json \
             --raw cache/msData.before_official_overrides.json \
             --current msData.json \
-            --out "reports/official_overrides_audit_${REPORT_DATE}.md" \
+            --out "${OVERRIDES_AUDIT_FILE}" \
             --today "${REPORT_DATE}" \
             --github-output "$GITHUB_OUTPUT" \
             --step-summary "$GITHUB_STEP_SUMMARY"
@@ -220,7 +227,7 @@ jobs:
           - report_date: ${REPORT_DATE}
           - review_due: ${{ steps.official_overrides_audit.outputs.review_due }}
           - remove_due: ${{ steps.official_overrides_audit.outputs.remove_due }}
-          - audit_report: reports/official_overrides_audit_${REPORT_DATE}.md
+          - audit_report: ${OVERRIDES_AUDIT_FILE}
           - workflow_run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
 
           remove_due が 1 件以上ある場合は、該当 override を撤去できるか確認してください。
@@ -284,15 +291,15 @@ jobs:
             --full-diff-warning-count "${ATWIKI_QUALITY_FULL_DIFF_WARNING_COUNT}" \
             --github-output "$GITHUB_OUTPUT" \
             --step-summary "$GITHUB_STEP_SUMMARY" \
-            --out "reports/atwiki_quality_${REPORT_DATE}.json" \
+            --out "${QUALITY_FILE}" \
             "${full_update_args[@]}"
 
       - name: Validate generated operational reports
         run: |
-          test -f "reports/rollback_guard_${REPORT_DATE}.md"
-          test -f "reports/field_completeness_${REPORT_DATE}.md"
-          test -f "reports/official_overrides_audit_${REPORT_DATE}.md"
-          test -f "reports/atwiki_quality_${REPORT_DATE}.json"
+          test -f "${ROLLBACK_FILE}"
+          test -f "${FIELD_COMPLETENESS_FILE}"
+          test -f "${OVERRIDES_AUDIT_FILE}"
+          test -f "${QUALITY_FILE}"
           uv run python -m ms_data.validation.validate_generated_reports \
             --reports-dir reports \
             --schema-dir schema/reports
@@ -300,7 +307,7 @@ jobs:
       - name: Fail on protected official override rollback
         if: steps.official_overrides_audit.outputs.protected_rollback != '0'
         run: |
-          echo "official_overrides protected rollback detected. See reports/official_overrides_audit_${REPORT_DATE}.md" >&2
+          echo "official_overrides protected rollback detected. See ${OVERRIDES_AUDIT_FILE}" >&2
           exit 1
 
       - id: changes
@@ -328,8 +335,8 @@ jobs:
             --age-coverage "${{ steps.detection.outputs.age_coverage }}" \
             --fallback-reason "$FALLBACK_REASON" \
             --run-id "${GITHUB_RUN_ID}" \
-            --rollback-guard-path "reports/rollback_guard_${REPORT_DATE}.md" \
-            --official-overrides-audit-path "reports/official_overrides_audit_${REPORT_DATE}.md" \
+            --rollback-guard-path "${ROLLBACK_FILE}" \
+            --official-overrides-audit-path "${OVERRIDES_AUDIT_FILE}" \
             --out "$body_path"
           echo "path=$body_path" >> "$GITHUB_OUTPUT"
 
@@ -350,13 +357,14 @@ jobs:
           uv run python -m ms_data.reporting.report_msdata_diff \
             --old msData.before.json \
             --new msData.json \
-            --out "reports/diff_msdata_${REPORT_DATE}.md" \
-            --note "巻き戻りガード: reports/rollback_guard_${REPORT_DATE}.md" \
-            --note "official_overrides監査: reports/official_overrides_audit_${REPORT_DATE}.md" \
-            --note "atwiki品質: reports/atwiki_quality_${REPORT_DATE}.json" \
+            --out "${DIFF_FILE}" \
+            --note "巻き戻りガード: ${ROLLBACK_FILE}" \
+            --note "official_overrides監査: ${OVERRIDES_AUDIT_FILE}" \
+            --note "atwiki品質: ${QUALITY_FILE}" \
             --print-summary | tee reports/diff_summary.txt
           REPORT_DATE="${REPORT_DATE}" \
           PROVENANCE_OUT="${PROVENANCE_FILE}" \
+          DIFF_OUT="${DIFF_FILE}" \
           RAW_SNAPSHOT_FILE="${RAW_SNAPSHOT_FILE}" \
           RAW_ARTIFACT_NAME="${RAW_ARTIFACT_NAME}" \
           ARTIFACT_RETENTION_DAYS="${ARTIFACT_RETENTION_DAYS}" \
@@ -369,7 +377,7 @@ jobs:
       - name: Validate generated update reports
         if: steps.changes.outputs.changed == 'true'
         run: |
-          test -f "reports/provenance_${REPORT_DATE}.json"
+          test -f "${PROVENANCE_FILE}"
           uv run python -m ms_data.validation.validate_generated_reports \
             --reports-dir reports \
             --schema-dir schema/reports
@@ -402,7 +410,7 @@ jobs:
           name: atwiki-quality-${{ env.REPORT_DATE }}-run-${{ github.run_id }}
           retention-days: 30
           if-no-files-found: ignore
-          path: reports/atwiki_quality_${{ env.REPORT_DATE }}.json
+          path: ${{ env.QUALITY_FILE }}
 
       - name: Upload operational reports
         if: always()
@@ -412,9 +420,9 @@ jobs:
           retention-days: 30
           if-no-files-found: ignore
           path: |
-            reports/rollback_guard_${{ env.REPORT_DATE }}.md
-            reports/field_completeness_${{ env.REPORT_DATE }}.md
-            reports/official_overrides_audit_${{ env.REPORT_DATE }}.md
+            ${{ env.ROLLBACK_FILE }}
+            ${{ env.FIELD_COMPLETENESS_FILE }}
+            ${{ env.OVERRIDES_AUDIT_FILE }}
 
       - name: Upload raw snapshot artifact
         if: steps.changes.outputs.changed == 'true'
@@ -425,12 +433,12 @@ jobs:
           if-no-files-found: error
           path: |
             ${{ env.RAW_SNAPSHOT_FILE }}
-            reports/diff_msdata_${{ env.REPORT_DATE }}.md
-            reports/provenance_${{ env.REPORT_DATE }}.json
-            reports/rollback_guard_${{ env.REPORT_DATE }}.md
-            reports/field_completeness_${{ env.REPORT_DATE }}.md
-            reports/official_overrides_audit_${{ env.REPORT_DATE }}.md
-            reports/atwiki_quality_${{ env.REPORT_DATE }}.json
+            ${{ env.DIFF_FILE }}
+            ${{ env.PROVENANCE_FILE }}
+            ${{ env.ROLLBACK_FILE }}
+            ${{ env.FIELD_COMPLETENESS_FILE }}
+            ${{ env.OVERRIDES_AUDIT_FILE }}
+            ${{ env.QUALITY_FILE }}
 
       - name: Upload dry-run reports
         if: always() && env.DRY_RUN == 'true'
@@ -440,12 +448,12 @@ jobs:
           retention-days: 30
           if-no-files-found: ignore
           path: |
-            reports/diff_msdata_${{ env.REPORT_DATE }}.md
-            reports/provenance_${{ env.REPORT_DATE }}.json
-            reports/rollback_guard_${{ env.REPORT_DATE }}.md
-            reports/field_completeness_${{ env.REPORT_DATE }}.md
-            reports/official_overrides_audit_${{ env.REPORT_DATE }}.md
-            reports/atwiki_quality_${{ env.REPORT_DATE }}.json
+            ${{ env.DIFF_FILE }}
+            ${{ env.PROVENANCE_FILE }}
+            ${{ env.ROLLBACK_FILE }}
+            ${{ env.FIELD_COMPLETENESS_FILE }}
+            ${{ env.OVERRIDES_AUDIT_FILE }}
+            ${{ env.QUALITY_FILE }}
             ${{ env.RAW_SNAPSHOT_FILE }}
 
       - name: Dry-run summary
@@ -494,14 +502,14 @@ jobs:
           body: |
             自動更新（定期実行）により差分を作成しました。
             - 差分: ${{ steps.summary.outputs.summary }}
-            - レポート: reports/diff_msdata_${{ env.REPORT_DATE }}.md
-            - 巻き戻りガード: reports/rollback_guard_${{ env.REPORT_DATE }}.md
-            - フィールド充足率監査: reports/field_completeness_${{ env.REPORT_DATE }}.md
-            - official_overrides監査: reports/official_overrides_audit_${{ env.REPORT_DATE }}.md
+            - レポート: ${{ env.DIFF_FILE }}
+            - 巻き戻りガード: ${{ env.ROLLBACK_FILE }}
+            - フィールド充足率監査: ${{ env.FIELD_COMPLETENESS_FILE }}
+            - official_overrides監査: ${{ env.OVERRIDES_AUDIT_FILE }}
             - official_overrides期限: ${{ steps.official_overrides_audit.outputs.due_summary }}
-            - atwiki品質: reports/atwiki_quality_${{ env.REPORT_DATE }}.json
+            - atwiki品質: ${{ env.QUALITY_FILE }}
             - atwiki品質警告: ${{ steps.quality.outputs.warning_summary }}
-            - provenance: reports/provenance_${{ env.REPORT_DATE }}.json
+            - provenance: ${{ env.PROVENANCE_FILE }}
             - source_run_id: ${{ github.run_id }}
             - source_artifact: ${{ env.RAW_ARTIFACT_NAME }}
             <!-- source_run_id:${{ github.run_id }} -->
@@ -513,9 +521,9 @@ jobs:
             atwiki-quality
           add-paths: |
             msData.json
-            reports/diff_msdata_${{ env.REPORT_DATE }}.md
-            reports/provenance_${{ env.REPORT_DATE }}.json
-            reports/rollback_guard_${{ env.REPORT_DATE }}.md
-            reports/field_completeness_${{ env.REPORT_DATE }}.md
-            reports/official_overrides_audit_${{ env.REPORT_DATE }}.md
-            reports/atwiki_quality_${{ env.REPORT_DATE }}.json
+            ${{ env.DIFF_FILE }}
+            ${{ env.PROVENANCE_FILE }}
+            ${{ env.ROLLBACK_FILE }}
+            ${{ env.FIELD_COMPLETENESS_FILE }}
+            ${{ env.OVERRIDES_AUDIT_FILE }}
+            ${{ env.QUALITY_FILE }}

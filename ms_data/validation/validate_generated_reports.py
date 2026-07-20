@@ -51,13 +51,13 @@ def validate_reports(reports_dir: Path, schema_dir: Path) -> list[str]:
         if not schema_path.is_file():
             messages.append(f"schema not found: {schema_path}")
             continue
-        for path in sorted(reports_dir.glob(pattern)):
+        for path in sorted(reports_dir.rglob(pattern)):
             try:
                 messages.extend(_validate_json_report(path, schema_path))
             except (OSError, json.JSONDecodeError) as exc:
                 messages.append(f"{path}: JSON validation failed: {exc}")
 
-    for path in sorted(reports_dir.glob("rollback_guard_*.md")):
+    for path in sorted(reports_dir.rglob("rollback_guard_*.md")):
         messages.extend(
             _require_text(
                 path,
@@ -70,7 +70,7 @@ def validate_reports(reports_dir: Path, schema_dir: Path) -> list[str]:
             )
         )
 
-    for path in sorted(reports_dir.glob("official_overrides_audit_*.md")):
+    for path in sorted(reports_dir.rglob("official_overrides_audit_*.md")):
         messages.extend(
             _require_text(
                 path,
@@ -83,7 +83,7 @@ def validate_reports(reports_dir: Path, schema_dir: Path) -> list[str]:
             )
         )
 
-    for path in sorted(reports_dir.glob("field_completeness_*.md")):
+    for path in sorted(reports_dir.rglob("field_completeness_*.md")):
         messages.extend(
             _require_text(
                 path,

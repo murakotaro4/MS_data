@@ -97,3 +97,25 @@ def test_overlapping_patterns_count_once(tmp_path: Path):
     actions = plan_prune_entry(entry, root=tmp_path, today="20260610")
     assert len(actions) == 3
     assert sum(1 for item in actions if item.action == "delete") == 1
+
+
+def test_nested_year_month_patterns_are_pruned(tmp_path: Path):
+    reports = tmp_path / "reports"
+    for date in ["20250101", "20250102", "20260601", "20260602"]:
+        month_dir = reports / date[:4] / date[4:6]
+        month_dir.mkdir(parents=True, exist_ok=True)
+        (month_dir / f"diff_msdata_{date}.md").write_text("x", encoding="utf-8")
+    entry = _entry(
+        path_patterns=[
+            "reports/*/*/diff_msdata_*.md",
+            "reports/diff_msdata_*.md",
+        ]
+    )
+    actions = plan_prune_entry(entry, root=tmp_path, today="20260610")
+    by_date = {item.report_date: item.action for item in actions}
+    assert by_date == {
+        "20260602": "keep",
+        "20260601": "keep",
+        "20250102": "delete",
+        "20250101": "delete",
+    }
