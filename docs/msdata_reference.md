@@ -140,8 +140,10 @@
 例:
 
 ```json
-{ "name": "複合拡張パーツスロット", "level": 1, "points": null }
-{ "name": "強行出撃", "level": 1, "points": null }
+[
+  { "name": "複合拡張パーツスロット", "level": 1, "points": null },
+  { "name": "強行出撃", "level": 1, "points": null }
+]
 ```
 
 ## 5. 必須項目
