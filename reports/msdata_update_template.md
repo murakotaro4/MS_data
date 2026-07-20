@@ -55,7 +55,7 @@
 - 重要な指標（unknown=0、不整合なしなど）を明記する
 
 ## 検証結果
-- `make validate-strict`: OK（XXX件）
+- `uv run python -m ms_data.tasks validate-strict`: OK（XXX件）
 - ラベル揺らぎ監査 unknown=0、index vs msData 監査で不整合なし。
 
 **記載ガイドライン:**

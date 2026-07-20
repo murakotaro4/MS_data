@@ -21,7 +21,7 @@ uv sync --dev
 ```
 
 ## よく使うコマンド
-第一コマンドは `uv run python -m ms_data.tasks <target>`（`make <target>` は Linux/macOS 向けの薄いラッパー）。
+第一コマンドは `uv run python -m ms_data.tasks <target>`。
 
 - 品質チェック一括: `uv run python -m ms_data.tasks ci`
 - 検証: `uv run python -m ms_data.tasks validate`（厳格: `validate-strict`、skills系: `validate-skills`）
