@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-07-20T12:41:45Z",
+  "report_date": "20260720",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "4364626e2acf214c583d3c3574788d96ca97a32a"
+  },
+  "github": {
+    "run_id": "29742450580",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "workflow_dispatch"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "6d1468b4ea502c88872348ee8194069a15f41f68a955a5e1650bb6d8b9dbbe06",
+      "size_bytes": 143557,
+      "record_count": 583
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "88d4f4989eeba9b47c5e741691e48cc127983b9e75e9622b3bcad19f1521b58d",
+      "size_bytes": 1973930,
+      "record_count": 1670
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "b025c40d210ee50634de72b467c55d38302327e32534110d4d4a6fec37403a61",
+      "size_bytes": 2580438,
+      "record_count": 1670
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "17decc7979cd64734c0efbfaf1972090fb76f2b28e7dfaed566bacf622fb7cc8",
+      "file_count": 1168,
+      "size_bytes": 179878876
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "b5c6496d7abd3b24e86e90af1f6879caac5c7c429063f2c449b2cdd42a9a2a35",
+      "size_bytes": 2581631,
+      "record_count": 1671
+    },
+    "diff_report": {
+      "path": "reports/2026/07/diff_msdata_20260720.md",
+      "sha256": "5d52b6315333f8278a99e3edb3932f79512b3c4eaaee321c216441b11841f00d",
+      "size_bytes": 1575
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260720-run-29742450580",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260720-run-29742450580",
+    "asset_name": "raw_snapshot_20260720_run29742450580.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260720-run-29742450580"
+  }
+}
