@@ -104,7 +104,7 @@ jobs:
         run: |
           uv run python -m ms_data.validation.validate_report_contract \
             --mode data-update \
-            --manifest reports_manifest.yml \
+            --manifest reports_manifest.json \
             --report-date "${REPORT_DATE}" \
             --source-run-id "${GITHUB_RUN_ID}" \
             --head-ref "${HEAD_REF}" \

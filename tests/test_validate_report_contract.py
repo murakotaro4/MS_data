@@ -49,7 +49,7 @@ def _manifest() -> dict:
 
 
 def test_data_update_mode_ok(tmp_path: Path) -> None:
-    manifest = tmp_path / "reports_manifest.yml"
+    manifest = tmp_path / "reports_manifest.json"
     _write_json(manifest, _manifest())
 
     rc = validate_report_contract.main(
@@ -80,7 +80,7 @@ def test_data_update_mode_ok(tmp_path: Path) -> None:
 
 
 def test_data_update_mode_release_tag_mismatch(tmp_path: Path) -> None:
-    manifest = tmp_path / "reports_manifest.yml"
+    manifest = tmp_path / "reports_manifest.json"
     _write_json(manifest, _manifest())
 
     rc = validate_report_contract.main(
@@ -139,7 +139,7 @@ def test_manifest_rejects_unknown_entry_type(tmp_path: Path) -> None:
             },
         ],
     }
-    manifest = tmp_path / "reports_manifest.yml"
+    manifest = tmp_path / "reports_manifest.json"
     _write_json(manifest, bad)
 
     rc = validate_report_contract.main(
@@ -156,7 +156,7 @@ def test_manifest_rejects_unknown_entry_type(tmp_path: Path) -> None:
 
 
 def test_ci_mode_rejects_unknown_report_file(tmp_path: Path) -> None:
-    manifest = tmp_path / "reports_manifest.yml"
+    manifest = tmp_path / "reports_manifest.json"
     _write_json(manifest, _manifest())
     reports_dir = tmp_path / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)

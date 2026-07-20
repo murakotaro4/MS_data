@@ -38,7 +38,7 @@ jobs:
       - name: Prune expired reports
         run: |
           uv run python -m ms_data.reporting.prune_reports \
-            --manifest reports_manifest.yml \
+            --manifest reports_manifest.json \
             ${{ steps.mode.outputs.apply }} \
             --step-summary "$GITHUB_STEP_SUMMARY"
 
@@ -58,7 +58,7 @@ jobs:
           commit-message: "chore: 期限切れレポートを整理（reports prune）"
           title: "chore: 期限切れレポートを整理（reports prune）"
           body: |
-            reports_manifest.yml の prune 設定（max_age_days / keep_min）に基づき、
+            reports_manifest.json の prune 設定（max_age_days / keep_min）に基づき、
             期限切れレポートを削除しました。
 
             - 削除一覧は本 PR の diff と Actions の Step Summary を参照

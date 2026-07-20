@@ -52,7 +52,7 @@ jobs:
       - uses: ./.github/actions/setup-uv-env
 
       - name: Validate reports contract allowlist
-        run: uv run python -m ms_data.validation.validate_report_contract --mode ci --manifest reports_manifest.yml --reports-dir reports
+        run: uv run python -m ms_data.validation.validate_report_contract --mode ci --manifest reports_manifest.json --reports-dir reports
 
       - name: Validate msData.json
         run: uv run python -m ms_data.tasks validate-strict

@@ -172,7 +172,7 @@ def _validate_ci(args: argparse.Namespace, manifest: dict[str, Any]) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--manifest", default="reports_manifest.yml")
+    ap.add_argument("--manifest", default="reports_manifest.json")
     ap.add_argument(
         "--mode",
         choices=("ci", "data-update", "post-merge", "auto-review"),
