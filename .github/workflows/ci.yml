@@ -39,11 +39,6 @@ jobs:
                   break
                 fi
                 case "$path" in
-                  # tests/ が fixture として直接参照するレポート。テスト側の参照を変えたらここも更新
-                  reports/diff_msdata_20260601.md|reports/rollback_guard_20260601.md|reports/official_overrides_audit_20260601.md)
-                    code=true
-                    break
-                    ;;
                   reports/*|msData.json|*.md) ;;
                   *) code=true; break ;;
                 esac
