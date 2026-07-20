@@ -39,6 +39,8 @@ jobs:
                   break
                 fi
                 case "$path" in
+                  # tests/ 配下は fixture 含めコード変更として扱う
+                  tests/*) code=true; break ;;
                   reports/*|msData.json|*.md) ;;
                   *) code=true; break ;;
                 esac
