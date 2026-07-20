@@ -17,7 +17,7 @@
     - `skills/`: スキルデータ生成（build_skills / build_param_skills / build_owners_flat / preview_params）
     - `gh/`: GitHub 連携（auto_review_gate / auto_review_merge / cleanup_auto_update_prs / post_merge_assets）
     - `notify/`: メール送信（send_gmail）
-    - `tasks.py`: 全ターゲットのディスパッチャ（Makefile / ワークフローの入口）
+    - `tasks.py`: 全ターゲットのディスパッチャ（ワークフロー・開発者の共通入口）
   - `tests/`: ユニットテスト
   - `schema/`: JSON Schema
   - `data/`: スキル定義・公式調整オーバーライド（SSOT）
@@ -25,7 +25,7 @@
 
 ## ビルド・テスト・開発コマンド（uv）
 - 環境作成: `uv venv` → `uv sync --dev`。実行は基本 `uv run <cmd>`。
-- 第一コマンド: `uv run python -m ms_data.tasks <target>`。`make <target>` は Linux/macOS 向けの薄いラッパー（Windows では ms_data.tasks を優先）。
+- 第一コマンド: `uv run python -m ms_data.tasks <target>`。
 - 主要ターゲット:
   - 品質チェック一括: `uv run python -m ms_data.tasks ci`
   - 検証: `validate` / 厳格: `validate-strict` / skills系: `validate-skills`
