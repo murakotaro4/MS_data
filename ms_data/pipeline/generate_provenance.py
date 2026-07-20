@@ -9,9 +9,9 @@ msData 更新時の生成元証跡（provenance）を JSON で出力する。
     --details-jsonl cache/details.jsonl \
     --details-json cache/details.json \
     --msdata msData.json \
-    --diff reports/diff_msdata_20260221.md \
+    --diff reports/2026/02/diff_msdata_20260221.md \
     --html-dir cache/html \
-    --out reports/provenance_20260221.json \
+    --out reports/2026/02/provenance_20260221.json \
     --ttl 7d --rate 1.0 --limit 0
 """
 from __future__ import annotations

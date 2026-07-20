@@ -2,7 +2,7 @@
 """
 skill_owners.json と msData.json を突合し、監査レポートを出力。
 
-出力: reports/skill_owners_audit_YYYYMMDD.md
+出力: reports/YYYY/MM/skill_owners_audit_YYYYMMDD.md
 
 チェック項目（初期版）
 - unknown_series: owners にあるが msData にシリーズが見つからない
@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from ms_data.core.ms_names import ms_name_to_series_level
+from ms_data.core.paths import reports_month_dir
 
 
 def ms_name_to_series(ms_name: str) -> str:
@@ -79,7 +80,7 @@ def main() -> int:
 
     # 出力
     today = dt.datetime.now().strftime("%Y%m%d")
-    out = args.out or f"reports/skill_owners_audit_{today}.md"
+    out = args.out or f"{reports_month_dir(today)}/skill_owners_audit_{today}.md"
     Path(out).parent.mkdir(parents=True, exist_ok=True)
     with open(out, "w", encoding="utf-8") as f:
         f.write(f"# skill owners audit ({today})\n\n")

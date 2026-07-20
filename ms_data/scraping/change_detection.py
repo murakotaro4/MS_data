@@ -33,7 +33,7 @@ def find_latest_provenance(
     latest_path: Path | None = None
     latest_data: dict[str, Any] | None = None
     latest_generated_at: datetime | None = None
-    for path in sorted(reports_dir.glob("provenance_*.json")):
+    for path in sorted(reports_dir.rglob("provenance_*.json")):
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError, ValueError):

@@ -357,6 +357,20 @@ def test_cmd_detect_changed_selects_recent_and_mismatched_records(tmp_path: Path
     assert meta["reason_counts"]["new_name"] == 1
 
 
+def test_find_latest_provenance_discovers_nested_year_month_layout(tmp_path: Path):
+    nested = tmp_path / "reports" / "2026" / "03"
+    nested.mkdir(parents=True)
+    _write_json(
+        nested / "provenance_20260305.json",
+        {"generated_at": "2026-03-05T14:47:11Z"},
+    )
+
+    path, data = sm.find_latest_provenance(tmp_path / "reports")
+
+    assert path == nested / "provenance_20260305.json"
+    assert data == {"generated_at": "2026-03-05T14:47:11Z"}
+
+
 def test_cmd_detect_changed_falls_back_when_previous_provenance_is_missing(
     tmp_path: Path,
 ):

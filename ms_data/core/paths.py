@@ -30,3 +30,11 @@ SKILL_OWNERS_FLAT_JSON = DATA_DIR / "skill_owners_flat.json"
 SKILLS_POLICY_JSON = DATA_DIR / "skills_policy.json"
 
 REPORTS_DIR = Path("reports")
+
+
+def reports_month_dir(report_date: str, base_dir: str = "reports") -> str:
+    """日付付きレポートの年月ディレクトリ（例: reports/2026/07）。
+
+    report_date は YYYYMMDD 前提。base_dir で REPORTS_DIR オーバーライドを維持する。
+    """
+    return f"{base_dir}/{report_date[:4]}/{report_date[4:6]}"

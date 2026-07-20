@@ -42,23 +42,30 @@ def _matches_any(path: str, patterns: list[str]) -> bool:
     return any(posix_path.match(pattern) for pattern in patterns)
 
 
+def _naming_format_kwargs(report_date: str, source_run_id: str = "") -> dict[str, str]:
+    kwargs = {
+        "report_date": report_date,
+        "report_year": report_date[:4],
+        "report_month": report_date[4:6],
+    }
+    if source_run_id:
+        kwargs["source_run_id"] = source_run_id
+    return kwargs
+
+
 def _expected_from_manifest(
     manifest: dict[str, Any], report_date: str, source_run_id: str
 ) -> dict[str, str]:
     naming = manifest["naming"]
+    date_kwargs = _naming_format_kwargs(report_date)
+    run_kwargs = _naming_format_kwargs(report_date, source_run_id)
     return {
-        "head_ref": naming["head_ref_pattern"].format(report_date=report_date),
-        "diff": naming["diff_pattern"].format(report_date=report_date),
-        "provenance": naming["provenance_pattern"].format(report_date=report_date),
-        "artifact": naming["artifact_pattern"].format(
-            report_date=report_date, source_run_id=source_run_id
-        ),
-        "snapshot": naming["snapshot_pattern"].format(
-            report_date=report_date, source_run_id=source_run_id
-        ),
-        "release_tag": naming["release_tag_pattern"].format(
-            report_date=report_date, source_run_id=source_run_id
-        ),
+        "head_ref": naming["head_ref_pattern"].format(**date_kwargs),
+        "diff": naming["diff_pattern"].format(**date_kwargs),
+        "provenance": naming["provenance_pattern"].format(**date_kwargs),
+        "artifact": naming["artifact_pattern"].format(**run_kwargs),
+        "snapshot": naming["snapshot_pattern"].format(**run_kwargs),
+        "release_tag": naming["release_tag_pattern"].format(**run_kwargs),
     }
 
 
@@ -138,7 +145,7 @@ def _validate_auto_review(args: argparse.Namespace, manifest: dict[str, Any]) ->
         _error("head_ref is required")
         return 1
     expected_head = manifest["naming"]["head_ref_pattern"].format(
-        report_date=args.report_date
+        **_naming_format_kwargs(args.report_date)
     )
     if args.head_ref != expected_head:
         _error(f"head_ref mismatch: expected={expected_head} actual={args.head_ref}")

@@ -47,8 +47,8 @@
 - 変更がない項目は記載しない
 
 ## 監査
-- `reports/label_audit_YYYYMMDD.md`: ページXXX件、normalized XX種、unknown=0 を確認。
-- `reports/index_ms_audit_YYYYMMDD.md`: index XXX件 / msData XXX件（PC版X件を除き差異なし、属性・コスト不一致0）。
+- `reports/YYYY/MM/label_audit_YYYYMMDD.md`: ページXXX件、normalized XX種、unknown=0 を確認。
+- `reports/YYYY/MM/index_ms_audit_YYYYMMDD.md`: index XXX件 / msData XXX件（PC版X件を除き差異なし、属性・コスト不一致0）。
 
 **記載ガイドライン:**
 - 監査結果を簡潔に記載する

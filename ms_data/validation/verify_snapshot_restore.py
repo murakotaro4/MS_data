@@ -13,6 +13,7 @@ from ms_data.validation import validate_msdata, validate_report_contract
 
 
 REPORT_DATE = "20260531"
+REPORT_YEAR_MONTH = f"{REPORT_DATE[:4]}/{REPORT_DATE[4:6]}"
 SOURCE_RUN_ID = "12345"
 
 
@@ -34,7 +35,7 @@ def create_sample_snapshot(root: Path, snapshot_path: Path) -> None:
     record = _load_sample_record(root / "msData.json")
     sample_dir = snapshot_path.parent / "sample_snapshot"
     cache_dir = sample_dir / "cache"
-    reports_dir = sample_dir / "reports"
+    reports_month_dir = sample_dir / "reports" / REPORT_DATE[:4] / REPORT_DATE[4:6]
     html_dir = cache_dir / "html"
 
     _write_json(
@@ -52,16 +53,16 @@ def create_sample_snapshot(root: Path, snapshot_path: Path) -> None:
     )
     _write_json(cache_dir / "details.json", [record])
     html_dir.mkdir(parents=True, exist_ok=True)
-    reports_dir.mkdir(parents=True, exist_ok=True)
+    reports_month_dir.mkdir(parents=True, exist_ok=True)
     (html_dir / "sample.html").write_text(
         "<html><body>sample</body></html>\n", encoding="utf-8"
     )
-    (reports_dir / f"diff_msdata_{REPORT_DATE}.md").write_text(
+    (reports_month_dir / f"diff_msdata_{REPORT_DATE}.md").write_text(
         "# sample diff\n\n- レコード数: 1 → 1 | +0 -0 ~0\n",
         encoding="utf-8",
     )
     _write_json(
-        reports_dir / f"provenance_{REPORT_DATE}.json",
+        reports_month_dir / f"provenance_{REPORT_DATE}.json",
         {
             "date": REPORT_DATE,
             "source_run_id": SOURCE_RUN_ID,
@@ -78,7 +79,7 @@ def create_sample_snapshot(root: Path, snapshot_path: Path) -> None:
         },
     )
     _write_json(
-        reports_dir / f"atwiki_quality_{REPORT_DATE}.json",
+        reports_month_dir / f"atwiki_quality_{REPORT_DATE}.json",
         {
             "schema_version": "1",
             "report_date": REPORT_DATE,
@@ -119,9 +120,9 @@ def create_sample_snapshot(root: Path, snapshot_path: Path) -> None:
             cache_dir / "index.json",
             cache_dir / "details.jsonl",
             cache_dir / "details.json",
-            reports_dir / f"diff_msdata_{REPORT_DATE}.md",
-            reports_dir / f"provenance_{REPORT_DATE}.json",
-            reports_dir / f"atwiki_quality_{REPORT_DATE}.json",
+            reports_month_dir / f"diff_msdata_{REPORT_DATE}.md",
+            reports_month_dir / f"provenance_{REPORT_DATE}.json",
+            reports_month_dir / f"atwiki_quality_{REPORT_DATE}.json",
         ):
             archive.add(path, arcname=path.relative_to(sample_dir).as_posix())
 
@@ -140,9 +141,9 @@ def verify(root: Path) -> None:
             "cache/index.json",
             "cache/details.jsonl",
             "cache/details.json",
-            f"reports/diff_msdata_{REPORT_DATE}.md",
-            f"reports/provenance_{REPORT_DATE}.json",
-            f"reports/atwiki_quality_{REPORT_DATE}.json",
+            f"reports/{REPORT_YEAR_MONTH}/diff_msdata_{REPORT_DATE}.md",
+            f"reports/{REPORT_YEAR_MONTH}/provenance_{REPORT_DATE}.json",
+            f"reports/{REPORT_YEAR_MONTH}/atwiki_quality_{REPORT_DATE}.json",
         }
         missing = required - set(restored)
         if missing:
@@ -164,9 +165,9 @@ def verify(root: Path) -> None:
                 "--head-ref",
                 f"data/auto-update-{REPORT_DATE}",
                 "--diff-path",
-                f"reports/diff_msdata_{REPORT_DATE}.md",
+                f"reports/{REPORT_YEAR_MONTH}/diff_msdata_{REPORT_DATE}.md",
                 "--provenance-path",
-                f"reports/provenance_{REPORT_DATE}.json",
+                f"reports/{REPORT_YEAR_MONTH}/provenance_{REPORT_DATE}.json",
                 "--artifact-name",
                 f"raw-snapshot-{REPORT_DATE}-run-{SOURCE_RUN_ID}",
                 "--snapshot-file",

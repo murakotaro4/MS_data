@@ -9,6 +9,7 @@ import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from ms_data.core.paths import reports_month_dir
 from ms_data.gh import outputs as gh_outputs
 
 
@@ -61,11 +62,14 @@ def resolve_assets(
         raise ValueError(f"head_ref から report_date を解決できません: {head_ref}")
     report_date = match.group(1)
     source_run_id = resolve_source_run_id(source_run_id_input, pr_body)
-    report_path = f"reports/diff_msdata_{report_date}.md"
-    provenance_path = f"reports/provenance_{report_date}.json"
-    rollback_guard_path = f"reports/rollback_guard_{report_date}.md"
-    official_overrides_audit_path = f"reports/official_overrides_audit_{report_date}.md"
-    atwiki_quality_path = f"reports/atwiki_quality_{report_date}.json"
+    month_dir = reports_month_dir(report_date)
+    report_path = f"{month_dir}/diff_msdata_{report_date}.md"
+    provenance_path = f"{month_dir}/provenance_{report_date}.json"
+    rollback_guard_path = f"{month_dir}/rollback_guard_{report_date}.md"
+    official_overrides_audit_path = (
+        f"{month_dir}/official_overrides_audit_{report_date}.md"
+    )
+    atwiki_quality_path = f"{month_dir}/atwiki_quality_{report_date}.json"
     artifact_name = f"raw-snapshot-{report_date}-run-{source_run_id}"
     snapshot_file = f"raw_snapshot_{report_date}_run{source_run_id}.tar.xz"
     release_tag = f"raw-snapshot-{report_date}-run-{source_run_id}"

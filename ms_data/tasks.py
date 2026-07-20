@@ -22,6 +22,7 @@ from ms_data.core.env import env_float as _env_float
 from ms_data.core.env import env_int as _env_int
 from ms_data.core.env import env_str as _env_str
 from ms_data.core.json_io import load_json as _load_json_file
+from ms_data.core.paths import reports_month_dir
 
 
 INDEX_URL = "https://w.atwiki.jp/battle-operation2/pages/377.html"
@@ -91,7 +92,11 @@ def _report_date() -> str:
 
 
 def _provenance_out() -> str:
-    return _env("PROVENANCE_OUT", f"reports/provenance_{_report_date()}.json")
+    report_date = _report_date()
+    return _env(
+        "PROVENANCE_OUT",
+        f"{reports_month_dir(report_date)}/provenance_{report_date}.json",
+    )
 
 
 def _raw_snapshot_file() -> str:
@@ -528,7 +533,10 @@ def task_provenance() -> int:
         "--msdata",
         _env("MSDATA", DEFAULT_MSDATA),
         "--diff",
-        _env("DIFF_OUT", f"reports/diff_msdata_{report_date}.md"),
+        _env(
+            "DIFF_OUT",
+            f"{reports_month_dir(report_date)}/diff_msdata_{report_date}.md",
+        ),
         "--html-dir",
         _env("HTML_DIR", DEFAULT_HTML_DIR),
         "--out",
@@ -562,7 +570,12 @@ def task_snapshot() -> int:
         Path(_env("DETAILS_JSON", DEFAULT_DETAILS_JSON)),
         Path(_provenance_out()),
     ]
-    diff_path = Path(_env("DIFF_OUT", f"reports/diff_msdata_{report_date}.md"))
+    diff_path = Path(
+        _env(
+            "DIFF_OUT",
+            f"{reports_month_dir(report_date)}/diff_msdata_{report_date}.md",
+        )
+    )
     if diff_path.exists():
         files.append(diff_path)
 
@@ -618,7 +631,10 @@ def task_atwiki_quality_report() -> int:
         "--current-msdata",
         _env("MSDATA", DEFAULT_MSDATA),
         "--out",
-        _env("ATWIKI_QUALITY_OUT", f"reports/atwiki_quality_{report_date}.json"),
+        _env(
+            "ATWIKI_QUALITY_OUT",
+            f"{reports_month_dir(report_date)}/atwiki_quality_{report_date}.json",
+        ),
     )
 
 
@@ -634,7 +650,10 @@ def task_audit_labels() -> int:
         "--in",
         _env("LABELS_OUT", DEFAULT_LABELS_OUT),
         "--out",
-        _env("AUDIT_LABELS_OUT", f"reports/label_audit_{report_date}.md"),
+        _env(
+            "AUDIT_LABELS_OUT",
+            f"{reports_month_dir(report_date)}/label_audit_{report_date}.md",
+        ),
     )
 
 
@@ -647,7 +666,10 @@ def task_audit_index() -> int:
         "--ms",
         _env("MSDATA", DEFAULT_MSDATA),
         "--out",
-        _env("AUDIT_INDEX_OUT", f"reports/index_ms_audit_{report_date}.md"),
+        _env(
+            "AUDIT_INDEX_OUT",
+            f"{reports_month_dir(report_date)}/index_ms_audit_{report_date}.md",
+        ),
     )
 
 
@@ -661,7 +683,10 @@ def task_rollback_guard() -> int:
         "--official-overrides-dir",
         _env("OFFICIAL_OVERRIDES_DIR", DEFAULT_OVERRIDES_DIR),
         "--out",
-        _env("ROLLBACK_GUARD_OUT", f"reports/rollback_guard_{report_date}.md"),
+        _env(
+            "ROLLBACK_GUARD_OUT",
+            f"{reports_month_dir(report_date)}/rollback_guard_{report_date}.md",
+        ),
     ]
     if _env_flag("FAIL_ON_PROTECTED_ROLLBACK"):
         args.append("--fail-on-protected-rollback")
@@ -678,7 +703,7 @@ def task_audit_official_overrides() -> int:
         "--out",
         _env(
             "OFFICIAL_OVERRIDES_AUDIT_OUT",
-            f"reports/official_overrides_audit_{report_date}.md",
+            f"{reports_month_dir(report_date)}/official_overrides_audit_{report_date}.md",
         ),
     ]
     raw = _env_str("RAW")
@@ -709,7 +734,7 @@ def task_audit_field_completeness() -> int:
             "data/field_completeness_allowlist.json",
         ),
         "--out",
-        f"{reports_dir}/field_completeness_{report_date}.md",
+        f"{reports_month_dir(report_date, base_dir=reports_dir)}/field_completeness_{report_date}.md",
     ]
     today = _env_str("TODAY")
     if today:

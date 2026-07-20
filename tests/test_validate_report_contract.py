@@ -174,3 +174,41 @@ def test_ci_mode_rejects_unknown_report_file(tmp_path: Path) -> None:
         ]
     )
     assert rc == 1
+
+
+def test_data_update_mode_year_month_patterns(tmp_path: Path) -> None:
+    manifest_data = _manifest()
+    manifest_data["naming"]["diff_pattern"] = (
+        "reports/{report_year}/{report_month}/diff_msdata_{report_date}.md"
+    )
+    manifest_data["naming"]["provenance_pattern"] = (
+        "reports/{report_year}/{report_month}/provenance_{report_date}.json"
+    )
+    manifest = tmp_path / "reports_manifest.json"
+    _write_json(manifest, manifest_data)
+
+    rc = validate_report_contract.main(
+        [
+            "--mode",
+            "data-update",
+            "--manifest",
+            str(manifest),
+            "--report-date",
+            "20260320",
+            "--source-run-id",
+            "12345",
+            "--head-ref",
+            "data/auto-update-20260320",
+            "--diff-path",
+            "reports/2026/03/diff_msdata_20260320.md",
+            "--provenance-path",
+            "reports/2026/03/provenance_20260320.json",
+            "--artifact-name",
+            "raw-snapshot-20260320-run-12345",
+            "--snapshot-file",
+            "raw_snapshot_20260320_run12345.tar.xz",
+            "--release-tag",
+            "raw-snapshot-20260320-run-12345",
+        ]
+    )
+    assert rc == 0

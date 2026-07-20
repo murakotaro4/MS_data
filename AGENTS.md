@@ -40,7 +40,7 @@
 - SSOT: index（`cache/index.json`）の `name` を真実のソースとし、詳細抽出の `MS名` も index 表記で固定（LVは `_LVn` を付与）。読み込み・マージ時にも index 準拠へ正規化します。
 - キャッシュ: `ms_data/net/cache_http.py`（TTL・If-None-Match/If-Modified-Since 対応）。保存先 `cache/html/<slug>.html` + `*.meta.json`。注意: atwiki は ETag/Last-Modified を返さない（2026-06 実測）ため 304 は期待できず、負荷軽減は取得対象の絞り込み（`detect-changed` / `REVALIDATE`）で行う。
 - レート制限: 既定 2.0 req/sec。atwiki への負荷を考慮し過度な緩和は避ける。待機は実際のネットワーク取得時のみ（キャッシュヒットは待機しない）。2回目以降は `NO_NET=1` でキャッシュのみ利用可。
-- 取得計測: 実行ごとに `cache/fetch_stats.json` へフェーズ別（index/details）のリクエスト数・200/304件数・失敗数・受信バイト数・所要秒数を記録。`reports/atwiki_quality_*.json` の `fetch` セクションに転記され、負荷削減の検証に使う。`body_bytes` は Content-Encoding 展開後のボディ長（実転送量は圧縮分小さい。実行間の相対比較には影響なし）。index フェーズ書き込み時に前回実行分をリセットする。
+- 取得計測: 実行ごとに `cache/fetch_stats.json` へフェーズ別（index/details）のリクエスト数・200/304件数・失敗数・受信バイト数・所要秒数を記録。`reports/YYYY/MM/atwiki_quality_YYYYMMDD.json` の `fetch` セクションに転記され、負荷削減の検証に使う。`body_bytes` は Content-Encoding 展開後のボディ長（実転送量は圧縮分小さい。実行間の相対比較には影響なし）。index フェーズ書き込み時に前回実行分をリセットする。
 - データ構造: 配列（各要素=MSの1レベル）。主キー相当は `MS名`（例: `XXX_LV1`）。
 - 必須項目: `MS名`, `属性`（汎用/強襲/支援）, `コスト`, `HP`, `スピード`, `スラスター`, `高速移動`, `射撃補正`, `格闘補正`, `耐ビーム補正`, `耐実弾補正`, `耐格闘補正`, `近/中/遠スロット`。旋回は anyOf（`旋回_地上_通常時` または `旋回_宇宙_通常時`）で宇宙専用機を許容。
 - 主な抽出・正規化ルール:
@@ -60,18 +60,18 @@
 - レポート整理: `reports prune` が毎月1日 18:00 JST に実行され、`reports_manifest.json` の `prune`（max_age_days / keep_min）に基づき期限切れレポートの削除 PR を作成します。この PR は自動マージ対象外のため人間がレビューしてマージします。
 - PRラベル: 自動更新 PR には `data-update` / `rollback-guard` / `official-overrides` / `atwiki-quality` を付与。
 - reports 運用SSOT: 命名規約・分類・保持方針は `reports_manifest.json` が正。契約検証は `uv run python -m ms_data.validation.validate_report_contract`、生成物検証は `uv run python -m ms_data.tasks validate-generated-reports`。
-- 手動更新レポート: 手動でデータ更新した場合は `reports/msdata_update_YYYYMMDD.md` を `reports/msdata_update_template.md` に沿って作成（新規追加機体は主要パラメータを網羅、既存更新は変更前後の値を明記）。
+- 手動更新レポート: 手動でデータ更新した場合は `reports/YYYY/MM/msdata_update_YYYYMMDD.md` を `reports/msdata_update_template.md` に沿って作成（新規追加機体は主要パラメータを網羅、既存更新は変更前後の値を明記）。
 - 失敗時の挙動: Codex が応答しない、または指摘が 1 件以上ある場合は自動マージせず PR を残して手動対応。
 - Codexレビュー待ち: 既定 3 回まで試行。調整は repository variables の `CODEX_REVIEW_MAX_ATTEMPTS` / `CODEX_REVIEW_ATTEMPT_TIMEOUT_SECONDS` / `CODEX_REVIEW_POLL_SECONDS` / `CODEX_REVIEW_SETTLE_SECONDS`。
-- 通知: マージ後に `post merge notify` が Release アセット作成とメール送信を行います。本文は `reports/diff_msdata_YYYYMMDD.md` から生成、添付は `msData.json`。差分ゼロの定期実行時は `data update` から「差分なし」報告メールを送信。idempotency キーは `source_run_id + head_ref`。
+- 通知: マージ後に `post merge notify` が Release アセット作成とメール送信を行います。本文は `reports/YYYY/MM/diff_msdata_YYYYMMDD.md` から生成、添付は `msData.json`。差分ゼロの定期実行時は `data update` から「差分なし」報告メールを送信。idempotency キーは `source_run_id + head_ref`。
 - メール秘匿運用（重要）: `GMAIL_ADDRESS` / `GMAIL_APP_PASSWORD` / `GMAIL_TO` は必ず GitHub **Secrets** 経由で渡します（public リポジトリではログが公開されるため、`vars.` への変更や `echo` でのデバッグ出力は禁止。Secrets はログで自動マスクされます）。`GMAIL_TO` はカンマ区切りで複数宛先可。値の参照は不可のため変更時は最終文字列で上書き。
-- 生成元追跡: 実行ごとに `reports/provenance_YYYYMMDD.json`（index/details/html のハッシュ・件数・source_run_id）を生成。
-- 巻き戻り対策: `reports/rollback_guard_YYYYMMDD.md` と `reports/official_overrides_audit_YYYYMMDD.md` を生成。protected rollback は自動更新を失敗させます。
+- 生成元追跡: 実行ごとに `reports/YYYY/MM/provenance_YYYYMMDD.json`（index/details/html のハッシュ・件数・source_run_id）を生成。
+- 巻き戻り対策: `reports/YYYY/MM/rollback_guard_YYYYMMDD.md` と `reports/YYYY/MM/official_overrides_audit_YYYYMMDD.md` を生成。protected rollback は自動更新を失敗させます。
 - 生データアーカイブ: 実行ごとに `raw_snapshot_*.tar.xz` を artifact（90日）へ、マージ後に Release tag `raw-snapshot-YYYYMMDD-run-<run_id>` へ恒久保存。
 - 復元手順: 対象コミットの provenance から `release.tag` を取得し、`uv run python -m ms_data.tasks restore-snapshot SNAPSHOT=... OUT_DIR=restore_tmp` で `cache/` と `reports/` を再構成（ファイルが HEAD から prune 済みでも `git log -- <path>` + `git show` で provenance 自体を辿れます）。復元CI: `verify-snapshot-restore`。
 - official_overrides 期限管理: 各 entry に `review_after` / `remove_after` を設定。期限到達時は `data update` が Step Summary に件数を出し、protected rollback 0 件なら Issue `official_overrides 期限確認` を作成/追記。スキーマは `schema/official_overrides.schema.json`（`MS名` / `values` / `stale_values` 必須）。
 - official_overrides 期限確認 Issue の対応手順（大規模調整のたびに繰り返す）: 監査レポートの状態別に、`upstream_current`（atwiki 反映済み）と `source_changed`（stale 不一致で不発化）は entry を撤去、`protected_by_override`（未反映）は存続させ `review_after` を延長。全 entry 撤去後はファイルごと削除する（ディレクトリは `.gitkeep` で維持。空でも `validate-official-overrides-schema` は OK）。例: Issue #113 → PR #145。
-- atwiki取得品質: `reports/atwiki_quality_YYYYMMDD.json` に HTTP 状態・304件数・失敗推定・レコード数・差分件数を記録。しきい値超過は warnings として PR 本文・Step Summary に警告（`ATWIKI_QUALITY_*` 変数で調整）。
+- atwiki取得品質: `reports/YYYY/MM/atwiki_quality_YYYYMMDD.json` に HTTP 状態・304件数・失敗推定・レコード数・差分件数を記録。しきい値超過は warnings として PR 本文・Step Summary に警告（`ATWIKI_QUALITY_*` 変数で調整）。
 - CI runner: Windows は `windows-2025-vs2026` を明示使用。`windows-latest` へ戻す場合は GitHub の runner image 移行状況を確認。
 - 互換期間: レポート再編時は旧パスを最低 1 リリース周期維持し、参照 consumer が 0 かつ互換期間経過後に撤去。
 
