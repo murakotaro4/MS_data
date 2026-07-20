@@ -241,10 +241,8 @@
       "id": "manual_notes",
       "type": "manual",
       "path_patterns": [
-        "reports/actions_timing_comparison_*.md",
         "reports/README.md",
-        "reports/index.md",
-        "reports/reports_inventory_*.md"
+        "reports/index.md"
       ],
       "producer": [
         "human"
