@@ -231,13 +231,13 @@ JOIN の目安:
 2. 同レコードの `skill` / `skill_level` で `skills_params` の定義を引く
 3. `effects`（`op: add|mul` 等）を恒常値へ適用
 
-合成プレビュー（`msData` には埋め込まない）:
+効果の集約プレビュー（`msData` には埋め込まない。元ステータスへの適用はアプリ側で行う）:
 
 ```bash
 uv run python -m ms_data.tasks preview-params
 ```
 
-出力先: `derived/ms_params_preview.json`
+出力先: `derived/ms_params_preview.json`（機体ごとの所持スキルと `aggregated_effects` のみ。合成済みステータスは含まない）
 
 ## 8. 注意事項
 
