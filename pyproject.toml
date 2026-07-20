@@ -3,6 +3,7 @@ name = "ms-data-repo"
 version = "0.1.0"
 description = "Data management for msData.json with Python tooling"
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
   "httpx~=0.27",
