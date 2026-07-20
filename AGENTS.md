@@ -7,20 +7,20 @@
 - 目的: 本リポジトリは `msData.json`（バトオペ2の機体ステータス）を管理し、atwiki からの取得・正規化・検証・自動更新を行います。
 - 構成:
   - `ms_data/`: Python パッケージ本体
-    - `core/`: 共通ユーティリティ（json_io / paths / ms_names / records / env / labels）
+    - `core/`: 共通ユーティリティ（json_io / paths / ms_names / records / env / labels / dates）
     - `net/`: HTTP クライアントとキャッシュ（client / cache_http）
-    - `scraping/`: atwiki 取得（scrape_msdata / extract_skills）
-    - `pipeline/`: 取り込み・正規化（update_msdata / jsonl_to_json / generate_provenance / restore_snapshot）
+    - `scraping/`: atwiki 取得（scrape_msdata(facade・CLI) / index_page(一覧解析) / detail_page(詳細解析) / fullst(強化リスト) / text_values(値パース) / change_detection(差分検出) / fetch_state(取得状態) / extract_skills(facade) / skills_html(スキル HTML 解析) / skills_cli(スキル CLI) / skill_owners(所持抽出)）
+    - `pipeline/`: 取り込み・正規化（update_msdata / jsonl_to_json / generate_provenance / restore_snapshot / official_overrides）
     - `validation/`: スキーマ・契約検証（validate_* / verify_snapshot_restore）
     - `audit/`: 監査・巻き戻り検出（audit_* / detect_msdata_rollbacks）
-    - `reporting/`: レポート生成・整理（report_msdata_diff / build_atwiki_quality_report / build_update_mail_body / prune_reports）
+    - `reporting/`: レポート生成・整理（report_msdata_diff / msdata_diff_model / rendering / build_atwiki_quality_report / build_update_mail_body / prune_reports）
     - `skills/`: スキルデータ生成（build_skills / build_param_skills / build_owners_flat / preview_params）
-    - `gh/`: GitHub 連携（auto_review_gate / auto_review_merge / cleanup_auto_update_prs / post_merge_assets）
+    - `gh/`: GitHub 連携（auto_review_gate / auto_review_merge / cleanup_auto_update_prs / post_merge_assets / notify_failure / gh_json / outputs）
     - `notify/`: メール送信（send_gmail）
     - `tasks.py`: 全ターゲットのディスパッチャ（ワークフロー・開発者の共通入口）
   - `tests/`: ユニットテスト
-  - `schema/`: JSON Schema
-  - `data/`: スキル定義・公式調整オーバーライド（SSOT）
+  - `schema/`: JSON Schema（対応表は `schema/README.md`）
+  - `data/`: スキル定義・公式調整オーバーライド（SSOT）（役割は `data/README.md`）
   - `reports/`: 生成レポート（保持方針は `reports_manifest.json` が SSOT）
 
 ## ビルド・テスト・開発コマンド（uv）
@@ -72,8 +72,11 @@
 - official_overrides 期限管理: 各 entry に `review_after` / `remove_after` を設定。期限到達時は `data update` が Step Summary に件数を出し、protected rollback 0 件なら Issue `official_overrides 期限確認` を作成/追記。スキーマは `schema/official_overrides.schema.json`（`MS名` / `values` / `stale_values` 必須）。
 - official_overrides 期限確認 Issue の対応手順（大規模調整のたびに繰り返す）: 監査レポートの状態別に、`upstream_current`（atwiki 反映済み）と `source_changed`（stale 不一致で不発化）は entry を撤去、`protected_by_override`（未反映）は存続させ `review_after` を延長。全 entry 撤去後はファイルごと削除する（ディレクトリは `.gitkeep` で維持。空でも `validate-official-overrides-schema` は OK）。例: Issue #113 → PR #145。
 - atwiki取得品質: `reports/YYYY/MM/atwiki_quality_YYYYMMDD.json` に HTTP 状態・304件数・失敗推定・レコード数・差分件数を記録。しきい値超過は warnings として PR 本文・Step Summary に警告（`ATWIKI_QUALITY_*` 変数で調整）。
+- notify failure: `workflow_run` で 5 ワークフロー（`data update` / `auto review merge` / `post merge notify` / `cleanup auto update prs` / `reports prune`）の `failure` / `timed_out` / `startup_failure` / `action_required` を監視し、GMAIL Secrets によるメール送信と `pipeline-failure` ラベル付き Issue 起票を行う（`ms_data/gh/notify_failure.py`、stdlib のみで動作、重複 Issue の自己修復あり）。
+- ci の changes ジョブ: PR がデータ・レポート・md のみの変更なら checks（ubuntu/windows マトリクス）をスキップ。`tests/` 配下と削除は `code=true`。changes ジョブ自身が report-contract / msData / generated-reports の軽量検証を実施。actionlint は checks ジョブ（ubuntu）で実行。
+- `.github/actions/setup-uv-env`: Python 3.11 + uv + `uv sync --dev` の composite action。`ci` / `data update` / `auto review merge` / `post merge notify` / `reports prune` で共用（Python バージョン変更はここが主変更点）。`notify failure` と `cleanup auto update prs` は uv 不要のため未使用。
 - CI runner: Windows は `windows-2025-vs2026` を明示使用。`windows-latest` へ戻す場合は GitHub の runner image 移行状況を確認。
-- 互換期間: レポート再編時は旧パスを最低 1 リリース周期維持し、参照 consumer が 0 かつ互換期間経過後に撤去。
+- 互換期間: レポート再編時の旧パス互換は原則検討するが、v3 の年月階層化（`reports/YYYY/MM/`）は破壊的移行として実施済み（`legacy_path_support: false`、旧パスへの転送なし）。manifest に併記した旧フラットパターンは過渡的安全弁で、新パスでの 1 運用周期の安定稼働確認後に撤去する。
 
 ## スキルデータ（params / owners）
 - 方針: msData.json は恒常値のみ。スキルは別ファイル管理（アプリ側で合成）。定義（`data/skills_params.json`）と所有（`data/skill_owners_flat.json`）を分離し SSOT 化。
