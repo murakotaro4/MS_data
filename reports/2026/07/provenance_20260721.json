@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-07-21T11:05:15Z",
+  "report_date": "20260721",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "4364626e2acf214c583d3c3574788d96ca97a32a"
+  },
+  "github": {
+    "run_id": "29824704146",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "2a85ab50cbf99ebe9a74b1fcf04c0899e6f10538065ce14358120386216aa107",
+      "size_bytes": 143568,
+      "record_count": 583
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "9e95441d2fad41b252bbf29820515e5e8f01fe8013c09c8a4eb58c106d1d2d29",
+      "size_bytes": 8248,
+      "record_count": 7
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "938e3fcb9d90979a7f331d3d372415f370accc82b4ec9ceff931ccf22d2162c9",
+      "size_bytes": 10789,
+      "record_count": 7
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "45be52c738ff2e8615fd0db7f512f7fe0236ce59067c0720f478829cb17ddc74",
+      "file_count": 10,
+      "size_bytes": 2099610
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "b5c6496d7abd3b24e86e90af1f6879caac5c7c429063f2c449b2cdd42a9a2a35",
+      "size_bytes": 2581631,
+      "record_count": 1671
+    },
+    "diff_report": {
+      "path": "reports/2026/07/diff_msdata_20260721.md",
+      "sha256": "db464d6b1f827af9e577bf745cd17bc3b186ee71c7df4602a0496e335f210308",
+      "size_bytes": 1575
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260721-run-29824704146",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260721-run-29824704146",
+    "asset_name": "raw_snapshot_20260721_run29824704146.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260721-run-29824704146"
+  }
+}
