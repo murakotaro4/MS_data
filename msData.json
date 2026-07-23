@@ -41322,32 +41322,32 @@
       {
         "name": "フレーム補強",
         "level": 1,
-        "points": null
+        "points": 540
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 1090
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 1450
       },
       {
         "name": "AD-FCS",
         "level": 1,
-        "points": null
+        "points": 1820
       },
       {
         "name": "フレーム補強",
         "level": 3,
-        "points": null
+        "points": 3640
       },
       {
         "name": "AD-FCS",
         "level": 3,
-        "points": null
+        "points": 5460
       }
     ]
   },
@@ -53725,33 +53725,33 @@
     "fullst": [
       {
         "name": "フレーム補強",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 610
       },
       {
         "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 1220
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 1630
       },
       {
         "name": "AD-FCS",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 2040
       },
       {
         "name": "フレーム補強",
         "level": 3,
-        "points": null
+        "points": 4080
       },
       {
         "name": "AD-FCS",
         "level": 3,
-        "points": null
+        "points": 6120
       }
     ]
   },
