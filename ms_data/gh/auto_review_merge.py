@@ -133,21 +133,51 @@ def fetch_commit_committer_date(client: GitHubClient, head_sha: str) -> str:
     return extract_commit_committer_date(payload)
 
 
+def latest_force_push_created_at(timeline: list[dict[str, Any]]) -> str:
+    """timeline の ``head_ref_force_pushed`` イベントから最新 created_at を返す。"""
+    dates = [
+        str(item.get("created_at") or "")
+        for item in timeline
+        if item.get("event") == "head_ref_force_pushed"
+        and isinstance(item.get("created_at"), str)
+        and str(item.get("created_at") or "").strip()
+    ]
+    if not dates:
+        return ""
+    return later_iso8601(*dates)
+
+
 def resolve_review_since(
     *,
     client: "GitHubClient",
+    pr_number: str,
     pr_created_at: str,
     head_sha: str,
 ) -> str:
-    """レビュー since を PR created_at と HEAD committer 日時の遅い方にする。
+    """レビュー since を PR / HEAD committer / 最終 force-push の最遅にする。
 
     force-push 後に旧 HEAD 宛の no-issue コメントが新 HEAD の合格シグナルに
     ならないよう、HEAD より古い issue comment を除外するため。
+    committer 日時は author 制御下のため、timeline の force-push 時刻も候補に含める。
+    timeline API の失敗は握りつぶさず伝播させる。
     """
     commit_date = ""
     if head_sha:
         commit_date = fetch_commit_committer_date(client, head_sha)
-    return later_iso8601(pr_created_at, commit_date)
+    force_push_at = ""
+    if pr_number:
+        timeline = client.api_json(
+            f"repos/{client.repo}/issues/{pr_number}/timeline",
+            paginate=True,
+            headers=["Accept: application/vnd.github+json"],
+        )
+        if not isinstance(timeline, list):
+            raise RuntimeError(
+                f"PR #{pr_number}: timeline API が list 以外を返しました "
+                f"({type(timeline).__name__})."
+            )
+        force_push_at = latest_force_push_created_at(timeline)
+    return later_iso8601(pr_created_at, commit_date, force_push_at)
 
 
 def extract_codex_findings(
@@ -307,8 +337,8 @@ def select_resume_candidates(
 
     - open / github-actions[bot] / ``data/auto-update-*`` / base=main / 同一 repo
     - stop マーカーは github-actions[bot] 投稿のみ受理
-    - stop マーカー reason が ``codex_no_response`` / ``codex_disconnected``
-    - stop マーカーの head_sha が現在の PR HEAD と一致
+    - 同一 head_sha の停止マーカーのうち created_at が最新の 1 件で判定
+    - 最新マーカー reason が ``codex_no_response`` / ``codex_disconnected`` のみ候補
     - report_date 降順で最大 ``max_candidates`` 件
     """
     eligible: list[dict[str, Any]] = []
@@ -327,20 +357,20 @@ def select_resume_candidates(
         if not pr_number or not head_sha:
             continue
         comments = comments_by_pr.get(pr_number, [])
-        matched: dict[str, str] | None = None
+        matching_stops: list[tuple[str, dict[str, str]]] = []
         for comment in comments:
             if _login(comment) != GITHUB_ACTIONS_BOT:
                 continue
             parsed = parse_stop_marker(str(comment.get("body") or ""))
             if parsed is None:
                 continue
-            if parsed["reason"] not in RESUME_STOP_REASONS:
-                continue
             if parsed["head_sha"] != head_sha:
                 continue
-            matched = parsed
-            break
-        if matched is None:
+            matching_stops.append((str(comment.get("created_at") or ""), parsed))
+        if not matching_stops:
+            continue
+        matched = sorted(matching_stops, key=lambda item: item[0])[-1][1]
+        if matched["reason"] not in RESUME_STOP_REASONS:
             continue
         report_date = report_date_from_head_ref(head_ref)
         if not report_date:
@@ -400,6 +430,13 @@ class GitHubClient:
 
     def issue_comment(self, comment_id: str) -> dict[str, Any]:
         return self.api_json(f"repos/{self.repo}/issues/comments/{comment_id}")
+
+    def issue_timeline(self, pr_number: str) -> list[dict[str, Any]]:
+        return self.api_json(
+            f"repos/{self.repo}/issues/{pr_number}/timeline",
+            paginate=True,
+            headers=["Accept: application/vnd.github+json"],
+        )
 
 
 def _run_gh_with_token(args: list[str], token: str) -> str:
@@ -560,7 +597,7 @@ def cmd_resolve_target_pr(args: argparse.Namespace) -> int:
 def cmd_establish_baseline(args: argparse.Namespace) -> int:
     """レビュー since baseline を Outputs に書き出す（コメントは投稿しない）。
 
-    PR created_at と現 HEAD commit の committer 日時の遅い方を採用する。
+    PR created_at / HEAD committer 日時 / 最終 force-push 時刻の最遅を採用する。
     HEAD より古い issue comment（force-push 前の旧 no-issue など）を除外するため。
     """
     client = GitHubClient(args.repo)
@@ -569,6 +606,7 @@ def cmd_establish_baseline(args: argparse.Namespace) -> int:
     head_sha = _head_sha(pr) if isinstance(pr, dict) else ""
     baseline = resolve_review_since(
         client=client,
+        pr_number=args.pr_number,
         pr_created_at=pr_created_at,
         head_sha=head_sha,
     )
@@ -580,7 +618,7 @@ def cmd_establish_baseline(args: argparse.Namespace) -> int:
         f"Baseline established: baseline_created_at={baseline} "
         f"(PR #{args.pr_number}, pr_created_at={pr_created_at}, "
         f"head_sha={head_sha or '-'}; "
-        "HEAD より古いコメントを除外するため committer 日時と比較)"
+        "HEAD より古いコメントを除外するため committer / force-push 日時と比較)"
     )
     return 0
 
@@ -1210,6 +1248,7 @@ def cmd_resume(args: argparse.Namespace) -> int:
         report_date = candidate["report_date"]
         since = resolve_review_since(
             client=client,
+            pr_number=pr_number,
             pr_created_at=candidate["created_at"],
             head_sha=head_sha,
         )

@@ -12,6 +12,7 @@ from ms_data.gh.auto_review_merge import (
     find_latest_bot_comment,
     jst_report_date,
     later_iso8601,
+    latest_force_push_created_at,
     recovered_marker,
     resolve_source_run_id,
     resolve_target_pr,
@@ -308,10 +309,11 @@ def _stop_comment(
     run_id: str = "99",
     *,
     login: str = "github-actions[bot]",
+    created_at: str = "2026-05-31T12:00:00Z",
 ) -> dict:
     return {
         "id": 1,
-        "created_at": "2026-05-31T12:00:00Z",
+        "created_at": created_at,
         "user": {"login": login},
         "body": f"stopped\n\n{stop_marker(reason, run_id, head_sha)}",
     }
@@ -367,6 +369,50 @@ def test_select_resume_candidates_rejects_third_party_stop_marker():
     )
 
     assert [item["pr_number"] for item in selected] == ["21"]
+
+
+def test_select_resume_candidates_uses_latest_stop_marker_only():
+    pulls = [
+        _auto_update_pr(number=30, report_date="20260531", head_sha="sha30"),
+        _auto_update_pr(number=31, report_date="20260601", head_sha="sha31"),
+    ]
+    comments_by_pr = {
+        "30": [
+            _stop_comment(
+                "codex_no_response",
+                "sha30",
+                created_at="2026-05-31T10:00:00Z",
+            ),
+            _stop_comment(
+                "codex_findings",
+                "sha30",
+                created_at="2026-05-31T12:00:00Z",
+            ),
+        ],
+        "31": [
+            _stop_comment(
+                "codex_findings",
+                "sha31",
+                created_at="2026-06-01T09:00:00Z",
+            ),
+            _stop_comment(
+                "codex_disconnected",
+                "sha31",
+                created_at="2026-06-01T11:00:00Z",
+            ),
+        ],
+    }
+
+    selected = select_resume_candidates(
+        pulls=pulls,
+        comments_by_pr=comments_by_pr,
+        repo="owner/repo",
+        max_candidates=5,
+    )
+
+    # 30: 最新が findings → 除外 / 31: 最新が disconnected → 採用
+    assert [item["pr_number"] for item in selected] == ["31"]
+    assert selected[0]["stop_reason"] == "codex_disconnected"
 
 
 def test_select_resume_candidates_orders_desc_and_respects_limit():
@@ -434,3 +480,23 @@ def test_later_iso8601_picks_newer_timestamp():
         == "2026-05-31T15:00:00Z"
     )
     assert later_iso8601("2026-05-31T09:10:00Z", "") == "2026-05-31T09:10:00Z"
+
+
+def test_latest_force_push_created_at_picks_newest_event():
+    assert (
+        latest_force_push_created_at(
+            [
+                {"event": "committed", "created_at": "2026-05-31T18:00:00Z"},
+                {
+                    "event": "head_ref_force_pushed",
+                    "created_at": "2026-05-31T12:00:00Z",
+                },
+                {
+                    "event": "head_ref_force_pushed",
+                    "created_at": "2026-05-31T16:00:00Z",
+                },
+            ]
+        )
+        == "2026-05-31T16:00:00Z"
+    )
+    assert latest_force_push_created_at([]) == ""

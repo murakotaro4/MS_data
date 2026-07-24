@@ -386,6 +386,48 @@ def test_cmd_establish_baseline_uses_commit_date_after_force_push(
     assert read_github_output(out)["baseline_created_at"] == commit_date
 
 
+def test_cmd_establish_baseline_uses_latest_force_push_event(
+    fake_gh, read_github_output, tmp_path
+):
+    force_push_at = "2026-05-31T18:00:00Z"
+    fake_gh.responses["/pulls/97"] = {
+        "number": 97,
+        "created_at": BASELINE,
+        "head": {"sha": HEAD_SHA, "ref": "data/auto-update-20260531"},
+    }
+    # 古い committer 日時を force-push しても、timeline の最終 force-push が勝つ
+    fake_gh.responses[f"/commits/{HEAD_SHA}"] = {
+        "commit": {"committer": {"date": "2026-05-30T01:00:00Z"}}
+    }
+    fake_gh.responses["/issues/97/timeline"] = [
+        {"event": "committed", "created_at": "2026-05-31T17:00:00Z"},
+        {
+            "event": "head_ref_force_pushed",
+            "created_at": "2026-05-31T12:00:00Z",
+        },
+        {
+            "event": "head_ref_force_pushed",
+            "created_at": force_push_at,
+        },
+    ]
+    out = tmp_path / "out.txt"
+
+    rc = main(
+        [
+            "establish-baseline",
+            "--repo",
+            "owner/repo",
+            "--pr-number",
+            "97",
+            "--github-output",
+            str(out),
+        ]
+    )
+
+    assert rc == 0
+    assert read_github_output(out)["baseline_created_at"] == force_push_at
+
+
 def test_collect_review_metrics_ignores_old_no_issue_before_force_push_baseline(
     fake_gh,
 ):
