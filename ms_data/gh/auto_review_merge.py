@@ -5,20 +5,28 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
+import subprocess
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from ms_data.gh.auto_review_gate import CODEX_LOGINS, evaluate
 from ms_data.gh.gh_json import gh_api_json, run_gh
 from ms_data.gh.gh_json import login_of as _login
 from ms_data.gh.outputs import append_step_summary, write_github_output
-from ms_data.gh.auto_review_gate import evaluate
 
 
 JST = timezone(timedelta(hours=9))
 GITHUB_ACTIONS_BOT = "github-actions[bot]"
+RESUME_STOP_REASONS = frozenset({"codex_no_response", "codex_disconnected"})
+STOP_MARKER_RE = re.compile(
+    r"<!--\s*auto-review-stop\s+reason:(\S+)\s+run_id:(\S+)\s+head_sha:(\S+)\s*-->"
+)
+SOURCE_RUN_ID_RE = re.compile(r"source_run_id:(\d+)")
+HEAD_REF_DATE_RE = re.compile(r"^data/auto-update-(\d{8})$")
 
 
 def _head_ref(item: dict[str, Any]) -> str:
@@ -37,12 +45,42 @@ def _head_sha(item: dict[str, Any]) -> str:
     return value if isinstance(value, str) else ""
 
 
+def _base_ref(item: dict[str, Any]) -> str:
+    base = item.get("base")
+    if not isinstance(base, dict):
+        return ""
+    value = base.get("ref")
+    return value if isinstance(value, str) else ""
+
+
+def _head_repo_full_name(item: dict[str, Any]) -> str:
+    head = item.get("head")
+    if not isinstance(head, dict):
+        return ""
+    repo = head.get("repo")
+    if not isinstance(repo, dict):
+        return ""
+    value = repo.get("full_name")
+    return value if isinstance(value, str) else ""
+
+
 def jst_report_date(run_created_at: str) -> str:
     value = run_created_at.strip().replace("Z", "+00:00")
     created_at = datetime.fromisoformat(value)
     if created_at.tzinfo is None:
         created_at = created_at.replace(tzinfo=timezone.utc)
     return created_at.astimezone(JST).strftime("%Y%m%d")
+
+
+def report_date_from_head_ref(head_ref: str) -> str:
+    match = HEAD_REF_DATE_RE.match(head_ref)
+    return match.group(1) if match else ""
+
+
+def resolve_source_run_id(body: str) -> str:
+    """PR body の ``source_run_id:N`` マーカーから run id を取り出す。"""
+    match = SOURCE_RUN_ID_RE.search(body or "")
+    return match.group(1) if match else ""
 
 
 def resolve_target_pr(
@@ -119,17 +157,104 @@ def stop_marker(reason_label: str, run_id: str, head_sha: str) -> str:
     )
 
 
+def resume_marker(run_id: str, head_sha: str) -> str:
+    return f"<!-- auto-review resume run_id:{run_id} head_sha:{head_sha} -->"
+
+
+def recovered_marker(run_id: str, merge_sha: str, source_run_id: str) -> str:
+    return (
+        f"<!-- auto-review-recovered run_id:{run_id} "
+        f"merge_sha:{merge_sha} source_run_id:{source_run_id} -->"
+    )
+
+
+def parse_stop_marker(body: str) -> dict[str, str] | None:
+    """停止コメント body から reason / run_id / head_sha を取り出す。"""
+    match = STOP_MARKER_RE.search(body or "")
+    if not match:
+        return None
+    return {
+        "reason": match.group(1),
+        "run_id": match.group(2),
+        "head_sha": match.group(3),
+    }
+
+
 def find_latest_bot_comment(
-    comments: list[dict[str, Any]], marker: str
+    comments: list[dict[str, Any]],
+    marker: str,
+    allowed_logins: set[str],
 ) -> dict[str, Any] | None:
     matches = [
         item
         for item in comments
-        if _login(item) == GITHUB_ACTIONS_BOT and marker in str(item.get("body") or "")
+        if _login(item) in allowed_logins and marker in str(item.get("body") or "")
     ]
     if not matches:
         return None
     return sorted(matches, key=lambda item: str(item.get("created_at") or ""))[-1]
+
+
+def select_resume_candidates(
+    *,
+    pulls: list[dict[str, Any]],
+    comments_by_pr: dict[str, list[dict[str, Any]]],
+    repo: str,
+    max_candidates: int = 3,
+) -> list[dict[str, Any]]:
+    """翌朝レスキュー対象 PR を選定する（純関数）。
+
+    - open / github-actions[bot] / ``data/auto-update-*`` / base=main / 同一 repo
+    - stop マーカー reason が ``codex_no_response`` / ``codex_disconnected``
+    - stop マーカーの head_sha が現在の PR HEAD と一致
+    - report_date 降順で最大 ``max_candidates`` 件
+    """
+    eligible: list[dict[str, Any]] = []
+    for pr in pulls:
+        if _login(pr) != GITHUB_ACTIONS_BOT:
+            continue
+        head_ref = _head_ref(pr)
+        if not head_ref.startswith("data/auto-update-"):
+            continue
+        if _base_ref(pr) and _base_ref(pr) != "main":
+            continue
+        if _head_repo_full_name(pr) and _head_repo_full_name(pr) != repo:
+            continue
+        head_sha = _head_sha(pr)
+        pr_number = str(pr.get("number") or "")
+        if not pr_number or not head_sha:
+            continue
+        comments = comments_by_pr.get(pr_number, [])
+        matched: dict[str, str] | None = None
+        for comment in comments:
+            parsed = parse_stop_marker(str(comment.get("body") or ""))
+            if parsed is None:
+                continue
+            if parsed["reason"] not in RESUME_STOP_REASONS:
+                continue
+            if parsed["head_sha"] != head_sha:
+                continue
+            matched = parsed
+            break
+        if matched is None:
+            continue
+        report_date = report_date_from_head_ref(head_ref)
+        if not report_date:
+            continue
+        eligible.append(
+            {
+                "pr_number": pr_number,
+                "head_ref": head_ref,
+                "head_sha": head_sha,
+                "created_at": str(pr.get("created_at") or ""),
+                "report_date": report_date,
+                "stop_reason": matched["reason"],
+                "body": str(pr.get("body") or ""),
+            }
+        )
+
+    eligible.sort(key=lambda item: item["report_date"], reverse=True)
+    return eligible[: max(0, max_candidates)]
 
 
 @dataclass
@@ -173,16 +298,62 @@ class GitHubClient:
         return self.api_json(f"repos/{self.repo}/issues/comments/{comment_id}")
 
 
+def _run_gh_with_token(args: list[str], token: str) -> str:
+    """指定 token を ``GH_TOKEN`` に差し替えて gh を実行する。"""
+    env = os.environ.copy()
+    env["GH_TOKEN"] = token
+    result = subprocess.run(
+        args,
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env,
+    )
+    return result.stdout
+
+
+def post_codex_trigger_comment(
+    *,
+    repo: str,
+    pr_number: str,
+    body: str,
+) -> dict[str, Any]:
+    """``@codex review`` 投稿。``CODEX_TRIGGER_TOKEN`` があればそれで投稿する。"""
+    token = os.environ.get("CODEX_TRIGGER_TOKEN", "").strip()
+    if token:
+        return gh_api_json(
+            f"repos/{repo}/issues/{pr_number}/comments",
+            method="POST",
+            fields={"body": body},
+            runner=lambda cmd: _run_gh_with_token(cmd, token),
+        )
+    return gh_api_json(
+        f"repos/{repo}/issues/{pr_number}/comments",
+        method="POST",
+        fields={"body": body},
+    )
+
+
 def ensure_review_comment(
     *,
     client: GitHubClient,
     pr_number: str,
     marker: str,
+    allowed_logins: set[str] | None = None,
+    use_trigger_token: bool = False,
 ) -> tuple[str, str, bool]:
-    existing = find_latest_bot_comment(client.issue_comments(pr_number), marker)
+    logins = allowed_logins if allowed_logins is not None else {GITHUB_ACTIONS_BOT}
+    existing = find_latest_bot_comment(client.issue_comments(pr_number), marker, logins)
     created_new = existing is None
     if existing is None:
-        comment = client.post_issue_comment(pr_number, f"@codex review\n\n{marker}")
+        body = f"@codex review\n\n{marker}"
+        if use_trigger_token:
+            comment = post_codex_trigger_comment(
+                repo=client.repo, pr_number=pr_number, body=body
+            )
+        else:
+            comment = client.post_issue_comment(pr_number, body)
     else:
         comment = existing
 
@@ -249,6 +420,14 @@ def _int_or_none(value: str) -> int | None:
         return None
 
 
+def _allowed_trigger_logins(pat_login: str) -> set[str]:
+    logins = {GITHUB_ACTIONS_BOT}
+    login = pat_login.strip()
+    if login:
+        logins.add(login)
+    return logins
+
+
 def cmd_resolve_target_pr(args: argparse.Namespace) -> int:
     client = GitHubClient(args.repo)
     pulls = client.api_json(
@@ -274,21 +453,16 @@ def cmd_resolve_target_pr(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_trigger_review(args: argparse.Namespace) -> int:
+def cmd_establish_baseline(args: argparse.Namespace) -> int:
+    """PR created_at を baseline として Outputs に書き出す（コメントは投稿しない）。"""
     client = GitHubClient(args.repo)
-    comment_id, created_at, created_new = ensure_review_comment(
-        client=client,
-        pr_number=args.pr_number,
-        marker=review_marker(args.head_sha),
-    )
+    pr = client.api_json(f"repos/{args.repo}/pulls/{args.pr_number}")
+    baseline = str(pr.get("created_at") or "")
     write_github_output(
         args.github_output,
-        {
-            "trigger_comment_id": comment_id,
-            "trigger_created_at": created_at,
-            "created_new": str(created_new).lower(),
-        },
+        {"baseline_created_at": baseline},
     )
+    print(f"Baseline established: created_at={baseline} (PR #{args.pr_number})")
     return 0
 
 
@@ -298,23 +472,32 @@ def _ensure_attempt_trigger(
     attempt: int,
     max_attempts: int,
     trigger_comment_ids: list[str],
+    *,
+    pat_available: bool,
+    allowed_logins: set[str],
 ) -> None:
-    """試行回ごとのトリガーコメントを確保する（初回は既存コメントを使う）。
+    """試行回ごとのトリガーを確保する。
 
-    2回目以降は再試行マーカー付きコメントを作成（既存なら再利用）し、
-    trigger_comment_ids に追記する。
+    attempt 1 は Automatic review 待ちのためコメント投稿なし。
+    attempt 2 以降は PAT が使える場合のみ retry マーカー付き ``@codex review`` を投稿する。
     """
     if attempt == 1:
-        trigger_comment_id = args.trigger_comment_id
         print(
             f"Codex review attempt {attempt}/{max_attempts}: "
-            f"using initial trigger comment {trigger_comment_id}."
+            "polling for Automatic review (no comment)."
+        )
+        return
+    if not pat_available or not str(args.pat_login or "").strip():
+        print(
+            f"Codex review attempt {attempt}/{max_attempts}: "
+            "PAT unavailable; continue polling without comment."
         )
         return
     trigger_comment_id, _, created_new = ensure_review_comment(
         client=client,
         pr_number=args.pr_number,
         marker=retry_marker(attempt, args.head_sha),
+        allowed_logins=allowed_logins,
     )
     if trigger_comment_id not in trigger_comment_ids:
         trigger_comment_ids.append(trigger_comment_id)
@@ -335,15 +518,14 @@ def _poll_for_response(
     poll_seconds: int,
     settle_seconds: int,
     trigger_comment_ids: list[str],
-    first_trigger_created_at: str,
+    since: str,
     started_at: float,
-) -> tuple[bool, str]:
+) -> tuple[bool, str, bool]:
     """1試行分のポーリングループ。
 
-    タイムアウトまで poll_seconds 間隔でレビュー応答を確認し、
-    応答を検知したら (True, 経過秒の文字列) を返す。検知できなければ
-    (False, "")。応答検知時は settle_seconds だけ待ってから返る
-    （ゲート再チェック前にコメントが出揃うのを待つ）。
+    戻り値: ``(responded, response_seconds, disconnected)``。
+    応答検知時は settle_seconds だけ待ってから返る。
+    ``disconnect_count > 0`` を検知したら早期打ち切り。
     """
     attempt_started = time.monotonic()
     deadline = attempt_started + attempt_timeout_seconds
@@ -353,10 +535,11 @@ def _poll_for_response(
             pr_number=args.pr_number,
             head_sha=args.head_sha,
             trigger_comment_ids=trigger_comment_ids,
-            since=first_trigger_created_at,
+            since=since,
         )
         total_elapsed = int(time.monotonic() - started_at)
         attempt_elapsed = int(time.monotonic() - attempt_started)
+        disconnect_count = int(metrics.get("disconnect_count") or 0)
         print(
             "Codex response poll: "
             f"attempt={attempt}/{max_attempts} "
@@ -366,9 +549,13 @@ def _poll_for_response(
             f"reactions={metrics['reaction_count']} "
             f"issue_comments={metrics['issue_comment_count']} "
             f"no_issue_comments={metrics['no_issue_comment_count']} "
+            f"disconnect={disconnect_count} "
             f"terminal={metrics['terminal_count']} "
             f"review_complete={str(metrics['review_complete']).lower()}"
         )
+        if disconnect_count > 0:
+            print("Codex disconnect response detected; aborting wait early.")
+            return False, "", True
         if metrics["review_complete"]:
             if settle_seconds > 0:
                 print(
@@ -376,19 +563,20 @@ def _poll_for_response(
                     f"Waiting {settle_seconds}s before gate re-check."
                 )
                 time.sleep(settle_seconds)
-            return True, str(total_elapsed)
+            return True, str(total_elapsed), False
 
         sleep_seconds = min(poll_seconds, max(0, int(deadline - time.monotonic())))
         if sleep_seconds <= 0:
             break
         time.sleep(sleep_seconds)
-    return False, ""
+    return False, "", False
 
 
 def _write_wait_outputs(
     args: argparse.Namespace,
     *,
     responded: bool,
+    disconnected: bool,
     response_attempt: str,
     response_seconds: str,
     max_attempts: int,
@@ -397,11 +585,12 @@ def _write_wait_outputs(
     settle_seconds: int,
     trigger_comment_ids: list[str],
     first_trigger_created_at: str,
+    attempts_used: str,
 ) -> None:
     """待機結果を GitHub Outputs と Step Summary に書き出す。"""
-    attempts_used = response_attempt if responded else str(max_attempts)
     outputs = {
         "responded": str(responded).lower(),
+        "disconnected": str(disconnected).lower(),
         "attempts_used": attempts_used,
         "max_attempts": str(max_attempts),
         "attempt_timeout_seconds": str(attempt_timeout_seconds),
@@ -416,6 +605,7 @@ def _write_wait_outputs(
     summary = [
         "### Codex Review Response",
         f"- responded: {outputs['responded']}",
+        f"- disconnected: {outputs['disconnected']}",
         f"- attempts_used: {attempts_used}/{max_attempts}",
         f"- attempt_timeout_seconds: {attempt_timeout_seconds}",
         f"- poll_seconds: {poll_seconds}",
@@ -433,25 +623,36 @@ def _write_wait_outputs(
 
 
 def cmd_wait_for_review(args: argparse.Namespace) -> int:
-    """Codex のレビュー応答を待つ（最大 max_attempts 回、試行ごとに再トリガー）。"""
+    """Codex のレビュー応答を待つ（Automatic review 優先、PAT フォールバック）。"""
     client = GitHubClient(args.repo)
     max_attempts = _positive_int(args.max_attempts, 3)
     attempt_timeout_seconds = _positive_int(args.attempt_timeout_seconds, 420)
     poll_seconds = _positive_int(args.poll_seconds, 30)
     settle_seconds = max(0, int(args.settle_seconds))
+    pat_available = _bool_text(args.pat_available)
+    allowed_logins = _allowed_trigger_logins(args.pat_login)
 
     responded = False
+    disconnected = False
     response_attempt = ""
     response_seconds = ""
-    trigger_comment_ids = [args.trigger_comment_id]
-    first_trigger_created_at = args.trigger_comment_created_at
+    trigger_comment_ids: list[str] = []
+    first_trigger_created_at = args.baseline_created_at
     started_at = time.monotonic()
+    attempts_used = "0"
 
     for attempt in range(1, max_attempts + 1):
+        attempts_used = str(attempt)
         _ensure_attempt_trigger(
-            client, args, attempt, max_attempts, trigger_comment_ids
+            client,
+            args,
+            attempt,
+            max_attempts,
+            trigger_comment_ids,
+            pat_available=pat_available,
+            allowed_logins=allowed_logins,
         )
-        responded, response_seconds = _poll_for_response(
+        responded, response_seconds, disconnected = _poll_for_response(
             client,
             args,
             attempt=attempt,
@@ -460,9 +661,11 @@ def cmd_wait_for_review(args: argparse.Namespace) -> int:
             poll_seconds=poll_seconds,
             settle_seconds=settle_seconds,
             trigger_comment_ids=trigger_comment_ids,
-            first_trigger_created_at=first_trigger_created_at,
+            since=first_trigger_created_at,
             started_at=started_at,
         )
+        if disconnected:
+            break
         if responded:
             response_attempt = str(attempt)
             break
@@ -470,6 +673,7 @@ def cmd_wait_for_review(args: argparse.Namespace) -> int:
     _write_wait_outputs(
         args,
         responded=responded,
+        disconnected=disconnected,
         response_attempt=response_attempt,
         response_seconds=response_seconds,
         max_attempts=max_attempts,
@@ -478,6 +682,7 @@ def cmd_wait_for_review(args: argparse.Namespace) -> int:
         settle_seconds=settle_seconds,
         trigger_comment_ids=trigger_comment_ids,
         first_trigger_created_at=first_trigger_created_at,
+        attempts_used=attempts_used,
     )
     return 0
 
@@ -517,6 +722,17 @@ def cmd_record_stop(args: argparse.Namespace) -> int:
             f"（各 {args.attempt_timeout_seconds} 秒）しましたが確認できなかったため、"
             f"自動マージを停止しました。手動で確認してください。 (run_id: {args.run_id})"
         )
+    elif args.stop_reason == "disconnected":
+        reason_label = "codex_disconnected"
+        message = (
+            "Codex の連携切れ応答を検知したため、自動マージを停止しました。"
+            "ChatGPT 側の GitHub コネクタが bot 投稿を認識できない状態です。"
+            "https://chatgpt.com/codex/cloud/settings/connectors "
+            "で接続を確認してください。"
+            "この PR に手動で `@codex review` をコメントすれば、"
+            "翌朝 09:00 JST の自動レスキューがマージまで回収します。"
+            f" (run_id: {args.run_id})"
+        )
     else:
         reason_label = "codex_findings"
         message = (
@@ -525,7 +741,9 @@ def cmd_record_stop(args: argparse.Namespace) -> int:
         )
 
     marker = stop_marker(reason_label, args.run_id, args.head_sha)
-    existing = find_latest_bot_comment(client.issue_comments(args.pr_number), marker)
+    existing = find_latest_bot_comment(
+        client.issue_comments(args.pr_number), marker, {GITHUB_ACTIONS_BOT}
+    )
     posted = existing is None
     if posted:
         client.post_issue_comment(args.pr_number, f"{message}\n\n{marker}")
@@ -541,6 +759,43 @@ def cmd_record_stop(args: argparse.Namespace) -> int:
         summary.append(f"- findings: {args.findings}")
     summary.append(f"- comment_posted: {str(posted).lower()}")
     append_step_summary(summary, args.step_summary)
+    return 0
+
+
+def cmd_export_findings(args: argparse.Namespace) -> int:
+    """Codex ファイル指摘を JSON へ書き出し、パスと件数のみ Outputs に出す。"""
+    client = GitHubClient(args.repo)
+    file_comments = client.api_json(
+        f"repos/{client.repo}/pulls/{args.pr_number}/comments", paginate=True
+    )
+    findings: list[dict[str, Any]] = []
+    for item in file_comments:
+        if _login(item) not in CODEX_LOGINS:
+            continue
+        if item.get("commit_id") != args.head_sha:
+            continue
+        line = item.get("line")
+        findings.append(
+            {
+                "path": str(item.get("path") or ""),
+                "line": line if isinstance(line, int) else None,
+                "body": str(item.get("body") or ""),
+            }
+        )
+
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(
+        json.dumps(findings, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    write_github_output(
+        args.github_output,
+        {
+            "findings_path": str(args.out),
+            "findings_count": str(len(findings)),
+        },
+    )
+    print(f"Exported findings: count={len(findings)} path={args.out}")
     return 0
 
 
@@ -619,6 +874,263 @@ def cmd_write_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def _fetch_current_head_sha(client: GitHubClient, pr_number: str) -> str:
+    pr = client.api_json(f"repos/{client.repo}/pulls/{pr_number}")
+    return _head_sha(pr)
+
+
+def _merge_and_notify(
+    *,
+    client: GitHubClient,
+    pr_number: str,
+    head_ref: str,
+    evaluated_sha: str,
+    source_run_id: str,
+    resume_run_id: str,
+) -> str | None:
+    """評価済み SHA と一致する場合のみ merge し、notify を dispatch する。
+
+    成功時は merge_commit_sha、不一致や未 MERGED の場合は None。
+    """
+    current_sha = _fetch_current_head_sha(client, pr_number)
+    if current_sha != evaluated_sha:
+        print(
+            f"PR #{pr_number}: head SHA changed "
+            f"({evaluated_sha} -> {current_sha}); skip merge."
+        )
+        return None
+
+    run_gh(
+        [
+            "gh",
+            "pr",
+            "merge",
+            pr_number,
+            "--repo",
+            client.repo,
+            "--merge",
+            "--delete-branch",
+            "--match-head-commit",
+            evaluated_sha,
+        ]
+    )
+    view = json.loads(
+        run_gh(
+            [
+                "gh",
+                "pr",
+                "view",
+                pr_number,
+                "--repo",
+                client.repo,
+                "--json",
+                "state,mergeCommit",
+            ]
+        )
+    )
+    if str(view.get("state") or "").upper() != "MERGED":
+        print(f"PR #{pr_number}: merge did not reach MERGED state.")
+        return None
+    merge_commit = view.get("mergeCommit")
+    if isinstance(merge_commit, dict):
+        merge_sha = str(merge_commit.get("oid") or "")
+    else:
+        merge_sha = ""
+    if not merge_sha:
+        print(f"PR #{pr_number}: merge_commit_sha missing after merge.")
+        return None
+
+    run_gh(
+        [
+            "gh",
+            "workflow",
+            "run",
+            "post_merge_notify.yml",
+            "--repo",
+            client.repo,
+            "-f",
+            f"merge_commit_sha={merge_sha}",
+            "-f",
+            f"head_ref={head_ref}",
+            "-f",
+            f"source_run_id={source_run_id}",
+        ]
+    )
+    marker = recovered_marker(resume_run_id, merge_sha, source_run_id)
+    client.post_issue_comment(
+        pr_number,
+        f"翌朝レスキューで自動マージしました。\n\n{marker}",
+    )
+    return merge_sha
+
+
+def _resume_wait_for_merge_ok(
+    *,
+    client: GitHubClient,
+    pr_number: str,
+    head_sha: str,
+    since: str,
+    retry_wait_seconds: int,
+    poll_seconds: int,
+) -> dict[str, Any]:
+    """resume 投稿後、指定秒数だけポーリングして最終 metrics を返す。"""
+    deadline = time.monotonic() + retry_wait_seconds
+    metrics = collect_review_metrics(
+        client=client,
+        pr_number=pr_number,
+        head_sha=head_sha,
+        trigger_comment_ids=[],
+        since=since,
+    )
+    while time.monotonic() < deadline:
+        if metrics.get("merge_ok"):
+            return metrics
+        sleep_seconds = min(poll_seconds, max(0, int(deadline - time.monotonic())))
+        if sleep_seconds <= 0:
+            break
+        time.sleep(sleep_seconds)
+        metrics = collect_review_metrics(
+            client=client,
+            pr_number=pr_number,
+            head_sha=head_sha,
+            trigger_comment_ids=[],
+            since=since,
+        )
+    return metrics
+
+
+def cmd_resume(args: argparse.Namespace) -> int:
+    """翌朝レスキュー: no_response / disconnected で止まった PR を回収する。"""
+    client = GitHubClient(args.repo)
+    max_candidates = _positive_int(args.max_candidates, 3)
+    retry_wait_seconds = _positive_int(args.retry_wait_seconds, 300)
+    poll_seconds = _positive_int(args.poll_seconds, 30)
+    pat_available = _bool_text(args.pat_available)
+    pat_login = str(args.pat_login or "").strip()
+
+    pulls = client.api_json(
+        f"repos/{args.repo}/pulls?state=open&base=main&per_page=100"
+    )
+    comments_by_pr: dict[str, list[dict[str, Any]]] = {}
+    for pr in pulls:
+        pr_number = str(pr.get("number") or "")
+        if not pr_number:
+            continue
+        head_ref = _head_ref(pr)
+        if not head_ref.startswith("data/auto-update-"):
+            continue
+        comments_by_pr[pr_number] = client.issue_comments(pr_number)
+
+    candidates = select_resume_candidates(
+        pulls=pulls,
+        comments_by_pr=comments_by_pr,
+        repo=args.repo,
+        max_candidates=max_candidates,
+    )
+
+    merged_count = 0
+    pending_count = 0
+    summary_lines = [
+        "### Auto Review Resume",
+        f"- candidates: {len(candidates)}",
+    ]
+
+    for candidate in candidates:
+        pr_number = candidate["pr_number"]
+        head_sha = candidate["head_sha"]
+        head_ref = candidate["head_ref"]
+        since = candidate["created_at"]
+        source_run_id = resolve_source_run_id(candidate["body"])
+        print(
+            f"Resume candidate PR #{pr_number} "
+            f"({head_ref} @ {head_sha}) stop={candidate['stop_reason']}"
+        )
+
+        metrics = collect_review_metrics(
+            client=client,
+            pr_number=pr_number,
+            head_sha=head_sha,
+            trigger_comment_ids=[],
+            since=since,
+        )
+        if metrics.get("merge_ok"):
+            merge_sha = _merge_and_notify(
+                client=client,
+                pr_number=pr_number,
+                head_ref=head_ref,
+                evaluated_sha=head_sha,
+                source_run_id=source_run_id,
+                resume_run_id=args.run_id,
+            )
+            if merge_sha:
+                merged_count += 1
+                summary_lines.append(f"- merged: #{pr_number} ({merge_sha})")
+            else:
+                pending_count += 1
+                summary_lines.append(f"- pending(merge_skipped): #{pr_number}")
+            continue
+
+        if not (pat_available and pat_login):
+            pending_count += 1
+            summary_lines.append(f"- pending(no_pat): #{pr_number}")
+            print(f"PR #{pr_number}: review not ready and PAT unavailable.")
+            continue
+
+        marker = resume_marker(args.run_id, head_sha)
+        ensure_review_comment(
+            client=client,
+            pr_number=pr_number,
+            marker=marker,
+            allowed_logins=_allowed_trigger_logins(pat_login),
+            use_trigger_token=True,
+        )
+        metrics = _resume_wait_for_merge_ok(
+            client=client,
+            pr_number=pr_number,
+            head_sha=head_sha,
+            since=since,
+            retry_wait_seconds=retry_wait_seconds,
+            poll_seconds=poll_seconds,
+        )
+        if metrics.get("merge_ok"):
+            merge_sha = _merge_and_notify(
+                client=client,
+                pr_number=pr_number,
+                head_ref=head_ref,
+                evaluated_sha=head_sha,
+                source_run_id=source_run_id,
+                resume_run_id=args.run_id,
+            )
+            if merge_sha:
+                merged_count += 1
+                summary_lines.append(f"- merged_after_retry: #{pr_number} ({merge_sha})")
+            else:
+                pending_count += 1
+                summary_lines.append(f"- pending(merge_skipped): #{pr_number}")
+        else:
+            pending_count += 1
+            summary_lines.append(f"- pending(no_response): #{pr_number}")
+            print(f"PR #{pr_number}: still no mergeable Codex response after retry.")
+
+    write_github_output(
+        args.github_output,
+        {
+            "processed": str(len(candidates)),
+            "merged_count": str(merged_count),
+            "pending_count": str(pending_count),
+        },
+    )
+    summary_lines.extend(
+        [
+            f"- processed: {len(candidates)}",
+            f"- merged_count: {merged_count}",
+            f"- pending_count: {pending_count}",
+        ]
+    )
+    append_step_summary(summary_lines, args.step_summary)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -630,19 +1142,19 @@ def build_parser() -> argparse.ArgumentParser:
     resolve.add_argument("--github-output", type=Path, required=True)
     resolve.set_defaults(func=cmd_resolve_target_pr)
 
-    trigger = sub.add_parser("trigger-review")
-    trigger.add_argument("--repo", required=True)
-    trigger.add_argument("--pr-number", required=True)
-    trigger.add_argument("--head-sha", required=True)
-    trigger.add_argument("--github-output", type=Path, required=True)
-    trigger.set_defaults(func=cmd_trigger_review)
+    baseline = sub.add_parser("establish-baseline")
+    baseline.add_argument("--repo", required=True)
+    baseline.add_argument("--pr-number", required=True)
+    baseline.add_argument("--github-output", type=Path, required=True)
+    baseline.set_defaults(func=cmd_establish_baseline)
 
     wait = sub.add_parser("wait-for-review")
     wait.add_argument("--repo", required=True)
     wait.add_argument("--pr-number", required=True)
     wait.add_argument("--head-sha", required=True)
-    wait.add_argument("--trigger-comment-id", required=True)
-    wait.add_argument("--trigger-comment-created-at", required=True)
+    wait.add_argument("--baseline-created-at", required=True)
+    wait.add_argument("--pat-available", required=True)
+    wait.add_argument("--pat-login", default="")
     wait.add_argument("--max-attempts", required=True)
     wait.add_argument("--attempt-timeout-seconds", required=True)
     wait.add_argument("--poll-seconds", required=True)
@@ -672,6 +1184,26 @@ def build_parser() -> argparse.ArgumentParser:
     record.add_argument("--attempt-timeout-seconds", required=True)
     record.add_argument("--step-summary", type=Path, default=None)
     record.set_defaults(func=cmd_record_stop)
+
+    export = sub.add_parser("export-findings")
+    export.add_argument("--repo", required=True)
+    export.add_argument("--pr-number", required=True)
+    export.add_argument("--head-sha", required=True)
+    export.add_argument("--out", type=Path, required=True)
+    export.add_argument("--github-output", type=Path, required=True)
+    export.set_defaults(func=cmd_export_findings)
+
+    resume = sub.add_parser("resume")
+    resume.add_argument("--repo", required=True)
+    resume.add_argument("--run-id", required=True)
+    resume.add_argument("--pat-available", required=True)
+    resume.add_argument("--pat-login", default="")
+    resume.add_argument("--max-candidates", default="3")
+    resume.add_argument("--retry-wait-seconds", default="300")
+    resume.add_argument("--poll-seconds", default="30")
+    resume.add_argument("--github-output", type=Path, required=True)
+    resume.add_argument("--step-summary", type=Path, default=None)
+    resume.set_defaults(func=cmd_resume)
 
     report = sub.add_parser("write-report")
     report.add_argument("--report-date", required=True)

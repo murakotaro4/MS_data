@@ -155,3 +155,75 @@ def test_late_finding_wins_over_no_issue_comment():
     assert result["review_complete"] is True
     assert result["merge_ok"] is False
     assert result["stop_reason"] == "findings"
+
+
+def test_disconnect_comment_sets_disconnected_without_terminal():
+    result = evaluate(
+        reviews=[],
+        file_comments=[],
+        issue_comments=[
+            {
+                "user": CODEX_USER,
+                "created_at": "2026-05-31T08:47:49Z",
+                "body": (
+                    "To use Codex here, create a Codex account and connect to github"
+                ),
+            }
+        ],
+        reactions=[],
+        head_sha=HEAD_SHA,
+        since=SINCE,
+    )
+
+    assert result["disconnect_count"] == 1
+    assert result["terminal_count"] == 0
+    assert result["review_complete"] is False
+    assert result["merge_ok"] is False
+    assert result["stop_reason"] == "disconnected"
+
+
+def test_disconnect_comment_before_since_is_ignored():
+    result = evaluate(
+        reviews=[],
+        file_comments=[],
+        issue_comments=[
+            {
+                "user": CODEX_USER,
+                "created_at": "2026-05-31T08:00:00Z",
+                "body": "To use Codex here, create a Codex account and connect to github",
+            }
+        ],
+        reactions=[],
+        head_sha=HEAD_SHA,
+        since=SINCE,
+    )
+
+    assert result["disconnect_count"] == 0
+    assert result["issue_comment_count"] == 0
+    assert result["stop_reason"] == "no_response"
+
+
+def test_findings_win_over_disconnect():
+    result = evaluate(
+        reviews=[],
+        file_comments=[
+            {
+                "user": CODEX_USER,
+                "commit_id": HEAD_SHA,
+                "body": "Please fix this.",
+            }
+        ],
+        issue_comments=[
+            {
+                "user": CODEX_USER,
+                "created_at": "2026-05-31T08:47:49Z",
+                "body": "To use Codex here, create a Codex account and connect to github",
+            }
+        ],
+        reactions=[],
+        head_sha=HEAD_SHA,
+        since=SINCE,
+    )
+
+    assert result["disconnect_count"] == 1
+    assert result["stop_reason"] == "findings"
