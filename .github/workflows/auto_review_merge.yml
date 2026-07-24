@@ -170,6 +170,25 @@ jobs:
             --out "$RUNNER_TEMP/codex_findings.json" \
             --github-output "$GITHUB_OUTPUT"
 
+      - name: Record stop reason
+        if: steps.resolve.outputs.skip != 'true' && steps.gate.outputs.merge_ok != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FINDINGS: ${{ steps.gate.outputs.findings }}
+          STOP_REASON: ${{ steps.gate.outputs.stop_reason }}
+        run: |
+          uv run python -m ms_data.gh.auto_review_merge record-stop \
+            --repo "${{ steps.prepare.outputs.repo }}" \
+            --pr-number "${{ steps.resolve.outputs.pr }}" \
+            --head-sha "${{ steps.resolve.outputs.head_sha }}" \
+            --findings "$FINDINGS" \
+            --stop-reason "$STOP_REASON" \
+            --run-id "${{ steps.prepare.outputs.run_id }}" \
+            --attempts-used "${{ steps.wait.outputs.attempts_used }}" \
+            --max-attempts "${{ steps.wait.outputs.max_attempts }}" \
+            --attempt-timeout-seconds "${{ steps.wait.outputs.attempt_timeout_seconds }}" \
+            --step-summary "$GITHUB_STEP_SUMMARY"
+
       - name: Notify stop by mail
         if: steps.resolve.outputs.skip != 'true' && steps.gate.outputs.merge_ok != 'true'
         env:
@@ -196,25 +215,6 @@ jobs:
             args+=(--findings-json "${RUNNER_TEMP}/codex_findings.json")
           fi
           uv run python -m ms_data.gh.notify_review_stop "${args[@]}"
-
-      - name: Record stop reason
-        if: steps.resolve.outputs.skip != 'true' && steps.gate.outputs.merge_ok != 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          FINDINGS: ${{ steps.gate.outputs.findings }}
-          STOP_REASON: ${{ steps.gate.outputs.stop_reason }}
-        run: |
-          uv run python -m ms_data.gh.auto_review_merge record-stop \
-            --repo "${{ steps.prepare.outputs.repo }}" \
-            --pr-number "${{ steps.resolve.outputs.pr }}" \
-            --head-sha "${{ steps.resolve.outputs.head_sha }}" \
-            --findings "$FINDINGS" \
-            --stop-reason "$STOP_REASON" \
-            --run-id "${{ steps.prepare.outputs.run_id }}" \
-            --attempts-used "${{ steps.wait.outputs.attempts_used }}" \
-            --max-attempts "${{ steps.wait.outputs.max_attempts }}" \
-            --attempt-timeout-seconds "${{ steps.wait.outputs.attempt_timeout_seconds }}" \
-            --step-summary "$GITHUB_STEP_SUMMARY"
 
       - id: merge
         name: Merge pull request

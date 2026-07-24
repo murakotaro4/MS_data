@@ -52,6 +52,9 @@ jobs:
           CODEX_TRIGGER_PAT: ${{ secrets.CODEX_TRIGGER_PAT }}
           PAT_AVAILABLE: ${{ steps.pat.outputs.pat_available }}
           PAT_LOGIN: ${{ steps.pat.outputs.pat_login }}
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GMAIL_TO: ${{ secrets.GMAIL_ADDRESS }}
         shell: bash
         run: |
           set -euo pipefail

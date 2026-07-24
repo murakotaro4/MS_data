@@ -7,6 +7,7 @@ import json
 import os
 import re
 import subprocess
+import tempfile
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -16,6 +17,7 @@ from typing import Any
 from ms_data.gh.auto_review_gate import CODEX_LOGINS, evaluate
 from ms_data.gh.gh_json import gh_api_json, run_gh
 from ms_data.gh.gh_json import login_of as _login
+from ms_data.gh.notify_review_stop import notify_review_stop
 from ms_data.gh.outputs import append_step_summary, write_github_output
 
 
@@ -75,6 +77,105 @@ def jst_report_date(run_created_at: str) -> str:
 def report_date_from_head_ref(head_ref: str) -> str:
     match = HEAD_REF_DATE_RE.match(head_ref)
     return match.group(1) if match else ""
+
+
+def parse_github_datetime(value: str) -> datetime | None:
+    """GitHub API の ISO8601 日時を UTC aware datetime へ変換する。"""
+    text = value.strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def format_github_datetime(value: datetime) -> str:
+    """UTC datetime を ISO8601(Z) 文字列にする。"""
+    return (
+        value.astimezone(timezone.utc)
+        .isoformat(timespec="seconds")
+        .replace("+00:00", "Z")
+    )
+
+
+def later_iso8601(*values: str) -> str:
+    """複数の ISO8601 日時のうち最も遅いものを返す。"""
+    parsed = [dt for value in values if (dt := parse_github_datetime(value)) is not None]
+    if not parsed:
+        for value in values:
+            text = value.strip()
+            if text:
+                return text
+        return ""
+    return format_github_datetime(max(parsed))
+
+
+def extract_commit_committer_date(commit_payload: dict[str, Any]) -> str:
+    """``repos/.../commits/{sha}`` 応答から committer.date を取り出す。"""
+    commit = commit_payload.get("commit")
+    if not isinstance(commit, dict):
+        return ""
+    committer = commit.get("committer")
+    if not isinstance(committer, dict):
+        return ""
+    value = committer.get("date")
+    return value if isinstance(value, str) else ""
+
+
+def fetch_commit_committer_date(client: GitHubClient, head_sha: str) -> str:
+    payload = client.api_json(f"repos/{client.repo}/commits/{head_sha}")
+    if not isinstance(payload, dict):
+        return ""
+    return extract_commit_committer_date(payload)
+
+
+def resolve_review_since(
+    *,
+    client: "GitHubClient",
+    pr_created_at: str,
+    head_sha: str,
+) -> str:
+    """レビュー since を PR created_at と HEAD committer 日時の遅い方にする。
+
+    force-push 後に旧 HEAD 宛の no-issue コメントが新 HEAD の合格シグナルに
+    ならないよう、HEAD より古い issue comment を除外するため。
+    """
+    commit_date = ""
+    if head_sha:
+        commit_date = fetch_commit_committer_date(client, head_sha)
+    return later_iso8601(pr_created_at, commit_date)
+
+
+def extract_codex_findings(
+    file_comments: list[dict[str, Any]], head_sha: str
+) -> list[dict[str, Any]]:
+    """Codex ファイルコメントを export-findings と同形式へ整形する。"""
+    findings: list[dict[str, Any]] = []
+    for item in file_comments:
+        if _login(item) not in CODEX_LOGINS:
+            continue
+        if item.get("commit_id") != head_sha:
+            continue
+        line = item.get("line")
+        findings.append(
+            {
+                "path": str(item.get("path") or ""),
+                "line": line if isinstance(line, int) else None,
+                "body": str(item.get("body") or ""),
+            }
+        )
+    return findings
+
+
+def github_run_url() -> str:
+    server = os.environ.get("GITHUB_SERVER_URL", "https://github.com").rstrip("/")
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    run_id = os.environ.get("GITHUB_RUN_ID", "")
+    return f"{server}/{repo}/actions/runs/{run_id}"
 
 
 def resolve_source_run_id(body: str) -> str:
@@ -457,15 +558,30 @@ def cmd_resolve_target_pr(args: argparse.Namespace) -> int:
 
 
 def cmd_establish_baseline(args: argparse.Namespace) -> int:
-    """PR created_at を baseline として Outputs に書き出す（コメントは投稿しない）。"""
+    """レビュー since baseline を Outputs に書き出す（コメントは投稿しない）。
+
+    PR created_at と現 HEAD commit の committer 日時の遅い方を採用する。
+    HEAD より古い issue comment（force-push 前の旧 no-issue など）を除外するため。
+    """
     client = GitHubClient(args.repo)
     pr = client.api_json(f"repos/{args.repo}/pulls/{args.pr_number}")
-    baseline = str(pr.get("created_at") or "")
+    pr_created_at = str(pr.get("created_at") or "")
+    head_sha = _head_sha(pr) if isinstance(pr, dict) else ""
+    baseline = resolve_review_since(
+        client=client,
+        pr_created_at=pr_created_at,
+        head_sha=head_sha,
+    )
     write_github_output(
         args.github_output,
         {"baseline_created_at": baseline},
     )
-    print(f"Baseline established: created_at={baseline} (PR #{args.pr_number})")
+    print(
+        f"Baseline established: baseline_created_at={baseline} "
+        f"(PR #{args.pr_number}, pr_created_at={pr_created_at}, "
+        f"head_sha={head_sha or '-'}; "
+        "HEAD より古いコメントを除外するため committer 日時と比較)"
+    )
     return 0
 
 
@@ -771,20 +887,7 @@ def cmd_export_findings(args: argparse.Namespace) -> int:
     file_comments = client.api_json(
         f"repos/{client.repo}/pulls/{args.pr_number}/comments", paginate=True
     )
-    findings: list[dict[str, Any]] = []
-    for item in file_comments:
-        if _login(item) not in CODEX_LOGINS:
-            continue
-        if item.get("commit_id") != args.head_sha:
-            continue
-        line = item.get("line")
-        findings.append(
-            {
-                "path": str(item.get("path") or ""),
-                "line": line if isinstance(line, int) else None,
-                "body": str(item.get("body") or ""),
-            }
-        )
+    findings = extract_codex_findings(file_comments, args.head_sha)
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(
@@ -1006,6 +1109,64 @@ def _resume_wait_for_merge_ok(
     return metrics
 
 
+def _metrics_has_findings(metrics: dict[str, Any]) -> bool:
+    if metrics.get("stop_reason") == "findings":
+        return True
+    try:
+        return int(metrics.get("finding_count") or 0) > 0
+    except (TypeError, ValueError):
+        return False
+
+
+def _handle_resume_findings(
+    *,
+    client: GitHubClient,
+    pr_number: str,
+    head_sha: str,
+    report_date: str,
+    resume_run_id: str,
+) -> None:
+    """resume 中に findings を検知したとき停止マーカー投稿とメール通知を行う。"""
+    marker = stop_marker("codex_findings", resume_run_id, head_sha)
+    message = (
+        f"Codex のファイル指摘があるため、翌朝レスキューでの自動マージを停止しました。"
+        f"手動で確認してください。 (run_id: {resume_run_id})"
+    )
+    existing = find_latest_bot_comment(
+        client.issue_comments(pr_number), marker, {GITHUB_ACTIONS_BOT}
+    )
+    if existing is None:
+        client.post_issue_comment(pr_number, f"{message}\n\n{marker}")
+
+    file_comments = client.api_json(
+        f"repos/{client.repo}/pulls/{pr_number}/comments", paginate=True
+    )
+    findings = extract_codex_findings(file_comments, head_sha)
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        encoding="utf-8",
+        suffix=".json",
+        delete=False,
+    ) as handle:
+        findings_path = Path(handle.name)
+        handle.write(json.dumps(findings, ensure_ascii=False, indent=2) + "\n")
+
+    pr_url = f"https://github.com/{client.repo}/pull/{pr_number}"
+    rc = notify_review_stop(
+        stop_reason="findings",
+        pr_number=int(pr_number),
+        pr_url=pr_url,
+        report_date=report_date,
+        run_url=github_run_url(),
+        findings_json=findings_path,
+    )
+    if rc != 0:
+        raise RuntimeError(
+            f"PR #{pr_number}: findings 停止通知メールの送信に失敗しました "
+            f"(marker は記録済み)。"
+        )
+
+
 def cmd_resume(args: argparse.Namespace) -> int:
     """翌朝レスキュー: no_response / disconnected で止まった PR を回収する。"""
     client = GitHubClient(args.repo)
@@ -1046,11 +1207,17 @@ def cmd_resume(args: argparse.Namespace) -> int:
         pr_number = candidate["pr_number"]
         head_sha = candidate["head_sha"]
         head_ref = candidate["head_ref"]
-        since = candidate["created_at"]
+        report_date = candidate["report_date"]
+        since = resolve_review_since(
+            client=client,
+            pr_created_at=candidate["created_at"],
+            head_sha=head_sha,
+        )
         source_run_id = resolve_source_run_id(candidate["body"])
         print(
             f"Resume candidate PR #{pr_number} "
-            f"({head_ref} @ {head_sha}) stop={candidate['stop_reason']}"
+            f"({head_ref} @ {head_sha}) stop={candidate['stop_reason']} "
+            f"since={since}"
         )
 
         metrics = collect_review_metrics(
@@ -1071,6 +1238,17 @@ def cmd_resume(args: argparse.Namespace) -> int:
             )
             merged_count += 1
             summary_lines.append(f"- merged: #{pr_number} ({merge_sha})")
+            continue
+
+        if _metrics_has_findings(metrics):
+            _handle_resume_findings(
+                client=client,
+                pr_number=pr_number,
+                head_sha=head_sha,
+                report_date=report_date,
+                resume_run_id=args.run_id,
+            )
+            summary_lines.append(f"- stopped_findings: #{pr_number}")
             continue
 
         if not (pat_available and pat_login):
@@ -1106,6 +1284,15 @@ def cmd_resume(args: argparse.Namespace) -> int:
             )
             merged_count += 1
             summary_lines.append(f"- merged_after_retry: #{pr_number} ({merge_sha})")
+        elif _metrics_has_findings(metrics):
+            _handle_resume_findings(
+                client=client,
+                pr_number=pr_number,
+                head_sha=head_sha,
+                report_date=report_date,
+                resume_run_id=args.run_id,
+            )
+            summary_lines.append(f"- stopped_findings: #{pr_number}")
         else:
             pending_count += 1
             summary_lines.append(f"- pending(no_response): #{pr_number}")

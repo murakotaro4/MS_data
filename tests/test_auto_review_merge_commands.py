@@ -327,7 +327,15 @@ def test_cmd_resolve_target_pr_skip_path(fake_gh, read_github_output, tmp_path, 
 def test_cmd_establish_baseline_writes_created_at(
     fake_gh, read_github_output, tmp_path
 ):
-    fake_gh.responses["/pulls/97"] = {"number": 97, "created_at": BASELINE}
+    fake_gh.responses["/pulls/97"] = {
+        "number": 97,
+        "created_at": BASELINE,
+        "head": {"sha": HEAD_SHA, "ref": "data/auto-update-20260531"},
+    }
+    # committer が PR created_at より古い場合は PR created_at を採用
+    fake_gh.responses[f"/commits/{HEAD_SHA}"] = {
+        "commit": {"committer": {"date": "2026-05-30T01:00:00Z"}}
+    }
     out = tmp_path / "out.txt"
 
     rc = main(
@@ -346,6 +354,62 @@ def test_cmd_establish_baseline_writes_created_at(
     outputs = read_github_output(out)
     assert outputs["baseline_created_at"] == BASELINE
     assert fake_gh.posted_comments == []
+
+
+def test_cmd_establish_baseline_uses_commit_date_after_force_push(
+    fake_gh, read_github_output, tmp_path
+):
+    commit_date = "2026-05-31T15:00:00Z"
+    fake_gh.responses["/pulls/97"] = {
+        "number": 97,
+        "created_at": BASELINE,
+        "head": {"sha": HEAD_SHA, "ref": "data/auto-update-20260531"},
+    }
+    fake_gh.responses[f"/commits/{HEAD_SHA}"] = {
+        "commit": {"committer": {"date": commit_date}}
+    }
+    out = tmp_path / "out.txt"
+
+    rc = main(
+        [
+            "establish-baseline",
+            "--repo",
+            "owner/repo",
+            "--pr-number",
+            "97",
+            "--github-output",
+            str(out),
+        ]
+    )
+
+    assert rc == 0
+    assert read_github_output(out)["baseline_created_at"] == commit_date
+
+
+def test_collect_review_metrics_ignores_old_no_issue_before_force_push_baseline(
+    fake_gh,
+):
+    # force-push 後の HEAD committer 日時を since にすると、旧 no-issue は terminal にならない
+    fake_gh.responses["/issues/97/comments"] = [
+        {
+            "user": {"login": CODEX_BOT},
+            "created_at": "2026-05-31T10:00:00Z",
+            "body": "Codex Review: Didn't find any major issues. 旧 HEAD 向け",
+        }
+    ]
+
+    metrics = collect_review_metrics(
+        client=fake_gh,
+        pr_number="97",
+        head_sha=HEAD_SHA,
+        trigger_comment_ids=[],
+        since="2026-05-31T15:00:00Z",
+    )
+
+    assert metrics["terminal_count"] == 0
+    assert metrics["no_issue_comment_count"] == 0
+    assert metrics["merge_ok"] is False
+    assert metrics["stop_reason"] == "no_response"
 
 
 def _wait_argv(
@@ -744,3 +808,107 @@ def test_cmd_write_report_writes_json_and_summary(tmp_path):
     text = summary.read_text(encoding="utf-8")
     assert "- status: merged" in text
     assert f"- report: {out}" in text
+
+
+def test_cmd_resume_stops_on_findings_without_retry(
+    fake_gh, read_github_output, tmp_path, monkeypatch
+):
+    stop = auto_review_merge.stop_marker("codex_no_response", "99", HEAD_SHA)
+    fake_gh.responses["/pulls?state=open"] = [
+        {
+            "number": 97,
+            "created_at": BASELINE,
+            "user": {"login": "github-actions[bot]"},
+            "base": {"ref": "main"},
+            "head": {
+                "ref": "data/auto-update-20260531",
+                "sha": HEAD_SHA,
+                "repo": {"full_name": "owner/repo"},
+            },
+            "body": "source_run_id:111",
+        }
+    ]
+    fake_gh.responses["/issues/97/comments"] = [
+        {
+            "id": 1,
+            "created_at": BASELINE,
+            "user": {"login": "github-actions[bot]"},
+            "body": f"stopped\n\n{stop}",
+        }
+    ]
+    fake_gh.responses[f"/commits/{HEAD_SHA}"] = {
+        "commit": {"committer": {"date": BASELINE}}
+    }
+    fake_gh.responses["/pulls/97/comments"] = [_codex_finding()]
+
+    notify_calls: list[dict] = []
+
+    def fake_notify(**kwargs):
+        notify_calls.append(kwargs)
+        return 0
+
+    monkeypatch.setattr(auto_review_merge, "notify_review_stop", fake_notify)
+    ensure_calls: list[dict] = []
+
+    def fake_ensure(**kwargs):
+        ensure_calls.append(kwargs)
+        raise AssertionError("findings 停止時に retry 投稿してはならない")
+
+    monkeypatch.setattr(auto_review_merge, "ensure_review_comment", fake_ensure)
+    _script_metrics(
+        monkeypatch,
+        [
+            _metrics(
+                finding_count=1,
+                review_complete=True,
+                merge_ok=False,
+                stop_reason="findings",
+            )
+        ],
+    )
+
+    out = tmp_path / "out.txt"
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_SERVER_URL", "https://github.com")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_RUN_ID", "555")
+
+    rc = main(
+        [
+            "resume",
+            "--repo",
+            "owner/repo",
+            "--run-id",
+            "555",
+            "--pat-available",
+            "true",
+            "--pat-login",
+            PAT_LOGIN,
+            "--retry-wait-seconds",
+            "60",
+            "--poll-seconds",
+            "30",
+            "--github-output",
+            str(out),
+            "--step-summary",
+            str(summary),
+        ]
+    )
+
+    assert rc == 0
+    assert ensure_calls == []
+    assert len(notify_calls) == 1
+    assert notify_calls[0]["stop_reason"] == "findings"
+    assert notify_calls[0]["pr_number"] == 97
+    assert notify_calls[0]["report_date"] == "20260531"
+    assert notify_calls[0]["pr_url"] == "https://github.com/owner/repo/pull/97"
+    assert (
+        notify_calls[0]["run_url"]
+        == "https://github.com/owner/repo/actions/runs/555"
+    )
+    assert any("reason:codex_findings" in body for _, body in fake_gh.posted_comments)
+    text = summary.read_text(encoding="utf-8")
+    assert "- stopped_findings: #97" in text
+    outputs = read_github_output(out)
+    assert outputs["merged_count"] == "0"
+    assert outputs["pending_count"] == "0"

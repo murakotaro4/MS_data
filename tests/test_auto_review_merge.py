@@ -11,6 +11,7 @@ from ms_data.gh.auto_review_merge import (
     build_auto_review_report,
     find_latest_bot_comment,
     jst_report_date,
+    later_iso8601,
     recovered_marker,
     resolve_source_run_id,
     resolve_target_pr,
@@ -421,3 +422,15 @@ def test_resolve_source_run_id_and_recovered_marker():
         recovered_marker("555", "mergeoid", "111")
         == "<!-- auto-review-recovered run_id:555 merge_sha:mergeoid source_run_id:111 -->"
     )
+
+
+def test_later_iso8601_picks_newer_timestamp():
+    assert (
+        later_iso8601("2026-05-31T09:10:00Z", "2026-05-31T15:00:00Z")
+        == "2026-05-31T15:00:00Z"
+    )
+    assert (
+        later_iso8601("2026-05-31T15:00:00Z", "2026-05-31T09:10:00Z")
+        == "2026-05-31T15:00:00Z"
+    )
+    assert later_iso8601("2026-05-31T09:10:00Z", "") == "2026-05-31T09:10:00Z"
