@@ -1,15 +1,24 @@
+import pytest
+
 from ms_data.gh.auto_review_merge import (
+    GITHUB_ACTIONS_BOT,
     _bool_text,
     _head_ref,
     _head_sha,
     _int_or_none,
+    _merge_and_notify,
     _positive_int,
     build_auto_review_report,
     find_latest_bot_comment,
     jst_report_date,
+    later_iso8601,
+    latest_force_push_created_at,
+    recovered_marker,
+    resolve_source_run_id,
     resolve_target_pr,
     retry_marker,
     review_marker,
+    select_resume_candidates,
     stop_marker,
 )
 
@@ -112,11 +121,11 @@ def test_comment_markers_and_latest_bot_comment():
         stop_marker("codex_no_response", "123", "abc123")
         == "<!-- auto-review-stop reason:codex_no_response run_id:123 head_sha:abc123 -->"
     )
-    assert find_latest_bot_comment(comments, marker)["id"] == 2
+    assert find_latest_bot_comment(comments, marker, {GITHUB_ACTIONS_BOT})["id"] == 2
 
 
 def test_find_latest_bot_comment_returns_none_without_match():
-    assert find_latest_bot_comment([], review_marker("abc")) is None
+    assert find_latest_bot_comment([], review_marker("abc"), {GITHUB_ACTIONS_BOT}) is None
     other_user = [
         {
             "id": 1,
@@ -125,7 +134,37 @@ def test_find_latest_bot_comment_returns_none_without_match():
             "body": review_marker("abc"),
         }
     ]
-    assert find_latest_bot_comment(other_user, review_marker("abc")) is None
+    assert (
+        find_latest_bot_comment(other_user, review_marker("abc"), {GITHUB_ACTIONS_BOT})
+        is None
+    )
+
+
+def test_find_latest_bot_comment_allows_pat_login_and_rejects_others():
+    marker = review_marker("abc123")
+    pat_login = "codex-trigger-user"
+    comments = [
+        {
+            "id": 1,
+            "created_at": "2026-05-31T09:00:00Z",
+            "user": {"login": "someone-else"},
+            "body": marker,
+        },
+        {
+            "id": 2,
+            "created_at": "2026-05-31T09:01:00Z",
+            "user": {"login": pat_login},
+            "body": marker,
+        },
+    ]
+
+    assert (
+        find_latest_bot_comment(
+            comments, marker, {GITHUB_ACTIONS_BOT, pat_login}
+        )["id"]
+        == 2
+    )
+    assert find_latest_bot_comment(comments, marker, {GITHUB_ACTIONS_BOT}) is None
 
 
 def test_text_parsing_helpers():
@@ -192,6 +231,24 @@ def test_build_auto_review_report_records_no_response_stop():
     assert report["review"]["trigger_comment_ids"] == ["10", "11", "12"]
 
 
+def test_build_auto_review_report_allows_empty_trigger_comment_ids():
+    report = build_auto_review_report(
+        _report_args(
+            merge_ok="false",
+            stop_reason="disconnected",
+            trigger_comment_ids="",
+            first_trigger_created_at="2026-05-31T09:10:00Z",
+            responded="false",
+            review_complete="false",
+        )
+    )
+
+    assert report["status"] == "stopped"
+    assert report["stop_reason"] == "disconnected"
+    assert report["review"]["trigger_comment_ids"] == []
+    assert report["review"]["first_trigger_created_at"] == "2026-05-31T09:10:00Z"
+
+
 def test_build_auto_review_report_records_merge_failure():
     report = build_auto_review_report(_report_args(merge_outcome="failure"))
 
@@ -220,3 +277,226 @@ def test_build_auto_review_report_records_merge_ready():
     assert report["stop_reason"] == "none"
     assert report["merge_ok"] is True
     assert report["merged"] is False
+
+
+def _auto_update_pr(
+    *,
+    number: int,
+    report_date: str,
+    head_sha: str,
+    body: str = "source_run_id:111",
+    login: str = "github-actions[bot]",
+    base_ref: str = "main",
+    repo: str = "owner/repo",
+) -> dict:
+    return {
+        "number": number,
+        "created_at": f"2026-05-{report_date[-2:]}T09:00:00Z",
+        "user": {"login": login},
+        "base": {"ref": base_ref},
+        "head": {
+            "ref": f"data/auto-update-{report_date}",
+            "sha": head_sha,
+            "repo": {"full_name": repo},
+        },
+        "body": body,
+    }
+
+
+def _stop_comment(
+    reason: str,
+    head_sha: str,
+    run_id: str = "99",
+    *,
+    login: str = "github-actions[bot]",
+    created_at: str = "2026-05-31T12:00:00Z",
+) -> dict:
+    return {
+        "id": 1,
+        "created_at": created_at,
+        "user": {"login": login},
+        "body": f"stopped\n\n{stop_marker(reason, run_id, head_sha)}",
+    }
+
+
+def test_select_resume_candidates_filters_reason_and_head_sha():
+    pulls = [
+        _auto_update_pr(number=10, report_date="20260530", head_sha="sha10"),
+        _auto_update_pr(number=11, report_date="20260531", head_sha="sha11"),
+        _auto_update_pr(number=12, report_date="20260601", head_sha="sha12"),
+        _auto_update_pr(number=13, report_date="20260602", head_sha="sha13"),
+    ]
+    comments_by_pr = {
+        "10": [_stop_comment("codex_no_response", "sha10")],
+        "11": [_stop_comment("codex_findings", "sha11")],  # findings は除外
+        "12": [_stop_comment("codex_disconnected", "old-sha")],  # head_sha 不一致
+        "13": [_stop_comment("codex_disconnected", "sha13")],
+    }
+
+    selected = select_resume_candidates(
+        pulls=pulls,
+        comments_by_pr=comments_by_pr,
+        repo="owner/repo",
+        max_candidates=5,
+    )
+
+    assert [item["pr_number"] for item in selected] == ["13", "10"]
+    assert selected[0]["stop_reason"] == "codex_disconnected"
+    assert selected[1]["stop_reason"] == "codex_no_response"
+
+
+def test_select_resume_candidates_rejects_third_party_stop_marker():
+    pulls = [
+        _auto_update_pr(number=20, report_date="20260531", head_sha="sha20"),
+        _auto_update_pr(number=21, report_date="20260601", head_sha="sha21"),
+    ]
+    comments_by_pr = {
+        "20": [
+            _stop_comment(
+                "codex_no_response",
+                "sha20",
+                login="attacker",
+            )
+        ],
+        "21": [_stop_comment("codex_disconnected", "sha21")],
+    }
+
+    selected = select_resume_candidates(
+        pulls=pulls,
+        comments_by_pr=comments_by_pr,
+        repo="owner/repo",
+        max_candidates=5,
+    )
+
+    assert [item["pr_number"] for item in selected] == ["21"]
+
+
+def test_select_resume_candidates_uses_latest_stop_marker_only():
+    pulls = [
+        _auto_update_pr(number=30, report_date="20260531", head_sha="sha30"),
+        _auto_update_pr(number=31, report_date="20260601", head_sha="sha31"),
+    ]
+    comments_by_pr = {
+        "30": [
+            _stop_comment(
+                "codex_no_response",
+                "sha30",
+                created_at="2026-05-31T10:00:00Z",
+            ),
+            _stop_comment(
+                "codex_findings",
+                "sha30",
+                created_at="2026-05-31T12:00:00Z",
+            ),
+        ],
+        "31": [
+            _stop_comment(
+                "codex_findings",
+                "sha31",
+                created_at="2026-06-01T09:00:00Z",
+            ),
+            _stop_comment(
+                "codex_disconnected",
+                "sha31",
+                created_at="2026-06-01T11:00:00Z",
+            ),
+        ],
+    }
+
+    selected = select_resume_candidates(
+        pulls=pulls,
+        comments_by_pr=comments_by_pr,
+        repo="owner/repo",
+        max_candidates=5,
+    )
+
+    # 30: 最新が findings → 除外 / 31: 最新が disconnected → 採用
+    assert [item["pr_number"] for item in selected] == ["31"]
+    assert selected[0]["stop_reason"] == "codex_disconnected"
+
+
+def test_select_resume_candidates_orders_desc_and_respects_limit():
+    pulls = [
+        _auto_update_pr(number=1, report_date="20260528", head_sha="a"),
+        _auto_update_pr(number=2, report_date="20260530", head_sha="b"),
+        _auto_update_pr(number=3, report_date="20260529", head_sha="c"),
+    ]
+    comments_by_pr = {
+        "1": [_stop_comment("codex_no_response", "a")],
+        "2": [_stop_comment("codex_no_response", "b")],
+        "3": [_stop_comment("codex_disconnected", "c")],
+    }
+
+    selected = select_resume_candidates(
+        pulls=pulls,
+        comments_by_pr=comments_by_pr,
+        repo="owner/repo",
+        max_candidates=2,
+    )
+
+    assert [item["pr_number"] for item in selected] == ["2", "3"]
+    assert [item["report_date"] for item in selected] == ["20260530", "20260529"]
+
+
+def test_merge_and_notify_raises_on_head_sha_mismatch():
+    class _FakeClient:
+        repo = "owner/repo"
+
+        def api_json(self, endpoint, **kwargs):
+            return {
+                "head": {
+                    "ref": "data/auto-update-20260531",
+                    "sha": "new-sha",
+                }
+            }
+
+    with pytest.raises(RuntimeError, match="head SHA changed"):
+        _merge_and_notify(
+            client=_FakeClient(),  # type: ignore[arg-type]
+            pr_number="97",
+            head_ref="data/auto-update-20260531",
+            evaluated_sha="old-sha",
+            source_run_id="111",
+            resume_run_id="555",
+        )
+
+
+def test_resolve_source_run_id_and_recovered_marker():
+    assert resolve_source_run_id("hello\nsource_run_id:26709410162\n") == "26709410162"
+    assert resolve_source_run_id("no marker") == ""
+    assert (
+        recovered_marker("555", "mergeoid", "111")
+        == "<!-- auto-review-recovered run_id:555 merge_sha:mergeoid source_run_id:111 -->"
+    )
+
+
+def test_later_iso8601_picks_newer_timestamp():
+    assert (
+        later_iso8601("2026-05-31T09:10:00Z", "2026-05-31T15:00:00Z")
+        == "2026-05-31T15:00:00Z"
+    )
+    assert (
+        later_iso8601("2026-05-31T15:00:00Z", "2026-05-31T09:10:00Z")
+        == "2026-05-31T15:00:00Z"
+    )
+    assert later_iso8601("2026-05-31T09:10:00Z", "") == "2026-05-31T09:10:00Z"
+
+
+def test_latest_force_push_created_at_picks_newest_event():
+    assert (
+        latest_force_push_created_at(
+            [
+                {"event": "committed", "created_at": "2026-05-31T18:00:00Z"},
+                {
+                    "event": "head_ref_force_pushed",
+                    "created_at": "2026-05-31T12:00:00Z",
+                },
+                {
+                    "event": "head_ref_force_pushed",
+                    "created_at": "2026-05-31T16:00:00Z",
+                },
+            ]
+        )
+        == "2026-05-31T16:00:00Z"
+    )
+    assert latest_force_push_created_at([]) == ""

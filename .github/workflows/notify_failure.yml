@@ -5,6 +5,7 @@ on:
     workflows:
       - data update
       - auto review merge
+      - resume auto review
       - post merge notify
       - cleanup auto update prs
       - reports prune

@@ -13,6 +13,7 @@ from ms_data.gh.gh_json import login_of as _login
 
 CODEX_LOGINS = {"chatgpt-codex-connector[bot]", "chatgpt-codex-connector"}
 NO_ISSUES_PREFIX = "Codex Review: Didn't find any major issues."
+DISCONNECT_PREFIX = "To use Codex here"
 
 
 def _is_codex(item: dict[str, Any]) -> bool:
@@ -62,6 +63,12 @@ def evaluate(
         if isinstance(item.get("body"), str)
         and item["body"].startswith(NO_ISSUES_PREFIX)
     )
+    disconnect_count = sum(
+        1
+        for item in codex_issue_comments
+        if isinstance(item.get("body"), str)
+        and item["body"].startswith(DISCONNECT_PREFIX)
+    )
 
     terminal_count = review_count + no_issue_comment_count
     review_complete = terminal_count > 0 or finding_count > 0
@@ -70,6 +77,8 @@ def evaluate(
         stop_reason = "findings"
     elif merge_ok:
         stop_reason = "none"
+    elif disconnect_count > 0:
+        stop_reason = "disconnected"
     else:
         stop_reason = "no_response"
 
@@ -79,6 +88,7 @@ def evaluate(
         "reaction_count": reaction_count,
         "issue_comment_count": len(codex_issue_comments),
         "no_issue_comment_count": no_issue_comment_count,
+        "disconnect_count": disconnect_count,
         "terminal_count": terminal_count,
         "review_complete": review_complete,
         "merge_ok": merge_ok,

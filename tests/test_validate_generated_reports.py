@@ -65,8 +65,8 @@ def test_validate_generated_reports_accepts_current_report_shapes(tmp_path: Path
                 "attempts_used": 3,
                 "max_attempts": 3,
                 "attempt_timeout_seconds": 420,
-                "trigger_comment_ids": ["10"],
-                "first_trigger_created_at": "2026-05-31T10:00:00Z",
+                "trigger_comment_ids": [],
+                "first_trigger_created_at": "2026-05-31T09:10:00Z",
             },
         },
     )

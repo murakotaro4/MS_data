@@ -18,8 +18,8 @@ jobs:
       pull-requests: write
       issues: write
     concurrency:
-      group: auto-review-merge-${{ github.event.workflow_run.id }}
-      cancel-in-progress: true
+      group: msdata-auto-review-merge
+      cancel-in-progress: false
     if: >
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
@@ -76,34 +76,67 @@ jobs:
             --report-date "${{ steps.resolve.outputs.report_date }}" \
             --head-ref "$HEAD_REF"
 
-      - id: trigger
-        name: Trigger Codex review
+      - id: baseline
+        name: Establish review baseline
         if: steps.resolve.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          uv run python -m ms_data.gh.auto_review_merge trigger-review \
+          uv run python -m ms_data.gh.auto_review_merge establish-baseline \
             --repo "${{ steps.prepare.outputs.repo }}" \
             --pr-number "${{ steps.resolve.outputs.pr }}" \
-            --head-sha "${{ steps.resolve.outputs.head_sha }}" \
             --github-output "$GITHUB_OUTPUT"
+
+      - id: pat
+        name: Resolve Codex trigger PAT
+        if: steps.resolve.outputs.skip != 'true'
+        env:
+          CODEX_TRIGGER_PAT: ${{ secrets.CODEX_TRIGGER_PAT }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pat_available=false
+          pat_login=""
+          if [[ -n "${CODEX_TRIGGER_PAT}" ]]; then
+            if login="$(GH_TOKEN="${CODEX_TRIGGER_PAT}" gh api user --jq .login)" && [[ -n "${login}" ]]; then
+              pat_available=true
+              pat_login="${login}"
+            else
+              echo "Warning: CODEX_TRIGGER_PAT is set but login resolution failed; falling back without PAT."
+              pat_available=false
+              pat_login=""
+            fi
+          fi
+          echo "pat_available=${pat_available}" >> "$GITHUB_OUTPUT"
+          echo "pat_login=${pat_login}" >> "$GITHUB_OUTPUT"
 
       - id: wait
         name: Wait for Codex response with retries
         if: steps.resolve.outputs.skip != 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN_DEFAULT: ${{ github.token }}
+          CODEX_TRIGGER_PAT: ${{ secrets.CODEX_TRIGGER_PAT }}
+          PAT_AVAILABLE: ${{ steps.pat.outputs.pat_available }}
+          PAT_LOGIN: ${{ steps.pat.outputs.pat_login }}
+        shell: bash
         run: |
+          set -euo pipefail
+          if [[ "${PAT_AVAILABLE}" == "true" ]]; then
+            export GH_TOKEN="${CODEX_TRIGGER_PAT}"
+          else
+            export GH_TOKEN="${GITHUB_TOKEN_DEFAULT}"
+          fi
           uv run python -m ms_data.gh.auto_review_merge wait-for-review \
             --repo "${{ steps.prepare.outputs.repo }}" \
             --pr-number "${{ steps.resolve.outputs.pr }}" \
             --head-sha "${{ steps.resolve.outputs.head_sha }}" \
-            --trigger-comment-id "${{ steps.trigger.outputs.trigger_comment_id }}" \
-            --trigger-comment-created-at "${{ steps.trigger.outputs.trigger_created_at }}" \
+            --baseline-created-at "${{ steps.baseline.outputs.baseline_created_at }}" \
             --max-attempts "${CODEX_REVIEW_MAX_ATTEMPTS}" \
             --attempt-timeout-seconds "${CODEX_REVIEW_ATTEMPT_TIMEOUT_SECONDS}" \
             --poll-seconds "${CODEX_REVIEW_POLL_SECONDS}" \
             --settle-seconds "${CODEX_REVIEW_SETTLE_SECONDS}" \
+            --pat-available "${PAT_AVAILABLE}" \
+            --pat-login "${PAT_LOGIN}" \
             --github-output "$GITHUB_OUTPUT" \
             --step-summary "$GITHUB_STEP_SUMMARY"
 
@@ -119,7 +152,22 @@ jobs:
             --pr-number "${{ steps.resolve.outputs.pr }}" \
             --head-sha "${{ steps.resolve.outputs.head_sha }}" \
             --trigger-comment-ids "$TRIGGER_COMMENT_IDS" \
-            --first-trigger-created-at "${{ steps.wait.outputs.first_trigger_created_at }}" \
+            --first-trigger-created-at "${{ steps.baseline.outputs.baseline_created_at }}" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Export findings
+        if: >
+          steps.resolve.outputs.skip != 'true'
+          && steps.gate.outputs.merge_ok != 'true'
+          && steps.gate.outputs.stop_reason == 'findings'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          uv run python -m ms_data.gh.auto_review_merge export-findings \
+            --repo "${{ steps.prepare.outputs.repo }}" \
+            --pr-number "${{ steps.resolve.outputs.pr }}" \
+            --head-sha "${{ steps.resolve.outputs.head_sha }}" \
+            --out "$RUNNER_TEMP/codex_findings.json" \
             --github-output "$GITHUB_OUTPUT"
 
       - name: Record stop reason
@@ -141,6 +189,33 @@ jobs:
             --attempt-timeout-seconds "${{ steps.wait.outputs.attempt_timeout_seconds }}" \
             --step-summary "$GITHUB_STEP_SUMMARY"
 
+      - name: Notify stop by mail
+        if: steps.resolve.outputs.skip != 'true' && steps.gate.outputs.merge_ok != 'true'
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GMAIL_TO: ${{ secrets.GMAIL_ADDRESS }}
+          STOP_REASON: ${{ steps.gate.outputs.stop_reason }}
+          PR_NUMBER: ${{ steps.resolve.outputs.pr }}
+          REPORT_DATE: ${{ steps.resolve.outputs.report_date }}
+          REPO: ${{ steps.prepare.outputs.repo }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pr_url="${GITHUB_SERVER_URL}/${REPO}/pull/${PR_NUMBER}"
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          args=(
+            --stop-reason "${STOP_REASON}"
+            --pr-number "${PR_NUMBER}"
+            --pr-url "${pr_url}"
+            --report-date "${REPORT_DATE}"
+            --run-url "${run_url}"
+          )
+          if [[ "${STOP_REASON}" == "findings" ]]; then
+            args+=(--findings-json "${RUNNER_TEMP}/codex_findings.json")
+          fi
+          uv run python -m ms_data.gh.notify_review_stop "${args[@]}"
+
       - id: merge
         name: Merge pull request
         if: steps.resolve.outputs.skip != 'true' && steps.gate.outputs.merge_ok == 'true'
@@ -149,6 +224,7 @@ jobs:
           REPO: ${{ steps.prepare.outputs.repo }}
           PR_NUMBER: ${{ steps.resolve.outputs.pr }}
           HEAD_REF: ${{ steps.resolve.outputs.head_ref }}
+          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -159,7 +235,20 @@ jobs:
             exit 0
           fi
 
-          gh pr merge "${PR_NUMBER}" --repo "${REPO}" --merge --delete-branch
+          current_sha="$(gh pr view "${PR_NUMBER}" --repo "${REPO}" --json headRefOid --jq '.headRefOid')"
+          if [[ "${current_sha}" != "${HEAD_SHA}" ]]; then
+            echo "HEAD SHA mismatch: expected=${HEAD_SHA} current=${current_sha}. Skip merge."
+            {
+              echo "### Merge skipped"
+              echo "- reason: head SHA mismatch after review"
+              echo "- expected: \`${HEAD_SHA}\`"
+              echo "- current: \`${current_sha}\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "merged=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+          gh pr merge "${PR_NUMBER}" --repo "${REPO}" --merge --delete-branch --match-head-commit "${HEAD_SHA}"
 
           merged_state="$(gh pr view "${PR_NUMBER}" --repo "${REPO}" --json state --jq '.state')"
           if [[ "${merged_state}" != "MERGED" ]]; then
