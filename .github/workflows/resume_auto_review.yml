@@ -1,0 +1,69 @@
+name: resume auto review
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write
+
+concurrency:
+  group: msdata-auto-review-merge
+  cancel-in-progress: false
+
+jobs:
+  resume:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup-uv-env
+
+      - id: pat
+        name: Resolve Codex trigger PAT
+        env:
+          CODEX_TRIGGER_PAT: ${{ secrets.CODEX_TRIGGER_PAT }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pat_available=false
+          pat_login=""
+          if [[ -n "${CODEX_TRIGGER_PAT}" ]]; then
+            if login="$(GH_TOKEN="${CODEX_TRIGGER_PAT}" gh api user --jq .login)" && [[ -n "${login}" ]]; then
+              pat_available=true
+              pat_login="${login}"
+            else
+              echo "Warning: CODEX_TRIGGER_PAT is set but login resolution failed; falling back without PAT."
+              pat_available=false
+              pat_login=""
+            fi
+          fi
+          echo "pat_available=${pat_available}" >> "$GITHUB_OUTPUT"
+          echo "pat_login=${pat_login}" >> "$GITHUB_OUTPUT"
+
+      - name: Resume stopped auto reviews
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CODEX_TRIGGER_PAT: ${{ secrets.CODEX_TRIGGER_PAT }}
+          PAT_AVAILABLE: ${{ steps.pat.outputs.pat_available }}
+          PAT_LOGIN: ${{ steps.pat.outputs.pat_login }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${PAT_AVAILABLE}" == "true" ]]; then
+            export CODEX_TRIGGER_TOKEN="${CODEX_TRIGGER_PAT}"
+          fi
+          uv run python -m ms_data.gh.auto_review_merge resume \
+            --repo "${GITHUB_REPOSITORY}" \
+            --run-id "${GITHUB_RUN_ID}" \
+            --pat-available "${PAT_AVAILABLE}" \
+            --pat-login "${PAT_LOGIN}" \
+            --max-candidates 3 \
+            --retry-wait-seconds 300 \
+            --github-output "$GITHUB_OUTPUT" \
+            --step-summary "$GITHUB_STEP_SUMMARY"
