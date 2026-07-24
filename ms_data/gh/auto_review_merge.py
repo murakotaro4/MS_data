@@ -205,6 +205,7 @@ def select_resume_candidates(
     """翌朝レスキュー対象 PR を選定する（純関数）。
 
     - open / github-actions[bot] / ``data/auto-update-*`` / base=main / 同一 repo
+    - stop マーカーは github-actions[bot] 投稿のみ受理
     - stop マーカー reason が ``codex_no_response`` / ``codex_disconnected``
     - stop マーカーの head_sha が現在の PR HEAD と一致
     - report_date 降順で最大 ``max_candidates`` 件
@@ -227,6 +228,8 @@ def select_resume_candidates(
         comments = comments_by_pr.get(pr_number, [])
         matched: dict[str, str] | None = None
         for comment in comments:
+            if _login(comment) != GITHUB_ACTIONS_BOT:
+                continue
             parsed = parse_stop_marker(str(comment.get("body") or ""))
             if parsed is None:
                 continue
@@ -887,18 +890,19 @@ def _merge_and_notify(
     evaluated_sha: str,
     source_run_id: str,
     resume_run_id: str,
-) -> str | None:
+) -> str:
     """評価済み SHA と一致する場合のみ merge し、notify を dispatch する。
 
-    成功時は merge_commit_sha、不一致や未 MERGED の場合は None。
+    成功時は merge_commit_sha を返す。
+    HEAD 変更・未 MERGED・merge_commit_sha 欠落は RuntimeError を送出し、
+    cmd_resume を非ゼロ終了させて notify_failure に拾わせる。
     """
     current_sha = _fetch_current_head_sha(client, pr_number)
     if current_sha != evaluated_sha:
-        print(
+        raise RuntimeError(
             f"PR #{pr_number}: head SHA changed "
-            f"({evaluated_sha} -> {current_sha}); skip merge."
+            f"({evaluated_sha} -> {current_sha}); abort resume merge."
         )
-        return None
 
     run_gh(
         [
@@ -929,16 +933,19 @@ def _merge_and_notify(
         )
     )
     if str(view.get("state") or "").upper() != "MERGED":
-        print(f"PR #{pr_number}: merge did not reach MERGED state.")
-        return None
+        raise RuntimeError(
+            f"PR #{pr_number}: merge did not reach MERGED state "
+            f"(state={view.get('state')!r})."
+        )
     merge_commit = view.get("mergeCommit")
     if isinstance(merge_commit, dict):
         merge_sha = str(merge_commit.get("oid") or "")
     else:
         merge_sha = ""
     if not merge_sha:
-        print(f"PR #{pr_number}: merge_commit_sha missing after merge.")
-        return None
+        raise RuntimeError(
+            f"PR #{pr_number}: merge_commit_sha missing after merge."
+        )
 
     run_gh(
         [
@@ -1062,12 +1069,8 @@ def cmd_resume(args: argparse.Namespace) -> int:
                 source_run_id=source_run_id,
                 resume_run_id=args.run_id,
             )
-            if merge_sha:
-                merged_count += 1
-                summary_lines.append(f"- merged: #{pr_number} ({merge_sha})")
-            else:
-                pending_count += 1
-                summary_lines.append(f"- pending(merge_skipped): #{pr_number}")
+            merged_count += 1
+            summary_lines.append(f"- merged: #{pr_number} ({merge_sha})")
             continue
 
         if not (pat_available and pat_login):
@@ -1101,12 +1104,8 @@ def cmd_resume(args: argparse.Namespace) -> int:
                 source_run_id=source_run_id,
                 resume_run_id=args.run_id,
             )
-            if merge_sha:
-                merged_count += 1
-                summary_lines.append(f"- merged_after_retry: #{pr_number} ({merge_sha})")
-            else:
-                pending_count += 1
-                summary_lines.append(f"- pending(merge_skipped): #{pr_number}")
+            merged_count += 1
+            summary_lines.append(f"- merged_after_retry: #{pr_number} ({merge_sha})")
         else:
             pending_count += 1
             summary_lines.append(f"- pending(no_response): #{pr_number}")

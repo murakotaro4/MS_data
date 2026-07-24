@@ -1,9 +1,12 @@
+import pytest
+
 from ms_data.gh.auto_review_merge import (
     GITHUB_ACTIONS_BOT,
     _bool_text,
     _head_ref,
     _head_sha,
     _int_or_none,
+    _merge_and_notify,
     _positive_int,
     build_auto_review_report,
     find_latest_bot_comment,
@@ -298,11 +301,17 @@ def _auto_update_pr(
     }
 
 
-def _stop_comment(reason: str, head_sha: str, run_id: str = "99") -> dict:
+def _stop_comment(
+    reason: str,
+    head_sha: str,
+    run_id: str = "99",
+    *,
+    login: str = "github-actions[bot]",
+) -> dict:
     return {
         "id": 1,
         "created_at": "2026-05-31T12:00:00Z",
-        "user": {"login": "github-actions[bot]"},
+        "user": {"login": login},
         "body": f"stopped\n\n{stop_marker(reason, run_id, head_sha)}",
     }
 
@@ -333,6 +342,32 @@ def test_select_resume_candidates_filters_reason_and_head_sha():
     assert selected[1]["stop_reason"] == "codex_no_response"
 
 
+def test_select_resume_candidates_rejects_third_party_stop_marker():
+    pulls = [
+        _auto_update_pr(number=20, report_date="20260531", head_sha="sha20"),
+        _auto_update_pr(number=21, report_date="20260601", head_sha="sha21"),
+    ]
+    comments_by_pr = {
+        "20": [
+            _stop_comment(
+                "codex_no_response",
+                "sha20",
+                login="attacker",
+            )
+        ],
+        "21": [_stop_comment("codex_disconnected", "sha21")],
+    }
+
+    selected = select_resume_candidates(
+        pulls=pulls,
+        comments_by_pr=comments_by_pr,
+        repo="owner/repo",
+        max_candidates=5,
+    )
+
+    assert [item["pr_number"] for item in selected] == ["21"]
+
+
 def test_select_resume_candidates_orders_desc_and_respects_limit():
     pulls = [
         _auto_update_pr(number=1, report_date="20260528", head_sha="a"),
@@ -354,6 +389,29 @@ def test_select_resume_candidates_orders_desc_and_respects_limit():
 
     assert [item["pr_number"] for item in selected] == ["2", "3"]
     assert [item["report_date"] for item in selected] == ["20260530", "20260529"]
+
+
+def test_merge_and_notify_raises_on_head_sha_mismatch():
+    class _FakeClient:
+        repo = "owner/repo"
+
+        def api_json(self, endpoint, **kwargs):
+            return {
+                "head": {
+                    "ref": "data/auto-update-20260531",
+                    "sha": "new-sha",
+                }
+            }
+
+    with pytest.raises(RuntimeError, match="head SHA changed"):
+        _merge_and_notify(
+            client=_FakeClient(),  # type: ignore[arg-type]
+            pr_number="97",
+            head_ref="data/auto-update-20260531",
+            evaluated_sha="old-sha",
+            source_run_id="111",
+            resume_run_id="555",
+        )
 
 
 def test_resolve_source_run_id_and_recovered_marker():

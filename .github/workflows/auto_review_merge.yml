@@ -245,7 +245,7 @@ jobs:
               echo "- current: \`${current_sha}\`"
             } >> "$GITHUB_STEP_SUMMARY"
             echo "merged=false" >> "$GITHUB_OUTPUT"
-            exit 0
+            exit 1
           fi
 
           gh pr merge "${PR_NUMBER}" --repo "${REPO}" --merge --delete-branch --match-head-commit "${HEAD_SHA}"
