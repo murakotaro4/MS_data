@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-07-24T11:01:26Z",
+  "report_date": "20260724",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "2197ad8494dbc26fcdf3b6aff37a67894b90e119"
+  },
+  "github": {
+    "run_id": "30088119810",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "8199a9a05b4471f2392e75825a8767c6e2166cb26196de1afb6ac3ac0069b8d7",
+      "size_bytes": 144283,
+      "record_count": 586
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "b10cd3eeaa492643f82d019a73b184df184fab260d07b403bd0699941393e863",
+      "size_bytes": 59908,
+      "record_count": 51
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "87bbda398e9d8ef90abd43e52e4ce45c42284b5f9d542368d7982d1f98584870",
+      "size_bytes": 78385,
+      "record_count": 51
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "efa63513352e9e40b4c197a0445d6b89f11b3ddbbc983272cdea31390711e0c9",
+      "file_count": 48,
+      "size_bytes": 8179888
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "6c369d40a202641a58042e5d2589ac00e5bddd1233742fef1e5e09c9099e9b4c",
+      "size_bytes": 2585407,
+      "record_count": 1673
+    },
+    "diff_report": {
+      "path": "reports/2026/07/diff_msdata_20260724.md",
+      "sha256": "65efae6a10c982b429ff9baf22b532966531579a5b09d57862778d45877d33ca",
+      "size_bytes": 5094
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260724-run-30088119810",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260724-run-30088119810",
+    "asset_name": "raw_snapshot_20260724_run30088119810.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260724-run-30088119810"
+  }
+}
