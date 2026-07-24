@@ -954,3 +954,114 @@ def test_cmd_resume_stops_on_findings_without_retry(
     outputs = read_github_output(out)
     assert outputs["merged_count"] == "0"
     assert outputs["pending_count"] == "0"
+
+
+def test_cmd_resume_processes_only_newest_and_supersedes_older(
+    fake_gh, read_github_output, tmp_path, monkeypatch
+):
+    # 各 PR は main 基点の全量スナップショットのため、旧日 PR を後からマージすると
+    # データが巻き戻る。最新日 1 件のみ処理し、旧日は superseded として残す。
+    old_sha = "old-sha"
+    stop_new = auto_review_merge.stop_marker("codex_no_response", "99", HEAD_SHA)
+    stop_old = auto_review_merge.stop_marker("codex_no_response", "98", old_sha)
+    fake_gh.responses["/pulls?state=open"] = [
+        {
+            "number": 96,
+            "created_at": BASELINE,
+            "user": {"login": "github-actions[bot]"},
+            "base": {"ref": "main"},
+            "head": {
+                "ref": "data/auto-update-20260530",
+                "sha": old_sha,
+                "repo": {"full_name": "owner/repo"},
+            },
+            "body": "source_run_id:110",
+        },
+        {
+            "number": 97,
+            "created_at": BASELINE,
+            "user": {"login": "github-actions[bot]"},
+            "base": {"ref": "main"},
+            "head": {
+                "ref": "data/auto-update-20260531",
+                "sha": HEAD_SHA,
+                "repo": {"full_name": "owner/repo"},
+            },
+            "body": "source_run_id:111",
+        },
+    ]
+    fake_gh.responses["/issues/96/comments"] = [
+        {
+            "id": 1,
+            "created_at": BASELINE,
+            "user": {"login": "github-actions[bot]"},
+            "body": f"stopped\n\n{stop_old}",
+        }
+    ]
+    fake_gh.responses["/issues/97/comments"] = [
+        {
+            "id": 2,
+            "created_at": BASELINE,
+            "user": {"login": "github-actions[bot]"},
+            "body": f"stopped\n\n{stop_new}",
+        }
+    ]
+    fake_gh.responses[f"/commits/{HEAD_SHA}"] = {
+        "commit": {"committer": {"date": BASELINE}}
+    }
+    fake_gh.responses["/pulls/97/comments"] = [_codex_finding()]
+
+    notify_calls: list[dict] = []
+
+    def fake_notify(**kwargs):
+        notify_calls.append(kwargs)
+        return 0
+
+    monkeypatch.setattr(auto_review_merge, "notify_review_stop", fake_notify)
+    calls = _script_metrics(
+        monkeypatch,
+        [
+            _metrics(
+                finding_count=1,
+                review_complete=True,
+                merge_ok=False,
+                stop_reason="findings",
+            )
+        ],
+    )
+
+    out = tmp_path / "out.txt"
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_SERVER_URL", "https://github.com")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+    monkeypatch.setenv("GITHUB_RUN_ID", "556")
+
+    rc = main(
+        [
+            "resume",
+            "--repo",
+            "owner/repo",
+            "--run-id",
+            "556",
+            "--pat-available",
+            "false",
+            "--retry-wait-seconds",
+            "60",
+            "--poll-seconds",
+            "30",
+            "--github-output",
+            str(out),
+            "--step-summary",
+            str(summary),
+        ]
+    )
+
+    assert rc == 0
+    # 最新日 (#97) だけがゲート評価され、旧日 (#96) は評価されない
+    assert len(calls) == 1
+    assert len(notify_calls) == 1
+    assert notify_calls[0]["pr_number"] == 97
+    text = summary.read_text(encoding="utf-8")
+    assert "- superseded(skip): #96" in text
+    outputs = read_github_output(out)
+    assert outputs["merged_count"] == "0"

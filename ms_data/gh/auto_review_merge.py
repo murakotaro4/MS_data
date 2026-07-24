@@ -1241,6 +1241,18 @@ def cmd_resume(args: argparse.Namespace) -> int:
         f"- candidates: {len(candidates)}",
     ]
 
+    # 各 PR は main 基点の全量スナップショットのため、旧日 PR を後からマージすると
+    # データが巻き戻る。マージ対象は最新日の 1 件だけとし、旧日分は superseded
+    # として既存 cleanup のクローズに任せる。
+    superseded = candidates[1:]
+    candidates = candidates[:1]
+    for item in superseded:
+        summary_lines.append(f"- superseded(skip): #{item['pr_number']}")
+        print(
+            f"Resume superseded PR #{item['pr_number']} "
+            f"({item['head_ref']}): newer candidate exists; leave to cleanup."
+        )
+
     for candidate in candidates:
         pr_number = candidate["pr_number"]
         head_sha = candidate["head_sha"]
