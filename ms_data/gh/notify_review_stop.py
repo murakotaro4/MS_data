@@ -28,7 +28,7 @@ MANUAL_RECOVERY_HINT = (
     "翌朝 09:00 JST の自動レスキューがマージまで回収します。"
 )
 # 改行(\\n)・タブ以外の制御文字を除去する
-_CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+_CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
 
 
 def reason_label(stop_reason: str) -> str:
