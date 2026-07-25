@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-07-25T10:24:43Z",
+  "report_date": "20260725",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "9dbb86c87fb2fba65887fb7a61132d874cfeeb8d"
+  },
+  "github": {
+    "run_id": "30154394757",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "8ab29880c2715fb69526af611abd6bf4c894002cf86d2d2527337fc8302c1e85",
+      "size_bytes": 144258,
+      "record_count": 586
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "68c2373a0b1151556756f69048b204230f8bb96066016e5e5ba9344e397f357c",
+      "size_bytes": 72561,
+      "record_count": 62
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "ac01a32a9e68052712edc5386c622ee1e0a9655b8b8503d46100a11468f98893",
+      "size_bytes": 94993,
+      "record_count": 62
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "a1d962caa141ce4ac9796cc520d803147daa93fa8fe26f9eaa3e46d45e60fa3b",
+      "file_count": 58,
+      "size_bytes": 9738886
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "516f133ecbf7089a348f351ef972bb1d5be11f3868e8daf98e8c5991a4422e37",
+      "size_bytes": 2585407,
+      "record_count": 1673
+    },
+    "diff_report": {
+      "path": "reports/2026/07/diff_msdata_20260725.md",
+      "sha256": "54ae794d16efd12ea7ef2b343029dcab38aa4105565334e435d53da68238b3f1",
+      "size_bytes": 3227
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260725-run-30154394757",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260725-run-30154394757",
+    "asset_name": "raw_snapshot_20260725_run30154394757.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260725-run-30154394757"
+  }
+}
