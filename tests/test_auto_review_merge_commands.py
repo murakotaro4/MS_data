@@ -544,10 +544,55 @@ def test_cmd_wait_for_review_pat_fallback_posts_from_attempt_2(
     assert len(calls) == 3
 
 
-def test_cmd_wait_for_review_empty_pat_login_skips_posting(
+def test_cmd_wait_for_review_without_pat_posts_bot_comment_from_attempt_2(
+    fake_gh, fake_time, read_github_output, tmp_path, monkeypatch, capsys
+):
+    """PAT 不在でも attempt 2 以降は bot 名義で @codex review を投稿する。"""
+    calls = _script_metrics(
+        monkeypatch,
+        [
+            _metrics(),
+            _metrics(),
+            _metrics(review_complete=True, terminal_count=1),
+        ],
+    )
+    out = tmp_path / "out.txt"
+    summary = tmp_path / "summary.md"
+    ensure_calls: list[dict] = []
+    real_ensure = auto_review_merge.ensure_review_comment
+
+    def tracking_ensure(**kwargs):
+        ensure_calls.append(kwargs)
+        return real_ensure(**kwargs)
+
+    monkeypatch.setattr(auto_review_merge, "ensure_review_comment", tracking_ensure)
+
+    rc = main(
+        _wait_argv(
+            out, summary, max_attempts="3", pat_available="false", pat_login=""
+        )
+    )
+
+    assert rc == 0
+    outputs = read_github_output(out)
+    assert outputs["responded"] == "true"
+    assert outputs["response_attempt"] == "2"
+    assert outputs["trigger_comment_ids"] == "1000"
+    assert len(fake_gh.posted_comments) == 1
+    assert retry_marker(2, HEAD_SHA) in fake_gh.posted_comments[0][1]
+    assert "@codex review" in fake_gh.posted_comments[0][1]
+    assert len(ensure_calls) == 1
+    assert "allowed_logins" not in ensure_calls[0]
+    assert "use_trigger_token" not in ensure_calls[0]
+    assert "(bot)" in capsys.readouterr().out
+    assert len(calls) == 3
+
+
+def test_cmd_wait_for_review_empty_pat_login_posts_bot_comment(
     fake_gh, fake_time, read_github_output, tmp_path, monkeypatch
 ):
-    calls = _script_metrics(monkeypatch, [_metrics()])
+    """pat_available=true でも pat_login 空なら bot 名義で投稿する。"""
+    _script_metrics(monkeypatch, [_metrics()])
     out = tmp_path / "out.txt"
     summary = tmp_path / "summary.md"
 
@@ -560,9 +605,9 @@ def test_cmd_wait_for_review_empty_pat_login_skips_posting(
     assert rc == 0
     outputs = read_github_output(out)
     assert outputs["responded"] == "false"
-    assert outputs["trigger_comment_ids"] == ""
-    assert fake_gh.posted_comments == []
-    assert len(calls) == 4
+    assert outputs["trigger_comment_ids"] == "1000"
+    assert len(fake_gh.posted_comments) == 1
+    assert retry_marker(2, HEAD_SHA) in fake_gh.posted_comments[0][1]
 
 
 def test_cmd_wait_for_review_disconnect_aborts_early(
