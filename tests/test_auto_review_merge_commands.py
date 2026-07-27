@@ -493,9 +493,10 @@ def _wait_argv(
     ]
 
 
-def test_cmd_wait_for_review_responds_first_poll_without_comment(
+def test_cmd_wait_for_review_posts_review_marker_and_responds_on_attempt_1(
     fake_time, read_github_output, tmp_path, monkeypatch, fake_gh
 ):
+    """attempt 1 で review_marker 付き投稿→初回試行内で応答検知する。"""
     calls = _script_metrics(
         monkeypatch, [_metrics(review_complete=True, terminal_count=1)]
     )
@@ -510,17 +511,20 @@ def test_cmd_wait_for_review_responds_first_poll_without_comment(
     assert outputs["disconnected"] == "false"
     assert outputs["response_attempt"] == "1"
     assert outputs["attempts_used"] == "1"
-    assert outputs["trigger_comment_ids"] == ""
+    assert outputs["trigger_comment_ids"] == "1000"
     assert outputs["first_trigger_created_at"] == BASELINE
-    assert fake_gh.posted_comments == []
+    assert len(fake_gh.posted_comments) == 1
+    assert review_marker(HEAD_SHA) in fake_gh.posted_comments[0][1]
+    assert "@codex review" in fake_gh.posted_comments[0][1]
     assert calls[0]["since"] == BASELINE
     assert fake_time.sleeps == []
     assert "- responded: true" in summary.read_text(encoding="utf-8")
 
 
-def test_cmd_wait_for_review_pat_fallback_posts_from_attempt_2(
-    fake_gh, fake_time, read_github_output, tmp_path, monkeypatch
+def test_cmd_wait_for_review_pat_posts_from_attempt_1(
+    fake_gh, fake_time, read_github_output, tmp_path, monkeypatch, capsys
 ):
+    """PAT ありなら attempt 1 から人間名義で投稿し、応答が遅ければ retry も投稿する。"""
     calls = _script_metrics(
         monkeypatch,
         [
@@ -531,6 +535,14 @@ def test_cmd_wait_for_review_pat_fallback_posts_from_attempt_2(
     )
     out = tmp_path / "out.txt"
     summary = tmp_path / "summary.md"
+    ensure_calls: list[dict] = []
+    real_ensure = auto_review_merge.ensure_review_comment
+
+    def tracking_ensure(**kwargs):
+        ensure_calls.append(kwargs)
+        return real_ensure(**kwargs)
+
+    monkeypatch.setattr(auto_review_merge, "ensure_review_comment", tracking_ensure)
 
     rc = main(_wait_argv(out, summary, max_attempts="3"))
 
@@ -539,15 +551,20 @@ def test_cmd_wait_for_review_pat_fallback_posts_from_attempt_2(
     assert outputs["responded"] == "true"
     assert outputs["response_attempt"] == "2"
     assert outputs["attempts_used"] == "2"
-    assert outputs["trigger_comment_ids"] == "1000"
-    assert retry_marker(2, HEAD_SHA) in fake_gh.posted_comments[0][1]
+    assert outputs["trigger_comment_ids"] == "1000,1001"
+    assert len(fake_gh.posted_comments) == 2
+    assert review_marker(HEAD_SHA) in fake_gh.posted_comments[0][1]
+    assert retry_marker(2, HEAD_SHA) in fake_gh.posted_comments[1][1]
+    assert len(ensure_calls) == 2
+    assert PAT_LOGIN in ensure_calls[0]["allowed_logins"]
+    assert "(PAT)" in capsys.readouterr().out
     assert len(calls) == 3
 
 
-def test_cmd_wait_for_review_without_pat_posts_bot_comment_from_attempt_2(
+def test_cmd_wait_for_review_without_pat_posts_bot_comment_from_attempt_1(
     fake_gh, fake_time, read_github_output, tmp_path, monkeypatch, capsys
 ):
-    """PAT 不在でも attempt 2 以降は bot 名義で @codex review を投稿する。"""
+    """PAT 不在でも attempt 1 から bot 名義で @codex review を投稿する。"""
     calls = _script_metrics(
         monkeypatch,
         [
@@ -577,11 +594,12 @@ def test_cmd_wait_for_review_without_pat_posts_bot_comment_from_attempt_2(
     outputs = read_github_output(out)
     assert outputs["responded"] == "true"
     assert outputs["response_attempt"] == "2"
-    assert outputs["trigger_comment_ids"] == "1000"
-    assert len(fake_gh.posted_comments) == 1
-    assert retry_marker(2, HEAD_SHA) in fake_gh.posted_comments[0][1]
+    assert outputs["trigger_comment_ids"] == "1000,1001"
+    assert len(fake_gh.posted_comments) == 2
+    assert review_marker(HEAD_SHA) in fake_gh.posted_comments[0][1]
+    assert retry_marker(2, HEAD_SHA) in fake_gh.posted_comments[1][1]
     assert "@codex review" in fake_gh.posted_comments[0][1]
-    assert len(ensure_calls) == 1
+    assert len(ensure_calls) == 2
     assert "allowed_logins" not in ensure_calls[0]
     assert "use_trigger_token" not in ensure_calls[0]
     assert "(bot)" in capsys.readouterr().out
@@ -605,9 +623,10 @@ def test_cmd_wait_for_review_empty_pat_login_posts_bot_comment(
     assert rc == 0
     outputs = read_github_output(out)
     assert outputs["responded"] == "false"
-    assert outputs["trigger_comment_ids"] == "1000"
-    assert len(fake_gh.posted_comments) == 1
-    assert retry_marker(2, HEAD_SHA) in fake_gh.posted_comments[0][1]
+    assert outputs["trigger_comment_ids"] == "1000,1001"
+    assert len(fake_gh.posted_comments) == 2
+    assert review_marker(HEAD_SHA) in fake_gh.posted_comments[0][1]
+    assert retry_marker(2, HEAD_SHA) in fake_gh.posted_comments[1][1]
 
 
 def test_cmd_wait_for_review_disconnect_aborts_early(
@@ -627,8 +646,9 @@ def test_cmd_wait_for_review_disconnect_aborts_early(
     assert outputs["responded"] == "false"
     assert outputs["disconnected"] == "true"
     assert outputs["attempts_used"] == "1"
-    assert outputs["trigger_comment_ids"] == ""
-    assert fake_gh.posted_comments == []
+    assert outputs["trigger_comment_ids"] == "1000"
+    assert len(fake_gh.posted_comments) == 1
+    assert review_marker(HEAD_SHA) in fake_gh.posted_comments[0][1]
     assert len(calls) == 1  # 全 attempt を消費しない
 
 
@@ -647,14 +667,15 @@ def test_cmd_wait_for_review_times_out_all_attempts(
     assert outputs["disconnected"] == "false"
     assert outputs["attempts_used"] == "2"
     assert outputs["response_attempt"] == ""
-    assert outputs["trigger_comment_ids"] == "1000"
-    assert retry_marker(2, HEAD_SHA) in fake_gh.posted_comments[0][1]
+    assert outputs["trigger_comment_ids"] == "1000,1001"
+    assert review_marker(HEAD_SHA) in fake_gh.posted_comments[0][1]
+    assert retry_marker(2, HEAD_SHA) in fake_gh.posted_comments[1][1]
     assert len(calls) == 4
     assert "- responded: false" in summary.read_text(encoding="utf-8")
 
 
 def test_cmd_wait_for_review_settle_sleep(
-    fake_time, read_github_output, tmp_path, monkeypatch
+    fake_gh, fake_time, read_github_output, tmp_path, monkeypatch
 ):
     _script_metrics(monkeypatch, [_metrics(review_complete=True, terminal_count=1)])
     out = tmp_path / "out.txt"
@@ -666,6 +687,7 @@ def test_cmd_wait_for_review_settle_sleep(
     assert fake_time.sleeps == [45]
     outputs = read_github_output(out)
     assert outputs["settle_seconds"] == "45"
+    assert outputs["trigger_comment_ids"] == "1000"
 
 
 def _check_gate_argv(out, *, trigger_comment_ids="10"):
