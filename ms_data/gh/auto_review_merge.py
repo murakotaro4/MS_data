@@ -636,7 +636,9 @@ def _ensure_attempt_trigger(
     """試行回ごとのトリガーを確保する。
 
     attempt 1 は Automatic review 待ちのためコメント投稿なし。
-    attempt 2 以降は PAT が使える場合のみ retry マーカー付き ``@codex review`` を投稿する。
+    attempt 2 以降は retry マーカー付き ``@codex review`` を投稿する。
+    PAT が使える場合は人間名義（``allowed_logins`` に PAT login を含む）を優先し、
+    使えない場合は bot 名義（``GITHUB_ACTIONS_BOT`` 既定）で投稿する。
     """
     if attempt == 1:
         print(
@@ -644,24 +646,31 @@ def _ensure_attempt_trigger(
             "polling for Automatic review (no comment)."
         )
         return
-    if not pat_available or not str(args.pat_login or "").strip():
-        print(
-            f"Codex review attempt {attempt}/{max_attempts}: "
-            "PAT unavailable; continue polling without comment."
+
+    use_pat = pat_available and bool(str(args.pat_login or "").strip())
+    if use_pat:
+        trigger_comment_id, _, created_new = ensure_review_comment(
+            client=client,
+            pr_number=args.pr_number,
+            marker=retry_marker(attempt, args.head_sha),
+            allowed_logins=allowed_logins,
         )
-        return
-    trigger_comment_id, _, created_new = ensure_review_comment(
-        client=client,
-        pr_number=args.pr_number,
-        marker=retry_marker(attempt, args.head_sha),
-        allowed_logins=allowed_logins,
-    )
+        identity = "PAT"
+    else:
+        # use_trigger_token は付けず、allowed_logins も既定（GITHUB_ACTIONS_BOT）
+        trigger_comment_id, _, created_new = ensure_review_comment(
+            client=client,
+            pr_number=args.pr_number,
+            marker=retry_marker(attempt, args.head_sha),
+        )
+        identity = "bot"
+
     if trigger_comment_id not in trigger_comment_ids:
         trigger_comment_ids.append(trigger_comment_id)
     print(
         f"Codex review attempt {attempt}/{max_attempts}: "
         f"trigger_comment_id={trigger_comment_id}, "
-        f"created_new={str(created_new).lower()}."
+        f"created_new={str(created_new).lower()} ({identity})."
     )
 
 
