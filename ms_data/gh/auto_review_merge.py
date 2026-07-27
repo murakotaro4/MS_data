@@ -635,24 +635,22 @@ def _ensure_attempt_trigger(
 ) -> None:
     """試行回ごとのトリガーを確保する。
 
-    attempt 1 は Automatic review 待ちのためコメント投稿なし。
-    attempt 2 以降は retry マーカー付き ``@codex review`` を投稿する。
+    attempt 1 から ``@codex review`` を投稿する。
+    初回は ``review_marker``、attempt 2 以降は ``retry_marker`` を付ける。
     PAT が使える場合は人間名義（``allowed_logins`` に PAT login を含む）を優先し、
     使えない場合は bot 名義（``GITHUB_ACTIONS_BOT`` 既定）で投稿する。
     """
-    if attempt == 1:
-        print(
-            f"Codex review attempt {attempt}/{max_attempts}: "
-            "polling for Automatic review (no comment)."
-        )
-        return
-
+    marker = (
+        review_marker(args.head_sha)
+        if attempt == 1
+        else retry_marker(attempt, args.head_sha)
+    )
     use_pat = pat_available and bool(str(args.pat_login or "").strip())
     if use_pat:
         trigger_comment_id, _, created_new = ensure_review_comment(
             client=client,
             pr_number=args.pr_number,
-            marker=retry_marker(attempt, args.head_sha),
+            marker=marker,
             allowed_logins=allowed_logins,
         )
         identity = "PAT"
@@ -661,7 +659,7 @@ def _ensure_attempt_trigger(
         trigger_comment_id, _, created_new = ensure_review_comment(
             client=client,
             pr_number=args.pr_number,
-            marker=retry_marker(attempt, args.head_sha),
+            marker=marker,
         )
         identity = "bot"
 
@@ -789,7 +787,7 @@ def _write_wait_outputs(
 
 
 def cmd_wait_for_review(args: argparse.Namespace) -> int:
-    """Codex のレビュー応答を待つ（Automatic review 優先、PAT フォールバック）。"""
+    """Codex のレビュー応答を待つ（attempt 1 から ``@codex review`` を投稿）。"""
     client = GitHubClient(args.repo)
     max_attempts = _positive_int(args.max_attempts, 3)
     attempt_timeout_seconds = _positive_int(args.attempt_timeout_seconds, 420)
