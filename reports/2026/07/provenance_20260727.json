@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-07-27T12:18:34Z",
+  "report_date": "20260727",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "9dbb86c87fb2fba65887fb7a61132d874cfeeb8d"
+  },
+  "github": {
+    "run_id": "30265339127",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "9700cd9ea25e5aa615b132cde96dc66c0c82584cf330e14619a144ff5f80a74b",
+      "size_bytes": 144276,
+      "record_count": 586
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "0087a8bcca5cc34275037c6c01e79bebc2bf57d1e44d2d9e9991e9d2bf2f5575",
+      "size_bytes": 37772,
+      "record_count": 31
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "9ed837a291455bac267bf7a1b1888432726acd4d68f9ccf560091e27fec49a0a",
+      "size_bytes": 49169,
+      "record_count": 31
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "a43062fc315d0bc82634f6f38b3aeeb853ca932fb0cbd62d4c4d72b2bdd36e93",
+      "file_count": 28,
+      "size_bytes": 4984150
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "b094de87f27622034d90304c0da43bf98e8cc14728a34daf447d6e4796b28a14",
+      "size_bytes": 2590005,
+      "record_count": 1676
+    },
+    "diff_report": {
+      "path": "reports/2026/07/diff_msdata_20260727.md",
+      "sha256": "6acac4fbad5571078919699f6fa512e6f38256cab417d0844070f6750688cfd4",
+      "size_bytes": 3316
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260727-run-30265339127",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260727-run-30265339127",
+    "asset_name": "raw_snapshot_20260727_run30265339127.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260727-run-30265339127"
+  }
+}
