@@ -207,7 +207,7 @@ def cmd_wait_for_review(args: argparse.Namespace) -> int:
 
     for attempt in range(1, max_attempts + 1):
         attempts_used = str(attempt)
-        _ensure_attempt_trigger(
+        _facade()._ensure_attempt_trigger(
             client,
             args,
             attempt,
@@ -216,7 +216,7 @@ def cmd_wait_for_review(args: argparse.Namespace) -> int:
             pat_available=pat_available,
             allowed_logins=allowed_logins,
         )
-        responded, response_seconds, disconnected = _poll_for_response(
+        responded, response_seconds, disconnected = _facade()._poll_for_response(
             client,
             args,
             attempt=attempt,
@@ -234,7 +234,7 @@ def cmd_wait_for_review(args: argparse.Namespace) -> int:
             response_attempt = str(attempt)
             break
 
-    _write_wait_outputs(
+    _facade()._write_wait_outputs(
         args,
         responded=responded,
         disconnected=disconnected,
@@ -407,7 +407,7 @@ def build_auto_review_report(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def cmd_write_report(args: argparse.Namespace) -> int:
-    report = build_auto_review_report(args)
+    report = _facade().build_auto_review_report(args)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"

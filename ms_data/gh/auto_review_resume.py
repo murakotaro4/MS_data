@@ -41,7 +41,7 @@ def _merge_and_notify(
     HEAD 変更・未 MERGED・merge_commit_sha 欠落は RuntimeError を送出し、
     cmd_resume を非ゼロ終了させて notify_failure に拾わせる。
     """
-    current_sha = _fetch_current_head_sha(client, pr_number)
+    current_sha = _facade()._fetch_current_head_sha(client, pr_number)
     if current_sha != evaluated_sha:
         raise RuntimeError(
             f"PR #{pr_number}: head SHA changed "
@@ -282,7 +282,7 @@ def cmd_resume(args: argparse.Namespace) -> int:
             since=since,
         )
         if metrics.get("merge_ok"):
-            merge_sha = _merge_and_notify(
+            merge_sha = _facade()._merge_and_notify(
                 client=client,
                 pr_number=pr_number,
                 head_ref=head_ref,
@@ -294,8 +294,8 @@ def cmd_resume(args: argparse.Namespace) -> int:
             summary_lines.append(f"- merged: #{pr_number} ({merge_sha})")
             continue
 
-        if _metrics_has_findings(metrics):
-            _handle_resume_findings(
+        if _facade()._metrics_has_findings(metrics):
+            _facade()._handle_resume_findings(
                 client=client,
                 pr_number=pr_number,
                 head_sha=head_sha,
@@ -319,7 +319,7 @@ def cmd_resume(args: argparse.Namespace) -> int:
             allowed_logins=_facade()._allowed_trigger_logins(pat_login),
             use_trigger_token=True,
         )
-        metrics = _resume_wait_for_merge_ok(
+        metrics = _facade()._resume_wait_for_merge_ok(
             client=client,
             pr_number=pr_number,
             head_sha=head_sha,
@@ -328,7 +328,7 @@ def cmd_resume(args: argparse.Namespace) -> int:
             poll_seconds=poll_seconds,
         )
         if metrics.get("merge_ok"):
-            merge_sha = _merge_and_notify(
+            merge_sha = _facade()._merge_and_notify(
                 client=client,
                 pr_number=pr_number,
                 head_ref=head_ref,
@@ -338,8 +338,8 @@ def cmd_resume(args: argparse.Namespace) -> int:
             )
             merged_count += 1
             summary_lines.append(f"- merged_after_retry: #{pr_number} ({merge_sha})")
-        elif _metrics_has_findings(metrics):
-            _handle_resume_findings(
+        elif _facade()._metrics_has_findings(metrics):
+            _facade()._handle_resume_findings(
                 client=client,
                 pr_number=pr_number,
                 head_sha=head_sha,
