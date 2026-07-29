@@ -164,7 +164,7 @@ def resolve_review_since(
     """
     commit_date = ""
     if head_sha:
-        commit_date = fetch_commit_committer_date(client, head_sha)
+        commit_date = _facade().fetch_commit_committer_date(client, head_sha)
     force_push_at = ""
     if pr_number:
         timeline = client.api_json(
@@ -177,8 +177,8 @@ def resolve_review_since(
                 f"PR #{pr_number}: timeline API が list 以外を返しました "
                 f"({type(timeline).__name__})."
             )
-        force_push_at = latest_force_push_created_at(timeline)
-    return later_iso8601(pr_created_at, commit_date, force_push_at)
+        force_push_at = _facade().latest_force_push_created_at(timeline)
+    return _facade().later_iso8601(pr_created_at, commit_date, force_push_at)
 
 
 def extract_codex_findings(
@@ -344,7 +344,7 @@ def cmd_resolve_target_pr(args: argparse.Namespace) -> int:
     pulls = client.api_json(
         f"repos/{args.repo}/pulls?state=open&base=main&per_page=100"
     )
-    result = resolve_target_pr(
+    result = _facade().resolve_target_pr(
         pulls=pulls,
         run_id=args.run_id,
         run_created_at=args.run_created_at,
@@ -373,8 +373,8 @@ def cmd_establish_baseline(args: argparse.Namespace) -> int:
     client = _facade().GitHubClient(args.repo)
     pr = client.api_json(f"repos/{args.repo}/pulls/{args.pr_number}")
     pr_created_at = str(pr.get("created_at") or "")
-    head_sha = _head_sha(pr) if isinstance(pr, dict) else ""
-    baseline = resolve_review_since(
+    head_sha = _facade()._head_sha(pr) if isinstance(pr, dict) else ""
+    baseline = _facade().resolve_review_since(
         client=client,
         pr_number=args.pr_number,
         pr_created_at=pr_created_at,
