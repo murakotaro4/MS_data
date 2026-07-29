@@ -10,10 +10,11 @@ import subprocess
 import tempfile
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from ms_data.core.dates import JST
 from ms_data.gh.auto_review_gate import CODEX_LOGINS, evaluate
 from ms_data.gh.gh_json import gh_api_json, run_gh
 from ms_data.gh.gh_json import login_of as _login
@@ -21,7 +22,6 @@ from ms_data.gh.notify_review_stop import notify_review_stop
 from ms_data.gh.outputs import append_step_summary, write_github_output
 
 
-JST = timezone(timedelta(hours=9))
 GITHUB_ACTIONS_BOT = "github-actions[bot]"
 RESUME_STOP_REASONS = frozenset({"codex_no_response", "codex_disconnected"})
 STOP_MARKER_RE = re.compile(

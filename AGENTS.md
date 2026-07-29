@@ -77,7 +77,7 @@
 - ci の changes ジョブ: PR がデータ・レポート・md のみの変更なら checks（ubuntu/windows マトリクス）をスキップ。`tests/` 配下と削除は `code=true`。changes ジョブ自身が report-contract / msData / generated-reports の軽量検証を実施。actionlint は checks ジョブ（ubuntu）で実行。
 - `.github/actions/setup-uv-env`: Python 3.11 + uv + `uv sync --dev` の composite action。`ci` / `data update` / `auto review merge` / `resume auto review` / `post merge notify` / `reports prune` で共用（Python バージョン変更はここが主変更点）。`notify failure` と `cleanup auto update prs` は uv 不要のため未使用。
 - CI runner: Windows は `windows-2025-vs2026` を明示使用。`windows-latest` へ戻す場合は GitHub の runner image 移行状況を確認。
-- 互換期間: レポート再編時の旧パス互換は原則検討するが、v3 の年月階層化（`reports/YYYY/MM/`）は破壊的移行として実施済み（`legacy_path_support: false`、旧パスへの転送なし）。manifest に併記した旧フラットパターンは過渡的安全弁で、新パスでの 1 運用周期の安定稼働確認後に撤去する。
+- 互換期間: レポート再編時の旧パス互換は原則検討するが、v3 の年月階層化（`reports/YYYY/MM/`）は破壊的移行として実施済み（`legacy_path_support: false`、旧パスへの転送なし）。日付付きレポートの旧フラット `path_patterns` は撤去済み（直下に残す undated / テンプレートのみ許容）。
 
 ## スキルデータ（params / owners）
 - 方針: msData.json は恒常値のみ。スキルは別ファイル管理（アプリ側で合成）。定義（`data/skills_params.json`）と所有（`data/skill_owners_flat.json`）を分離し SSOT 化。

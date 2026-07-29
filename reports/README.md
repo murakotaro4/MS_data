@@ -20,6 +20,7 @@
 ## 互換ポリシー（v3）
 - v3 で年月階層へ破壊的移行済み（旧フラットパスの転送なし）。
 - `compatibility.legacy_path_support` は `false`。新規書き出し・検証・Release 添付はすべて `reports/YYYY/MM/` を使う。
+- 日付付きレポートの旧フラット `path_patterns` は manifest から撤去済み（直下は undated / テンプレートのみ）。
 
 ## CI検証
 - CIの `reports` 検証は `reports_manifest.json` の allowlist に対して実行します。

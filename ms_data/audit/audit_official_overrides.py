@@ -6,17 +6,15 @@ import argparse
 import json
 import os
 from collections import Counter
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
+from ms_data.core.dates import JST
 from ms_data.core.records import load_records_by_name
 from ms_data.gh.outputs import append_step_summary, write_github_output
 from ms_data.reporting.rendering import value_text as _value_text
 from ms_data.pipeline import update_msdata
-
-
-JST = timezone(timedelta(hours=9))
 
 
 def _load_records(path: Path | None) -> dict[str, dict[str, Any]]:

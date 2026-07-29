@@ -23,8 +23,7 @@
       "id": "diff_msdata",
       "type": "generated",
       "path_patterns": [
-        "reports/*/*/diff_msdata_*.md",
-        "reports/diff_msdata_*.md"
+        "reports/*/*/diff_msdata_*.md"
       ],
       "producer": [
         "ms_data.reporting.report_msdata_diff",
@@ -44,8 +43,7 @@
       "id": "provenance",
       "type": "generated",
       "path_patterns": [
-        "reports/*/*/provenance_*.json",
-        "reports/provenance_*.json"
+        "reports/*/*/provenance_*.json"
       ],
       "producer": [
         "ms_data.pipeline.generate_provenance",
@@ -66,8 +64,7 @@
       "id": "rollback_guard",
       "type": "generated",
       "path_patterns": [
-        "reports/*/*/rollback_guard_*.md",
-        "reports/rollback_guard_*.md"
+        "reports/*/*/rollback_guard_*.md"
       ],
       "producer": [
         "ms_data.audit.detect_msdata_rollbacks",
@@ -87,8 +84,7 @@
       "id": "official_overrides_audit",
       "type": "generated",
       "path_patterns": [
-        "reports/*/*/official_overrides_audit_*.md",
-        "reports/official_overrides_audit_*.md"
+        "reports/*/*/official_overrides_audit_*.md"
       ],
       "producer": [
         "ms_data.audit.audit_official_overrides",
@@ -108,8 +104,7 @@
       "id": "field_completeness",
       "type": "generated",
       "path_patterns": [
-        "reports/*/*/field_completeness_*.md",
-        "reports/field_completeness_*.md"
+        "reports/*/*/field_completeness_*.md"
       ],
       "producer": [
         "ms_data.audit.audit_field_completeness",
@@ -129,8 +124,7 @@
       "id": "atwiki_quality",
       "type": "generated",
       "path_patterns": [
-        "reports/*/*/atwiki_quality_*.json",
-        "reports/atwiki_quality_*.json"
+        "reports/*/*/atwiki_quality_*.json"
       ],
       "producer": [
         "ms_data.reporting.build_atwiki_quality_report",
@@ -168,7 +162,6 @@
       "type": "generated",
       "path_patterns": [
         "reports/*/*/label_audit_*.md",
-        "reports/label_audit_*.md",
         "reports/label_audit_latest.md"
       ],
       "producer": [
@@ -189,8 +182,7 @@
       "id": "index_ms_audit",
       "type": "generated",
       "path_patterns": [
-        "reports/*/*/index_ms_audit_*.md",
-        "reports/index_ms_audit_*.md"
+        "reports/*/*/index_ms_audit_*.md"
       ],
       "producer": [
         "ms_data.audit.audit_index_vs_msdata",
@@ -211,7 +203,6 @@
       "type": "manual",
       "path_patterns": [
         "reports/*/*/msdata_update_*.md",
-        "reports/msdata_update_*.md",
         "reports/msdata_update_template.md"
       ],
       "producer": [
@@ -229,8 +220,7 @@
       "path_patterns": [
         "reports/skills_params_audit.json",
         "reports/owners_flat_audit.json",
-        "reports/*/*/skill_owners_audit_*.md",
-        "reports/skill_owners_audit_*.md"
+        "reports/*/*/skill_owners_audit_*.md"
       ],
       "producer": [
         "ms_data.skills.build_param_skills",
