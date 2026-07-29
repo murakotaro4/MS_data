@@ -13,10 +13,10 @@ import os
 import subprocess
 import sys
 import tarfile
-from datetime import datetime
 from pathlib import Path
 from collections.abc import Callable
 
+from ms_data.core.dates import today_jst
 from ms_data.core.env import env_flag as _env_flag
 from ms_data.core.env import env_float as _env_float
 from ms_data.core.env import env_int as _env_int
@@ -57,7 +57,7 @@ def _env(name: str, default: str) -> str:
 
 
 def _today() -> str:
-    return datetime.now().strftime("%Y%m%d")
+    return today_jst()
 
 
 def _run(*args: str) -> int:

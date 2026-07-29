@@ -8,17 +8,17 @@ import re
 import sys
 from collections import Counter
 from collections.abc import Mapping
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
+from ms_data.core.dates import JST
 from ms_data.core.records import load_records_by_name
 from ms_data.gh.outputs import append_step_summary, write_github_output
 from ms_data.reporting.rendering import value_text
 from ms_data.scraping.detail_page import BASE_REQUIRED
 
 
-JST = timezone(timedelta(hours=9))
 ALLOWLIST_DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}\Z")
 
 REQUIRED_KEYS = frozenset(

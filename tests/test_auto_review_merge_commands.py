@@ -585,9 +585,7 @@ def test_cmd_wait_for_review_without_pat_posts_bot_comment_from_attempt_1(
     monkeypatch.setattr(auto_review_merge, "ensure_review_comment", tracking_ensure)
 
     rc = main(
-        _wait_argv(
-            out, summary, max_attempts="3", pat_available="false", pat_login=""
-        )
+        _wait_argv(out, summary, max_attempts="3", pat_available="false", pat_login="")
     )
 
     assert rc == 0
@@ -615,9 +613,7 @@ def test_cmd_wait_for_review_empty_pat_login_posts_bot_comment(
     summary = tmp_path / "summary.md"
 
     rc = main(
-        _wait_argv(
-            out, summary, max_attempts="2", pat_available="true", pat_login=""
-        )
+        _wait_argv(out, summary, max_attempts="2", pat_available="true", pat_login="")
     )
 
     assert rc == 0
@@ -919,6 +915,73 @@ def test_cmd_write_report_writes_json_and_summary(tmp_path):
     assert f"- report: {out}" in text
 
 
+def test_cmd_resume_honors_facade_merge_and_notify_monkeypatch(
+    fake_gh, read_github_output, tmp_path, monkeypatch
+):
+    """分割後も facade 上の _merge_and_notify monkeypatch が効くこと。"""
+    stop = auto_review_merge.stop_marker("codex_no_response", "99", HEAD_SHA)
+    fake_gh.responses["/pulls?state=open"] = [
+        {
+            "number": 97,
+            "created_at": BASELINE,
+            "user": {"login": "github-actions[bot]"},
+            "base": {"ref": "main"},
+            "head": {
+                "ref": "data/auto-update-20260531",
+                "sha": HEAD_SHA,
+                "repo": {"full_name": "owner/repo"},
+            },
+            "body": "source_run_id:111",
+        }
+    ]
+    fake_gh.responses["/issues/97/comments"] = [
+        {
+            "id": 1,
+            "created_at": BASELINE,
+            "user": {"login": "github-actions[bot]"},
+            "body": f"stopped\n\n{stop}",
+        }
+    ]
+    fake_gh.responses[f"/commits/{HEAD_SHA}"] = {
+        "commit": {"committer": {"date": BASELINE}}
+    }
+
+    merge_calls: list[dict] = []
+
+    def fake_merge(**kwargs):
+        merge_calls.append(kwargs)
+        return "merge-sha-patched"
+
+    monkeypatch.setattr(auto_review_merge, "_merge_and_notify", fake_merge)
+    _script_metrics(monkeypatch, [_metrics(merge_ok=True, review_complete=True)])
+
+    out = tmp_path / "out.txt"
+    summary = tmp_path / "summary.md"
+    rc = main(
+        [
+            "resume",
+            "--repo",
+            "owner/repo",
+            "--run-id",
+            "555",
+            "--pat-available",
+            "false",
+            "--github-output",
+            str(out),
+            "--step-summary",
+            str(summary),
+        ]
+    )
+
+    assert rc == 0
+    assert len(merge_calls) == 1
+    assert merge_calls[0]["pr_number"] == "97"
+    assert merge_calls[0]["evaluated_sha"] == HEAD_SHA
+    outputs = read_github_output(out)
+    assert outputs["merged_count"] == "1"
+    assert "- merged: #97 (merge-sha-patched)" in summary.read_text(encoding="utf-8")
+
+
 def test_cmd_resume_stops_on_findings_without_retry(
     fake_gh, read_github_output, tmp_path, monkeypatch
 ):
@@ -1012,8 +1075,7 @@ def test_cmd_resume_stops_on_findings_without_retry(
     assert notify_calls[0]["report_date"] == "20260531"
     assert notify_calls[0]["pr_url"] == "https://github.com/owner/repo/pull/97"
     assert (
-        notify_calls[0]["run_url"]
-        == "https://github.com/owner/repo/actions/runs/555"
+        notify_calls[0]["run_url"] == "https://github.com/owner/repo/actions/runs/555"
     )
     assert any("reason:codex_findings" in body for _, body in fake_gh.posted_comments)
     text = summary.read_text(encoding="utf-8")

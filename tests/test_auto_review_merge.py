@@ -2,6 +2,7 @@ import pytest
 
 from ms_data.gh.auto_review_merge import (
     GITHUB_ACTIONS_BOT,
+    JST,
     _bool_text,
     _head_ref,
     _head_sha,
@@ -21,6 +22,12 @@ from ms_data.gh.auto_review_merge import (
     select_resume_candidates,
     stop_marker,
 )
+from ms_data.core.dates import JST as CORE_JST
+
+
+def test_facade_reexports_jst_from_core_dates():
+    assert JST is CORE_JST
+    assert jst_report_date("2026-05-31T16:00:00Z") == "20260601"
 
 
 def test_jst_report_date_uses_workflow_run_created_at():
@@ -125,7 +132,9 @@ def test_comment_markers_and_latest_bot_comment():
 
 
 def test_find_latest_bot_comment_returns_none_without_match():
-    assert find_latest_bot_comment([], review_marker("abc"), {GITHUB_ACTIONS_BOT}) is None
+    assert (
+        find_latest_bot_comment([], review_marker("abc"), {GITHUB_ACTIONS_BOT}) is None
+    )
     other_user = [
         {
             "id": 1,
@@ -159,9 +168,7 @@ def test_find_latest_bot_comment_allows_pat_login_and_rejects_others():
     ]
 
     assert (
-        find_latest_bot_comment(
-            comments, marker, {GITHUB_ACTIONS_BOT, pat_login}
-        )["id"]
+        find_latest_bot_comment(comments, marker, {GITHUB_ACTIONS_BOT, pat_login})["id"]
         == 2
     )
     assert find_latest_bot_comment(comments, marker, {GITHUB_ACTIONS_BOT}) is None
