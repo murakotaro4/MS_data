@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-07-29T11:22:56Z",
+  "report_date": "20260729",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "f4aff7a0290634f47b0634a294d2a27148ceee52"
+  },
+  "github": {
+    "run_id": "30447313254",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "d5a6c9bd2b717edf036d5d8ebdf487abc72e546da9cafef0a11655d8ba98de80",
+      "size_bytes": 144301,
+      "record_count": 586
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "f8d25f049002d856dd6edb585a506fdd8b379de5b105b4553d2419466ebc04a6",
+      "size_bytes": 17809,
+      "record_count": 15
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "75bfb53b8be782a66151cfa02dae4aa1889530907298726f3b92d7b020fb63b4",
+      "size_bytes": 23238,
+      "record_count": 15
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "84288a68d3fbf4d50bfffd0bdd95e660d0fe387bb9d870bf03f8dc846c8d6595",
+      "file_count": 12,
+      "size_bytes": 2406543
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "76717ca5db4157a30577f8b94e653afa96e4db9ecbbb290df962e2060a52150a",
+      "size_bytes": 2589999,
+      "record_count": 1676
+    },
+    "diff_report": {
+      "path": "reports/2026/07/diff_msdata_20260729.md",
+      "sha256": "69fbafc93ebf41c0c66426c0ee197527a50f29fc335687ddcf26460d89130f5e",
+      "size_bytes": 2178
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260729-run-30447313254",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260729-run-30447313254",
+    "asset_name": "raw_snapshot_20260729_run30447313254.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260729-run-30447313254"
+  }
+}
