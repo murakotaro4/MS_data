@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-07-30T11:04:15Z",
+  "report_date": "20260730",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "71112a10d473889eb46f1d55b51d81af548b8cd1"
+  },
+  "github": {
+    "run_id": "30537084818",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "f9f2e37addd78cbd8e3f44b79fb1d5bb7a4e79181b007d96e93c260f283af359",
+      "size_bytes": 144261,
+      "record_count": 586
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "6f8ed56837af85ac3b7a16e6939556052bec414adf889b4109a95c5f915e206e",
+      "size_bytes": 40364,
+      "record_count": 34
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "14757914f9532773fdd5c86415b9a22b747cb479faa62dffb8ab625c7e59798a",
+      "size_bytes": 52724,
+      "record_count": 34
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "2df2abd1d62c486b8968647525639c0fcc23b93f133d91fa07e7d861e4b94f77",
+      "file_count": 30,
+      "size_bytes": 5243616
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "fd973ff085894b6adb405f6819a13023c4f7332822afcd7afedd3a3debf1c6bc",
+      "size_bytes": 2590360,
+      "record_count": 1676
+    },
+    "diff_report": {
+      "path": "reports/2026/07/diff_msdata_20260730.md",
+      "sha256": "04dfa0bf2cb60edb516c35f7d9264904fa472276c818edb54971a0e012dd057f",
+      "size_bytes": 2761
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260730-run-30537084818",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260730-run-30537084818",
+    "asset_name": "raw_snapshot_20260730_run30537084818.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260730-run-30537084818"
+  }
+}
