@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from ms_data.core.ms_names import ms_name_to_series_level
+from ms_data.scraping.text_values import normalize_symbol_text
 
 
 def load_series_levels(msdata_path: Path) -> dict[str, set[int]]:
@@ -67,9 +68,11 @@ def build_flat_owners(
     owners_out: list[dict[str, Any]] = []
     unknown_series: dict[str, list[dict[str, Any]]] = {}
 
+    # 抽出側（owners-table）はスキル名を normalize_symbol_text 済みのため、同じ規則で照合
+    include_norm = {normalize_symbol_text(x) for x in include or set()}
     for row in owners_table.get("rows", []):
         skill = row.get("skill") or ""
-        if include and skill not in include:
+        if include_norm and normalize_symbol_text(skill) not in include_norm:
             continue
         skill_lv = int(row.get("level") or 0)
         for o in row.get("owners", []) or []:

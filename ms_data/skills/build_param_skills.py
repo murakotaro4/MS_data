@@ -178,11 +178,11 @@ def build_params(
     for r in rows:
         skill = r.get("skill") or ""
         level = int(r.get("level") or 0)
-        # ポリシー適用
+        # ポリシー適用（抽出側はスキル名を _norm 済みのため、ポリシー側も同じ規則で照合）
         if policy:
-            inc = set(policy.get("include_exact", []) or [])
-            exc = set(policy.get("exclude_exact", []) or [])
-            if inc and skill not in inc:
+            inc = {_norm(x) for x in policy.get("include_exact", []) or []}
+            exc = {_norm(x) for x in policy.get("exclude_exact", []) or []}
+            if inc and _norm(skill) not in inc:
                 # 監査: 除外だが数値含む？
                 if audit is not None:
                     maybe = extract_param_effects(
@@ -193,7 +193,7 @@ def build_params(
                             {"skill": skill, "level": level, "effects": maybe}
                         )
                 continue
-            if exc and skill in exc:
+            if exc and _norm(skill) in exc:
                 if audit is not None:
                     maybe = extract_param_effects(
                         (r.get("details_text") or "") + "\n" + (r.get("desc") or "")

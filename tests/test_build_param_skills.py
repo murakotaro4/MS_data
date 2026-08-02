@@ -56,3 +56,38 @@ def test_build_params_golden():
             }
         ]
     }
+
+
+def test_build_params_policy_fullwidth_colon_matches_extracted_name():
+    # 抽出側は「：」を「:」へ正規化するため、ポリシー側が全角表記でも一致すること
+    rows = [
+        {
+            "skill": "能力UP「NT-D:共鳴」",
+            "level": 1,
+            "desc": "",
+            "details_text": "・高速移動+10\n・スラスター消費-50%",
+        },
+    ]
+
+    data = build_params(
+        rows,
+        policy={"include_exact": ["能力UP「NT-D：共鳴」"]},
+        audit=None,
+    )
+
+    assert data == {
+        "skills": [
+            {
+                "name": "能力UP「NT-D:共鳴」",
+                "levels": [
+                    {
+                        "level": 1,
+                        "effects": {
+                            "高速移動": {"op": "add", "value": 10},
+                            "スラスター消費": {"op": "mul", "factor": 0.5},
+                        },
+                    }
+                ],
+            }
+        ]
+    }

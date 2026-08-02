@@ -63,3 +63,33 @@ def test_build_owners_flat_golden():
         ],
         "owners_count": 2,
     }
+
+
+def test_build_flat_owners_include_fullwidth_colon_matches_extracted_name():
+    # 抽出側は「：」を「:」へ正規化するため、ポリシー側が全角表記でも一致すること
+    owners_table = {
+        "rows": [
+            {
+                "skill": "能力UP「NT-D:共鳴」",
+                "level": 1,
+                "owners": [{"name": "テストMS"}],
+            },
+        ]
+    }
+    series_levels = normalize_series_levels({"テストMS": {1}})
+
+    owners_out, unknown_series = build_flat_owners(
+        owners_table,
+        series_levels,
+        include={"能力UP「NT-D：共鳴」"},
+    )
+
+    assert owners_out == [
+        {
+            "skill": "能力UP「NT-D:共鳴」",
+            "skill_level": 1,
+            "series": "テストMS",
+            "ms_level": 1,
+        },
+    ]
+    assert unknown_series == {}
