@@ -18651,32 +18651,32 @@
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 270
       },
       {
         "name": "耐実弾装甲補強",
         "level": 1,
-        "points": null
+        "points": 540
       },
       {
         "name": "耐格闘装甲補強",
         "level": 1,
-        "points": null
+        "points": 810
       },
       {
         "name": "AD-PA",
         "level": 1,
-        "points": null
+        "points": 1350
       },
       {
         "name": "爆発物取扱いサポート",
         "level": 1,
-        "points": null
+        "points": 2700
       },
       {
         "name": "強化セキュリティ",
         "level": 1,
-        "points": null
+        "points": 4050
       }
     ]
   },
@@ -29264,33 +29264,33 @@
     "fullst": [
       {
         "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 210
       },
       {
         "name": "耐実弾装甲補強",
         "level": 1,
-        "points": null
+        "points": 420
       },
       {
         "name": "耐格闘装甲補強",
         "level": 1,
-        "points": null
+        "points": 630
       },
       {
         "name": "AD-PA",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 1050
       },
       {
         "name": "爆発物取扱いサポート",
         "level": 1,
-        "points": null
+        "points": 2100
       },
       {
         "name": "強化セキュリティ",
         "level": 1,
-        "points": null
+        "points": 3150
       }
     ]
   },
@@ -90618,32 +90618,32 @@
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 660
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 1330
       },
       {
         "name": "耐格闘装甲補強",
         "level": 1,
-        "points": null
+        "points": 1780
       },
       {
         "name": "AD-FCS",
         "level": 1,
-        "points": null
+        "points": 2230
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 3,
-        "points": null
+        "points": 4460
       },
       {
         "name": "AD-FCS",
         "level": 3,
-        "points": null
+        "points": 6690
       }
     ]
   },
@@ -101042,33 +101042,33 @@
     "fullst": [
       {
         "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 500
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 1000
       },
       {
         "name": "耐格闘装甲補強",
         "level": 1,
-        "points": null
+        "points": 1340
       },
       {
         "name": "AD-FCS",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 1680
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 3,
-        "points": null
+        "points": 3360
       },
       {
         "name": "AD-FCS",
         "level": 3,
-        "points": null
+        "points": 5040
       }
     ]
   },

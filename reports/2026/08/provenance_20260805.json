@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-08-05T11:17:23Z",
+  "report_date": "20260805",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "99faa4f0f09aa5322f8a9ae72326aaf2f8ba218f"
+  },
+  "github": {
+    "run_id": "31000816133",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "df36f6e095c0fe3f4cee417f65d8b4fdc09ca1724e032f545cffb6a4fa245a78",
+      "size_bytes": 144550,
+      "record_count": 587
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "605cb21ae7e325ef72cbb0c9d83c7237950618b6ad7c844f61aac51f26449bd9",
+      "size_bytes": 45450,
+      "record_count": 39
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "d63ee9438ab0f950e7773dde518355890856f66e02e3470bf4409f23725aba11",
+      "size_bytes": 59539,
+      "record_count": 39
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "4e738e56d9593076551281a9f824df2196070d64c94b59fea66e4866b6e12ffc",
+      "file_count": 26,
+      "size_bytes": 4558775
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "66fed7ef886c5e1ac72789abb08b4470692ce9784ba7fc3860f8dc1325e16815",
+      "size_bytes": 2599205,
+      "record_count": 1682
+    },
+    "diff_report": {
+      "path": "reports/2026/08/diff_msdata_20260805.md",
+      "sha256": "c38016ed0050962b80be387a0dc9cb4db8fdccce8c8c0118cbd69a5d9ddb5bae",
+      "size_bytes": 3325
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260805-run-31000816133",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260805-run-31000816133",
+    "asset_name": "raw_snapshot_20260805_run31000816133.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260805-run-31000816133"
+  }
+}
