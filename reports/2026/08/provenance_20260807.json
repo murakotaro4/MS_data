@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-08-07T09:58:29Z",
+  "report_date": "20260807",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "7239f004e98befff0c5a5f4115566367314bc2fb"
+  },
+  "github": {
+    "run_id": "31168092131",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "06289492f98ec63089aeb47371e8dd368580eeb7c5e660169aec8330e5607f00",
+      "size_bytes": 144758,
+      "record_count": 588
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "d911652f0e6088c5417e7425d72b1df01872235e8280b0bb63066c6417183a41",
+      "size_bytes": 43004,
+      "record_count": 37
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "9a10a1a7df1c413040dcf097f68c99a100a8b6c6aae3c6727bbd75017c2b2c7f",
+      "size_bytes": 56375,
+      "record_count": 37
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "f9e4c710f806215ed4689269ca18aac7a3044b23f216d9e4ca8931ac22ebeba8",
+      "file_count": 32,
+      "size_bytes": 5564528
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "bb9e36741ad44041403342e581dd4017c5cc2a34f221a0eb2a5c2e013c79de99",
+      "size_bytes": 2603812,
+      "record_count": 1685
+    },
+    "diff_report": {
+      "path": "reports/2026/08/diff_msdata_20260807.md",
+      "sha256": "b96983525c202c0fff3492e923b33b682e07aba3334b438fb591584cb56b026d",
+      "size_bytes": 2015
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260807-run-31168092131",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260807-run-31168092131",
+    "asset_name": "raw_snapshot_20260807_run31168092131.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260807-run-31168092131"
+  }
+}
