@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-08-08T09:33:37Z",
+  "report_date": "20260808",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "2e74ea3ae90cafb89e80f58fdb9b9dd639f81359"
+  },
+  "github": {
+    "run_id": "31250822045",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "d521da5a45a70a4b45a5152c866f96f1ed6154c9a0a22eb749f02aefa20bfe99",
+      "size_bytes": 144753,
+      "record_count": 588
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "590e1be506d37618eb4c5df068acfacd9cf928c8bd0388dae20424da7cd5dcd5",
+      "size_bytes": 55803,
+      "record_count": 48
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "5991e93d1542ce9cc5c917c02ec0834de9090205e00bcfde2d510613d1d95c24",
+      "size_bytes": 73145,
+      "record_count": 48
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "4a05441ac9ad27da95f700013bfb7b0058029634c9d1e239acd9967bf311a68a",
+      "file_count": 38,
+      "size_bytes": 6547794
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "82f6bf63f2f705535688f501c6b7e42e63de56033e75feaca15c25df25fcfdf9",
+      "size_bytes": 2606727,
+      "record_count": 1687
+    },
+    "diff_report": {
+      "path": "reports/2026/08/diff_msdata_20260808.md",
+      "sha256": "d7083cfe8581e011bfa57282032703c8147d69599be36e6475e6f65e990eefaf",
+      "size_bytes": 1356
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260808-run-31250822045",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260808-run-31250822045",
+    "asset_name": "raw_snapshot_20260808_run31250822045.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260808-run-31250822045"
+  }
+}
