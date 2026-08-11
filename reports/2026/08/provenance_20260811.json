@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-08-11T09:57:57Z",
+  "report_date": "20260811",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "0f6e1ee887f10cf140970c9c2354e4842c4301d0"
+  },
+  "github": {
+    "run_id": "31479970175",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "b4594671c57fcfcf92607bbe51f04ffdc12105653822f81b781dec851474a3ef",
+      "size_bytes": 144605,
+      "record_count": 588
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "1829310acb7d7c19ada901e82d0e9046079e976dac45801373b2dc86cd2aaf9d",
+      "size_bytes": 220806,
+      "record_count": 188
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "5bcef50216a9c8d1662bcf289c5b7b5a665c6d90c471f2e54c48ddb0d8a0c64b",
+      "size_bytes": 288952,
+      "record_count": 188
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "1be135bfe692e178fd5fe0afd1891d85cf7c968d10f0dfb31d9b9329b4448013",
+      "file_count": 98,
+      "size_bytes": 15835731
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "0e126a6a9babd875dea3f2b878bfb2add6609060d4025e03b4099c989efbca30",
+      "size_bytes": 2606766,
+      "record_count": 1687
+    },
+    "diff_report": {
+      "path": "reports/2026/08/diff_msdata_20260811.md",
+      "sha256": "5e4a9044eeaee9039b959e3b888b2908652d7d07d62c7bb9408fd5cf6860c2df",
+      "size_bytes": 3554
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260811-run-31479970175",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260811-run-31479970175",
+    "asset_name": "raw_snapshot_20260811_run31479970175.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260811-run-31479970175"
+  }
+}
