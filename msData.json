@@ -38842,6 +38842,7 @@
     "格闘判定力": "中",
     "レアリティ": "☆",
     "必要階級": "",
+    "必要リサイクルチケット": 135,
     "fullst": [
       {
         "name": "シールド構造強化",
@@ -53661,32 +53662,32 @@
       {
         "name": "プロペラントタンク",
         "level": 1,
-        "points": null
+        "points": 290
       },
       {
         "name": "フレーム補強",
         "level": 1,
-        "points": null
+        "points": 580
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 1060
       },
       {
         "name": "AD-FCS",
         "level": 1,
-        "points": null
+        "points": 1940
       },
       {
         "name": "プロペラントタンク",
         "level": 3,
-        "points": null
+        "points": 3880
       },
       {
         "name": "AD-FCS",
         "level": 3,
-        "points": null
+        "points": 5820
       }
     ]
   },
@@ -67543,33 +67544,33 @@
     "fullst": [
       {
         "name": "プロペラントタンク",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 220
       },
       {
         "name": "フレーム補強",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 440
       },
       {
         "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 810
       },
       {
         "name": "AD-FCS",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 1480
       },
       {
         "name": "プロペラントタンク",
         "level": 3,
-        "points": null
+        "points": 2960
       },
       {
         "name": "AD-FCS",
         "level": 3,
-        "points": null
+        "points": 4440
       }
     ]
   },
@@ -80891,32 +80892,32 @@
       {
         "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 680
       },
       {
         "name": "耐格闘装甲補強",
         "level": 1,
-        "points": null
+        "points": 1370
       },
       {
         "name": "AD-FCS",
         "level": 1,
-        "points": null
+        "points": 2060
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 2750
       },
       {
         "name": "緊急出撃",
         "level": 1,
-        "points": null
+        "points": 5500
       },
       {
         "name": "AD-FCS",
         "level": 4,
-        "points": null
+        "points": 8250
       }
     ]
   },
@@ -93054,32 +93055,32 @@
       {
         "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 720
       },
       {
         "name": "耐格闘装甲補強",
         "level": 1,
-        "points": null
+        "points": 1450
       },
       {
         "name": "AD-FCS",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 2180
       },
       {
         "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 2910
       },
       {
         "name": "緊急出撃",
         "level": 1,
-        "points": null
+        "points": 5820
       },
       {
         "name": "AD-FCS",
         "level": 4,
-        "points": null
+        "points": 8730
       }
     ]
   },
