@@ -68562,32 +68562,32 @@
       {
         "name": "AD-FCS",
         "level": 1,
-        "points": null
+        "points": 480
       },
       {
         "name": "耐格闘装甲補強",
         "level": 1,
-        "points": null
+        "points": 970
       },
       {
         "name": "フレーム補強",
         "level": 1,
-        "points": null
+        "points": 1460
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 2440
       },
       {
         "name": "耐格闘装甲補強",
         "level": 4,
-        "points": null
+        "points": 4880
       },
       {
         "name": "AD-FCS",
         "level": 4,
-        "points": null
+        "points": 7320
       }
     ]
   },
@@ -100071,32 +100071,32 @@
       {
         "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 630
       },
       {
         "name": "耐格闘装甲補強",
         "level": 1,
-        "points": null
+        "points": 1270
       },
       {
         "name": "AD-PA",
         "level": 1,
-        "points": null
+        "points": 1900
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 2540
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 4,
-        "points": null
+        "points": 5080
       },
       {
         "name": "AD-PA",
         "level": 4,
-        "points": null
+        "points": 7620
       }
     ]
   },
@@ -101259,6 +101259,43 @@
         "name": "AD-FCS",
         "level": 3,
         "points": 8160
+      }
+    ]
+  },
+  {
+    "MS名": "量産型サイコ・ガンダム_LV1",
+    "wiki_url": "https://w.atwiki.jp/battle-operation2/pages/7855.html",
+    "属性": "汎用",
+    "出撃_地上可": true,
+    "出撃_宇宙可": true,
+    "環境適正_地上": false,
+    "環境適正_宇宙": true,
+    "環境適正_水中": false,
+    "コスト": 700,
+    "HP": 31000,
+    "耐実弾補正": 34,
+    "耐ビーム補正": 36,
+    "耐格闘補正": 32,
+    "射撃補正": 33,
+    "格闘補正": 32,
+    "スピード": 110,
+    "高速移動": 210,
+    "スラスター": 60,
+    "旋回_地上_通常時": 66,
+    "旋回_宇宙_通常時": 75,
+    "近スロット": 20,
+    "中スロット": 12,
+    "遠スロット": 20,
+    "カウンター": "特殊",
+    "再出撃時間": 12,
+    "格闘判定力": "強",
+    "レアリティ": "☆☆☆",
+    "必要階級": "",
+    "fullst": [
+      {
+        "name": "強行出撃",
+        "level": 1,
+        "points": null
       }
     ]
   },

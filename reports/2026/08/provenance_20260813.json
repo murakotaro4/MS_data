@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-08-13T10:00:49Z",
+  "report_date": "20260813",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "f5be47abc07d494e25c763a8a38b659383ad2d01"
+  },
+  "github": {
+    "run_id": "31689132865",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "6f8ddc127fbb6aaa362e4acb262d7aff0788446cf53ffe8e9d9aa8cbdd2a34d9",
+      "size_bytes": 144816,
+      "record_count": 589
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "5ed7b3c2c2352875aa7de62858f773b7bee82eb96ec0af067b7d53b634d7ff0c",
+      "size_bytes": 90063,
+      "record_count": 76
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "d21cf70f1fc1f65472eff6961817fa184cdbedd170f5af1a41d35db091f28d5f",
+      "size_bytes": 117511,
+      "record_count": 76
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "51f8fd2cd209d13cfc677922679fb07f10bc845be47580c05bf210e28bfdcb84",
+      "file_count": 50,
+      "size_bytes": 8426952
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "9d5375891aa6d0d2a013b7828bd540bc82ccbb0b9892b05a36683e20b7236cd5",
+      "size_bytes": 2607745,
+      "record_count": 1688
+    },
+    "diff_report": {
+      "path": "reports/2026/08/diff_msdata_20260813.md",
+      "sha256": "03152441c470809b2a8fc573eb4901c85d8c330658afe42a8d814d3d85c60b79",
+      "size_bytes": 2430
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260813-run-31689132865",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260813-run-31689132865",
+    "asset_name": "raw_snapshot_20260813_run31689132865.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260813-run-31689132865"
+  }
+}
