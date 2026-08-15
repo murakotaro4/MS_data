@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-08-15T09:21:44Z",
+  "report_date": "20260815",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "8a07cb844cad8f9977163d3f0acc5c4ab1f3a79d"
+  },
+  "github": {
+    "run_id": "31876773758",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "211b4baeeeedef9d4ac92ec9b1d08b08bc18fd04392fc11e33c635d6a3b08565",
+      "size_bytes": 144822,
+      "record_count": 589
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "4dadabdce9402e954387c3d63ed28eb41f15c0f7ab746d6066355f91f14c64b3",
+      "size_bytes": 44569,
+      "record_count": 38
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "6ff2023765ed3f53332077e59fd9ad1ffe88be0f1b3d5146421fc6d2a3c1850b",
+      "size_bytes": 58309,
+      "record_count": 38
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "52c0051f24c9138adee0ef5771dfd2d026b413cc7d9f49e5df7f99e07ddefbd6",
+      "file_count": 28,
+      "size_bytes": 4915600
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "4fd65f4eda78104c1b50958a6316fc6d4c32800c7cd900f2147ac23c82a5700d",
+      "size_bytes": 2608612,
+      "record_count": 1688
+    },
+    "diff_report": {
+      "path": "reports/2026/08/diff_msdata_20260815.md",
+      "sha256": "c64de0885d598bb1b66bd1916f1a41af2b5315072c856b5dce7af52200f6290d",
+      "size_bytes": 1143
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260815-run-31876773758",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260815-run-31876773758",
+    "asset_name": "raw_snapshot_20260815_run31876773758.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260815-run-31876773758"
+  }
+}
