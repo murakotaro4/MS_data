@@ -1,6 +1,9 @@
+import json
+
 from ms_data.skills.build_owners_flat import (
     build_audit,
     build_flat_owners,
+    load_series_levels,
     normalize_series_levels,
 )
 
@@ -91,5 +94,49 @@ def test_build_flat_owners_include_fullwidth_colon_matches_extracted_name():
             "series": "テストMS",
             "ms_level": 1,
         },
+    ]
+    assert unknown_series == {}
+
+
+def test_load_series_levels_skips_empty_and_unleveled(tmp_path):
+    path = tmp_path / "msdata.json"
+    path.write_text(
+        json.dumps(
+            [
+                {"MS名": "テストMS_LV1"},
+                {"MS名": "テストMS_LV2"},
+                {"MS名": ""},
+                {"MS名": "レベル無し"},
+                {},
+            ],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    assert load_series_levels(path) == {"テストMS": {1, 2}}
+
+
+def test_build_flat_owners_skips_empty_owner_name():
+    owners_table = {
+        "rows": [
+            {
+                "skill": "能力UP「EXAM」",
+                "level": 1,
+                "owners": [{"name": ""}, {"name": "テストMS"}],
+            }
+        ]
+    }
+    owners_out, unknown_series = build_flat_owners(
+        owners_table,
+        {"テストMS": {1}},
+        include={"能力UP「EXAM」"},
+    )
+    assert owners_out == [
+        {
+            "skill": "能力UP「EXAM」",
+            "skill_level": 1,
+            "series": "テストMS",
+            "ms_level": 1,
+        }
     ]
     assert unknown_series == {}
