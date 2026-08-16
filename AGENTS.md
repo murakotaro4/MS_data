@@ -113,3 +113,10 @@
 - 秘密情報や個人情報をコミットしない。認証情報はすべて GitHub Secrets / 環境変数経由（上記メール秘匿運用を参照）。
 - 10MB 超やバイナリは Git LFS を使用。
 - 再現性を重視: 依存はピン留め、デフォルト実行での外部ネットワーク依存を回避（`NO_NET=1` で検証可能に保つ）。
+
+## Cursor Cloud specific instructions
+- 本プロジェクトは Web アプリや常駐サービスを持たない **CLI／データ管理ツール**です。「アプリを起動する」= `uv run python -m ms_data.tasks <target>` を実行すること。起動しっぱなしにする dev サーバーやポートは存在しない。
+- パッケージ管理は `uv`。VM 起動時の update script で `uv sync --dev` 済みなので、追加のインストールは不要。コマンドは常に `uv run <cmd>`（例: `uv run python -m ms_data.tasks ci`）で実行する。標準コマンド一覧は本ファイル上部「ビルド・テスト・開発コマンド」と `README.md` を参照。
+- 環境の総合ヘルスチェックは `uv run python -m ms_data.tasks ci`（lint + カバレッジ付きテスト + 各種 validate を一括実行）。単発なら `lint` / `test` / `validate-strict` / `validate-skills`。
+- Python バージョン差異に注意: cloud VM のローカル venv は Python 3.12 で動く（`requires-python >=3.11` のため問題なし）が、GitHub Actions CI は Python 3.11 を使う。バージョン固有の挙動を疑う場合はこの差を考慮する。
+- スクレイピング系ターゲット（`scrape-index` / `scrape-details` / `skills` 等）は外部 atwiki へ実アクセスし、既定 2 req/sec のレート制限がかかる。cloud 上でのライブ取得は原則避け、オフライン検証は `NO_NET=1`（キャッシュのみ利用）を付ける。`ci` とユニットテストはネットワーク非依存で完結する。
