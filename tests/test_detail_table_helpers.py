@@ -30,6 +30,7 @@ def test_levels_from_table_without_thead_skips_rows_without_th():
 def test_expand_cells_truncates_and_pads_and_expands_colspan():
     html = "<tr>" "<td>a</td><td colspan='2'>b</td><td>c</td>" "</tr>"
     cells = BeautifulSoup(html, "lxml").find_all("td")
+    assert expand_cells(cells, 4) == ["a", "b", "b", "c"]
     assert expand_cells(cells, 2) == ["a", "b"]
     assert expand_cells(cells[:1], 3) == ["a", None, None]
 
