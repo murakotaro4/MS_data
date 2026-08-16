@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-08-16T09:22:02Z",
+  "report_date": "20260816",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "fa338828bb5ccdeaf8e776d0b52f84041ba50a70"
+  },
+  "github": {
+    "run_id": "31938827726",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "e0ffef8c5671e927b6930704c2b3eef6b1f0a28f38e1c9f1085225d412b4760d",
+      "size_bytes": 144828,
+      "record_count": 589
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "433901730694c835ac10a1afdaecb63416f1fb48515afd142d16fc61e9a05997",
+      "size_bytes": 19697,
+      "record_count": 17
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "2d79722012976a08626db81f37d1a9a8cbad006eda8ffbd929ae2a1183a91c1e",
+      "size_bytes": 25824,
+      "record_count": 17
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "34e3e8078eca56f737d20c7da0a01092b0caaa9ab6b561d605a5769e76be4fe0",
+      "file_count": 14,
+      "size_bytes": 2715581
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "1e1538a2f37667341208cf8c1464d0c2e3e7106eb65fa1cee262abf521fdb3c3",
+      "size_bytes": 2614450,
+      "record_count": 1692
+    },
+    "diff_report": {
+      "path": "reports/2026/08/diff_msdata_20260816.md",
+      "sha256": "4754c92e3aef5d6010c5f8a02f8d71b11da3835e8c6767e3d821ec8d42712b71",
+      "size_bytes": 1710
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260816-run-31938827726",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260816-run-31938827726",
+    "asset_name": "raw_snapshot_20260816_run31938827726.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260816-run-31938827726"
+  }
+}
