@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-08-17T09:36:36Z",
+  "report_date": "20260817",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "733b63ed8841ff65347e8e93d0c9d7f8edeb1ccc"
+  },
+  "github": {
+    "run_id": "32016065647",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "e7cbc7712d4afe26cc245286feaebc9a98bd15baffcce9f7595764dfaf0ee19b",
+      "size_bytes": 144836,
+      "record_count": 589
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "420ee8224503e700275d821e85c2e92257d979dc6b06425da5740a1a64ca8709",
+      "size_bytes": 21175,
+      "record_count": 18
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "22f82a19408b12dfb583fb380819444f49f510b3fa0d650da6eaab4493c7375f",
+      "size_bytes": 27675,
+      "record_count": 18
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "bc8f7975e1f0877094a3fb46a031fe2a4e188253b03423a793800f54eb542152",
+      "file_count": 14,
+      "size_bytes": 2714249
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "fc0b66711fa63cc6858995d67471af37d54e70d52feee12c00cd2dfa96624918",
+      "size_bytes": 2614449,
+      "record_count": 1692
+    },
+    "diff_report": {
+      "path": "reports/2026/08/diff_msdata_20260817.md",
+      "sha256": "50778a7c473190290ab69ca3e2a7592a535b69f3e350f12728d60a0171580946",
+      "size_bytes": 1166
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260817-run-32016065647",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260817-run-32016065647",
+    "asset_name": "raw_snapshot_20260817_run32016065647.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260817-run-32016065647"
+  }
+}
