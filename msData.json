@@ -35167,32 +35167,32 @@
       {
         "name": "フレーム補強",
         "level": 1,
-        "points": null
+        "points": 450
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 910
       },
       {
         "name": "耐実弾装甲補強",
         "level": 1,
-        "points": null
+        "points": 1210
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 1520
       },
       {
         "name": "対汎用防御プログラム",
         "level": 2,
-        "points": null
+        "points": 3040
       },
       {
         "name": "フレーム補強",
         "level": 3,
-        "points": null
+        "points": 4560
       }
     ]
   },
@@ -46739,32 +46739,32 @@
       {
         "name": "フレーム補強",
         "level": 1,
-        "points": null
+        "points": 520
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 1040
       },
       {
         "name": "耐実弾装甲補強",
         "level": 1,
-        "points": null
+        "points": 1390
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 1740
       },
       {
         "name": "対汎用防御プログラム",
         "level": 2,
-        "points": null
+        "points": 3480
       },
       {
         "name": "フレーム補強",
         "level": 3,
-        "points": null
+        "points": 5220
       }
     ]
   },
@@ -59903,33 +59903,33 @@
     "fullst": [
       {
         "name": "フレーム補強",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 390
       },
       {
         "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 790
       },
       {
         "name": "耐実弾装甲補強",
         "level": 1,
-        "points": null
+        "points": 1060
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 1330
       },
       {
         "name": "対汎用防御プログラム",
         "level": 2,
-        "points": null
+        "points": 2660
       },
       {
         "name": "フレーム補強",
         "level": 3,
-        "points": null
+        "points": 3990
       }
     ]
   },
@@ -105199,32 +105199,32 @@
       {
         "name": "AD-FCS",
         "level": 1,
-        "points": null
+        "points": 1210
       },
       {
         "name": "AD-PA",
         "level": 1,
-        "points": null
+        "points": 2430
       },
       {
         "name": "冷却補助システム",
         "level": 1,
-        "points": null
+        "points": 2950
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 3480
       },
       {
         "name": "緊急出撃",
         "level": 1,
-        "points": null
+        "points": 6960
       },
       {
         "name": "強化セキュリティ",
         "level": 1,
-        "points": null
+        "points": 10440
       }
     ]
   },
