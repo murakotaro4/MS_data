@@ -731,6 +731,25 @@ def test_cmd_check_gate_findings_stop(fake_gh, read_github_output, tmp_path):
     assert outputs["findings"] == "1"
 
 
+def test_cmd_check_gate_resolved_findings_do_not_block(
+    fake_gh, read_github_output, tmp_path
+):
+    finding = _codex_finding()
+    finding["id"] = 3820325517
+    fake_gh.responses["/pulls/97/reviews"] = [_codex_review()]
+    fake_gh.responses["/pulls/97/comments"] = [finding]
+    fake_gh.resolved_comment_ids = {"3820325517"}
+    out = tmp_path / "out.txt"
+
+    rc = main(_check_gate_argv(out))
+
+    assert rc == 0
+    outputs = read_github_output(out)
+    assert outputs["merge_ok"] == "true"
+    assert outputs["stop_reason"] == "none"
+    assert outputs["findings"] == "0"
+
+
 def _record_stop_argv(summary, *, stop_reason, findings="0"):
     return [
         "record-stop",

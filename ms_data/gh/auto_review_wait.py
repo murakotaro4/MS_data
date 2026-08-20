@@ -332,7 +332,11 @@ def cmd_export_findings(args: argparse.Namespace) -> int:
     file_comments = client.api_json(
         f"repos/{client.repo}/pulls/{args.pr_number}/comments", paginate=True
     )
-    findings = _facade().extract_codex_findings(file_comments, args.head_sha)
+    findings = _facade().extract_codex_findings(
+        file_comments,
+        args.head_sha,
+        client.resolved_review_comment_ids(args.pr_number),
+    )
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(

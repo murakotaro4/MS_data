@@ -17,6 +17,7 @@ from ms_data.gh.auto_review_merge import (
     recovered_marker,
     resolve_source_run_id,
     resolve_target_pr,
+    resolved_comment_ids_from_graphql,
     retry_marker,
     review_marker,
     select_resume_candidates,
@@ -507,3 +508,34 @@ def test_latest_force_push_created_at_picks_newest_event():
         == "2026-05-31T16:00:00Z"
     )
     assert latest_force_push_created_at([]) == ""
+
+
+def test_resolved_comment_ids_from_graphql_collects_resolved_only():
+    payload = {
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "reviewThreads": {
+                        "nodes": [
+                            {
+                                "isResolved": True,
+                                "comments": {
+                                    "nodes": [
+                                        {"databaseId": 11},
+                                        {"databaseId": 12},
+                                    ]
+                                },
+                            },
+                            {
+                                "isResolved": False,
+                                "comments": {"nodes": [{"databaseId": 21}]},
+                            },
+                        ]
+                    }
+                }
+            }
+        }
+    }
+    assert resolved_comment_ids_from_graphql(payload) == {"11", "12"}
+    assert resolved_comment_ids_from_graphql({}) == set()
+    assert resolved_comment_ids_from_graphql(None) == set()
