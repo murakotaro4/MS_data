@@ -10,6 +10,7 @@ from ms_data.gh.auto_review_merge import (
     _merge_and_notify,
     _positive_int,
     build_auto_review_report,
+    fetch_resolved_review_comment_ids,
     find_latest_bot_comment,
     jst_report_date,
     later_iso8601,
@@ -17,6 +18,7 @@ from ms_data.gh.auto_review_merge import (
     recovered_marker,
     resolve_source_run_id,
     resolve_target_pr,
+    resolved_comment_ids_from_graphql,
     retry_marker,
     review_marker,
     select_resume_candidates,
@@ -507,3 +509,143 @@ def test_latest_force_push_created_at_picks_newest_event():
         == "2026-05-31T16:00:00Z"
     )
     assert latest_force_push_created_at([]) == ""
+
+
+def test_resolved_comment_ids_from_graphql_collects_resolved_only():
+    payload = {
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "reviewThreads": {
+                        "nodes": [
+                            {
+                                "isResolved": True,
+                                "comments": {
+                                    "nodes": [
+                                        {"databaseId": 11},
+                                        {"databaseId": 12},
+                                    ]
+                                },
+                            },
+                            {
+                                "isResolved": False,
+                                "comments": {"nodes": [{"databaseId": 21}]},
+                            },
+                        ]
+                    }
+                }
+            }
+        }
+    }
+    assert resolved_comment_ids_from_graphql(payload) == {"11", "12"}
+    assert resolved_comment_ids_from_graphql({}) == set()
+    assert resolved_comment_ids_from_graphql(None) == set()
+
+
+def _threads_payload(nodes: list, *, has_next: bool = False, cursor: str | None = None):
+    return {
+        "data": {
+            "repository": {
+                "pullRequest": {
+                    "reviewThreads": {
+                        "pageInfo": {
+                            "hasNextPage": has_next,
+                            "endCursor": cursor,
+                        },
+                        "nodes": nodes,
+                    }
+                }
+            }
+        }
+    }
+
+
+def _comments_payload(
+    nodes: list, *, has_next: bool = False, cursor: str | None = None
+):
+    return {
+        "data": {
+            "node": {
+                "comments": {
+                    "pageInfo": {
+                        "hasNextPage": has_next,
+                        "endCursor": cursor,
+                    },
+                    "nodes": nodes,
+                }
+            }
+        }
+    }
+
+
+def test_fetch_resolved_review_comment_ids_paginates_threads_and_comments():
+    queries: list[str] = []
+
+    def graphql(query: str):
+        queries.append(query)
+        if "reviewThreads" in query:
+            if "after:" in query:
+                assert 'after:"thread-cursor"' in query
+                return _threads_payload(
+                    [
+                        {
+                            "id": "thread-2",
+                            "isResolved": True,
+                            "comments": {
+                                "pageInfo": {
+                                    "hasNextPage": True,
+                                    "endCursor": "comment-cursor",
+                                },
+                                "nodes": [{"databaseId": 31}],
+                            },
+                        }
+                    ]
+                )
+            return _threads_payload(
+                [
+                    {
+                        "id": "thread-1",
+                        "isResolved": True,
+                        "comments": {
+                            "pageInfo": {"hasNextPage": False, "endCursor": None},
+                            "nodes": [{"databaseId": 11}, {"databaseId": 12}],
+                        },
+                    },
+                    {
+                        "id": "thread-unresolved",
+                        "isResolved": False,
+                        "comments": {
+                            "pageInfo": {
+                                "hasNextPage": True,
+                                "endCursor": "skip-me",
+                            },
+                            "nodes": [{"databaseId": 21}],
+                        },
+                    },
+                ],
+                has_next=True,
+                cursor="thread-cursor",
+            )
+        assert 'id:"thread-2"' in query
+        assert 'after:"comment-cursor"' in query
+        return _comments_payload([{"databaseId": 32}])
+
+    assert fetch_resolved_review_comment_ids(
+        owner="o",
+        name="r",
+        pr_number=231,
+        graphql=graphql,
+    ) == {"11", "12", "31", "32"}
+    assert len(queries) == 3
+    assert "pageInfo{hasNextPage endCursor}" in queries[0]
+    assert "comments(first:100)" in queries[0]
+
+
+def test_fetch_resolved_review_comment_ids_raises_on_graphql_errors():
+    def graphql(_query: str):
+        return {"errors": [{"message": "limit exceeded"}]}
+
+    with pytest.raises(RuntimeError, match="limit exceeded"):
+        fetch_resolved_review_comment_ids(
+            owner="o", name="r", pr_number=1, graphql=graphql
+        )

@@ -107,9 +107,10 @@ def to_int(text: str) -> int | None:
     """セル文字列から最初の整数を取り出す。数値が無ければ None。"""
     if text is None:
         return None
-    # 全角→半角、カンマや単位除去
+    # 全角記号・カンマや単位を除去してから整数を探す
+    t = normalize_symbol_text(text)
     t = (
-        text.replace(",", "")
+        t.replace(",", "")
         .replace("％", "%")
         .replace("秒", "")
         .replace("度/秒", "")
@@ -118,6 +119,19 @@ def to_int(text: str) -> int | None:
     )
     m = re.search(r"-?\d+", t)
     return int(m.group(0)) if m else None
+
+
+def looks_like_ticket_count(text: str) -> bool:
+    """必要階級欄の値がリサイクルチケット数（純数字）かを判定する。
+
+    atwiki のステータステーブルでは「必要リサイクルチケット」と
+    「必要階級」が隣接しており、チケット数だけが階級欄へ誤配置される
+    ことがある（例: キャノンガン pages/6138, 2026-08-20 実測で LV1=225 /
+    LV2=260）。階級の正規値は「少尉01」等の名称か空欄であり、純数字は
+    チケット数とみなす。
+    """
+    t = normalize_symbol_text(text).replace(",", "").replace("\xa0", "")
+    return bool(re.fullmatch(r"\d+", t))
 
 
 def is_counter_placeholder(text: str) -> bool:

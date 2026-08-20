@@ -25,6 +25,24 @@ def _created_at(item: dict[str, Any]) -> str:
     return value if isinstance(value, str) else ""
 
 
+def _comment_id(item: dict[str, Any]) -> str:
+    value = item.get("id")
+    return str(value) if value is not None else ""
+
+
+def is_active_finding(
+    item: dict[str, Any],
+    *,
+    head_sha: str,
+    resolved_comment_ids: set[str],
+) -> bool:
+    """HEAD 上の未解決 Codex ファイル指摘なら True。"""
+    if not _is_codex(item) or item.get("commit_id") != head_sha:
+        return False
+    comment_id = _comment_id(item)
+    return not (comment_id and comment_id in resolved_comment_ids)
+
+
 def evaluate(
     *,
     reviews: list[dict[str, Any]],
@@ -33,21 +51,23 @@ def evaluate(
     reactions: list[dict[str, Any]],
     head_sha: str,
     since: str,
+    resolved_comment_ids: set[str] | None = None,
 ) -> dict[str, Any]:
     """Return merge-gate metrics for Codex review signals.
 
     ``review_complete`` means Codex has emitted a terminal no-issue signal or a
     file finding. Generic issue comments and reactions only prove activity; they
-    do not make the PR mergeable.
+    do not make the PR mergeable. Resolved review threads are not findings.
     """
 
+    resolved_ids = resolved_comment_ids or set()
     review_count = sum(
         1 for item in reviews if _is_codex(item) and item.get("commit_id") == head_sha
     )
     finding_count = sum(
         1
         for item in file_comments
-        if _is_codex(item) and item.get("commit_id") == head_sha
+        if is_active_finding(item, head_sha=head_sha, resolved_comment_ids=resolved_ids)
     )
     reaction_count = sum(
         1 for item in reactions if _is_codex(item) and item.get("content") == "+1"

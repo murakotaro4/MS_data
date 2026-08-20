@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
+from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from ms_data.core.dates import JST
-from ms_data.gh.auto_review_gate import CODEX_LOGINS
+from ms_data.gh.auto_review_gate import is_active_finding
 from ms_data.gh.auto_review_markers import parse_stop_marker
 from ms_data.gh.gh_json import login_of as _login
 from ms_data.gh.outputs import write_github_output
@@ -21,6 +23,10 @@ GITHUB_ACTIONS_BOT = "github-actions[bot]"
 RESUME_STOP_REASONS = frozenset({"codex_no_response", "codex_disconnected"})
 SOURCE_RUN_ID_RE = re.compile(r"source_run_id:(\d+)")
 HEAD_REF_DATE_RE = re.compile(r"^data/auto-update-(\d{8})$")
+REVIEW_THREADS_PAGE_SIZE = 100
+REVIEW_THREAD_COMMENTS_PAGE_SIZE = 100
+MAX_REVIEW_THREAD_PAGES = 50
+MAX_THREAD_COMMENT_PAGES = 20
 
 
 def _facade():
@@ -182,14 +188,17 @@ def resolve_review_since(
 
 
 def extract_codex_findings(
-    file_comments: list[dict[str, Any]], head_sha: str
+    file_comments: list[dict[str, Any]],
+    head_sha: str,
+    resolved_comment_ids: set[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Codex ファイルコメントを export-findings と同形式へ整形する。"""
+    resolved_ids = resolved_comment_ids or set()
     findings: list[dict[str, Any]] = []
     for item in file_comments:
-        if _login(item) not in CODEX_LOGINS:
-            continue
-        if item.get("commit_id") != head_sha:
+        if not is_active_finding(
+            item, head_sha=head_sha, resolved_comment_ids=resolved_ids
+        ):
             continue
         line = item.get("line")
         findings.append(
@@ -200,6 +209,173 @@ def extract_codex_findings(
             }
         )
     return findings
+
+
+def _as_dict(value: Any) -> dict[str, Any] | None:
+    return value if isinstance(value, dict) else None
+
+
+def _payload_data(payload: Any) -> dict[str, Any] | None:
+    if not isinstance(payload, dict):
+        return None
+    data = payload.get("data")
+    if isinstance(data, dict):
+        return data
+    return payload
+
+
+def _raise_graphql_errors(payload: Any) -> None:
+    if not isinstance(payload, dict):
+        return
+    errors = payload.get("errors")
+    if not isinstance(errors, list) or not errors:
+        return
+    messages = [
+        str(item.get("message") or "unknown")
+        for item in errors
+        if isinstance(item, dict)
+    ]
+    raise RuntimeError("GitHub GraphQL errors: " + "; ".join(messages or ["unknown"]))
+
+
+def _page_info(connection: Any) -> tuple[bool, str | None]:
+    info = _as_dict((_as_dict(connection) or {}).get("pageInfo"))
+    if info is None:
+        return False, None
+    cursor = info.get("endCursor")
+    if not (isinstance(cursor, str) and cursor) or not info.get("hasNextPage"):
+        return False, None
+    return True, cursor
+
+
+def _comment_ids(nodes: Any) -> set[str]:
+    ids: set[str] = set()
+    if not isinstance(nodes, list):
+        return ids
+    for comment in nodes:
+        if not isinstance(comment, dict) or comment.get("databaseId") is None:
+            continue
+        ids.add(str(comment["databaseId"]))
+    return ids
+
+
+def _review_threads_connection(payload: Any) -> dict[str, Any] | None:
+    data = _payload_data(payload)
+    repository = _as_dict(data.get("repository") if data else None)
+    pull = _as_dict(repository.get("pullRequest") if repository else None)
+    return _as_dict(pull.get("reviewThreads") if pull else None)
+
+
+def _node_comments_connection(payload: Any) -> dict[str, Any] | None:
+    data = _payload_data(payload)
+    node = _as_dict(data.get("node") if data else None)
+    return _as_dict(node.get("comments") if node else None)
+
+
+def review_threads_graphql_query(
+    owner: str, name: str, pr_number: int, cursor: str | None = None
+) -> str:
+    after = f",after:{json.dumps(cursor)}" if cursor else ""
+    return (
+        "query{repository(owner:"
+        + json.dumps(owner)
+        + ",name:"
+        + json.dumps(name)
+        + "){pullRequest(number:"
+        + str(int(pr_number))
+        + "){reviewThreads(first:"
+        + str(REVIEW_THREADS_PAGE_SIZE)
+        + after
+        + "){pageInfo{hasNextPage endCursor}nodes{id isResolved "
+        "comments(first:"
+        + str(REVIEW_THREAD_COMMENTS_PAGE_SIZE)
+        + "){pageInfo{hasNextPage endCursor}nodes{databaseId}}}}}}}"
+    )
+
+
+def thread_comments_graphql_query(thread_id: str, cursor: str) -> str:
+    return (
+        "query{node(id:"
+        + json.dumps(thread_id)
+        + "){... on PullRequestReviewThread{comments(first:"
+        + str(REVIEW_THREAD_COMMENTS_PAGE_SIZE)
+        + ",after:"
+        + json.dumps(cursor)
+        + "){pageInfo{hasNextPage endCursor}nodes{databaseId}}}}}"
+    )
+
+
+def resolved_comment_ids_from_graphql(payload: Any) -> set[str]:
+    """reviewThreads GraphQL 応答から解決済みコメント ID を集める。"""
+    threads = _review_threads_connection(payload)
+    nodes = threads.get("nodes") if threads else None
+    if not isinstance(nodes, list):
+        return set()
+    ids: set[str] = set()
+    for thread in nodes:
+        if not isinstance(thread, dict) or not thread.get("isResolved"):
+            continue
+        comments = _as_dict(thread.get("comments"))
+        ids.update(_comment_ids(comments.get("nodes") if comments else None))
+    return ids
+
+
+def _fetch_remaining_thread_comments(
+    graphql: Callable[[str], Any], thread_id: str, cursor: str
+) -> set[str]:
+    ids: set[str] = set()
+    for _ in range(MAX_THREAD_COMMENT_PAGES):
+        payload = graphql(thread_comments_graphql_query(thread_id, cursor))
+        _raise_graphql_errors(payload)
+        comments = _node_comments_connection(payload)
+        ids.update(_comment_ids(comments.get("nodes") if comments else None))
+        has_next, next_cursor = _page_info(comments)
+        if not has_next or next_cursor is None:
+            return ids
+        cursor = next_cursor
+    raise RuntimeError(
+        "review thread comments pagination exceeded MAX_THREAD_COMMENT_PAGES"
+    )
+
+
+def fetch_resolved_review_comment_ids(
+    *,
+    owner: str,
+    name: str,
+    pr_number: int,
+    graphql: Callable[[str], Any],
+) -> set[str]:
+    """reviewThreads を pageInfo で辿り、解決済みコメント ID を集める。"""
+    ids: set[str] = set()
+    cursor: str | None = None
+    for _ in range(MAX_REVIEW_THREAD_PAGES):
+        payload = graphql(review_threads_graphql_query(owner, name, pr_number, cursor))
+        _raise_graphql_errors(payload)
+        threads = _review_threads_connection(payload)
+        nodes = threads.get("nodes") if threads else None
+        if isinstance(nodes, list):
+            for thread in nodes:
+                if not isinstance(thread, dict) or not thread.get("isResolved"):
+                    continue
+                comments = _as_dict(thread.get("comments")) or {}
+                ids.update(_comment_ids(comments.get("nodes")))
+                has_more, comment_cursor = _page_info(comments)
+                thread_id = thread.get("id")
+                if (
+                    has_more
+                    and isinstance(thread_id, str)
+                    and thread_id
+                    and comment_cursor
+                ):
+                    ids.update(
+                        _fetch_remaining_thread_comments(
+                            graphql, thread_id, comment_cursor
+                        )
+                    )
+        has_next, cursor = _page_info(threads)
+        if not has_next:
+            return ids
+    raise RuntimeError("reviewThreads pagination exceeded MAX_REVIEW_THREAD_PAGES")
 
 
 def github_run_url() -> str:

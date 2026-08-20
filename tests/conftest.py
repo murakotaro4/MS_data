@@ -27,6 +27,7 @@ class FakeGitHubClient:
         self.repo = repo
         self.responses: dict[str, Any] = {}
         self.posted_comments: list[tuple[str, str]] = []
+        self.resolved_comment_ids: set[str] = set()
         self._comments_by_id: dict[str, dict[str, Any]] = {}
         self._next_comment_id = 1000
 
@@ -74,6 +75,9 @@ class FakeGitHubClient:
     def issue_comment(self, comment_id: str) -> dict[str, Any]:
         return self.api_json(f"repos/{self.repo}/issues/comments/{comment_id}")
 
+    def resolved_review_comment_ids(self, pr_number: str) -> set[str]:
+        return set(self.resolved_comment_ids)
+
 
 class FakeTime:
     """sleep() が時刻を進める time モジュール代替。実時間を消費しない。"""
@@ -109,9 +113,7 @@ def load_fixture():
     """tests/fixtures 配下の UTF-8 テキストを読み込む。"""
 
     def _load_fixture(name: str) -> str:
-        return (Path(__file__).with_name("fixtures") / name).read_text(
-            encoding="utf-8"
-        )
+        return (Path(__file__).with_name("fixtures") / name).read_text(encoding="utf-8")
 
     return _load_fixture
 

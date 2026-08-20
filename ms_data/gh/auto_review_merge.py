@@ -38,6 +38,8 @@ from ms_data.gh.auto_review_pr import (
     extract_codex_findings,
     extract_commit_committer_date,
     fetch_commit_committer_date,
+    fetch_resolved_review_comment_ids,
+    resolved_comment_ids_from_graphql,
     format_github_datetime,
     github_run_url,
     jst_report_date,
@@ -121,6 +123,22 @@ class GitHubClient:
             f"repos/{self.repo}/issues/{pr_number}/timeline",
             paginate=True,
             headers=["Accept: application/vnd.github+json"],
+        )
+
+    def resolved_review_comment_ids(self, pr_number: str) -> set[str]:
+        """解決済みレビュースレッドに属するコメント ID を返す。"""
+        if "/" not in self.repo:
+            raise ValueError(f"invalid repo: {self.repo}")
+        if not str(pr_number).isdigit():
+            raise ValueError(f"invalid pr_number: {pr_number}")
+        owner, name = self.repo.split("/", 1)
+        return fetch_resolved_review_comment_ids(
+            owner=owner,
+            name=name,
+            pr_number=int(pr_number),
+            graphql=lambda query: self.api_json(
+                "graphql", method="POST", fields={"query": query}
+            ),
         )
 
 
@@ -221,6 +239,7 @@ def collect_review_metrics(
         reactions=reactions,
         head_sha=head_sha,
         since=since,
+        resolved_comment_ids=client.resolved_review_comment_ids(pr_number),
     )
 
 

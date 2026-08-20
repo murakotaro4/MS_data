@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 import ms_data.validation.validate_msdata as vm
 
 
@@ -38,6 +40,26 @@ def test_validate_msdata_main_accepts_valid_minimal_data(tmp_path):
     path = tmp_path / "msData.json"
     write_json(path, [make_record()])
     assert vm.main([str(path)]) == 0
+
+
+@pytest.mark.parametrize(
+    "rank",
+    ["225", "1,234", "２２５", " 225 ", "１，２３４"],
+)
+def test_validate_schema_rejects_numeric_required_rank(rank):
+    errors = vm.validate_schema(
+        [make_record(必要階級=rank)],
+        vm.SCHEMA_PATH,
+    )
+    assert errors
+
+
+def test_validate_schema_accepts_named_required_rank():
+    errors = vm.validate_schema(
+        [make_record(必要階級="少尉01")],
+        vm.SCHEMA_PATH,
+    )
+    assert not errors
 
 
 def test_find_unknown_keys_detects_unmapped_key():

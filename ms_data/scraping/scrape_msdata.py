@@ -59,6 +59,7 @@ from ms_data.net.client import get_scraper_client
 # 動的参照やリポジトリ外の互換は保証しない。
 from ms_data.scraping.text_values import (
     is_counter_placeholder,
+    looks_like_ticket_count,
     parse_iso_datetime,
     parse_ttl,
     symbol_to_bool,

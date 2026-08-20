@@ -28,6 +28,7 @@ from ms_data.core.labels import FIELD_MAP, clean_text, normalize_row_label
 from ms_data.scraping.fullst import apply_fullst_fallback, parse_fullst_by_ms_level
 from ms_data.scraping.text_values import (
     is_counter_placeholder,
+    looks_like_ticket_count,
     symbol_to_bool,
     to_int,
 )
@@ -298,6 +299,12 @@ def build_base_records(
                 # 新規作成ページではカウンター欄にテンプレートの候補羅列が
                 # 残っていることがあるため、未記入として空にする
                 if key_name == "カウンター" and is_counter_placeholder(text):
+                    text = ""
+                # 隣接行のチケット数が必要階級へ誤配置された場合は寄せ替える
+                if key_name == "必要階級" and looks_like_ticket_count(text):
+                    iv = to_int(text)
+                    if iv is not None and "必要リサイクルチケット" not in per_level[lv]:
+                        per_level[lv]["必要リサイクルチケット"] = iv
                     text = ""
                 per_level[lv][key_name] = text
                 continue
