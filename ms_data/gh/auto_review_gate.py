@@ -16,16 +16,6 @@ NO_ISSUES_PREFIX = "Codex Review: Didn't find any major issues."
 DISCONNECT_PREFIX = "To use Codex here"
 
 
-def finding_commit_sha(item: dict[str, Any]) -> str:
-    """ファイルコメントが投稿されたコミット SHA。
-
-    GitHub は指摘対応後もコメントを新 HEAD へ再配置し ``commit_id`` を
-    更新する。自動マージ判定では投稿元の ``original_commit_id`` を使う。
-    """
-    value = item.get("original_commit_id") or item.get("commit_id")
-    return value if isinstance(value, str) else ""
-
-
 def _is_codex(item: dict[str, Any]) -> bool:
     return _login(item) in CODEX_LOGINS
 
@@ -57,7 +47,7 @@ def evaluate(
     finding_count = sum(
         1
         for item in file_comments
-        if _is_codex(item) and finding_commit_sha(item) == head_sha
+        if _is_codex(item) and item.get("commit_id") == head_sha
     )
     reaction_count = sum(
         1 for item in reactions if _is_codex(item) and item.get("content") == "+1"

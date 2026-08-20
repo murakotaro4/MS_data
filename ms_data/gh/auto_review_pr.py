@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from ms_data.core.dates import JST
-from ms_data.gh.auto_review_gate import CODEX_LOGINS, finding_commit_sha
+from ms_data.gh.auto_review_gate import CODEX_LOGINS
 from ms_data.gh.auto_review_markers import parse_stop_marker
 from ms_data.gh.gh_json import login_of as _login
 from ms_data.gh.outputs import write_github_output
@@ -189,7 +189,7 @@ def extract_codex_findings(
     for item in file_comments:
         if _login(item) not in CODEX_LOGINS:
             continue
-        if finding_commit_sha(item) != head_sha:
+        if item.get("commit_id") != head_sha:
             continue
         line = item.get("line")
         findings.append(
