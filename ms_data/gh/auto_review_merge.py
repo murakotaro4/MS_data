@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import subprocess
 import time
@@ -39,6 +38,7 @@ from ms_data.gh.auto_review_pr import (
     extract_codex_findings,
     extract_commit_committer_date,
     fetch_commit_committer_date,
+    fetch_resolved_review_comment_ids,
     resolved_comment_ids_from_graphql,
     format_github_datetime,
     github_run_url,
@@ -132,18 +132,14 @@ class GitHubClient:
         if not str(pr_number).isdigit():
             raise ValueError(f"invalid pr_number: {pr_number}")
         owner, name = self.repo.split("/", 1)
-        query = (
-            "query{repository(owner:"
-            + json.dumps(owner)
-            + ",name:"
-            + json.dumps(name)
-            + "){pullRequest(number:"
-            + str(int(pr_number))
-            + "){reviewThreads(first:100){nodes{isResolved "
-            "comments(first:30){nodes{databaseId}}}}}}}"
+        return fetch_resolved_review_comment_ids(
+            owner=owner,
+            name=name,
+            pr_number=int(pr_number),
+            graphql=lambda query: self.api_json(
+                "graphql", method="POST", fields={"query": query}
+            ),
         )
-        payload = self.api_json("graphql", method="POST", fields={"query": query})
-        return resolved_comment_ids_from_graphql(payload)
 
 
 def _run_gh_with_token(args: list[str], token: str) -> str:

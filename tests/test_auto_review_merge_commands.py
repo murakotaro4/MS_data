@@ -124,6 +124,81 @@ def test_api_json_post_with_fields(monkeypatch):
     assert result == {"id": 5}
 
 
+def test_resolved_review_comment_ids_uses_paged_graphql(monkeypatch):
+    captured: list[list[str]] = []
+
+    def fake_run(cmd, **kwargs):
+        captured.append(cmd)
+        if len(captured) == 1:
+            payload = {
+                "data": {
+                    "repository": {
+                        "pullRequest": {
+                            "reviewThreads": {
+                                "pageInfo": {
+                                    "hasNextPage": True,
+                                    "endCursor": "c1",
+                                },
+                                "nodes": [
+                                    {
+                                        "id": "t1",
+                                        "isResolved": True,
+                                        "comments": {
+                                            "pageInfo": {
+                                                "hasNextPage": False,
+                                                "endCursor": None,
+                                            },
+                                            "nodes": [{"databaseId": 11}],
+                                        },
+                                    }
+                                ],
+                            }
+                        }
+                    }
+                }
+            }
+        else:
+            payload = {
+                "data": {
+                    "repository": {
+                        "pullRequest": {
+                            "reviewThreads": {
+                                "pageInfo": {
+                                    "hasNextPage": False,
+                                    "endCursor": None,
+                                },
+                                "nodes": [
+                                    {
+                                        "id": "t2",
+                                        "isResolved": True,
+                                        "comments": {
+                                            "pageInfo": {
+                                                "hasNextPage": False,
+                                                "endCursor": None,
+                                            },
+                                            "nodes": [{"databaseId": 12}],
+                                        },
+                                    }
+                                ],
+                            }
+                        }
+                    }
+                }
+            }
+        return SimpleNamespace(stdout=json.dumps(payload))
+
+    monkeypatch.setattr(gh_json.subprocess, "run", fake_run)
+    client = GitHubClient("owner/repo")
+    assert client.resolved_review_comment_ids("231") == {"11", "12"}
+    assert len(captured) == 2
+    assert captured[0][:4] == ["gh", "api", "graphql", "-X"]
+    first_query = captured[0][-1]
+    second_query = captured[1][-1]
+    assert first_query.startswith("query=")
+    assert "after:" not in first_query
+    assert 'after:"c1"' in second_query
+
+
 def test_api_json_parses_paginated_stream(monkeypatch):
     def fake_run(cmd, **kwargs):
         return SimpleNamespace(stdout='[{"id": 1}]\n[{"id": 2}]')
