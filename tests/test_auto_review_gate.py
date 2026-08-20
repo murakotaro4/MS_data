@@ -112,6 +112,29 @@ def test_file_comment_blocks_merge_even_without_review_body():
     assert result["stop_reason"] == "findings"
 
 
+def test_reanchored_old_finding_does_not_block_new_head():
+    result = evaluate(
+        reviews=[{"user": CODEX_USER, "commit_id": HEAD_SHA}],
+        file_comments=[
+            {
+                "user": CODEX_USER,
+                "commit_id": HEAD_SHA,
+                "original_commit_id": "oldsha",
+                "body": "Stale finding re-anchored onto the new HEAD.",
+            }
+        ],
+        issue_comments=[],
+        reactions=[],
+        head_sha=HEAD_SHA,
+        since=SINCE,
+    )
+
+    assert result["finding_count"] == 0
+    assert result["review_complete"] is True
+    assert result["merge_ok"] is True
+    assert result["stop_reason"] == "none"
+
+
 def test_review_is_filtered_by_head_sha():
     result = evaluate(
         reviews=[
