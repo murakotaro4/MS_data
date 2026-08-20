@@ -47,6 +47,18 @@ def test_numeric_rank_does_not_overwrite_existing_tickets():
     assert recs[2]["必要リサイクルチケット"] == 245
 
 
+def test_fullwidth_comma_rank_is_moved_to_recycle_tickets():
+    recs = _build_records(
+        """
+        <tr><th>必要リサイクルチケット</th><td></td><td></td></tr>
+        <tr><th>必要階級</th><td>１，２３４</td><td>225</td></tr>
+        """
+    )
+    assert recs[1]["必要階級"] == ""
+    assert recs[1]["必要リサイクルチケット"] == 1234
+    assert recs[2]["必要リサイクルチケット"] == 225
+
+
 def test_real_rank_values_are_kept():
     recs = _build_records(
         """

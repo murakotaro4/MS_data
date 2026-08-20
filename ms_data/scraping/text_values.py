@@ -107,9 +107,10 @@ def to_int(text: str) -> int | None:
     """セル文字列から最初の整数を取り出す。数値が無ければ None。"""
     if text is None:
         return None
-    # 全角→半角、カンマや単位除去
+    # 全角記号・カンマや単位を除去してから整数を探す
+    t = normalize_symbol_text(text)
     t = (
-        text.replace(",", "")
+        t.replace(",", "")
         .replace("％", "%")
         .replace("秒", "")
         .replace("度/秒", "")

@@ -129,6 +129,7 @@ def test_parse_ttl_rejects_current_invalid_forms(value):
     [
         ("１２３", 123),
         ("1,234", 1_234),
+        ("１，２３４", 1_234),
         ("45％", 45),
         ("価格 1,234.5 DP", 1_234),
         ("速度なし", None),

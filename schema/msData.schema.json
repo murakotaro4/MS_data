@@ -43,6 +43,7 @@
       "レアリティ": { "type": "string" },
       "必要階級": {
         "type": "string",
+        "description": "階級名。ASCII/全角の純数字、カンマ区切り、前後空白のみの値は不可",
         "not": { "pattern": "^[\\s0-9０-９,，]+$" }
       },
       "必要DP": { "type": "integer", "minimum": 0 },
