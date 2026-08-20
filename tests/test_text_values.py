@@ -10,6 +10,7 @@ from ms_data.scraping.text_values import (
     extract_page_id,
     extract_updated_age,
     is_counter_placeholder,
+    looks_like_ticket_count,
     normalize_symbol_text,
     parse_iso_datetime,
     parse_ttl,
@@ -145,6 +146,24 @@ def test_is_counter_placeholder_normalizes_mixed_whitespace():
 def test_is_counter_placeholder_rejects_none():
     with pytest.raises(TypeError):
         is_counter_placeholder(None)
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        ("225", True),
+        ("260", True),
+        ("1,234", True),
+        ("  225  ", True),
+        ("少尉01", False),
+        ("二等兵01", False),
+        ("DP交換不可（リサイクル窓口専用ユニット）", False),
+        ("", False),
+        ("225チケット", False),
+    ],
+)
+def test_looks_like_ticket_count(text, expected):
+    assert looks_like_ticket_count(text) is expected
 
 
 @pytest.mark.parametrize(

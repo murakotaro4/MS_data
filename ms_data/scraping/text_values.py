@@ -120,6 +120,19 @@ def to_int(text: str) -> int | None:
     return int(m.group(0)) if m else None
 
 
+def looks_like_ticket_count(text: str) -> bool:
+    """必要階級欄の値がリサイクルチケット数（純数字）かを判定する。
+
+    atwiki のステータステーブルでは「必要リサイクルチケット」と
+    「必要階級」が隣接しており、チケット数だけが階級欄へ誤配置される
+    ことがある（例: キャノンガン pages/6138, 2026-08-20 実測で LV1=225 /
+    LV2=260）。階級の正規値は「少尉01」等の名称か空欄であり、純数字は
+    チケット数とみなす。
+    """
+    t = clean_text(text).replace(",", "").replace("\xa0", "")
+    return bool(re.fullmatch(r"\d+", t))
+
+
 def is_counter_placeholder(text: str) -> bool:
     """カウンター欄がテンプレートの候補羅列のまま（未記入）かを判定する。
 

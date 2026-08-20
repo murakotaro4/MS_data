@@ -41,7 +41,10 @@
       "再出撃時間": { "type": "integer", "minimum": 0 },
       "格闘判定力": { "type": ["string", "null"] },
       "レアリティ": { "type": "string" },
-      "必要階級": { "type": "string" },
+      "必要階級": {
+        "type": "string",
+        "not": { "pattern": "^[0-9]+$" }
+      },
       "必要DP": { "type": "integer", "minimum": 0 },
       "必要リサイクルチケット": { "type": "integer", "minimum": 0 },
       "fullst": {

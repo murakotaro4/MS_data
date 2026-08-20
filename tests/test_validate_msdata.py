@@ -40,6 +40,22 @@ def test_validate_msdata_main_accepts_valid_minimal_data(tmp_path):
     assert vm.main([str(path)]) == 0
 
 
+def test_validate_schema_rejects_numeric_required_rank():
+    errors = vm.validate_schema(
+        [make_record(必要階級="225")],
+        vm.SCHEMA_PATH,
+    )
+    assert errors
+
+
+def test_validate_schema_accepts_named_required_rank():
+    errors = vm.validate_schema(
+        [make_record(必要階級="少尉01")],
+        vm.SCHEMA_PATH,
+    )
+    assert not errors
+
+
 def test_find_unknown_keys_detects_unmapped_key():
     unknown = vm.find_unknown_keys(
         [make_record(謎キー=1)], vm.load_allowed_keys(vm.SCHEMA_PATH)
