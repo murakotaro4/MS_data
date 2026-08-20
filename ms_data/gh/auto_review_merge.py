@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import time
@@ -38,6 +39,7 @@ from ms_data.gh.auto_review_pr import (
     extract_codex_findings,
     extract_commit_committer_date,
     fetch_commit_committer_date,
+    resolved_comment_ids_from_graphql,
     format_github_datetime,
     github_run_url,
     jst_report_date,
@@ -122,6 +124,26 @@ class GitHubClient:
             paginate=True,
             headers=["Accept: application/vnd.github+json"],
         )
+
+    def resolved_review_comment_ids(self, pr_number: str) -> set[str]:
+        """解決済みレビュースレッドに属するコメント ID を返す。"""
+        if "/" not in self.repo:
+            raise ValueError(f"invalid repo: {self.repo}")
+        if not str(pr_number).isdigit():
+            raise ValueError(f"invalid pr_number: {pr_number}")
+        owner, name = self.repo.split("/", 1)
+        query = (
+            "query{repository(owner:"
+            + json.dumps(owner)
+            + ",name:"
+            + json.dumps(name)
+            + "){pullRequest(number:"
+            + str(int(pr_number))
+            + "){reviewThreads(first:100){nodes{isResolved "
+            "comments(first:30){nodes{databaseId}}}}}}}"
+        )
+        payload = self.api_json("graphql", method="POST", fields={"query": query})
+        return resolved_comment_ids_from_graphql(payload)
 
 
 def _run_gh_with_token(args: list[str], token: str) -> str:
@@ -221,6 +243,7 @@ def collect_review_metrics(
         reactions=reactions,
         head_sha=head_sha,
         since=since,
+        resolved_comment_ids=client.resolved_review_comment_ids(pr_number),
     )
 
 

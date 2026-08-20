@@ -112,6 +112,30 @@ def test_file_comment_blocks_merge_even_without_review_body():
     assert result["stop_reason"] == "findings"
 
 
+def test_resolved_file_comment_does_not_block_merge():
+    result = evaluate(
+        reviews=[{"user": CODEX_USER, "commit_id": HEAD_SHA}],
+        file_comments=[
+            {
+                "id": 3820325517,
+                "user": CODEX_USER,
+                "commit_id": HEAD_SHA,
+                "body": "Please fix this.",
+            }
+        ],
+        issue_comments=[],
+        reactions=[],
+        head_sha=HEAD_SHA,
+        since=SINCE,
+        resolved_comment_ids={"3820325517"},
+    )
+
+    assert result["finding_count"] == 0
+    assert result["review_complete"] is True
+    assert result["merge_ok"] is True
+    assert result["stop_reason"] == "none"
+
+
 def test_review_is_filtered_by_head_sha():
     result = evaluate(
         reviews=[

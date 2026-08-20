@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from ms_data.core.dates import JST
-from ms_data.gh.auto_review_gate import CODEX_LOGINS
+from ms_data.gh.auto_review_gate import is_active_finding
 from ms_data.gh.auto_review_markers import parse_stop_marker
 from ms_data.gh.gh_json import login_of as _login
 from ms_data.gh.outputs import write_github_output
@@ -182,14 +182,17 @@ def resolve_review_since(
 
 
 def extract_codex_findings(
-    file_comments: list[dict[str, Any]], head_sha: str
+    file_comments: list[dict[str, Any]],
+    head_sha: str,
+    resolved_comment_ids: set[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Codex ファイルコメントを export-findings と同形式へ整形する。"""
+    resolved_ids = resolved_comment_ids or set()
     findings: list[dict[str, Any]] = []
     for item in file_comments:
-        if _login(item) not in CODEX_LOGINS:
-            continue
-        if item.get("commit_id") != head_sha:
+        if not is_active_finding(
+            item, head_sha=head_sha, resolved_comment_ids=resolved_ids
+        ):
             continue
         line = item.get("line")
         findings.append(
@@ -200,6 +203,34 @@ def extract_codex_findings(
             }
         )
     return findings
+
+
+def resolved_comment_ids_from_graphql(payload: Any) -> set[str]:
+    """reviewThreads GraphQL 応答から解決済みコメント ID を集める。"""
+    if not isinstance(payload, dict):
+        return set()
+    data = payload.get("data")
+    if not isinstance(data, dict):
+        data = payload
+    repository = data.get("repository") if isinstance(data, dict) else None
+    pull = repository.get("pullRequest") if isinstance(repository, dict) else None
+    threads = pull.get("reviewThreads") if isinstance(pull, dict) else None
+    nodes = threads.get("nodes") if isinstance(threads, dict) else None
+    if not isinstance(nodes, list):
+        return set()
+    ids: set[str] = set()
+    for thread in nodes:
+        if not isinstance(thread, dict) or not thread.get("isResolved"):
+            continue
+        comments = thread.get("comments")
+        comment_nodes = comments.get("nodes") if isinstance(comments, dict) else None
+        if not isinstance(comment_nodes, list):
+            continue
+        for comment in comment_nodes:
+            if not isinstance(comment, dict) or comment.get("databaseId") is None:
+                continue
+            ids.add(str(comment["databaseId"]))
+    return ids
 
 
 def github_run_url() -> str:

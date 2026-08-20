@@ -182,7 +182,11 @@ def _handle_resume_findings(
     file_comments = client.api_json(
         f"repos/{client.repo}/pulls/{pr_number}/comments", paginate=True
     )
-    findings = _facade().extract_codex_findings(file_comments, head_sha)
+    findings = _facade().extract_codex_findings(
+        file_comments,
+        head_sha,
+        client.resolved_review_comment_ids(pr_number),
+    )
     with tempfile.NamedTemporaryFile(
         mode="w",
         encoding="utf-8",
