@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-08-20T09:30:23Z",
+  "report_date": "20260820",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "2aea90bec8b9a4a89d92355e0943467bfdec9ba8"
+  },
+  "github": {
+    "run_id": "32354156286",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "fd50e32e1c19cd5daa0efa0ab316d38a907cdad87d8c17045df5bc357ad42c06",
+      "size_bytes": 144812,
+      "record_count": 589
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "52f446d10cff40a8cf614a2393ba81b0022640a681daba79c4c80d4e06a9c307",
+      "size_bytes": 63944,
+      "record_count": 55
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "5366b3bc0ea2385e86bbb3212eac256b5a2c46450ad516e2a2dab4c3cc198f92",
+      "size_bytes": 83813,
+      "record_count": 55
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "e14513476726c2469e7362222dea05bab84971e2a1e5a92196cf920e94e2637b",
+      "file_count": 48,
+      "size_bytes": 7980793
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "564f133c1f5cf689614f09ce68f50b270006af68bc1ff82a60e6087b7bd149de",
+      "size_bytes": 2614607,
+      "record_count": 1692
+    },
+    "diff_report": {
+      "path": "reports/2026/08/diff_msdata_20260820.md",
+      "sha256": "d84c83edcfabc31f78b23c9d70beb15b6f270792cea6d0e6823024204a59e273",
+      "size_bytes": 1814
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260820-run-32354156286",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260820-run-32354156286",
+    "asset_name": "raw_snapshot_20260820_run32354156286.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260820-run-32354156286"
+  }
+}
