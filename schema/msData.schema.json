@@ -43,7 +43,7 @@
       "レアリティ": { "type": "string" },
       "必要階級": {
         "type": "string",
-        "not": { "pattern": "^[\\s0-9０-９,]+$" }
+        "not": { "pattern": "^[\\s0-9０-９,，]+$" }
       },
       "必要DP": { "type": "integer", "minimum": 0 },
       "必要リサイクルチケット": { "type": "integer", "minimum": 0 },

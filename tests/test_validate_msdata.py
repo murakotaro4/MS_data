@@ -44,7 +44,7 @@ def test_validate_msdata_main_accepts_valid_minimal_data(tmp_path):
 
 @pytest.mark.parametrize(
     "rank",
-    ["225", "1,234", "２２５", " 225 "],
+    ["225", "1,234", "２２５", " 225 ", "１，２３４"],
 )
 def test_validate_schema_rejects_numeric_required_rank(rank):
     errors = vm.validate_schema(

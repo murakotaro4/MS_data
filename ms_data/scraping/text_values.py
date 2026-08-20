@@ -129,7 +129,7 @@ def looks_like_ticket_count(text: str) -> bool:
     LV2=260）。階級の正規値は「少尉01」等の名称か空欄であり、純数字は
     チケット数とみなす。
     """
-    t = clean_text(text).replace(",", "").replace("\xa0", "")
+    t = normalize_symbol_text(text).replace(",", "").replace("\xa0", "")
     return bool(re.fullmatch(r"\d+", t))
 
 

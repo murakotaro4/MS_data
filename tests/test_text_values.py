@@ -156,6 +156,7 @@ def test_is_counter_placeholder_rejects_none():
         ("1,234", True),
         ("  225  ", True),
         ("２２５", True),
+        ("１，２３４", True),
         ("少尉01", False),
         ("二等兵01", False),
         ("DP交換不可（リサイクル窓口専用ユニット）", False),
