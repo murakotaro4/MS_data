@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "generated_at": "2026-08-20T09:30:23Z",
+  "generated_at": "2026-08-20T10:12:59Z",
   "report_date": "20260820",
   "git": {
     "repo": "murakotaro4/MS_data",
@@ -47,14 +47,14 @@
   "outputs": {
     "msdata_json": {
       "path": "msData.json",
-      "sha256": "564f133c1f5cf689614f09ce68f50b270006af68bc1ff82a60e6087b7bd149de",
-      "size_bytes": 2614607,
+      "sha256": "6d12332e0289a1c0a39efaa8ebfe62e9f3b4c7f276047c5c40d77dc16383c4cd",
+      "size_bytes": 2614693,
       "record_count": 1692
     },
     "diff_report": {
       "path": "reports/2026/08/diff_msdata_20260820.md",
-      "sha256": "d84c83edcfabc31f78b23c9d70beb15b6f270792cea6d0e6823024204a59e273",
-      "size_bytes": 1814
+      "sha256": "2f9f4c15401bb586217a88a51dc35f6a862e29cb330f6af20c12007c379a33b9",
+      "size_bytes": 1856
     }
   },
   "artifact": {
