@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 import ms_data.validation.validate_msdata as vm
 
 
@@ -40,9 +42,13 @@ def test_validate_msdata_main_accepts_valid_minimal_data(tmp_path):
     assert vm.main([str(path)]) == 0
 
 
-def test_validate_schema_rejects_numeric_required_rank():
+@pytest.mark.parametrize(
+    "rank",
+    ["225", "1,234", "２２５", " 225 "],
+)
+def test_validate_schema_rejects_numeric_required_rank(rank):
     errors = vm.validate_schema(
-        [make_record(必要階級="225")],
+        [make_record(必要階級=rank)],
         vm.SCHEMA_PATH,
     )
     assert errors
