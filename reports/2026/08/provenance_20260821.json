@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-08-21T09:32:51Z",
+  "report_date": "20260821",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "a573e6486f7497b23f30cea2e154a2cee9799a33"
+  },
+  "github": {
+    "run_id": "32468342424",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "d759be52e5010813f63bccf5e05ab382a9ef3fa56ba9e86e4e13e917b5c055cf",
+      "size_bytes": 145047,
+      "record_count": 590
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "c5486ba1a78c2834e7360a58b93837cd055ebff64d30802215ca6ddeda674c4c",
+      "size_bytes": 75838,
+      "record_count": 65
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "470108f40a7fb6795f244d63e0e36ee03ee7429deee1357332c56f9d178ba07d",
+      "size_bytes": 99313,
+      "record_count": 65
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "0b62af725cc149cef2234fae66f6a80f2f3babcc4e90d6c74bd745cc210d877f",
+      "file_count": 62,
+      "size_bytes": 10181104
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "04da64851252af0823fab24b9954413b29fd62c2831eefb9b018df5b108d98c3",
+      "size_bytes": 2625100,
+      "record_count": 1699
+    },
+    "diff_report": {
+      "path": "reports/2026/08/diff_msdata_20260821.md",
+      "sha256": "d1f2c2f47f91c1b1dfa00cc754124c069cb5acf74156b5d39097afb60f2f3a04",
+      "size_bytes": 2489
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260821-run-32468342424",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260821-run-32468342424",
+    "asset_name": "raw_snapshot_20260821_run32468342424.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260821-run-32468342424"
+  }
+}
