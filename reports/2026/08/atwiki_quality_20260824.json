@@ -1,0 +1,73 @@
+{
+  "schema_version": "1",
+  "report_date": "20260824",
+  "source_run_id": "32712956990",
+  "index": {
+    "total_count": 590,
+    "candidate_count": 9,
+    "full_update": false,
+    "mode": "fast",
+    "fast_path": true,
+    "fallback_reason": "none",
+    "age_coverage": 1.0,
+    "reason_counts": {
+      "recent_update": 9
+    }
+  },
+  "fetch": {
+    "totals": {
+      "network_requests": 10,
+      "status_200": 10,
+      "status_304": 0,
+      "failures": 0,
+      "body_bytes": 3639732,
+      "cache_hits": 0,
+      "duration_seconds": 11.875
+    },
+    "phases": {
+      "index": {
+        "network_requests": 1,
+        "status_200": 1,
+        "status_304": 0,
+        "failures": 0,
+        "body_bytes": 850433,
+        "cache_hits": 0,
+        "started_at": "2026-08-24T09:42:23.266313Z",
+        "duration_seconds": 2.557
+      },
+      "details": {
+        "network_requests": 9,
+        "status_200": 9,
+        "status_304": 0,
+        "failures": 0,
+        "body_bytes": 2789299,
+        "cache_hits": 0,
+        "started_at": "2026-08-24T09:42:26.333178Z",
+        "duration_seconds": 9.318
+      }
+    }
+  },
+  "detail_fetch": {
+    "attempted_url_count": 9,
+    "successful_url_count": 9,
+    "failed_url_count": 0,
+    "http_status_counts": {
+      "200": 9
+    },
+    "conditional_cache_hit_count": 0,
+    "cache_utilization": 0.0,
+    "state_entry_count": 590
+  },
+  "details": {
+    "json_records": 30,
+    "jsonl_records": 30
+  },
+  "msdata_diff": {
+    "old_count": 1701,
+    "new_count": 1701,
+    "added": 0,
+    "removed": 0,
+    "changed": 1
+  },
+  "warnings": []
+}
