@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-08-24T09:42:41Z",
+  "report_date": "20260824",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "7c11f310822de49b3f619f40708b733e8270637f"
+  },
+  "github": {
+    "run_id": "32712956990",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "3c7c17ff78ba6436dd4dad869be4b4e9a9def683e8a4cf2c73a373e0e73ec9ae",
+      "size_bytes": 145145,
+      "record_count": 590
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "313d2cb580d471fd82cc9b047d82b96c53b4c2b4f31e02467a443b27d752cd9d",
+      "size_bytes": 35498,
+      "record_count": 30
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "89c3b05a13fb3e963fdd962e49b8536b5b8c3fbf55e5768a86d50ada28b0f113",
+      "size_bytes": 46366,
+      "record_count": 30
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "aee6de96d671efca9ba8e0e336cc0c203eb11f8c493351a921ad271844769d46",
+      "file_count": 20,
+      "size_bytes": 3644449
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "fa1a2ee19a3222c011857bbdb0fdf14e92ab7688ea3df49154e34f9e47e66611",
+      "size_bytes": 2628096,
+      "record_count": 1701
+    },
+    "diff_report": {
+      "path": "reports/2026/08/diff_msdata_20260824.md",
+      "sha256": "096a014b5ee13b850e3585fb45a55b9cd9a30b01109dbd2bd4f2d6c66691bcda",
+      "size_bytes": 1131
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260824-run-32712956990",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260824-run-32712956990",
+    "asset_name": "raw_snapshot_20260824_run32712956990.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260824-run-32712956990"
+  }
+}
