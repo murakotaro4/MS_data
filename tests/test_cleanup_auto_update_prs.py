@@ -95,6 +95,22 @@ def test_parse_report_date():
     assert parse_report_date("feature/test") is None
 
 
+def test_main_uses_github_step_summary_env_when_option_is_omitted(
+    tmp_path, monkeypatch
+):
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    monkeypatch.setattr(cleanup_auto_update_prs, "fetch_open_pulls", lambda repo: [])
+    monkeypatch.setattr(
+        cleanup_auto_update_prs,
+        "cleanup_merged_branches",
+        lambda repo, *, dry_run: [],
+    )
+
+    assert cleanup_auto_update_prs.main(["--repo", "owner/repo"]) == 0
+    assert "### Auto Update PR Cleanup" in summary.read_text(encoding="utf-8")
+
+
 def test_plan_cleanup_closes_only_stale_auto_update_prs():
     actions = plan_cleanup(
         [

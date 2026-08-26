@@ -761,6 +761,20 @@ def test_cmd_wait_for_review_settle_sleep(
     assert outputs["trigger_comment_ids"] == "1000"
 
 
+def test_cmd_wait_for_review_invalid_settle_uses_default(
+    fake_gh, fake_time, read_github_output, tmp_path, monkeypatch
+):
+    _script_metrics(monkeypatch, [_metrics(review_complete=True, terminal_count=1)])
+    out = tmp_path / "out.txt"
+    summary = tmp_path / "summary.md"
+
+    rc = main(_wait_argv(out, summary, settle="invalid"))
+
+    assert rc == 0
+    assert fake_time.sleeps == [60]
+    assert read_github_output(out)["settle_seconds"] == "60"
+
+
 def _check_gate_argv(out, *, trigger_comment_ids="10"):
     return [
         "check-gate",

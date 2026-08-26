@@ -12,10 +12,11 @@ from urllib.parse import urlparse
 
 from ms_data.core.dates import parse_yyyymmdd_jst, today_jst
 from ms_data.gh import gh_json
+from ms_data.gh.auto_review_pr import HEAD_REF_DATE_RE as HEAD_REF_RE
 from ms_data.gh.gh_json import run_gh
+from ms_data.gh.outputs import append_step_summary
 
 
-HEAD_REF_RE = re.compile(r"^data/auto-update-(\d{8})$")
 AUTO_UPDATE_BRANCH_RE = re.compile(r"^data/auto-update-.+$")
 
 
@@ -421,13 +422,6 @@ def render_summary(
     return "\n".join(lines) + "\n"
 
 
-def write_step_summary(text: str, path: Path | None = None) -> None:
-    if path is None:
-        return
-    with path.open("a", encoding="utf-8") as f:
-        f.write(text)
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", required=True)
@@ -461,7 +455,7 @@ def main(argv: list[str] | None = None) -> int:
         branch_results=branch_results,
     )
     print(summary, end="")
-    write_step_summary(summary, args.step_summary)
+    append_step_summary(summary.splitlines(), args.step_summary)
     return 0
 
 

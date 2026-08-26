@@ -1,9 +1,9 @@
 from types import SimpleNamespace
 
-from ms_data.gh import auto_review_merge
+from ms_data.gh import auto_review_merge, gh_json
 
 
-def test_run_gh_with_token_uses_isolated_gh_token(monkeypatch):
+def test_run_gh_env_overrides_uses_isolated_gh_token(monkeypatch):
     captured = {}
 
     def run(cmd, **kwargs):
@@ -12,22 +12,22 @@ def test_run_gh_with_token_uses_isolated_gh_token(monkeypatch):
         return SimpleNamespace(stdout='{"id": 10}')
 
     monkeypatch.setenv("GH_TOKEN", "original-token")
-    monkeypatch.setattr(auto_review_merge.subprocess, "run", run)
+    monkeypatch.setattr(gh_json.subprocess, "run", run)
 
-    assert auto_review_merge._run_gh_with_token(["gh", "api", "user"], "pat") == (
-        '{"id": 10}'
-    )
+    assert gh_json.run_gh(
+        ["gh", "api", "user"], env_overrides={"GH_TOKEN": "pat"}
+    ) == '{"id": 10}'
     assert captured["cmd"] == ["gh", "api", "user"]
     assert captured["kwargs"]["env"]["GH_TOKEN"] == "pat"
     assert captured["kwargs"]["check"] is True
-    assert auto_review_merge.os.environ["GH_TOKEN"] == "original-token"
+    assert gh_json.os.environ["GH_TOKEN"] == "original-token"
 
 
 def test_post_codex_trigger_comment_uses_token_runner(monkeypatch):
     captured = {}
 
-    def run_with_token(cmd, token):
-        captured["runner"] = (cmd, token)
+    def run_gh(cmd, *, env_overrides=None):
+        captured["runner"] = (cmd, env_overrides)
         return '{"id": 10}'
 
     def api(endpoint, **kwargs):
@@ -36,7 +36,7 @@ def test_post_codex_trigger_comment_uses_token_runner(monkeypatch):
         return {"id": 10, "raw": kwargs["runner"](["gh", "api", endpoint])}
 
     monkeypatch.setenv("CODEX_TRIGGER_TOKEN", " pat-token ")
-    monkeypatch.setattr(auto_review_merge, "_run_gh_with_token", run_with_token)
+    monkeypatch.setattr(auto_review_merge, "run_gh", run_gh)
     monkeypatch.setattr(auto_review_merge, "gh_api_json", api)
 
     result = auto_review_merge.post_codex_trigger_comment(
@@ -47,7 +47,7 @@ def test_post_codex_trigger_comment_uses_token_runner(monkeypatch):
     assert captured["endpoint"] == "repos/owner/repo/issues/97/comments"
     assert captured["kwargs"]["method"] == "POST"
     assert captured["kwargs"]["fields"] == {"body": "@codex review"}
-    assert captured["runner"][1] == "pat-token"
+    assert captured["runner"][1] == {"GH_TOKEN": "pat-token"}
 
 
 def test_post_codex_trigger_comment_without_token_uses_default_runner(monkeypatch):
