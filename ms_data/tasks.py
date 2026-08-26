@@ -91,12 +91,17 @@ def _report_date() -> str:
     return _env("REPORT_DATE", _today())
 
 
-def _provenance_out() -> str:
+def _report_out(env_name: str, prefix: str, ext: str) -> str:
     report_date = _report_date()
+    reports_dir = _env("REPORTS_DIR", DEFAULT_REPORTS_DIR)
     return _env(
-        "PROVENANCE_OUT",
-        f"{reports_month_dir(report_date)}/provenance_{report_date}.json",
+        env_name,
+        f"{reports_month_dir(report_date, base_dir=reports_dir)}/{prefix}_{report_date}.{ext}",
     )
+
+
+def _provenance_out() -> str:
+    return _report_out("PROVENANCE_OUT", "provenance", "json")
 
 
 def _raw_snapshot_file() -> str:
@@ -533,10 +538,7 @@ def task_provenance() -> int:
         "--msdata",
         _env("MSDATA", DEFAULT_MSDATA),
         "--diff",
-        _env(
-            "DIFF_OUT",
-            f"{reports_month_dir(report_date)}/diff_msdata_{report_date}.md",
-        ),
+        _report_out("DIFF_OUT", "diff_msdata", "md"),
         "--html-dir",
         _env("HTML_DIR", DEFAULT_HTML_DIR),
         "--out",
@@ -561,7 +563,6 @@ def task_snapshot() -> int:
     if rc != 0:
         return rc
 
-    report_date = _report_date()
     snapshot_path = Path(_raw_snapshot_file())
     files = [
         Path(_env("HTML_DIR", DEFAULT_HTML_DIR)),
@@ -570,12 +571,7 @@ def task_snapshot() -> int:
         Path(_env("DETAILS_JSON", DEFAULT_DETAILS_JSON)),
         Path(_provenance_out()),
     ]
-    diff_path = Path(
-        _env(
-            "DIFF_OUT",
-            f"{reports_month_dir(report_date)}/diff_msdata_{report_date}.md",
-        )
-    )
+    diff_path = Path(_report_out("DIFF_OUT", "diff_msdata", "md"))
     if diff_path.exists():
         files.append(diff_path)
 
@@ -631,10 +627,7 @@ def task_atwiki_quality_report() -> int:
         "--current-msdata",
         _env("MSDATA", DEFAULT_MSDATA),
         "--out",
-        _env(
-            "ATWIKI_QUALITY_OUT",
-            f"{reports_month_dir(report_date)}/atwiki_quality_{report_date}.json",
-        ),
+        _report_out("ATWIKI_QUALITY_OUT", "atwiki_quality", "json"),
     )
 
 
@@ -644,21 +637,16 @@ def task_atwiki_quality_report() -> int:
 
 
 def task_audit_labels() -> int:
-    report_date = _report_date()
     return _run_python_module(
         "ms_data.audit.audit_labels",
         "--in",
         _env("LABELS_OUT", DEFAULT_LABELS_OUT),
         "--out",
-        _env(
-            "AUDIT_LABELS_OUT",
-            f"{reports_month_dir(report_date)}/label_audit_{report_date}.md",
-        ),
+        _report_out("AUDIT_LABELS_OUT", "label_audit", "md"),
     )
 
 
 def task_audit_index() -> int:
-    report_date = _report_date()
     return _run_python_module(
         "ms_data.audit.audit_index_vs_msdata",
         "--index",
@@ -666,15 +654,11 @@ def task_audit_index() -> int:
         "--ms",
         _env("MSDATA", DEFAULT_MSDATA),
         "--out",
-        _env(
-            "AUDIT_INDEX_OUT",
-            f"{reports_month_dir(report_date)}/index_ms_audit_{report_date}.md",
-        ),
+        _report_out("AUDIT_INDEX_OUT", "index_ms_audit", "md"),
     )
 
 
 def task_rollback_guard() -> int:
-    report_date = _report_date()
     args = [
         "--old",
         _require_env("OLD"),
@@ -683,10 +667,7 @@ def task_rollback_guard() -> int:
         "--official-overrides-dir",
         _env("OFFICIAL_OVERRIDES_DIR", DEFAULT_OVERRIDES_DIR),
         "--out",
-        _env(
-            "ROLLBACK_GUARD_OUT",
-            f"{reports_month_dir(report_date)}/rollback_guard_{report_date}.md",
-        ),
+        _report_out("ROLLBACK_GUARD_OUT", "rollback_guard", "md"),
     ]
     if _env_flag("FAIL_ON_PROTECTED_ROLLBACK"):
         args.append("--fail-on-protected-rollback")
@@ -694,17 +675,13 @@ def task_rollback_guard() -> int:
 
 
 def task_audit_official_overrides() -> int:
-    report_date = _report_date()
     args = [
         "--overrides-dir",
         _env("OFFICIAL_OVERRIDES_DIR", DEFAULT_OVERRIDES_DIR),
         "--current",
         _env("CURRENT", DEFAULT_MSDATA),
         "--out",
-        _env(
-            "OFFICIAL_OVERRIDES_AUDIT_OUT",
-            f"{reports_month_dir(report_date)}/official_overrides_audit_{report_date}.md",
-        ),
+        _report_out("OFFICIAL_OVERRIDES_AUDIT_OUT", "official_overrides_audit", "md"),
     ]
     raw = _env_str("RAW")
     before = _env_str("BEFORE")
