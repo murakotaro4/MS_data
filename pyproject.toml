@@ -45,6 +45,6 @@ source = ["ms_data"]
 [tool.coverage.report]
 # 自動更新 PR の CI にも適用されるため、実測値より必ず低く保つ。
 # 運用: テスト追加 PR ごとに「実測 -2pt」へ引き上げる（直近実測 82%）
-fail_under = 80
+fail_under = 81
 show_missing = true
 skip_covered = true
