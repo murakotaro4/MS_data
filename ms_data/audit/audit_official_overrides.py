@@ -13,8 +13,9 @@ from typing import Any
 from ms_data.core.dates import JST
 from ms_data.core.records import load_records_by_name
 from ms_data.gh.outputs import append_step_summary, write_github_output
-from ms_data.reporting.rendering import value_text as _value_text
 from ms_data.pipeline import update_msdata
+from ms_data.reporting.rendering import append_table as _append_markdown_table
+from ms_data.reporting.rendering import value_text as _value_text
 
 
 def _load_records(path: Path | None) -> dict[str, dict[str, Any]]:
@@ -174,55 +175,54 @@ def build_audit(
 
 
 def _append_table(lines: list[str], rows: list[dict[str, Any]]) -> None:
-    lines.append("| MS名 | 項目 | 状態 | 変更前 | 取得値 | 現在値 | override | stale |")
-    lines.append("| --- | --- | --- | --- | --- | --- | --- | --- |")
-    if not rows:
-        lines.append("| なし |  |  |  |  |  |  |  |")
-        return
-    for row in rows:
-        lines.append(
-            "| "
-            + " | ".join(
-                [
-                    str(row["MS名"]),
-                    str(row["field"]),
-                    str(row["status"]),
-                    _value_text(row["before"]),
-                    _value_text(row["raw"]),
-                    _value_text(row["current"]),
-                    _value_text(row["override"]),
-                    _value_text(row["stale"]),
-                ]
-            )
-            + " |"
-        )
+    table_rows = (
+        [
+            str(row["MS名"]),
+            str(row["field"]),
+            str(row["status"]),
+            _value_text(row["before"]),
+            _value_text(row["raw"]),
+            _value_text(row["current"]),
+            _value_text(row["override"]),
+            _value_text(row["stale"]),
+        ]
+        for row in rows
+    )
+    _append_markdown_table(
+        lines,
+        ["MS名", "項目", "状態", "変更前", "取得値", "現在値", "override", "stale"],
+        table_rows,
+    )
 
 
 def _append_lifecycle_table(lines: list[str], rows: list[dict[str, Any]]) -> None:
-    lines.append(
-        "| MS名 | 項目 | 期限状態 | review_after | remove_after | 状態 | override | 取得値 |"
+    table_rows = (
+        [
+            str(row["MS名"]),
+            str(row["field"]),
+            str(row["lifecycle"]),
+            str(row["review_after"]),
+            str(row["remove_after"]),
+            str(row["status"]),
+            _value_text(row["override"]),
+            _value_text(row["raw"]),
+        ]
+        for row in rows
     )
-    lines.append("| --- | --- | --- | --- | --- | --- | --- | --- |")
-    if not rows:
-        lines.append("| なし |  |  |  |  |  |  |  |")
-        return
-    for row in rows:
-        lines.append(
-            "| "
-            + " | ".join(
-                [
-                    str(row["MS名"]),
-                    str(row["field"]),
-                    str(row["lifecycle"]),
-                    str(row["review_after"]),
-                    str(row["remove_after"]),
-                    str(row["status"]),
-                    _value_text(row["override"]),
-                    _value_text(row["raw"]),
-                ]
-            )
-            + " |"
-        )
+    _append_markdown_table(
+        lines,
+        [
+            "MS名",
+            "項目",
+            "期限状態",
+            "review_after",
+            "remove_after",
+            "状態",
+            "override",
+            "取得値",
+        ],
+        table_rows,
+    )
 
 
 def render_markdown(

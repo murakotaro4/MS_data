@@ -15,6 +15,7 @@ from typing import Any
 from ms_data.core.dates import JST
 from ms_data.core.records import load_records_by_name
 from ms_data.gh.outputs import append_step_summary, write_github_output
+from ms_data.reporting.rendering import append_table as append_markdown_table
 from ms_data.reporting.rendering import value_text
 from ms_data.scraping.detail_page import BASE_REQUIRED
 
@@ -216,26 +217,22 @@ def detect_field_completeness(
 
 
 def _append_table(lines: list[str], rows: list[dict[str, Any]]) -> None:
-    lines.append("| MS名 | 項目 | 分類 | 値 | 理由 | review_after |")
-    lines.append("| --- | --- | --- | --- | --- | --- |")
-    if not rows:
-        lines.append("| なし |  |  |  |  |  |")
-        return
-    for row in rows:
-        lines.append(
-            "| "
-            + " | ".join(
-                [
-                    str(row["MS名"]),
-                    str(row["field"]),
-                    str(row["category"]),
-                    value_text(row.get("value")),
-                    str(row.get("reason", "")),
-                    str(row.get("review_after", "")),
-                ]
-            )
-            + " |"
-        )
+    table_rows = (
+        [
+            str(row["MS名"]),
+            str(row["field"]),
+            str(row["category"]),
+            value_text(row.get("value")),
+            str(row.get("reason", "")),
+            str(row.get("review_after", "")),
+        ]
+        for row in rows
+    )
+    append_markdown_table(
+        lines,
+        ["MS名", "項目", "分類", "値", "理由", "review_after"],
+        table_rows,
+    )
 
 
 def render_report(classified: Mapping[str, list[dict[str, Any]]]) -> str:
