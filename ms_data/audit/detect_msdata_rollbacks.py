@@ -10,8 +10,9 @@ from pathlib import Path
 from typing import Any
 
 from ms_data.core.records import load_records_by_name as _load_records
-from ms_data.reporting.rendering import value_text as _value_text
 from ms_data.pipeline import update_msdata
+from ms_data.reporting.rendering import append_table
+from ms_data.reporting.rendering import value_text as _value_text
 
 
 NUMERIC_GUARD_FIELDS = {
@@ -122,25 +123,17 @@ def detect_mixed_level_changes(
 
 
 def _append_rows(lines: list[str], rows: list[dict[str, Any]]) -> None:
-    lines.append("| 種別 | MS名 | 項目 | 変更前 | 変更後 |")
-    lines.append("| --- | --- | --- | --- | --- |")
-    if not rows:
-        lines.append("| なし |  |  |  |  |")
-        return
-    for row in rows:
-        lines.append(
-            "| "
-            + " | ".join(
-                [
-                    str(row["type"]),
-                    str(row["MS名"]),
-                    str(row["field"]),
-                    _value_text(row.get("old")),
-                    _value_text(row.get("new")),
-                ]
-            )
-            + " |"
-        )
+    table_rows = (
+        [
+            str(row["type"]),
+            str(row["MS名"]),
+            str(row["field"]),
+            _value_text(row.get("old")),
+            _value_text(row.get("new")),
+        ]
+        for row in rows
+    )
+    append_table(lines, ["種別", "MS名", "項目", "変更前", "変更後"], table_rows)
 
 
 def render_report(

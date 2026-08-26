@@ -38,6 +38,7 @@ from ms_data.reporting.msdata_diff_model import (
     level_sort_key,
     ms_level_sort_key,
 )
+from ms_data.reporting.rendering import append_table
 
 # Markdown 特殊文字のエスケープ用正規表現
 _MD_ESCAPE = re.compile(r"([\\`*_\[\]()#+\-.!|<>])")
@@ -117,21 +118,6 @@ def level_label(name: str) -> str:
     """ "ガンダム_LV3" → "LV3"（LV サフィックスが無ければ "LV不明"）。"""
     match = re.search(r"_LV(\d+)$", name)
     return f"LV{match.group(1)}" if match else "LV不明"
-
-
-def append_table(lines: list[str], headers: list[str], rows: list[list[str]]) -> None:
-    """Markdown 表を lines に追記する（行なしの場合は「なし」行）。"""
-    lines.append("| " + " | ".join(headers) + " |")
-    lines.append("| " + " | ".join("---" for _ in headers) + " |")
-    if rows:
-        for row in rows:
-            lines.append("| " + " | ".join(row) + " |")
-    else:
-        lines.append(
-            "| "
-            + " | ".join("なし" if i == 0 else "" for i in range(len(headers)))
-            + " |"
-        )
 
 
 def append_counter_table(
