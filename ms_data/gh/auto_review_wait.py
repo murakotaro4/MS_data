@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from ms_data.gh.auto_review_pr import format_github_datetime
 from ms_data.gh.outputs import append_step_summary, write_github_output
 
 if TYPE_CHECKING:
@@ -19,6 +20,13 @@ def _facade():
     from ms_data.gh import auto_review_merge as arm
 
     return arm
+
+
+def _non_negative_int(value: str, default: int) -> int:
+    try:
+        return max(0, int(value))
+    except ValueError:
+        return default
 
 
 def _ensure_attempt_trigger(
@@ -192,7 +200,7 @@ def cmd_wait_for_review(args: argparse.Namespace) -> int:
     max_attempts = _facade()._positive_int(args.max_attempts, 3)
     attempt_timeout_seconds = _facade()._positive_int(args.attempt_timeout_seconds, 420)
     poll_seconds = _facade()._positive_int(args.poll_seconds, 30)
-    settle_seconds = max(0, int(args.settle_seconds))
+    settle_seconds = _non_negative_int(args.settle_seconds, 60)
     pat_available = _facade()._bool_text(args.pat_available)
     allowed_logins = _facade()._allowed_trigger_logins(args.pat_login)
 
@@ -374,9 +382,7 @@ def build_auto_review_report(args: argparse.Namespace) -> dict[str, Any]:
 
     return {
         "schema_version": "1",
-        "generated_at": datetime.now(timezone.utc)
-        .isoformat(timespec="seconds")
-        .replace("+00:00", "Z"),
+        "generated_at": format_github_datetime(datetime.now(timezone.utc)),
         "report_date": args.report_date,
         "source_run_id": args.run_id,
         "pr_number": args.pr_number,

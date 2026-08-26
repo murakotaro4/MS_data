@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -186,21 +185,6 @@ class GitHubClient:
         )
 
 
-def _run_gh_with_token(args: list[str], token: str) -> str:
-    """指定 token を ``GH_TOKEN`` に差し替えて gh を実行する。"""
-    env = os.environ.copy()
-    env["GH_TOKEN"] = token
-    result = subprocess.run(
-        args,
-        check=True,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        env=env,
-    )
-    return result.stdout
-
-
 def post_codex_trigger_comment(
     *,
     repo: str,
@@ -214,7 +198,7 @@ def post_codex_trigger_comment(
             f"repos/{repo}/issues/{pr_number}/comments",
             method="POST",
             fields={"body": body},
-            runner=lambda cmd: _run_gh_with_token(cmd, token),
+            runner=lambda cmd: run_gh(cmd, env_overrides={"GH_TOKEN": token}),
         )
     return gh_api_json(
         f"repos/{repo}/issues/{pr_number}/comments",

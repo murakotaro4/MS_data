@@ -7,7 +7,9 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+import sys
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -16,14 +18,29 @@ from typing import Any
 GhRunner = Callable[[list[str]], str]
 
 
-def run_gh(args: list[str]) -> str:
-    result = subprocess.run(
-        args,
-        check=True,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
+def run_gh(
+    args: list[str], *, env_overrides: dict[str, str] | None = None
+) -> str:
+    kwargs: dict[str, Any] = {
+        "check": True,
+        "text": True,
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
+    }
+    if env_overrides is not None:
+        env = os.environ.copy()
+        env.update(env_overrides)
+        kwargs["env"] = env
+    try:
+        result = subprocess.run(args, **kwargs)
+    except subprocess.CalledProcessError as error:
+        if isinstance(error.stderr, str) and error.stderr:
+            print(
+                error.stderr,
+                file=sys.stderr,
+                end="" if error.stderr.endswith("\n") else "\n",
+            )
+        raise
     return result.stdout
 
 

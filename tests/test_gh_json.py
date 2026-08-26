@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 from types import SimpleNamespace
 
@@ -27,6 +28,43 @@ def test_run_gh_uses_existing_subprocess_contract(monkeypatch):
             "stderr": subprocess.PIPE,
         },
     }
+
+
+def test_run_gh_merges_env_overrides(monkeypatch):
+    captured = {}
+
+    def fake_run(args, **kwargs):
+        captured["env"] = kwargs["env"]
+        return SimpleNamespace(stdout="output\n")
+
+    monkeypatch.setenv("EXISTING_KEY", "existing")
+    monkeypatch.setattr(gh_json.subprocess, "run", fake_run)
+
+    assert gh_json.run_gh(
+        ["gh", "api", "user"], env_overrides={"GH_TOKEN": "token"}
+    ) == "output\n"
+    assert captured["env"]["EXISTING_KEY"] == "existing"
+    assert captured["env"]["GH_TOKEN"] == "token"
+    assert captured["env"] is not os.environ
+
+
+def test_run_gh_reprints_captured_stderr_before_reraising(monkeypatch, capsys):
+    error = subprocess.CalledProcessError(
+        1,
+        ["gh", "api", "user"],
+        stderr="gh: authentication failed\n",
+    )
+
+    def fake_run(args, **kwargs):
+        raise error
+
+    monkeypatch.setattr(gh_json.subprocess, "run", fake_run)
+
+    with pytest.raises(subprocess.CalledProcessError) as raised:
+        gh_json.run_gh(["gh", "api", "user"])
+
+    assert raised.value is error
+    assert capsys.readouterr().err == "gh: authentication failed\n"
 
 
 def test_gh_api_json_builds_command_and_parses_json():

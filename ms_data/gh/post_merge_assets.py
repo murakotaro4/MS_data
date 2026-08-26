@@ -11,9 +11,9 @@ from pathlib import Path
 
 from ms_data.core.paths import reports_month_dir
 from ms_data.gh import outputs as gh_outputs
+from ms_data.gh.auto_review_pr import HEAD_REF_DATE_RE as HEAD_REF_RE
 
 
-HEAD_REF_RE = re.compile(r"^data/auto-update-(\d{8})$")
 SOURCE_RUN_RE = re.compile(r"source_run_id[:=\s]*([0-9]+)")
 
 
