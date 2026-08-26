@@ -7,8 +7,6 @@ from typing import Any
 from bs4 import BeautifulSoup, Tag
 
 from ms_data.scraping.text_values import normalize_symbol_text
-
-# 後方互換 re-export（テスト・兄弟モジュールが本モジュール属性として参照する）
 from ms_data.scraping.skill_owners import SKILL_URL, _RE_ANCHOR
 
 # たたき台の対象スキル（名称は atwiki の見出しに合わせる）
@@ -74,7 +72,7 @@ def _extract_activation(desc: str) -> dict[str, Any]:
 def _extract_duration(text: str) -> int | None:
     """説明文から効果時間（秒）を推定する。「効果時間は無し」は None。"""
     t = _norm(text)
-    if "効果時間は無し" in t or "効果時間は、無し" in t or "効果時間は無し" in t:
+    if "効果時間は無し" in t or "効果時間は、無し" in t:
         return None
     m = re.search(r"効果時間[は、: ]*([0-9]+)秒", t)
     if m:
@@ -330,9 +328,7 @@ def extract_skill_owners_from_html(soup: BeautifulSoup) -> list[dict[str, Any]]:
         name = m.group(1)
         level = int(m.group(2))
         # 対象スキルのみ
-        if not any(
-            name.startswith(x.replace("】", "").replace("】", "")) for x in CORE_SKILLS
-        ):
+        if not any(name.startswith(x.replace("】", "")) for x in CORE_SKILLS):
             continue
         # th（スキル見出し）行を取得
         th = a.find_parent("th")

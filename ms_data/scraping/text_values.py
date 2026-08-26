@@ -113,8 +113,6 @@ def to_int(text: str) -> int | None:
         t.replace(",", "")
         .replace("％", "%")
         .replace("秒", "")
-        .replace("度/秒", "")
-        .replace("[度/秒]", "")
         .replace("\xa0", " ")
     )
     m = re.search(r"-?\d+", t)
