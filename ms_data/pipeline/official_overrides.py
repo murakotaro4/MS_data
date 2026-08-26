@@ -13,7 +13,7 @@ schema/official_overrides.schema.json）。
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Any, NamedTuple, TypedDict
 
 from ms_data.core.json_io import load_json
 from ms_data.core.labels import apply_key_aliases
@@ -30,6 +30,39 @@ class OfficialOverrideValue(TypedDict, total=False):
 
     value: Any
     stale_value: Any
+
+
+class ParsedOfficialOverrideData(NamedTuple):
+    """検証前の official_overrides 1ファイル分。"""
+
+    data: Any
+    active: bool
+    entries: Any
+
+
+def iter_official_override_files(directory: Path) -> list[Path]:
+    """official_overrides の JSON ファイルを現行順序で列挙する。"""
+
+    return sorted(directory.glob("*.json"))
+
+
+def load_official_override_data(path: Path) -> Any:
+    """official_overrides の JSON を検証せず読み込む。"""
+
+    return load_json(path)
+
+
+def parse_official_override_data(data: Any) -> ParsedOfficialOverrideData:
+    """active と entries fallback だけを解決し、raw 構造を返す。
+
+    data の型検証は adapter の責務。非 object を渡した場合の例外も変換しない。
+    """
+
+    return ParsedOfficialOverrideData(
+        data=data,
+        active=data.get("active", True) is not False,
+        entries=data.get("overrides", data.get("records", [])),
+    )
 
 
 def load_official_overrides(
@@ -63,13 +96,14 @@ def load_official_overrides(
         raise ValueError(f"official overrides path is not a directory: {directory}")
 
     overrides: dict[str, dict[str, OfficialOverrideValue]] = {}
-    for path in sorted(directory.glob("*.json")):
-        data = load_json(path)
+    for path in iter_official_override_files(directory):
+        data = load_official_override_data(path)
         if not isinstance(data, dict):
             raise ValueError(f"official override file must be an object: {path}")
-        if data.get("active", True) is False:
+        parsed = parse_official_override_data(data)
+        if not parsed.active:
             continue
-        entries = data.get("overrides", data.get("records", []))
+        entries = parsed.entries
         if not isinstance(entries, list):
             raise ValueError(f"official override entries must be a list: {path}")
 

@@ -13,7 +13,7 @@ from typing import Any
 from ms_data.core.dates import JST
 from ms_data.core.records import load_records_by_name
 from ms_data.gh.outputs import append_step_summary, write_github_output
-from ms_data.pipeline import update_msdata
+from ms_data.pipeline import official_overrides, update_msdata
 from ms_data.reporting.rendering import append_table as _append_markdown_table
 from ms_data.reporting.rendering import value_text as _value_text
 
@@ -74,16 +74,17 @@ def load_lifecycle_metadata(
         return {}
 
     metadata: dict[tuple[str, str], dict[str, str]] = {}
-    for path in sorted(directory.glob("*.json")):
-        data = update_msdata.load_json(path)
+    for path in official_overrides.iter_official_override_files(directory):
+        data = official_overrides.load_official_override_data(path)
         if not isinstance(data, dict):
             continue
-        if data.get("active", True) is False:
+        parsed = official_overrides.parse_official_override_data(data)
+        if not parsed.active:
             continue
 
-        file_review_after = _date_text(data.get("review_after"))
-        file_remove_after = _date_text(data.get("remove_after"))
-        entries = data.get("overrides", data.get("records", []))
+        file_review_after = _date_text(parsed.data.get("review_after"))
+        file_remove_after = _date_text(parsed.data.get("remove_after"))
+        entries = parsed.entries
         if not isinstance(entries, list):
             continue
 
