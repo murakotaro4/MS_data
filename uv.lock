@@ -436,14 +436,13 @@ dependencies = [
     { name = "beautifulsoup4" },
     { name = "cloudscraper" },
     { name = "httpx" },
+    { name = "jsonschema" },
     { name = "lxml" },
-    { name = "tenacity" },
 ]
 
 [package.dev-dependencies]
 dev = [
     { name = "black" },
-    { name = "jsonschema" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
@@ -454,14 +453,13 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = "~=4.12" },
     { name = "cloudscraper", specifier = "~=1.2" },
     { name = "httpx", specifier = "~=0.27" },
+    { name = "jsonschema", specifier = "~=4.22" },
     { name = "lxml", specifier = "~=5.2" },
-    { name = "tenacity", specifier = "~=8.2" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "black", specifier = "~=24.0" },
-    { name = "jsonschema", specifier = "~=4.22" },
     { name = "pytest", specifier = "~=8.0" },
     { name = "pytest-cov", specifier = "~=6.0" },
     { name = "ruff", specifier = "~=0.6" },
@@ -751,15 +749,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/6d/e6/21ccce3262dd4889aa3332e5a119a3491a95e8f60939870a3a035aabac0d/soupsieve-2.8.tar.gz", hash = "sha256:e2dd4a40a628cb5f28f6d4b0db8800b8f581b65bb380b97de22ba5ca8d72572f", size = 103472, upload-time = "2025-08-27T15:39:51.78Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/14/a0/bb38d3b76b8cae341dad93a2dd83ab7462e6dbcdd84d43f54ee60a8dc167/soupsieve-2.8-py3-none-any.whl", hash = "sha256:0cc76456a30e20f5d7f2e14a98a4ae2ee4e5abdc7c5ea0aafe795f344bc7984c", size = 36679, upload-time = "2025-08-27T15:39:50.179Z" },
-]
-
-[[package]]
-name = "tenacity"
-version = "8.5.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a3/4d/6a19536c50b849338fcbe9290d562b52cbdcf30d8963d3588a68a4107df1/tenacity-8.5.0.tar.gz", hash = "sha256:8bc6c0c8a09b31e6cad13c47afbed1a567518250a9a171418582ed8d9c20ca78", size = 47309, upload-time = "2024-07-05T07:25:31.836Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d2/3f/8ba87d9e287b9d385a02a7114ddcef61b26f86411e121c9003eb509a1773/tenacity-8.5.0-py3-none-any.whl", hash = "sha256:b594c2a5945830c267ce6b79a166228323ed52718f30302c1359836112346687", size = 28165, upload-time = "2024-07-05T07:25:29.591Z" },
 ]
 
 [[package]]

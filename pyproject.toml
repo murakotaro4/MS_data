@@ -9,7 +9,7 @@ dependencies = [
   "httpx~=0.27",
   "beautifulsoup4~=4.12",
   "lxml~=5.2",
-  "tenacity~=8.2",
+  "jsonschema~=4.22",
   "cloudscraper~=1.2"
 ]
 
@@ -19,7 +19,6 @@ dev = [
   "ruff~=0.6",
   "pytest~=8.0",
   "pytest-cov~=6.0",
-  "jsonschema~=4.22",
 ]
 
 [tool.black]
