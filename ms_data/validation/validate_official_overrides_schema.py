@@ -10,7 +10,7 @@ from typing import Any
 from jsonschema import Draft202012Validator, FormatChecker
 
 from ms_data.core.json_io import load_json as _load_json
-from ms_data.pipeline import update_msdata
+from ms_data.pipeline import official_overrides, update_msdata
 
 
 def _iter_override_files(directory: Path) -> list[Path]:
@@ -20,11 +20,14 @@ def _iter_override_files(directory: Path) -> list[Path]:
         raise NotADirectoryError(
             f"official_overrides path is not a directory: {directory}"
         )
-    return sorted(directory.glob("*.json"))
+    return official_overrides.iter_official_override_files(directory)
 
 
-def _validate_schema(path: Path, schema: dict[str, Any]) -> list[str]:
-    data = _load_json(path)
+def _validate_schema(
+    path: Path, schema: dict[str, Any], data: Any | None = None
+) -> list[str]:
+    if data is None:
+        data = official_overrides.load_official_override_data(path)
     validator = Draft202012Validator(schema, format_checker=FormatChecker())
     errors = sorted(validator.iter_errors(data), key=lambda error: list(error.path))
     messages: list[str] = []
@@ -34,9 +37,11 @@ def _validate_schema(path: Path, schema: dict[str, Any]) -> list[str]:
     return messages
 
 
-def _validate_stale_value_keys(path: Path) -> list[str]:
-    data = _load_json(path)
-    entries = data.get("overrides", data.get("records", []))
+def _validate_stale_value_keys(path: Path, data: Any | None = None) -> list[str]:
+    if data is None:
+        data = official_overrides.load_official_override_data(path)
+    parsed = official_overrides.parse_official_override_data(data)
+    entries = parsed.entries
     messages: list[str] = []
     if not isinstance(entries, list):
         return messages
@@ -75,8 +80,9 @@ def validate(
         return messages
 
     for path in files:
-        messages.extend(_validate_schema(path, schema))
-        messages.extend(_validate_stale_value_keys(path))
+        data = official_overrides.load_official_override_data(path)
+        messages.extend(_validate_schema(path, schema, data))
+        messages.extend(_validate_stale_value_keys(path, data))
 
     try:
         update_msdata.load_official_overrides(overrides_dir)
