@@ -8,38 +8,35 @@ import subprocess
 
 import httpx
 
-from ms_data.net.cache_http import CacheConfig, CacheHTTP
+from ms_data.net.cache_http import CacheHTTP
 from ms_data.net.client import get_browser_client
 from ms_data.scraping import skills_cli
 from ms_data.scraping.skill_owners import (
     SKILL_URL,
-    _RE_ANCHOR,
-    _candidate_owner_tables,
-    _collect_anchor_row_owners,
-    _collect_owner_block,
-    _extract_owner_anchors,
-    _find_owner_section_tables,
-    _owner_links_from_cells,
-    _role_from_text,
     extract_skill_owners_rows_table,
 )
-from ms_data.scraping.skills_cli import build_parser
 from ms_data.scraping.skills_html import (
-    CORE_SKILLS,
-    _effects_from_lines,
-    _extract_activation,
-    _extract_duration,
-    _norm,
-    _parse_grants,
-    _percent_to_factor,
-    _select_main_skill_table,
-    _split_lines,
-    _to_int_first,
     extract_skill_owners_from_html,
     extract_skill_rows_table,
     extract_skills_from_html,
 )
-from ms_data.scraping.text_values import normalize_symbol_text, parse_ttl
+
+__all__ = [
+    "CacheHTTP",
+    "SKILL_URL",
+    "cmd_all",
+    "cmd_fetch",
+    "cmd_owners_table",
+    "cmd_parse",
+    "cmd_table",
+    "extract_skill_owners_from_html",
+    "extract_skill_owners_rows_table",
+    "extract_skill_rows_table",
+    "extract_skills_from_html",
+    "get_client",
+    "main",
+    "subprocess",
+]
 
 
 def get_client(timeout: float = 30.0) -> httpx.Client:
@@ -77,11 +74,6 @@ def cmd_table(args: argparse.Namespace) -> int:
 
 def cmd_owners_table(args: argparse.Namespace) -> int:
     return skills_cli.cmd_owners_table(args, _deps())
-
-
-def _cmd_otbl(args: argparse.Namespace) -> int:
-    """旧ネスト名に対応する owners-table コマンドの互換 alias。"""
-    return cmd_owners_table(args)
 
 
 def main(argv: list[str] | None = None) -> int:

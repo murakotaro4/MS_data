@@ -21,7 +21,7 @@ from typing import Any
 from collections.abc import Iterable
 
 from ms_data.core.json_io import load_json
-from ms_data.core.ms_names import MS_NAME_WITH_LEVEL
+from ms_data.core.ms_names import extract_ms_base_name
 from ms_data.core.paths import MSDATA_SCHEMA as SCHEMA_PATH
 from ms_data.core.labels import KEY_ALIASES
 
@@ -70,14 +70,6 @@ def find_unknown_keys(
     return dict(counts)
 
 
-def extract_base_name(name: str) -> str | None:
-    """ "ガンダム_LV3" → "ガンダム"（LV サフィックスが無ければ None）。"""
-    match = MS_NAME_WITH_LEVEL.match(name)
-    if not match:
-        return None
-    return match.group("base")
-
-
 def _fullst_order_key(points: Any) -> int | None:
     """fullst の points を昇順検証用の整数に変換する。
 
@@ -109,7 +101,7 @@ def find_semantic_errors(records: Iterable[dict[str, Any]]) -> list[str]:
     for record in records:
         ms_name = record.get("MS名")
         if isinstance(ms_name, str):
-            base_name = extract_base_name(ms_name)
+            base_name = extract_ms_base_name(ms_name)
         else:
             base_name = None
 

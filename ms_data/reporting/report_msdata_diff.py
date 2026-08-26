@@ -23,21 +23,43 @@ from ms_data.core import json_io
 
 # 後方互換 re-export（差分計算は msdata_diff_model 側に実装がある）
 from ms_data.reporting.msdata_diff_model import (
-    _DELETED,
     _Sentinel,
     base_ms_name,
     diff_field_counts,
     diff_summary,
-    format_value_plain,
     fullst_detail_rows,
-    fullst_point_text,
     get_changed_records_detail,
     global_keys,
     index_by_name,
-    indexed_fullst_items,
     level_sort_key,
     ms_level_sort_key,
 )
+
+__all__ = [
+    "_Sentinel",
+    "append_changed_records_table",
+    "append_counter_table",
+    "append_records_by_ms_table",
+    "append_table",
+    "base_ms_name",
+    "build_report_lines",
+    "diff_field_counts",
+    "diff_summary",
+    "format_field_value",
+    "format_fullst_summary",
+    "format_value",
+    "fullst_detail_rows",
+    "get_changed_records_detail",
+    "global_keys",
+    "index_by_name",
+    "level_label",
+    "level_sort_key",
+    "load_json",
+    "main",
+    "ms_level_sort_key",
+    "record_ms_table_row",
+    "record_table_row",
+]
 
 # Markdown 特殊文字のエスケープ用正規表現
 _MD_ESCAPE = re.compile(r"([\\`*_\[\]()#+\-.!|<>])")
