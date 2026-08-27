@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-08-27T19:25:09Z",
+  "report_date": "20260828",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "c256a2a917eacf2f8f821e6bedd55c7b1eb40872"
+  },
+  "github": {
+    "run_id": "33108268931",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "a28afbf023ce922ca6a12aa895d2a7ed573e5c8f3b7de8b4c84bc4f575fb7ddf",
+      "size_bytes": 145328,
+      "record_count": 591
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "0ee37e39ffb52551ae6be1bf3f86be6d39afbea83f758cab4b7c0af2dab6923d",
+      "size_bytes": 78047,
+      "record_count": 66
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "1cd0140851e6bc9428343ebcee98892581310eba537c5c9ca63158033a098867",
+      "size_bytes": 101935,
+      "record_count": 66
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "0bd1cb256ded295fc5ac3e43643c55c0c3c76e24775557119b290a00fdd57782",
+      "file_count": 54,
+      "size_bytes": 9373163
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "31a97fb448bef434fc97371d3fb0df11f2972faaa52d11626fe272ab2aa7cec5",
+      "size_bytes": 2628814,
+      "record_count": 1701
+    },
+    "diff_report": {
+      "path": "reports/2026/08/diff_msdata_20260828.md",
+      "sha256": "8d1064929b6bb290c51e91e376060e1235672bcf1c64312991de26bb96c2810f",
+      "size_bytes": 7731
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260828-run-33108268931",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260828-run-33108268931",
+    "asset_name": "raw_snapshot_20260828_run33108268931.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260828-run-33108268931"
+  }
+}
