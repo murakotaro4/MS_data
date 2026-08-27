@@ -40,7 +40,7 @@ def _validate_schema(
 def _validate_stale_value_keys(path: Path, data: Any | None = None) -> list[str]:
     if data is None:
         data = official_overrides.load_official_override_data(path)
-    parsed = official_overrides.parse_official_override_data(data)
+    parsed = official_overrides.parse_official_override_data(data, source=path)
     entries = parsed.entries
     messages: list[str] = []
     if not isinstance(entries, list):
@@ -81,6 +81,8 @@ def validate(
 
     for path in files:
         data = official_overrides.load_official_override_data(path)
+        # active:false は適用だけを止める。無効化ファイルも常に schema-valid
+        # であることが意図した契約なので、active に関係なく検証する。
         messages.extend(_validate_schema(path, schema, data))
         messages.extend(_validate_stale_value_keys(path, data))
 
