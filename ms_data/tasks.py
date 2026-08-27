@@ -37,13 +37,6 @@ DEFAULT_HTML_DIR = "cache/html"  # HTML_DIR
 DEFAULT_REPORTS_DIR = "reports"  # REPORTS_DIR
 DEFAULT_LABELS_OUT = "cache/labels_raw.jsonl"  # LABELS_OUT
 DEFAULT_OVERRIDES_DIR = "data/official_overrides"  # OFFICIAL_OVERRIDES_DIR
-DEFAULT_SKILLS_OUT = "cache/skills.json"  # SKILLS_OUT
-DEFAULT_SKILLS_TABLE_OUT = "cache/skills_table.json"  # SKILLS_TABLE_OUT
-DEFAULT_OWNERS_TABLE_OUT = "cache/owners_table.json"  # OWNERS_TABLE_OUT
-DEFAULT_SKILLS_POLICY = "data/skills_policy.json"  # SKILLS_POLICY
-DEFAULT_SKILL_OWNERS_OUT = "data/skill_owners.json"  # SKILL_OWNERS_OUT
-DEFAULT_SKILL_OWNERS_FLAT_OUT = "data/skill_owners_flat.json"  # SKILL_OWNERS_FLAT_OUT
-DEFAULT_SKILLS_PARAMS_OUT = "data/skills_params.json"  # SKILLS_PARAMS_OUT
 
 
 # ---------------------------------------------------------------------------
@@ -721,113 +714,6 @@ def task_audit_field_completeness() -> int:
     return _run_python_module("ms_data.audit.audit_field_completeness", *args)
 
 
-def task_audit_skills() -> int:
-    return _run_python_module(
-        "ms_data.audit.audit_skills",
-        "--owners",
-        _env("SKILL_OWNERS_OUT", DEFAULT_SKILL_OWNERS_OUT),
-        "--msdata",
-        _env("MSDATA", DEFAULT_MSDATA),
-    )
-
-
-# ---------------------------------------------------------------------------
-# スキルデータ
-# ---------------------------------------------------------------------------
-
-
-def task_skills() -> int:
-    args = [
-        "all",
-        "--out",
-        _env("SKILLS_OUT", DEFAULT_SKILLS_OUT),
-        "--ttl",
-        _env("TTL", DEFAULT_TTL),
-        *_network_flags(),
-    ]
-    return _run_python_module("ms_data.scraping.extract_skills", *args)
-
-
-def task_skills_table() -> int:
-    args = [
-        "table",
-        "--out",
-        _env("SKILLS_TABLE_OUT", DEFAULT_SKILLS_TABLE_OUT),
-        "--ttl",
-        _env("TTL", DEFAULT_TTL),
-        *_network_flags(),
-    ]
-    return _run_python_module("ms_data.scraping.extract_skills", *args)
-
-
-def task_owners_table() -> int:
-    args = [
-        "owners-table",
-        "--out",
-        _env("OWNERS_TABLE_OUT", DEFAULT_OWNERS_TABLE_OUT),
-        "--ttl",
-        _env("TTL", DEFAULT_TTL),
-        *_network_flags(),
-    ]
-    return _run_python_module("ms_data.scraping.extract_skills", *args)
-
-
-def task_build_skills() -> int:
-    return _run_python_module(
-        "ms_data.skills.build_skills",
-        "--in",
-        _env("SKILLS_OUT", DEFAULT_SKILLS_OUT),
-        "--out-catalog",
-        _env("SKILLS_CATALOG_OUT", "data/skills_catalog.json"),
-        "--out-owners",
-        _env("SKILL_OWNERS_OUT", DEFAULT_SKILL_OWNERS_OUT),
-    )
-
-
-def task_build_param_skills() -> int:
-    return _run_python_module(
-        "ms_data.skills.build_param_skills",
-        "--in",
-        _env("SKILLS_TABLE_OUT", DEFAULT_SKILLS_TABLE_OUT),
-        "--out",
-        _env("SKILLS_PARAMS_OUT", DEFAULT_SKILLS_PARAMS_OUT),
-        "--policy",
-        _env("SKILLS_POLICY", DEFAULT_SKILLS_POLICY),
-        "--audit-out",
-        _env("SKILLS_PARAMS_AUDIT_OUT", "reports/skills_params_audit.json"),
-    )
-
-
-def task_build_owners_flat() -> int:
-    return _run_python_module(
-        "ms_data.skills.build_owners_flat",
-        "--in",
-        _env("OWNERS_TABLE_OUT", DEFAULT_OWNERS_TABLE_OUT),
-        "--msdata",
-        _env("MSDATA", DEFAULT_MSDATA),
-        "--policy",
-        _env("SKILLS_POLICY", DEFAULT_SKILLS_POLICY),
-        "--out",
-        _env("SKILL_OWNERS_FLAT_OUT", DEFAULT_SKILL_OWNERS_FLAT_OUT),
-        "--audit-out",
-        _env("OWNERS_FLAT_AUDIT_OUT", "reports/owners_flat_audit.json"),
-    )
-
-
-def task_preview_params() -> int:
-    return _run_python_module(
-        "ms_data.skills.preview_params",
-        "--msdata",
-        _env("MSDATA", DEFAULT_MSDATA),
-        "--owners",
-        _env("SKILL_OWNERS_FLAT_OUT", DEFAULT_SKILL_OWNERS_FLAT_OUT),
-        "--params",
-        _env("SKILLS_PARAMS_OUT", DEFAULT_SKILLS_PARAMS_OUT),
-        "--out",
-        _env("PREVIEW_PARAMS_OUT", "derived/ms_params_preview.json"),
-    )
-
-
 TASKS: dict[str, Callable[[], int]] = {
     "help": task_help,
     "setup": task_setup,
@@ -860,14 +746,6 @@ TASKS: dict[str, Callable[[], int]] = {
     "audit-field-completeness": task_audit_field_completeness,
     "validate-official-overrides-schema": task_validate_official_overrides_schema,
     "atwiki-quality-report": task_atwiki_quality_report,
-    "skills": task_skills,
-    "skills-table": task_skills_table,
-    "owners-table": task_owners_table,
-    "build-skills": task_build_skills,
-    "build-param-skills": task_build_param_skills,
-    "build-owners-flat": task_build_owners_flat,
-    "audit-skills": task_audit_skills,
-    "preview-params": task_preview_params,
     "validate-report-contract": task_validate_report_contract,
     "validate-generated-reports": task_validate_generated_reports,
 }

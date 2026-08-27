@@ -215,29 +215,6 @@
       "retention": "git"
     },
     {
-      "id": "skills_audit",
-      "type": "generated",
-      "path_patterns": [
-        "reports/skills_params_audit.json",
-        "reports/owners_flat_audit.json",
-        "reports/*/*/skill_owners_audit_*.md"
-      ],
-      "producer": [
-        "ms_data.skills.build_param_skills",
-        "ms_data.skills.build_owners_flat",
-        "ms_data.audit.audit_skills"
-      ],
-      "consumers": [
-        "AGENTS.md",
-        "human"
-      ],
-      "retention": "git",
-      "prune": {
-        "max_age_days": 90,
-        "keep_min": 5
-      }
-    },
-    {
       "id": "manual_notes",
       "type": "manual",
       "path_patterns": [
