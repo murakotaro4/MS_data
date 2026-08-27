@@ -9,7 +9,6 @@
 - `YYYY/MM/provenance_YYYYMMDD.json` : 生成元証跡（復元情報を含む）
 - `YYYY/MM/label_audit_YYYYMMDD.md` : ラベル監査
 - `YYYY/MM/index_ms_audit_YYYYMMDD.md` : index と msData の整合監査
-- `skills_params_audit.json` / `owners_flat_audit.json` : skills系監査（直下・undated）
 
 ## manual
 - `YYYY/MM/msdata_update_YYYYMMDD.md` : 週次/都度の人手更新レポート

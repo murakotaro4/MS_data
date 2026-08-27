@@ -18,7 +18,7 @@ https://raw.githubusercontent.com/murakotaro4/MS_data/main/msData.json
 - 1 要素 = 機体の 1 レベル分のステータス
 - 主キー: `MS名`（例: `XXX_LV1`）
 
-フィールド詳細は [docs/msdata_reference.md](docs/msdata_reference.md)、機械検証は [schema/msData.schema.json](schema/msData.schema.json)。スキルデータは [`data/`](data/) の JSON をアプリ側で合成します（リファレンスに解説あり）。
+フィールド詳細は [docs/msdata_reference.md](docs/msdata_reference.md)、機械検証は [schema/msData.schema.json](schema/msData.schema.json)。`data/skills*.json` は 2026-08 に廃止しました。過去データは git 履歴を参照してください。
 
 Release（`raw-snapshot-*`）は取得時の生 HTML スナップショットと差分レポートの保存先です。`msData.json` 本体は上記 raw URL で取得してください（Release には含まれません）。
 
@@ -44,7 +44,7 @@ uv sync --dev
 | ターゲット | 用途 |
 | --- | --- |
 | `ci` | 品質チェック一括 |
-| `validate` / `validate-strict` / `validate-skills` | 検証 |
+| `validate` / `validate-strict` | 検証 |
 | `scrape-index` / `scrape-details` | 一覧・詳細取得 |
 | `import-details` | 取り込み |
 
@@ -63,11 +63,11 @@ uv sync --dev
 - `ms_data/`: Python パッケージ本体
   - `core/` 共通ユーティリティ / `net/` HTTP・キャッシュ / `scraping/` atwiki 取得
   - `pipeline/` 取り込み・正規化 / `validation/` 検証 / `audit/` 監査
-  - `reporting/` レポート生成 / `skills/` スキルデータ / `gh/` GitHub 連携 / `notify/` メール
+  - `reporting/` レポート生成 / `gh/` GitHub 連携 / `notify/` メール
   - `tasks.py`: 全ターゲットのディスパッチャ
 - `tests/`: ユニットテスト
 - `schema/`: JSON Schema（→ [schema/README.md](schema/README.md)）
-- `data/`: スキル定義・公式調整オーバーライド（→ [data/README.md](data/README.md)）
+- `data/`: 監査許容リスト・公式調整オーバーライド（→ [data/README.md](data/README.md)）
 - `docs/`: 利用者向けドキュメント
 - `reports/`: 生成レポート（`YYYY/MM` 階層。保持方針は `reports_manifest.json`）
 - `msData.json`: データ本体

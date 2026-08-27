@@ -5,7 +5,7 @@
 
 ## レイアウト（v3）
 - 日付付き生成レポートの正: `reports/YYYY/MM/<name>_YYYYMMDD.*`
-- 直下に残すもの: `README.md` / `index.md` / `msdata_update_template.md` と undated（`skills_params_audit.json` / `owners_flat_audit.json` / `label_audit_latest.md` / `auto_review_*.json`）
+- 直下に残すもの: `README.md` / `index.md` / `msdata_update_template.md` と undated（`label_audit_latest.md` / `auto_review_*.json`）
 
 ## 分類
 - `generated`: スクリプト/Workflowが生成する成果物
