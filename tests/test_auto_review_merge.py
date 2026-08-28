@@ -4,6 +4,7 @@ from ms_data.core.dates import JST as CORE_JST
 from ms_data.gh.auto_review_merge import (
     GITHUB_ACTIONS_BOT,
     JST,
+    ReviewDeps,
     _bool_text,
     _head_ref,
     _head_sha,
@@ -27,7 +28,7 @@ from ms_data.gh.auto_review_merge import (
 )
 
 
-def test_facade_reexports_jst_from_core_dates():
+def test_public_api_reexports_jst_from_core_dates():
     assert JST is CORE_JST
     assert jst_report_date("2026-05-31T16:00:00Z") == "20260601"
 
@@ -467,6 +468,7 @@ def test_merge_and_notify_raises_on_head_sha_mismatch():
             evaluated_sha="old-sha",
             source_run_id="111",
             resume_run_id="555",
+            deps=ReviewDeps.default(),
         )
 
 

@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from ms_data.gh.argtypes import (
     GITHUB_ACTIONS_BOT,
+    ReviewDeps,
     _allowed_trigger_logins,
     _bool_text,
     _int_or_none,
@@ -27,13 +28,6 @@ if TYPE_CHECKING:
     from ms_data.gh.auto_review_merge import GitHubClient
 
 
-def _facade():
-    """monkeypatch 互換のため facade モジュールを遅延参照する。"""
-    from ms_data.gh import auto_review_merge as arm
-
-    return arm
-
-
 def _non_negative_int(value: str, default: int) -> int:
     try:
         return max(0, int(value))
@@ -48,6 +42,7 @@ def _ensure_attempt_trigger(
     max_attempts: int,
     trigger_comment_ids: list[str],
     *,
+    deps: ReviewDeps,
     pat_available: bool,
     allowed_logins: set[str],
 ) -> None:
@@ -65,7 +60,7 @@ def _ensure_attempt_trigger(
     )
     use_pat = pat_available and bool(str(args.pat_login or "").strip())
     if use_pat:
-        trigger_comment_id, _, created_new = _facade().ensure_review_comment(
+        trigger_comment_id, _, created_new = deps.ensure_comment(
             client=client,
             pr_number=args.pr_number,
             marker=marker,
@@ -74,7 +69,7 @@ def _ensure_attempt_trigger(
         identity = "PAT"
     else:
         # use_trigger_token は付けず、allowed_logins も既定（GITHUB_ACTIONS_BOT）
-        trigger_comment_id, _, created_new = _facade().ensure_review_comment(
+        trigger_comment_id, _, created_new = deps.ensure_comment(
             client=client,
             pr_number=args.pr_number,
             marker=marker,
@@ -94,6 +89,7 @@ def _poll_for_response(
     client: GitHubClient,
     args: argparse.Namespace,
     *,
+    deps: ReviewDeps,
     attempt: int,
     max_attempts: int,
     attempt_timeout_seconds: int,
@@ -109,18 +105,18 @@ def _poll_for_response(
     応答検知時は settle_seconds だけ待ってから返る。
     ``disconnect_count > 0`` を検知したら早期打ち切り。
     """
-    attempt_started = _facade().time.monotonic()
+    attempt_started = deps.clock.monotonic()
     deadline = attempt_started + attempt_timeout_seconds
-    while _facade().time.monotonic() < deadline:
-        metrics = _facade().collect_review_metrics(
+    while deps.clock.monotonic() < deadline:
+        metrics = deps.collect_metrics(
             client=client,
             pr_number=args.pr_number,
             head_sha=args.head_sha,
             trigger_comment_ids=trigger_comment_ids,
             since=since,
         )
-        total_elapsed = int(_facade().time.monotonic() - started_at)
-        attempt_elapsed = int(_facade().time.monotonic() - attempt_started)
+        total_elapsed = int(deps.clock.monotonic() - started_at)
+        attempt_elapsed = int(deps.clock.monotonic() - attempt_started)
         disconnect_count = int(metrics.get("disconnect_count") or 0)
         print(
             "Codex response poll: "
@@ -144,15 +140,15 @@ def _poll_for_response(
                     "Codex response detected. "
                     f"Waiting {settle_seconds}s before gate re-check."
                 )
-                _facade().time.sleep(settle_seconds)
+                deps.clock.sleep(settle_seconds)
             return True, str(total_elapsed), False
 
         sleep_seconds = min(
-            poll_seconds, max(0, int(deadline - _facade().time.monotonic()))
+            poll_seconds, max(0, int(deadline - deps.clock.monotonic()))
         )
         if sleep_seconds <= 0:
             break
-        _facade().time.sleep(sleep_seconds)
+        deps.clock.sleep(sleep_seconds)
     return False, "", False
 
 
@@ -206,9 +202,9 @@ def _write_wait_outputs(
     append_step_summary(summary, args.step_summary)
 
 
-def cmd_wait_for_review(args: argparse.Namespace) -> int:
+def cmd_wait_for_review(args: argparse.Namespace, deps: ReviewDeps) -> int:
     """Codex のレビュー応答を待つ（attempt 1 から ``@codex review`` を投稿）。"""
-    client = _facade().GitHubClient(args.repo)
+    client = deps.client(args.repo)
     max_attempts = _positive_int(args.max_attempts, 3)
     attempt_timeout_seconds = _positive_int(args.attempt_timeout_seconds, 420)
     poll_seconds = _positive_int(args.poll_seconds, 30)
@@ -222,7 +218,7 @@ def cmd_wait_for_review(args: argparse.Namespace) -> int:
     response_seconds = ""
     trigger_comment_ids: list[str] = []
     first_trigger_created_at = args.baseline_created_at
-    started_at = _facade().time.monotonic()
+    started_at = deps.clock.monotonic()
     attempts_used = "0"
 
     for attempt in range(1, max_attempts + 1):
@@ -233,12 +229,14 @@ def cmd_wait_for_review(args: argparse.Namespace) -> int:
             attempt,
             max_attempts,
             trigger_comment_ids,
+            deps=deps,
             pat_available=pat_available,
             allowed_logins=allowed_logins,
         )
         responded, response_seconds, disconnected = _poll_for_response(
             client,
             args,
+            deps=deps,
             attempt=attempt,
             max_attempts=max_attempts,
             attempt_timeout_seconds=attempt_timeout_seconds,
@@ -271,9 +269,9 @@ def cmd_wait_for_review(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_check_gate(args: argparse.Namespace) -> int:
-    client = _facade().GitHubClient(args.repo)
-    metrics = _facade().collect_review_metrics(
+def cmd_check_gate(args: argparse.Namespace, deps: ReviewDeps) -> int:
+    client = deps.client(args.repo)
+    metrics = deps.collect_metrics(
         client=client,
         pr_number=args.pr_number,
         head_sha=args.head_sha,
@@ -296,8 +294,8 @@ def cmd_check_gate(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_record_stop(args: argparse.Namespace) -> int:
-    client = _facade().GitHubClient(args.repo)
+def cmd_record_stop(args: argparse.Namespace, deps: ReviewDeps) -> int:
+    client = deps.client(args.repo)
     if args.stop_reason == "no_response":
         reason_label = "codex_no_response"
         message = (
@@ -346,9 +344,9 @@ def cmd_record_stop(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_export_findings(args: argparse.Namespace) -> int:
+def cmd_export_findings(args: argparse.Namespace, deps: ReviewDeps) -> int:
     """Codex ファイル指摘を JSON へ書き出し、パスと件数のみ Outputs に出す。"""
-    client = _facade().GitHubClient(args.repo)
+    client = deps.client(args.repo)
     file_comments = client.api_json(
         f"repos/{client.repo}/pulls/{args.pr_number}/comments", paginate=True
     )
@@ -426,7 +424,8 @@ def build_auto_review_report(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
-def cmd_write_report(args: argparse.Namespace) -> int:
+def cmd_write_report(args: argparse.Namespace, deps: ReviewDeps) -> int:
+    del deps
     report = build_auto_review_report(args)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(
