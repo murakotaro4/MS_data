@@ -36,6 +36,7 @@
         "idempotency_key"
       ],
       "properties": {
+        "reports_root": { "type": "string", "minLength": 1 },
         "report_date_format": { "type": "string" },
         "head_ref_pattern": { "type": "string" },
         "diff_pattern": { "type": "string" },

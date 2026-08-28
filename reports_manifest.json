@@ -9,6 +9,7 @@
     ]
   },
   "naming": {
+    "reports_root": "reports",
     "report_date_format": "YYYYMMDD",
     "head_ref_pattern": "data/auto-update-{report_date}",
     "diff_pattern": "reports/{report_year}/{report_month}/diff_msdata_{report_date}.md",
