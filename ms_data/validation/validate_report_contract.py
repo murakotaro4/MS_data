@@ -37,8 +37,24 @@ def _build_allowed_patterns(
 
 
 def _matches_any(path: str, patterns: list[str]) -> bool:
-    posix_path = PurePosixPath(path)
-    return any(posix_path.match(pattern) for pattern in patterns)
+    posix_path = PurePosixPath(f"/{path.lstrip('/')}")
+    return any(posix_path.match(f"/{pattern.lstrip('/')}") for pattern in patterns)
+
+
+def _reports_root(manifest: dict[str, Any]) -> str:
+    return manifest["naming"].get("reports_root", "reports")
+
+
+def _normalize_path(path: str) -> PurePosixPath:
+    return PurePosixPath(path.replace("\\", "/"))
+
+
+def _rebase_report_path(logical_path: str, reports_root: str, reports_dir: str) -> str:
+    normalized_logical_path = _normalize_path(logical_path)
+    if ".." in normalized_logical_path.parts:
+        raise ValueError(f"parent directory component is not allowed: {logical_path}")
+    relative_path = normalized_logical_path.relative_to(_normalize_path(reports_root))
+    return (_normalize_path(reports_dir) / relative_path).as_posix()
 
 
 def _naming_format_kwargs(report_date: str, source_run_id: str = "") -> dict[str, str]:
@@ -53,15 +69,21 @@ def _naming_format_kwargs(report_date: str, source_run_id: str = "") -> dict[str
 
 
 def _expected_from_manifest(
-    manifest: dict[str, Any], report_date: str, source_run_id: str
+    manifest: dict[str, Any],
+    report_date: str,
+    source_run_id: str,
+    reports_dir: str,
 ) -> dict[str, str]:
     naming = manifest["naming"]
     date_kwargs = _naming_format_kwargs(report_date)
     run_kwargs = _naming_format_kwargs(report_date, source_run_id)
+    reports_root = _reports_root(manifest)
+    diff_path = naming["diff_pattern"].format(**date_kwargs)
+    provenance_path = naming["provenance_pattern"].format(**date_kwargs)
     return {
         "head_ref": naming["head_ref_pattern"].format(**date_kwargs),
-        "diff": naming["diff_pattern"].format(**date_kwargs),
-        "provenance": naming["provenance_pattern"].format(**date_kwargs),
+        "diff": _rebase_report_path(diff_path, reports_root, reports_dir),
+        "provenance": _rebase_report_path(provenance_path, reports_root, reports_dir),
         "artifact": naming["artifact_pattern"].format(**run_kwargs),
         "snapshot": naming["snapshot_pattern"].format(**run_kwargs),
         "release_tag": naming["release_tag_pattern"].format(**run_kwargs),
@@ -118,7 +140,16 @@ def _validate_data_update(args: argparse.Namespace, manifest: dict[str, Any]) ->
     if rc != 0:
         return rc
 
-    expected = _expected_from_manifest(manifest, args.report_date, args.source_run_id)
+    try:
+        expected = _expected_from_manifest(
+            manifest,
+            args.report_date,
+            args.source_run_id,
+            args.reports_dir,
+        )
+    except ValueError as exc:
+        _error(f"report naming pattern must be under reports_root: {exc}")
+        return 1
     checks = {
         "head_ref": args.head_ref,
         "diff": args.diff_path,
@@ -132,7 +163,12 @@ def _validate_data_update(args: argparse.Namespace, manifest: dict[str, Any]) ->
             _error(f"{key} is required")
             rc = 1
             continue
-        if actual != expected[key]:
+        comparable_actual = (
+            _normalize_path(actual).as_posix()
+            if key in {"diff", "provenance"}
+            else actual
+        )
+        if comparable_actual != expected[key]:
             _error(f"{key} mismatch: expected={expected[key]} actual={actual}")
             rc = 1
     return rc
@@ -166,12 +202,15 @@ def _validate_ci(args: argparse.Namespace, manifest: dict[str, Any]) -> int:
     for path in reports_dir.rglob("*"):
         if not path.is_file():
             continue
-        rel = path.as_posix()
-        if _matches_any(rel, generated_patterns):
+        relative_path = path.relative_to(reports_dir)
+        logical_path = (
+            PurePosixPath(_reports_root(manifest)) / PurePosixPath(*relative_path.parts)
+        ).as_posix()
+        if _matches_any(logical_path, generated_patterns):
             continue
-        if _matches_any(rel, manual_patterns):
+        if _matches_any(logical_path, manual_patterns):
             continue
-        _error(f"report file not listed in manifest allowlist: {rel}")
+        _error(f"report file not listed in manifest allowlist: {path.as_posix()}")
         rc = 1
     return rc
 
