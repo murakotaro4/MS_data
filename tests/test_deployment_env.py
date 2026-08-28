@@ -88,6 +88,18 @@ def test_parse_env_suitability_from_text():
     assert env["環境適正_水中"] is False
 
 
+def test_parse_env_suitability_multiple_headers_preserves_output(load_fixture):
+    soup = BeautifulSoup(
+        load_fixture("env_suitability_multiple_headers.html"), "lxml"
+    )
+
+    assert sm.parse_env_suitability(soup) == {
+        "環境適正_地上": True,
+        "環境適正_宇宙": False,
+        "環境適正_水中": True,
+    }
+
+
 def test_apply_deployment_fallbacks_from_turn_keys():
     both = {1: {"旋回_地上_通常時": 70, "旋回_宇宙_通常時": 72}}
     apply_deployment_fallbacks(both, [1])

@@ -1,4 +1,3 @@
-from bs4 import BeautifulSoup
 
 import ms_data.scraping.scrape_msdata as sm
 

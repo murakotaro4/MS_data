@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 
 import httpx
-import pytest
 
 import ms_data.scraping.scrape_msdata as sm
 

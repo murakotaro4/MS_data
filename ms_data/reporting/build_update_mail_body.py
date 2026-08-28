@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-
 SUMMARY_KEYS = (
     "レコード数",
     "protected_rollback",

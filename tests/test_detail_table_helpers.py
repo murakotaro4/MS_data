@@ -9,7 +9,7 @@ from ms_data.scraping.detail_page import (
 
 
 def _required_record(**overrides: object) -> dict[str, object]:
-    rec: dict[str, object] = {key: 1 for key in BASE_REQUIRED}
+    rec: dict[str, object] = dict.fromkeys(BASE_REQUIRED, 1)
     rec["旋回_地上_通常時"] = 70
     rec.update(overrides)
     return rec

@@ -7,7 +7,6 @@ from typing import Any
 
 from ms_data.gh.gh_json import login_of as _login
 
-
 STOP_MARKER_RE = re.compile(
     r"<!--\s*auto-review-stop\s+reason:(\S+)\s+run_id:(\S+)\s+head_sha:(\S+)\s*-->"
 )

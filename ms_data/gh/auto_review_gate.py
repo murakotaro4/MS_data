@@ -10,7 +10,6 @@ from typing import Any
 from ms_data.gh.gh_json import load_json_stream as _load_json
 from ms_data.gh.gh_json import login_of as _login
 
-
 CODEX_LOGINS = {"chatgpt-codex-connector[bot]", "chatgpt-codex-connector"}
 NO_ISSUES_PREFIX = "Codex Review: Didn't find any major issues."
 DISCONNECT_PREFIX = "To use Codex here"

@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import json
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from ms_data.gh.auto_review_pr import format_github_datetime

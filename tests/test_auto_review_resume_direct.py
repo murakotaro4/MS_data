@@ -6,7 +6,6 @@ import pytest
 
 from ms_data.gh import auto_review_merge, auto_review_resume
 
-
 HEAD_SHA = "abc123"
 PENDING = {"merge_ok": False, "finding_count": 0, "stop_reason": "no_response"}
 FINDINGS = {"merge_ok": False, "finding_count": 1, "stop_reason": "findings"}

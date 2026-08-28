@@ -7,9 +7,7 @@ from ms_data.audit import audit_field_completeness
 
 
 def _record(name: str = "テスト機_LV1") -> dict[str, object]:
-    record: dict[str, object] = {
-        field: 1 for field in audit_field_completeness.REQUIRED_KEYS
-    }
+    record: dict[str, object] = dict.fromkeys(audit_field_completeness.REQUIRED_KEYS, 1)
     record.update(
         {
             "MS名": name,

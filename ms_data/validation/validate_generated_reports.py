@@ -6,12 +6,10 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any
 
 from jsonschema import Draft202012Validator
 
 from ms_data.core.json_io import load_json as _load_json
-
 
 JSON_SCHEMA_REPORTS = {
     "atwiki_quality_*.json": "atwiki_quality.schema.json",

@@ -16,16 +16,16 @@ from __future__ import annotations
 import argparse
 import sys
 from collections import Counter, defaultdict
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
-from collections.abc import Iterable
-
-from ms_data.core.json_io import load_json
-from ms_data.core.ms_names import extract_ms_base_name
-from ms_data.core.paths import MSDATA_SCHEMA as SCHEMA_PATH
-from ms_data.core.labels import KEY_ALIASES
 
 from jsonschema import Draft7Validator
+
+from ms_data.core.json_io import load_json
+from ms_data.core.labels import KEY_ALIASES
+from ms_data.core.ms_names import extract_ms_base_name
+from ms_data.core.paths import MSDATA_SCHEMA as SCHEMA_PATH
 
 
 def validate_schema(data: Any, schema_path: Path) -> list[str]:
@@ -100,10 +100,9 @@ def find_semantic_errors(records: Iterable[dict[str, Any]]) -> list[str]:
 
     for record in records:
         ms_name = record.get("MS名")
-        if isinstance(ms_name, str):
-            base_name = extract_ms_base_name(ms_name)
-        else:
-            base_name = None
+        base_name = (
+            extract_ms_base_name(ms_name) if isinstance(ms_name, str) else None
+        )
 
         if base_name:
             attr = record.get("属性")

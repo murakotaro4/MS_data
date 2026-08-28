@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import json
-import os
 from collections import Counter
 from datetime import date, datetime
 from pathlib import Path

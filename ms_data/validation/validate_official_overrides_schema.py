@@ -90,7 +90,7 @@ def validate(
         update_msdata.load_official_overrides(overrides_dir)
     except (
         Exception
-    ) as exc:  # noqa: BLE001 - CLI validator should report all contract errors.
+    ) as exc:
         messages.append(f"{overrides_dir}: semantic validation failed: {exc}")
     return messages
 

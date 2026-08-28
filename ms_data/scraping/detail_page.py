@@ -181,7 +181,7 @@ def parse_env_suitability(soup: BeautifulSoup) -> dict[str, bool]:
     for h in headers:
         txt = _section_text(h)
 
-        def find_bool(label: str) -> bool | None:
+        def find_bool(label: str, txt: str = txt) -> bool | None:
             m = re.search(label + r"\s*[:：]\s*([^\s]+)", txt)
             if m:
                 return symbol_to_bool(m.group(1))
@@ -291,7 +291,7 @@ def build_base_records(
             continue
 
         values = expand_cells(tr.find_all("td"), len(levels))
-        for lv, val in zip(levels, values):
+        for lv, val in zip(levels, values, strict=False):
             if val is None:
                 continue
             if key_name in _TEXT_FIELDS:
@@ -341,7 +341,7 @@ def apply_parts_slots(
         if not dst_key:
             continue
         values = expand_cells(tr.find_all("td"), len(levels))
-        for lv, val in zip(levels, values):
+        for lv, val in zip(levels, values, strict=False):
             iv = to_int(val or "")
             if iv is not None:
                 per_level[lv][dst_key] = iv

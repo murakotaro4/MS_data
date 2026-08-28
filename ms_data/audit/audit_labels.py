@@ -9,9 +9,9 @@ from __future__ import annotations
 import argparse
 import json
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from collections.abc import Iterable
 
 from ms_data.core.labels import FIELD_MAP, clean_text
 

@@ -8,7 +8,6 @@ import sys
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-
 DATE_RE = re.compile(r"^\d{8}$")
 
 # reports_manifest.schema.json の entry.type と一致させる

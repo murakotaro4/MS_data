@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
-from collections.abc import Iterable
 
 
 def write_github_output(path: Path, values: dict[str, Any]) -> None:

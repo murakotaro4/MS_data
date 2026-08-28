@@ -16,7 +16,6 @@ from ms_data.gh.auto_review_pr import HEAD_REF_DATE_RE as HEAD_REF_RE
 from ms_data.gh.gh_json import run_gh
 from ms_data.gh.outputs import append_step_summary
 
-
 AUTO_UPDATE_BRANCH_RE = re.compile(r"^data/auto-update-.+$")
 
 

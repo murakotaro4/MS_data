@@ -14,7 +14,6 @@ from typing import Any
 from ms_data.gh.gh_json import GhRunner, gh_api_json, run_gh
 from ms_data.notify import send_gmail
 
-
 NOTIFY_CONCLUSIONS = frozenset(
     {"failure", "timed_out", "startup_failure", "action_required"}
 )
@@ -363,7 +362,7 @@ def notify_failure(
 
     try:
         mail_sender(subject, body)
-    except Exception as exc:  # noqa: BLE001 - Issue 通知は継続する
+    except Exception as exc:
         failures += 1
         print(f"メール送信に失敗しました: {exc}", file=sys.stderr)
 
@@ -378,7 +377,7 @@ def notify_failure(
             runner=runner,
         )
         print(f"GitHub Issue: {action} #{number}")
-    except Exception as exc:  # noqa: BLE001 - メール結果とは独立して扱う
+    except Exception as exc:
         failures += 1
         print(f"GitHub Issue 通知に失敗しました: {exc}", file=sys.stderr)
 

@@ -16,7 +16,6 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-
 GhRunner = Callable[[list[str]], str]
 
 _GH_GET_RETRY_DELAYS = (2, 4, 8)
