@@ -216,28 +216,7 @@
 
 ## 7. スキルデータ
 
-`msData.json` は**恒常値のみ**を保持します。スキルによるパラメータ変化はアプリ側で別 JSON と合成する設計です。
-
-| ファイル | 役割 |
-| --- | --- |
-| [`data/skills_params.json`](../data/skills_params.json) | パラメータ変化スキルの定義（`skills[].name` / `levels[].effects`） |
-| [`data/skill_owners_flat.json`](../data/skill_owners_flat.json) | スキル×シリーズ×機体 Lv の所持展開（`owners[]`: `skill`, `skill_level`, `series`, `ms_level`） |
-| [`data/skills_catalog.json`](../data/skills_catalog.json) | 中間・参照用カタログ（発動条件・duration 等を含む） |
-| [`data/skill_owners.json`](../data/skill_owners.json) | 中間・参照用の所持データ（シリーズ単位） |
-
-JOIN の目安:
-
-1. `skill_owners_flat` の `series` + `ms_level` と、`msData` の `MS名`（シリーズ名と `_LVn`）を対応付ける
-2. 同レコードの `skill` / `skill_level` で `skills_params` の定義を引く
-3. `effects`（`op: add|mul` 等）を恒常値へ適用
-
-効果の集約プレビュー（`msData` には埋め込まない。元ステータスへの適用はアプリ側で行う）:
-
-```bash
-uv run python -m ms_data.tasks preview-params
-```
-
-出力先: `derived/ms_params_preview.json`（機体ごとの所持スキルと `aggregated_effects` のみ。合成済みステータスは含まない）
+スキル公開データは 2026-08 に廃止しました。過去データは git 履歴を参照してください。
 
 ## 8. 注意事項
 

@@ -181,7 +181,6 @@ def task_ci() -> int:
         "lint",
         "test-cov",
         "validate-strict",
-        "validate-skills",
     ):
         rc = TASKS[task_name]()
         if rc != 0:
@@ -206,10 +205,6 @@ def task_validate_strict() -> int:
         _env("MSDATA", DEFAULT_MSDATA),
         "--fail-on-typo",
     )
-
-
-def task_validate_skills() -> int:
-    return _run_python_module("ms_data.validation.validate_skills_data")
 
 
 def task_validate_official_overrides_schema() -> int:
@@ -723,7 +718,6 @@ TASKS: dict[str, Callable[[], int]] = {
     "test-cov": task_test_cov,
     "validate": task_validate,
     "validate-strict": task_validate_strict,
-    "validate-skills": task_validate_skills,
     "update": task_update,
     "normalize": task_normalize,
     "ci": task_ci,

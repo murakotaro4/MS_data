@@ -9,18 +9,17 @@
   - `ms_data/`: Python パッケージ本体
     - `core/`: 共通ユーティリティ（json_io / paths / ms_names / records / env / labels / dates）
     - `net/`: HTTP クライアントとキャッシュ（client / cache_http）
-    - `scraping/`: atwiki 取得（scrape_msdata(facade・CLI) / index_page(一覧解析) / detail_page(詳細解析) / fullst(強化リスト) / text_values(値パース) / change_detection(差分検出) / fetch_state(取得状態) / extract_skills(facade) / skills_html(スキル HTML 解析) / skills_cli(スキル CLI) / skill_owners(所持抽出)）
+    - `scraping/`: atwiki 取得（scrape_msdata(facade・CLI) / index_page(一覧解析) / detail_page(詳細解析) / fullst(強化リスト) / text_values(値パース) / change_detection(差分検出) / fetch_state(取得状態)）
     - `pipeline/`: 取り込み・正規化（update_msdata / jsonl_to_json / generate_provenance / restore_snapshot / official_overrides）
     - `validation/`: スキーマ・契約検証（validate_* / verify_snapshot_restore）
     - `audit/`: 監査・巻き戻り検出（audit_* / detect_msdata_rollbacks）
     - `reporting/`: レポート生成・整理（report_msdata_diff / msdata_diff_model / rendering / build_atwiki_quality_report / build_update_mail_body / prune_reports）
-    - `skills/`: スキルデータ生成（build_skills / build_param_skills / build_owners_flat / preview_params）
     - `gh/`: GitHub 連携（auto_review_gate / auto_review_merge / cleanup_auto_update_prs / post_merge_assets / notify_failure / gh_json / outputs）
     - `notify/`: メール送信（send_gmail）
     - `tasks.py`: 全ターゲットのディスパッチャ（ワークフロー・開発者の共通入口）
   - `tests/`: ユニットテスト
   - `schema/`: JSON Schema（対応表は `schema/README.md`）
-  - `data/`: スキル定義・公式調整オーバーライド（SSOT）（役割は `data/README.md`）
+  - `data/`: 監査許容リスト・公式調整オーバーライド（SSOT）（役割は `data/README.md`）
   - `reports/`: 生成レポート（保持方針は `reports_manifest.json` が SSOT）
 
 ## ビルド・テスト・開発コマンド（uv）
@@ -28,7 +27,7 @@
 - 第一コマンド: `uv run python -m ms_data.tasks <target>`。
 - 主要ターゲット:
   - 品質チェック一括: `uv run python -m ms_data.tasks ci`
-  - 検証: `validate` / 厳格: `validate-strict` / skills系: `validate-skills`
+  - 検証: `validate` / 厳格: `validate-strict`
   - 一覧取得: `scrape-index TTL=7d` / 詳細取得: `scrape-details TTL=7d RATE=2.0 LIMIT=0`
   - 取り込み: `import-details` / 正規化のみ: `normalize`
   - ラベル監査: `labels LIMIT=0` → `audit-labels` / index監査: `audit-index`
@@ -79,16 +78,6 @@
 - CI runner: Windows は `windows-2025-vs2026` を明示使用。`windows-latest` へ戻す場合は GitHub の runner image 移行状況を確認。
 - 互換期間: レポート再編時の旧パス互換は原則検討するが、v3 の年月階層化（`reports/YYYY/MM/`）は破壊的移行として実施済み（`legacy_path_support: false`、旧パスへの転送なし）。日付付きレポートの旧フラット `path_patterns` は撤去済み（直下に残す undated / テンプレートのみ許容）。
 
-## スキルデータ（params / owners）
-- 方針: msData.json は恒常値のみ。スキルは別ファイル管理（アプリ側で合成）。定義（`data/skills_params.json`）と所有（`data/skill_owners_flat.json`）を分離し SSOT 化。
-- コマンド:
-  - `skills-table` … スキル一覧表の厳格抽出 → `cache/skills_table.json`
-  - `owners-table` … 所持機体逆引きの厳格抽出 → `cache/owners_table.json`
-  - `build-param-skills` … パラメータ変化スキルのみ抽出 → `data/skills_params.json`
-  - `build-owners-flat` … シリーズ×機体Lv展開 → `data/skill_owners_flat.json`
-  - `preview-params` … 合成プレビュー → `derived/ms_params_preview.json`（msData へは埋め込まない）
-- 抽出ポリシー: 対象は能力UP系ホワイトリスト（EXAM/HADES/ALICE/ZEUS/バイオセンサー各種/覚醒 など）。対象パラメータはスピード/高速移動/補正/旋回/各耐性/スラスター消費/被ダメージ係数。シリーズ名は軽正規化（括弧全角化・空白圧縮）で JOIN 安定化、unknown=0 を維持。
-
 ## コーディング規約・テスト
 - JSON: 2スペース、UTF-8、LF、キーは `snake_case`。
 - Python: インデント4スペース、型ヒント必須（`str | None` 形式を推奨）。命名はファイル/関数 lower_snake_case、クラス CapWords。
@@ -117,6 +106,6 @@
 ## Cursor Cloud specific instructions
 - 本プロジェクトは Web アプリや常駐サービスを持たない **CLI／データ管理ツール**です。「アプリを起動する」= `uv run python -m ms_data.tasks <target>` を実行すること。起動しっぱなしにする dev サーバーやポートは存在しない。
 - パッケージ管理は `uv`。VM 起動時の update script で `uv sync --dev` 済みなので、追加のインストールは不要。コマンドは常に `uv run <cmd>`（例: `uv run python -m ms_data.tasks ci`）で実行する。標準コマンド一覧は本ファイル上部「ビルド・テスト・開発コマンド」と `README.md` を参照。
-- 環境の総合ヘルスチェックは `uv run python -m ms_data.tasks ci`（lint + カバレッジ付きテスト + 各種 validate を一括実行）。単発なら `lint` / `test` / `validate-strict` / `validate-skills`。
+- 環境の総合ヘルスチェックは `uv run python -m ms_data.tasks ci`（lint + カバレッジ付きテスト + 各種 validate を一括実行）。単発なら `lint` / `test` / `validate-strict`。
 - Python バージョン差異に注意: cloud VM のローカル venv は Python 3.12 で動く（`requires-python >=3.11` のため問題なし）が、GitHub Actions CI は Python 3.11 を使う。バージョン固有の挙動を疑う場合はこの差を考慮する。
-- スクレイピング系ターゲット（`scrape-index` / `scrape-details` / `skills` 等）は外部 atwiki へ実アクセスし、既定 2 req/sec のレート制限がかかる。cloud 上でのライブ取得は原則避け、オフライン検証は `NO_NET=1`（キャッシュのみ利用）を付ける。`ci` とユニットテストはネットワーク非依存で完結する。
+- スクレイピング系ターゲット（`scrape-index` / `scrape-details` 等）は外部 atwiki へ実アクセスし、既定 2 req/sec のレート制限がかかる。cloud 上でのライブ取得は原則避け、オフライン検証は `NO_NET=1`（キャッシュのみ利用）を付ける。`ci` とユニットテストはネットワーク非依存で完結する。
