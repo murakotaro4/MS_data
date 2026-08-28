@@ -253,26 +253,11 @@ jobs:
       - id: detection
         name: Read change detection summary
         run: |
-          python - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          meta = json.loads(Path("cache/index_changed_meta.json").read_text(encoding="utf-8"))
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
-              f.write(f"candidate_count={int(meta.get('candidate_count', 0))}\n")
-              f.write(f"fast_path={str(bool(meta.get('fast_path', False))).lower()}\n")
-              f.write(f"age_coverage={meta.get('age_coverage', 0.0)}\n")
-              f.write(f"fallback_reason={meta.get('fallback_reason') or 'none'}\n")
-          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as f:
-              f.write("### Change Detection\n")
-              f.write(f"- update_mode: {os.environ.get('UPDATE_MODE', 'fast')}\n")
-              f.write(f"- mode: {meta.get('mode') or 'fast'}\n")
-              f.write(f"- candidate_count: {int(meta.get('candidate_count', 0))}\n")
-              f.write(f"- fast_path: {str(bool(meta.get('fast_path', False))).lower()}\n")
-              f.write(f"- age_coverage: {meta.get('age_coverage', 0.0)}\n")
-              f.write(f"- fallback_reason: {meta.get('fallback_reason') or 'none'}\n")
-          PY
+          uv run python -m ms_data.pipeline.report_detection_summary \
+            --meta cache/index_changed_meta.json \
+            --update-mode "${UPDATE_MODE}" \
+            --github-output "$GITHUB_OUTPUT" \
+            --step-summary "$GITHUB_STEP_SUMMARY"
 
       - id: quality
         name: Build atwiki quality report
