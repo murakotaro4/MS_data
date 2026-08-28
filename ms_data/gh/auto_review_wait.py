@@ -7,7 +7,20 @@ import json
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from ms_data.gh.auto_review_pr import format_github_datetime
+from ms_data.gh.argtypes import (
+    GITHUB_ACTIONS_BOT,
+    _allowed_trigger_logins,
+    _bool_text,
+    _int_or_none,
+    _positive_int,
+)
+from ms_data.gh.auto_review_markers import (
+    find_latest_bot_comment,
+    retry_marker,
+    review_marker,
+    stop_marker,
+)
+from ms_data.gh.auto_review_pr import extract_codex_findings, format_github_datetime
 from ms_data.gh.outputs import append_step_summary, write_github_output
 
 if TYPE_CHECKING:
@@ -41,14 +54,14 @@ def _ensure_attempt_trigger(
     """試行回ごとのトリガーを確保する。
 
     attempt 1 から ``@codex review`` を投稿する。
-    初回は ``_facade().review_marker``、attempt 2 以降は ``_facade().retry_marker`` を付ける。
+    初回は ``review_marker``、attempt 2 以降は ``retry_marker`` を付ける。
     PAT が使える場合は人間名義（``allowed_logins`` に PAT login を含む）を優先し、
-    使えない場合は bot 名義（``_facade().GITHUB_ACTIONS_BOT`` 既定）で投稿する。
+    使えない場合は bot 名義（``GITHUB_ACTIONS_BOT`` 既定）で投稿する。
     """
     marker = (
-        _facade().review_marker(args.head_sha)
+        review_marker(args.head_sha)
         if attempt == 1
-        else _facade().retry_marker(attempt, args.head_sha)
+        else retry_marker(attempt, args.head_sha)
     )
     use_pat = pat_available and bool(str(args.pat_login or "").strip())
     if use_pat:
@@ -60,7 +73,7 @@ def _ensure_attempt_trigger(
         )
         identity = "PAT"
     else:
-        # use_trigger_token は付けず、allowed_logins も既定（_facade().GITHUB_ACTIONS_BOT）
+        # use_trigger_token は付けず、allowed_logins も既定（GITHUB_ACTIONS_BOT）
         trigger_comment_id, _, created_new = _facade().ensure_review_comment(
             client=client,
             pr_number=args.pr_number,
@@ -196,12 +209,12 @@ def _write_wait_outputs(
 def cmd_wait_for_review(args: argparse.Namespace) -> int:
     """Codex のレビュー応答を待つ（attempt 1 から ``@codex review`` を投稿）。"""
     client = _facade().GitHubClient(args.repo)
-    max_attempts = _facade()._positive_int(args.max_attempts, 3)
-    attempt_timeout_seconds = _facade()._positive_int(args.attempt_timeout_seconds, 420)
-    poll_seconds = _facade()._positive_int(args.poll_seconds, 30)
+    max_attempts = _positive_int(args.max_attempts, 3)
+    attempt_timeout_seconds = _positive_int(args.attempt_timeout_seconds, 420)
+    poll_seconds = _positive_int(args.poll_seconds, 30)
     settle_seconds = _non_negative_int(args.settle_seconds, 60)
-    pat_available = _facade()._bool_text(args.pat_available)
-    allowed_logins = _facade()._allowed_trigger_logins(args.pat_login)
+    pat_available = _bool_text(args.pat_available)
+    allowed_logins = _allowed_trigger_logins(args.pat_login)
 
     responded = False
     disconnected = False
@@ -214,7 +227,7 @@ def cmd_wait_for_review(args: argparse.Namespace) -> int:
 
     for attempt in range(1, max_attempts + 1):
         attempts_used = str(attempt)
-        _facade()._ensure_attempt_trigger(
+        _ensure_attempt_trigger(
             client,
             args,
             attempt,
@@ -223,7 +236,7 @@ def cmd_wait_for_review(args: argparse.Namespace) -> int:
             pat_available=pat_available,
             allowed_logins=allowed_logins,
         )
-        responded, response_seconds, disconnected = _facade()._poll_for_response(
+        responded, response_seconds, disconnected = _poll_for_response(
             client,
             args,
             attempt=attempt,
@@ -241,7 +254,7 @@ def cmd_wait_for_review(args: argparse.Namespace) -> int:
             response_attempt = str(attempt)
             break
 
-    _facade()._write_wait_outputs(
+    _write_wait_outputs(
         args,
         responded=responded,
         disconnected=disconnected,
@@ -311,9 +324,9 @@ def cmd_record_stop(args: argparse.Namespace) -> int:
             f"自動マージを停止しました。手動で確認してください。 (run_id: {args.run_id})"
         )
 
-    marker = _facade().stop_marker(reason_label, args.run_id, args.head_sha)
-    existing = _facade().find_latest_bot_comment(
-        client.issue_comments(args.pr_number), marker, {_facade().GITHUB_ACTIONS_BOT}
+    marker = stop_marker(reason_label, args.run_id, args.head_sha)
+    existing = find_latest_bot_comment(
+        client.issue_comments(args.pr_number), marker, {GITHUB_ACTIONS_BOT}
     )
     posted = existing is None
     if posted:
@@ -339,7 +352,7 @@ def cmd_export_findings(args: argparse.Namespace) -> int:
     file_comments = client.api_json(
         f"repos/{client.repo}/pulls/{args.pr_number}/comments", paginate=True
     )
-    findings = _facade().extract_codex_findings(
+    findings = extract_codex_findings(
         file_comments,
         args.head_sha,
         client.resolved_review_comment_ids(args.pr_number),
@@ -362,8 +375,8 @@ def cmd_export_findings(args: argparse.Namespace) -> int:
 
 
 def build_auto_review_report(args: argparse.Namespace) -> dict[str, Any]:
-    merge_ok = _facade()._bool_text(args.merge_ok)
-    merged = _facade()._bool_text(args.merged)
+    merge_ok = _bool_text(args.merge_ok)
+    merged = _bool_text(args.merged)
     merge_outcome = getattr(args, "merge_outcome", "") or ""
     stop_reason = args.stop_reason or "none"
     if merged:
@@ -392,19 +405,17 @@ def build_auto_review_report(args: argparse.Namespace) -> dict[str, Any]:
         "merge_ok": merge_ok,
         "merged": merged,
         "merge_outcome": merge_outcome,
-        "findings": _facade()._int_or_none(args.findings),
-        "review_complete": _facade()._bool_text(args.review_complete),
+        "findings": _int_or_none(args.findings),
+        "review_complete": _bool_text(args.review_complete),
         "review": {
-            "responded": _facade()._bool_text(args.responded),
-            "attempts_used": _facade()._int_or_none(args.attempts_used),
-            "max_attempts": _facade()._int_or_none(args.max_attempts),
-            "attempt_timeout_seconds": _facade()._int_or_none(
-                args.attempt_timeout_seconds
-            ),
-            "poll_seconds": _facade()._int_or_none(args.poll_seconds),
-            "settle_seconds": _facade()._int_or_none(args.settle_seconds),
-            "response_attempt": _facade()._int_or_none(args.response_attempt),
-            "response_seconds": _facade()._int_or_none(args.response_seconds),
+            "responded": _bool_text(args.responded),
+            "attempts_used": _int_or_none(args.attempts_used),
+            "max_attempts": _int_or_none(args.max_attempts),
+            "attempt_timeout_seconds": _int_or_none(args.attempt_timeout_seconds),
+            "poll_seconds": _int_or_none(args.poll_seconds),
+            "settle_seconds": _int_or_none(args.settle_seconds),
+            "response_attempt": _int_or_none(args.response_attempt),
+            "response_seconds": _int_or_none(args.response_seconds),
             "trigger_comment_ids": [
                 item.strip()
                 for item in args.trigger_comment_ids.split(",")
@@ -416,7 +427,7 @@ def build_auto_review_report(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def cmd_write_report(args: argparse.Namespace) -> int:
-    report = _facade().build_auto_review_report(args)
+    report = build_auto_review_report(args)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
