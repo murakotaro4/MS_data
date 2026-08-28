@@ -13,18 +13,25 @@ MSDATA = Path("msData.json")
 SCHEMA_DIR = Path("schema")
 MSDATA_SCHEMA = SCHEMA_DIR / "msData.schema.json"
 OFFICIAL_OVERRIDES_SCHEMA = SCHEMA_DIR / "official_overrides.schema.json"
+REPORT_SCHEMAS_DIR = SCHEMA_DIR / "reports"
 
 CACHE_DIR = Path("cache")
 INDEX_JSON = CACHE_DIR / "index.json"
+CHANGED_INDEX_JSON = CACHE_DIR / "index_changed.json"
+CHANGED_INDEX_META_JSON = CACHE_DIR / "index_changed_meta.json"
 DETAILS_JSONL = CACHE_DIR / "details.jsonl"
 DETAILS_JSON = CACHE_DIR / "details.json"
 HTML_CACHE_DIR = CACHE_DIR / "html"
 LABELS_RAW_JSONL = CACHE_DIR / "labels_raw.jsonl"
+DETAIL_FETCH_STATE_JSON = CACHE_DIR / "detail_fetch_state.json"
+FETCH_STATS_JSON = CACHE_DIR / "fetch_stats.json"
 
 DATA_DIR = Path("data")
 OFFICIAL_OVERRIDES_DIR = DATA_DIR / "official_overrides"
+FIELD_COMPLETENESS_ALLOWLIST = DATA_DIR / "field_completeness_allowlist.json"
 
 REPORTS_DIR = Path("reports")
+REPORTS_MANIFEST = Path("reports_manifest.json")
 
 
 def reports_month_dir(report_date: str, base_dir: str = "reports") -> str:

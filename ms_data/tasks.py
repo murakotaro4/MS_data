@@ -16,26 +16,36 @@ import tarfile
 from collections.abc import Callable
 from pathlib import Path
 
+from ms_data.core import paths
 from ms_data.core.dates import today_jst
 from ms_data.core.env import env_flag as _env_flag
 from ms_data.core.env import env_float as _env_float
 from ms_data.core.env import env_int as _env_int
 from ms_data.core.env import env_str as _env_str
 from ms_data.core.json_io import load_json as _load_json_file
-from ms_data.core.paths import reports_month_dir
 
 INDEX_URL = "https://w.atwiki.jp/battle-operation2/pages/377.html"
 
 # 既定パス・既定値（対応する環境変数で上書き可能）
-DEFAULT_MSDATA = "msData.json"  # MSDATA
+DEFAULT_MSDATA = paths.MSDATA.as_posix()  # MSDATA
 DEFAULT_TTL = "7d"  # TTL
-DEFAULT_INDEX_OUT = "cache/index.json"  # INDEX_OUT
-DEFAULT_DETAILS_OUT = "cache/details.jsonl"  # DETAILS_OUT
-DEFAULT_DETAILS_JSON = "cache/details.json"  # DETAILS_JSON
-DEFAULT_HTML_DIR = "cache/html"  # HTML_DIR
-DEFAULT_REPORTS_DIR = "reports"  # REPORTS_DIR
-DEFAULT_LABELS_OUT = "cache/labels_raw.jsonl"  # LABELS_OUT
-DEFAULT_OVERRIDES_DIR = "data/official_overrides"  # OFFICIAL_OVERRIDES_DIR
+DEFAULT_INDEX_OUT = paths.INDEX_JSON.as_posix()  # INDEX_OUT
+DEFAULT_DETAILS_OUT = paths.DETAILS_JSONL.as_posix()  # DETAILS_OUT
+DEFAULT_DETAILS_JSON = paths.DETAILS_JSON.as_posix()  # DETAILS_JSON
+DEFAULT_HTML_DIR = paths.HTML_CACHE_DIR.as_posix()  # HTML_DIR
+DEFAULT_REPORTS_DIR = paths.REPORTS_DIR.as_posix()  # REPORTS_DIR
+DEFAULT_LABELS_OUT = paths.LABELS_RAW_JSONL.as_posix()  # LABELS_OUT
+DEFAULT_OVERRIDES_DIR = (
+    paths.OFFICIAL_OVERRIDES_DIR.as_posix()
+)  # OFFICIAL_OVERRIDES_DIR
+DEFAULT_OFFICIAL_OVERRIDES_SCHEMA = paths.OFFICIAL_OVERRIDES_SCHEMA.as_posix()
+DEFAULT_REPORTS_MANIFEST = paths.REPORTS_MANIFEST.as_posix()
+DEFAULT_REPORT_SCHEMA_DIR = paths.REPORT_SCHEMAS_DIR.as_posix()
+DEFAULT_CHANGED_INDEX_OUT = paths.CHANGED_INDEX_JSON.as_posix()
+DEFAULT_CHANGED_META_OUT = paths.CHANGED_INDEX_META_JSON.as_posix()
+DEFAULT_DETAIL_FETCH_STATE = paths.DETAIL_FETCH_STATE_JSON.as_posix()
+DEFAULT_FETCH_STATS = paths.FETCH_STATS_JSON.as_posix()
+DEFAULT_FIELD_COMPLETENESS_ALLOWLIST = paths.FIELD_COMPLETENESS_ALLOWLIST.as_posix()
 
 
 # ---------------------------------------------------------------------------
@@ -88,7 +98,7 @@ def _report_out(env_name: str, prefix: str, ext: str) -> str:
     reports_dir = _env("REPORTS_DIR", DEFAULT_REPORTS_DIR)
     return _env(
         env_name,
-        f"{reports_month_dir(report_date, base_dir=reports_dir)}/{prefix}_{report_date}.{ext}",
+        f"{paths.reports_month_dir(report_date, base_dir=reports_dir)}/{prefix}_{report_date}.{ext}",
     )
 
 
@@ -101,15 +111,15 @@ def _raw_snapshot_file() -> str:
 
 
 def _changed_index_out() -> str:
-    return _env("CHANGED_INDEX_OUT", "cache/index_changed.json")
+    return _env("CHANGED_INDEX_OUT", DEFAULT_CHANGED_INDEX_OUT)
 
 
 def _changed_meta_out() -> str:
-    return _env("CHANGED_META_OUT", "cache/index_changed_meta.json")
+    return _env("CHANGED_META_OUT", DEFAULT_CHANGED_META_OUT)
 
 
 def _detail_fetch_state() -> str:
-    return _env("DETAIL_FETCH_STATE", "cache/detail_fetch_state.json")
+    return _env("DETAIL_FETCH_STATE", DEFAULT_DETAIL_FETCH_STATE)
 
 
 def _fast_ttl() -> str:
@@ -212,7 +222,7 @@ def task_validate_official_overrides_schema() -> int:
         "--overrides-dir",
         _env("OFFICIAL_OVERRIDES_DIR", DEFAULT_OVERRIDES_DIR),
         "--schema",
-        _env("OFFICIAL_OVERRIDES_SCHEMA", "schema/official_overrides.schema.json"),
+        _env("OFFICIAL_OVERRIDES_SCHEMA", DEFAULT_OFFICIAL_OVERRIDES_SCHEMA),
     )
 
 
@@ -222,7 +232,7 @@ def task_validate_report_contract() -> int:
         "--mode",
         _env("MODE", "ci"),
         "--manifest",
-        _env("REPORTS_MANIFEST", "reports_manifest.json"),
+        _env("REPORTS_MANIFEST", DEFAULT_REPORTS_MANIFEST),
         "--reports-dir",
         _env("REPORTS_DIR", DEFAULT_REPORTS_DIR),
         "--report-date",
@@ -250,7 +260,7 @@ def task_validate_generated_reports() -> int:
         "--reports-dir",
         _env("REPORTS_DIR", DEFAULT_REPORTS_DIR),
         "--schema-dir",
-        _env("REPORT_SCHEMA_DIR", "schema/reports"),
+        _env("REPORT_SCHEMA_DIR", DEFAULT_REPORT_SCHEMA_DIR),
     )
 
 
@@ -695,10 +705,10 @@ def task_audit_field_completeness() -> int:
         "--allowlist",
         _env(
             "FIELD_COMPLETENESS_ALLOWLIST",
-            "data/field_completeness_allowlist.json",
+            DEFAULT_FIELD_COMPLETENESS_ALLOWLIST,
         ),
         "--out",
-        f"{reports_month_dir(report_date, base_dir=reports_dir)}/field_completeness_{report_date}.md",
+        f"{paths.reports_month_dir(report_date, base_dir=reports_dir)}/field_completeness_{report_date}.md",
     ]
     today = _env_str("TODAY")
     if today:
