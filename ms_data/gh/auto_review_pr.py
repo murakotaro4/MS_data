@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from ms_data.core.dates import JST
-from ms_data.gh.argtypes import GITHUB_ACTIONS_BOT
+from ms_data.gh.argtypes import GITHUB_ACTIONS_BOT, ReviewDeps
 from ms_data.gh.auto_review_gate import is_active_finding
 from ms_data.gh.auto_review_markers import parse_stop_marker
 from ms_data.gh.gh_json import login_of as _login
@@ -27,13 +27,6 @@ REVIEW_THREADS_PAGE_SIZE = 100
 REVIEW_THREAD_COMMENTS_PAGE_SIZE = 100
 MAX_REVIEW_THREAD_PAGES = 50
 MAX_THREAD_COMMENT_PAGES = 20
-
-
-def _facade():
-    """monkeypatch 互換のため facade モジュールを遅延参照する。"""
-    from ms_data.gh import auto_review_merge as arm
-
-    return arm
 
 
 def _head_ref(item: dict[str, Any]) -> str:
@@ -515,8 +508,8 @@ def select_resume_candidates(
     return eligible[: max(0, max_candidates)]
 
 
-def cmd_resolve_target_pr(args: argparse.Namespace) -> int:
-    client = _facade().GitHubClient(args.repo)
+def cmd_resolve_target_pr(args: argparse.Namespace, deps: ReviewDeps) -> int:
+    client = deps.client(args.repo)
     pulls = client.api_json(
         f"repos/{args.repo}/pulls?state=open&base=main&per_page=100"
     )
@@ -540,17 +533,17 @@ def cmd_resolve_target_pr(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_establish_baseline(args: argparse.Namespace) -> int:
+def cmd_establish_baseline(args: argparse.Namespace, deps: ReviewDeps) -> int:
     """レビュー since baseline を Outputs に書き出す（コメントは投稿しない）。
 
     PR created_at / HEAD committer 日時 / 最終 force-push 時刻の最遅を採用する。
     HEAD より古い issue comment（force-push 前の旧 no-issue など）を除外するため。
     """
-    client = _facade().GitHubClient(args.repo)
+    client = deps.client(args.repo)
     pr = client.api_json(f"repos/{args.repo}/pulls/{args.pr_number}")
     pr_created_at = str(pr.get("created_at") or "")
     head_sha = _head_sha(pr) if isinstance(pr, dict) else ""
-    baseline = _facade().resolve_review_since(
+    baseline = resolve_review_since(
         client=client,
         pr_number=args.pr_number,
         pr_created_at=pr_created_at,

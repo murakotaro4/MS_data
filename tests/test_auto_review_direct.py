@@ -1,4 +1,5 @@
 from argparse import Namespace
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
 from ms_data.gh import auto_review_markers, auto_review_pr, auto_review_wait
@@ -96,9 +97,7 @@ def test_github_datetime_helpers_and_jst_boundary():
     assert auto_review_pr.jst_report_date("2026-05-31T15:00:00Z") == "20260601"
 
 
-def test_poll_for_response_breaks_when_poll_interval_is_zero(
-    fake_gh, fake_time, monkeypatch
-):
+def test_poll_for_response_breaks_when_poll_interval_is_zero(fake_gh, fake_time):
     metrics = {
         "review_count": 0,
         "finding_count": 0,
@@ -109,10 +108,13 @@ def test_poll_for_response_breaks_when_poll_interval_is_zero(
         "terminal_count": 0,
         "review_complete": False,
     }
-    from ms_data.gh import auto_review_merge
+    from ms_data.gh.argtypes import ReviewDeps
 
-    monkeypatch.setattr(
-        auto_review_merge, "collect_review_metrics", lambda **_: metrics
+    deps = replace(
+        ReviewDeps.default(),
+        client=lambda _: fake_gh,
+        clock=fake_time,
+        collect_metrics=lambda **_: metrics,
     )
     args = Namespace(pr_number="97", head_sha=HEAD_SHA)
 
@@ -127,5 +129,6 @@ def test_poll_for_response_breaks_when_poll_interval_is_zero(
         trigger_comment_ids=[],
         since="2026-05-31T00:00:00Z",
         started_at=0.0,
+        deps=deps,
     ) == (False, "", False)
     assert fake_time.sleeps == []

@@ -9,8 +9,6 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from ms_data.gh import auto_review_merge
-
 GITHUB_ACTIONS_BOT = "github-actions[bot]"
 
 
@@ -95,17 +93,13 @@ class FakeTime:
 
 
 @pytest.fixture
-def fake_gh(monkeypatch) -> FakeGitHubClient:
-    client = FakeGitHubClient()
-    monkeypatch.setattr(auto_review_merge, "GitHubClient", lambda repo: client)
-    return client
+def fake_gh() -> FakeGitHubClient:
+    return FakeGitHubClient()
 
 
 @pytest.fixture
-def fake_time(monkeypatch) -> FakeTime:
-    fake = FakeTime()
-    monkeypatch.setattr(auto_review_merge, "time", fake)
-    return fake
+def fake_time() -> FakeTime:
+    return FakeTime()
 
 
 @pytest.fixture

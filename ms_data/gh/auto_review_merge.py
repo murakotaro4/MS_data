@@ -1,7 +1,6 @@
-"""auto review merge workflow の CLI facade。
+"""auto review merge workflow の CLI 公開面。
 
 実装は責務別に分割し、本モジュールは後方互換の公開面と CLI 入口を維持する。
-テストの monkeypatch 対象（GitHubClient / time / collect_review_metrics 等）もここに残す。
 """
 
 from __future__ import annotations
@@ -9,6 +8,7 @@ from __future__ import annotations
 import argparse
 import os
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -16,6 +16,7 @@ from typing import Any
 from ms_data.core.dates import JST
 from ms_data.gh.argtypes import (
     GITHUB_ACTIONS_BOT,
+    ReviewDeps,
     _allowed_trigger_logins,
     _bool_text,
     _int_or_none,
@@ -74,6 +75,7 @@ __all__ = [
     "GITHUB_ACTIONS_BOT",
     "JST",
     "GitHubClient",
+    "ReviewDeps",
     "_allowed_trigger_logins",
     "_bool_text",
     "_ensure_attempt_trigger",
@@ -379,10 +381,15 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    deps_factory: Callable[[], ReviewDeps] = ReviewDeps.default,
+) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    return args.func(args)
+    deps = deps_factory()
+    return args.func(args, deps)
 
 
 if __name__ == "__main__":

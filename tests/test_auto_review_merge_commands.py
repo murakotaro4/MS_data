@@ -5,12 +5,16 @@ FakeGitHubClient / FakeTime 注入で検証する（実 gh CLI は一切呼ば�
 """
 
 import json
+from dataclasses import replace
 from types import SimpleNamespace
+
+import pytest
 
 from ms_data.gh import auto_review_merge, gh_json
 from ms_data.gh.auto_review_merge import (
     GITHUB_ACTIONS_BOT,
     GitHubClient,
+    ReviewDeps,
     collect_review_metrics,
     ensure_review_comment,
     find_latest_bot_comment,
@@ -23,6 +27,72 @@ CODEX_BOT = "chatgpt-codex-connector[bot]"
 HEAD_SHA = "abc123"
 PAT_LOGIN = "codex-trigger-user"
 BASELINE = "2026-05-31T09:10:00Z"
+
+
+def _main(argv, fake_gh=None, fake_time=None, **changes):
+    deps = ReviewDeps.default()
+    if fake_gh is not None:
+        deps = replace(deps, client=lambda _: fake_gh)
+    if fake_time is not None:
+        deps = replace(deps, clock=fake_time)
+    if changes:
+        deps = replace(deps, **changes)
+    return main(argv, deps_factory=lambda: deps)
+
+
+def test_review_deps_default_points_to_production_implementations():
+    deps = ReviewDeps.default()
+
+    assert deps.client is auto_review_merge.GitHubClient
+    assert deps.clock is auto_review_merge.time
+    assert deps.run_gh is auto_review_merge.run_gh
+    assert deps.collect_metrics is auto_review_merge.collect_review_metrics
+    assert deps.ensure_comment is auto_review_merge.ensure_review_comment
+    assert deps.notify_stop is auto_review_merge.notify_review_stop
+    assert deps.run_url is auto_review_merge.github_run_url
+
+
+def test_cli_help_smoke():
+    with pytest.raises(SystemExit) as exc_info:
+        main(["--help"])
+
+    assert exc_info.value.code == 0
+
+
+def test_cli_default_factory_resolve_target_pr_smoke(
+    monkeypatch, tmp_path, read_github_output
+):
+    calls: list[list[str]] = []
+
+    def fake_run_gh(command, **_):
+        calls.append(command)
+        return "[]"
+
+    monkeypatch.setattr(auto_review_merge, "run_gh", fake_run_gh)
+    out = tmp_path / "output.txt"
+
+    assert (
+        main(
+            [
+                "resolve-target-pr",
+                "--repo",
+                "owner/repo",
+                "--run-id",
+                "111",
+                "--run-created-at",
+                "2026-05-31T09:00:25Z",
+                "--github-output",
+                str(out),
+            ]
+        )
+        == 0
+    )
+    assert calls[0][0:3] == [
+        "gh",
+        "api",
+        "repos/owner/repo/pulls?state=open&base=main&per_page=100",
+    ]
+    assert read_github_output(out)["skip"] == "true"
 
 
 def _codex_review(commit_id: str = HEAD_SHA) -> dict:
@@ -56,7 +126,7 @@ def _metrics(**overrides) -> dict:
     return base
 
 
-def _script_metrics(monkeypatch, script: list[dict]) -> list[dict]:
+def _script_metrics(script: list[dict]):
     """collect_review_metrics を呼び出し回数で返値を切り替えるスタブに差し替える。"""
     calls: list[dict] = []
 
@@ -65,8 +135,7 @@ def _script_metrics(monkeypatch, script: list[dict]) -> list[dict]:
         calls.append(kwargs)
         return script[index]
 
-    monkeypatch.setattr(auto_review_merge, "collect_review_metrics", fake)
-    return calls
+    return calls, fake
 
 
 # ---------------------------------------------------------------------------
@@ -351,7 +420,7 @@ def test_cmd_resolve_target_pr_writes_outputs(
     ]
     out = tmp_path / "out.txt"
 
-    rc = main(
+    rc = _main(
         [
             "resolve-target-pr",
             "--repo",
@@ -362,7 +431,8 @@ def test_cmd_resolve_target_pr_writes_outputs(
             "2026-05-31T09:00:25Z",
             "--github-output",
             str(out),
-        ]
+        ],
+        fake_gh,
     )
 
     assert rc == 0
@@ -377,7 +447,7 @@ def test_cmd_resolve_target_pr_writes_outputs(
 def test_cmd_resolve_target_pr_skip_path(fake_gh, read_github_output, tmp_path, capsys):
     out = tmp_path / "out.txt"
 
-    rc = main(
+    rc = _main(
         [
             "resolve-target-pr",
             "--repo",
@@ -388,7 +458,8 @@ def test_cmd_resolve_target_pr_skip_path(fake_gh, read_github_output, tmp_path, 
             "2026-05-31T09:00:25Z",
             "--github-output",
             str(out),
-        ]
+        ],
+        fake_gh,
     )
 
     assert rc == 0
@@ -412,7 +483,7 @@ def test_cmd_establish_baseline_writes_created_at(
     }
     out = tmp_path / "out.txt"
 
-    rc = main(
+    rc = _main(
         [
             "establish-baseline",
             "--repo",
@@ -421,7 +492,8 @@ def test_cmd_establish_baseline_writes_created_at(
             "97",
             "--github-output",
             str(out),
-        ]
+        ],
+        fake_gh,
     )
 
     assert rc == 0
@@ -444,7 +516,7 @@ def test_cmd_establish_baseline_uses_commit_date_after_force_push(
     }
     out = tmp_path / "out.txt"
 
-    rc = main(
+    rc = _main(
         [
             "establish-baseline",
             "--repo",
@@ -453,7 +525,8 @@ def test_cmd_establish_baseline_uses_commit_date_after_force_push(
             "97",
             "--github-output",
             str(out),
-        ]
+        ],
+        fake_gh,
     )
 
     assert rc == 0
@@ -486,7 +559,7 @@ def test_cmd_establish_baseline_uses_latest_force_push_event(
     ]
     out = tmp_path / "out.txt"
 
-    rc = main(
+    rc = _main(
         [
             "establish-baseline",
             "--repo",
@@ -495,7 +568,8 @@ def test_cmd_establish_baseline_uses_latest_force_push_event(
             "97",
             "--github-output",
             str(out),
-        ]
+        ],
+        fake_gh,
     )
 
     assert rc == 0
@@ -568,16 +642,14 @@ def _wait_argv(
 
 
 def test_cmd_wait_for_review_posts_review_marker_and_responds_on_attempt_1(
-    fake_time, read_github_output, tmp_path, monkeypatch, fake_gh
+    fake_time, read_github_output, tmp_path, fake_gh
 ):
     """attempt 1 で review_marker 付き投稿→初回試行内で応答検知する。"""
-    calls = _script_metrics(
-        monkeypatch, [_metrics(review_complete=True, terminal_count=1)]
-    )
+    calls, collect = _script_metrics([_metrics(review_complete=True, terminal_count=1)])
     out = tmp_path / "out.txt"
     summary = tmp_path / "summary.md"
 
-    rc = main(_wait_argv(out, summary))
+    rc = _main(_wait_argv(out, summary), fake_gh, fake_time, collect_metrics=collect)
 
     assert rc == 0
     outputs = read_github_output(out)
@@ -596,11 +668,10 @@ def test_cmd_wait_for_review_posts_review_marker_and_responds_on_attempt_1(
 
 
 def test_cmd_wait_for_review_pat_posts_from_attempt_1(
-    fake_gh, fake_time, read_github_output, tmp_path, monkeypatch, capsys
+    fake_gh, fake_time, read_github_output, tmp_path, capsys
 ):
     """PAT ありなら attempt 1 から人間名義で投稿し、応答が遅ければ retry も投稿する。"""
-    calls = _script_metrics(
-        monkeypatch,
+    calls, collect = _script_metrics(
         [
             _metrics(),
             _metrics(),
@@ -616,9 +687,13 @@ def test_cmd_wait_for_review_pat_posts_from_attempt_1(
         ensure_calls.append(kwargs)
         return real_ensure(**kwargs)
 
-    monkeypatch.setattr(auto_review_merge, "ensure_review_comment", tracking_ensure)
-
-    rc = main(_wait_argv(out, summary, max_attempts="3"))
+    rc = _main(
+        _wait_argv(out, summary, max_attempts="3"),
+        fake_gh,
+        fake_time,
+        collect_metrics=collect,
+        ensure_comment=tracking_ensure,
+    )
 
     assert rc == 0
     outputs = read_github_output(out)
@@ -636,11 +711,10 @@ def test_cmd_wait_for_review_pat_posts_from_attempt_1(
 
 
 def test_cmd_wait_for_review_without_pat_posts_bot_comment_from_attempt_1(
-    fake_gh, fake_time, read_github_output, tmp_path, monkeypatch, capsys
+    fake_gh, fake_time, read_github_output, tmp_path, capsys
 ):
     """PAT 不在でも attempt 1 から bot 名義で @codex review を投稿する。"""
-    calls = _script_metrics(
-        monkeypatch,
+    calls, collect = _script_metrics(
         [
             _metrics(),
             _metrics(),
@@ -656,10 +730,12 @@ def test_cmd_wait_for_review_without_pat_posts_bot_comment_from_attempt_1(
         ensure_calls.append(kwargs)
         return real_ensure(**kwargs)
 
-    monkeypatch.setattr(auto_review_merge, "ensure_review_comment", tracking_ensure)
-
-    rc = main(
-        _wait_argv(out, summary, max_attempts="3", pat_available="false", pat_login="")
+    rc = _main(
+        _wait_argv(out, summary, max_attempts="3", pat_available="false", pat_login=""),
+        fake_gh,
+        fake_time,
+        collect_metrics=collect,
+        ensure_comment=tracking_ensure,
     )
 
     assert rc == 0
@@ -679,15 +755,18 @@ def test_cmd_wait_for_review_without_pat_posts_bot_comment_from_attempt_1(
 
 
 def test_cmd_wait_for_review_empty_pat_login_posts_bot_comment(
-    fake_gh, fake_time, read_github_output, tmp_path, monkeypatch
+    fake_gh, fake_time, read_github_output, tmp_path
 ):
     """pat_available=true でも pat_login 空なら bot 名義で投稿する。"""
-    _script_metrics(monkeypatch, [_metrics()])
+    _, collect = _script_metrics([_metrics()])
     out = tmp_path / "out.txt"
     summary = tmp_path / "summary.md"
 
-    rc = main(
-        _wait_argv(out, summary, max_attempts="2", pat_available="true", pat_login="")
+    rc = _main(
+        _wait_argv(out, summary, max_attempts="2", pat_available="true", pat_login=""),
+        fake_gh,
+        fake_time,
+        collect_metrics=collect,
     )
 
     assert rc == 0
@@ -700,16 +779,20 @@ def test_cmd_wait_for_review_empty_pat_login_posts_bot_comment(
 
 
 def test_cmd_wait_for_review_disconnect_aborts_early(
-    fake_time, read_github_output, tmp_path, monkeypatch, fake_gh
+    fake_time, read_github_output, tmp_path, fake_gh
 ):
-    calls = _script_metrics(
-        monkeypatch,
-        [_metrics(disconnect_count=1, stop_reason="disconnected")],
+    calls, collect = _script_metrics(
+        [_metrics(disconnect_count=1, stop_reason="disconnected")]
     )
     out = tmp_path / "out.txt"
     summary = tmp_path / "summary.md"
 
-    rc = main(_wait_argv(out, summary, max_attempts="3"))
+    rc = _main(
+        _wait_argv(out, summary, max_attempts="3"),
+        fake_gh,
+        fake_time,
+        collect_metrics=collect,
+    )
 
     assert rc == 0
     outputs = read_github_output(out)
@@ -723,13 +806,18 @@ def test_cmd_wait_for_review_disconnect_aborts_early(
 
 
 def test_cmd_wait_for_review_times_out_all_attempts(
-    fake_gh, fake_time, read_github_output, tmp_path, monkeypatch
+    fake_gh, fake_time, read_github_output, tmp_path
 ):
-    calls = _script_metrics(monkeypatch, [_metrics()])
+    calls, collect = _script_metrics([_metrics()])
     out = tmp_path / "out.txt"
     summary = tmp_path / "summary.md"
 
-    rc = main(_wait_argv(out, summary, max_attempts="2"))
+    rc = _main(
+        _wait_argv(out, summary, max_attempts="2"),
+        fake_gh,
+        fake_time,
+        collect_metrics=collect,
+    )
 
     assert rc == 0
     outputs = read_github_output(out)
@@ -745,13 +833,18 @@ def test_cmd_wait_for_review_times_out_all_attempts(
 
 
 def test_cmd_wait_for_review_settle_sleep(
-    fake_gh, fake_time, read_github_output, tmp_path, monkeypatch
+    fake_gh, fake_time, read_github_output, tmp_path
 ):
-    _script_metrics(monkeypatch, [_metrics(review_complete=True, terminal_count=1)])
+    _, collect = _script_metrics([_metrics(review_complete=True, terminal_count=1)])
     out = tmp_path / "out.txt"
     summary = tmp_path / "summary.md"
 
-    rc = main(_wait_argv(out, summary, settle="45"))
+    rc = _main(
+        _wait_argv(out, summary, settle="45"),
+        fake_gh,
+        fake_time,
+        collect_metrics=collect,
+    )
 
     assert rc == 0
     assert fake_time.sleeps == [45]
@@ -761,13 +854,18 @@ def test_cmd_wait_for_review_settle_sleep(
 
 
 def test_cmd_wait_for_review_invalid_settle_uses_default(
-    fake_gh, fake_time, read_github_output, tmp_path, monkeypatch
+    fake_gh, fake_time, read_github_output, tmp_path
 ):
-    _script_metrics(monkeypatch, [_metrics(review_complete=True, terminal_count=1)])
+    _, collect = _script_metrics([_metrics(review_complete=True, terminal_count=1)])
     out = tmp_path / "out.txt"
     summary = tmp_path / "summary.md"
 
-    rc = main(_wait_argv(out, summary, settle="invalid"))
+    rc = _main(
+        _wait_argv(out, summary, settle="invalid"),
+        fake_gh,
+        fake_time,
+        collect_metrics=collect,
+    )
 
     assert rc == 0
     assert fake_time.sleeps == [60]
@@ -796,7 +894,7 @@ def test_cmd_check_gate_merge_ok(fake_gh, read_github_output, tmp_path):
     fake_gh.responses["/pulls/97/reviews"] = [_codex_review()]
     out = tmp_path / "out.txt"
 
-    rc = main(_check_gate_argv(out, trigger_comment_ids="10, ,11"))
+    rc = _main(_check_gate_argv(out, trigger_comment_ids="10, ,11"), fake_gh)
 
     assert rc == 0
     outputs = read_github_output(out)
@@ -810,7 +908,7 @@ def test_cmd_check_gate_findings_stop(fake_gh, read_github_output, tmp_path):
     fake_gh.responses["/pulls/97/comments"] = [_codex_finding()]
     out = tmp_path / "out.txt"
 
-    rc = main(_check_gate_argv(out))
+    rc = _main(_check_gate_argv(out), fake_gh)
 
     assert rc == 0
     outputs = read_github_output(out)
@@ -829,7 +927,7 @@ def test_cmd_check_gate_resolved_findings_do_not_block(
     fake_gh.resolved_comment_ids = {"3820325517"}
     out = tmp_path / "out.txt"
 
-    rc = main(_check_gate_argv(out))
+    rc = _main(_check_gate_argv(out), fake_gh)
 
     assert rc == 0
     outputs = read_github_output(out)
@@ -867,7 +965,7 @@ def _record_stop_argv(summary, *, stop_reason, findings="0"):
 def test_cmd_record_stop_no_response_posts_comment(fake_gh, tmp_path):
     summary = tmp_path / "summary.md"
 
-    rc = main(_record_stop_argv(summary, stop_reason="no_response"))
+    rc = _main(_record_stop_argv(summary, stop_reason="no_response"), fake_gh)
 
     assert rc == 0
     assert len(fake_gh.posted_comments) == 1
@@ -883,7 +981,7 @@ def test_cmd_record_stop_no_response_posts_comment(fake_gh, tmp_path):
 def test_cmd_record_stop_disconnected_message(fake_gh, tmp_path):
     summary = tmp_path / "summary.md"
 
-    rc = main(_record_stop_argv(summary, stop_reason="disconnected"))
+    rc = _main(_record_stop_argv(summary, stop_reason="disconnected"), fake_gh)
 
     assert rc == 0
     body = fake_gh.posted_comments[0][1]
@@ -907,7 +1005,9 @@ def test_cmd_record_stop_findings_idempotent(fake_gh, tmp_path):
     ]
     summary = tmp_path / "summary.md"
 
-    rc = main(_record_stop_argv(summary, stop_reason="findings", findings="5"))
+    rc = _main(
+        _record_stop_argv(summary, stop_reason="findings", findings="5"), fake_gh
+    )
 
     assert rc == 0
     assert fake_gh.posted_comments == []  # 既存の停止コメントがあるため再投稿しない
@@ -940,7 +1040,7 @@ def test_cmd_export_findings_writes_json_and_path_only_outputs(
     findings_path = tmp_path / "findings.json"
     out = tmp_path / "out.txt"
 
-    rc = main(
+    rc = _main(
         [
             "export-findings",
             "--repo",
@@ -953,7 +1053,8 @@ def test_cmd_export_findings_writes_json_and_path_only_outputs(
             str(findings_path),
             "--github-output",
             str(out),
-        ]
+        ],
+        fake_gh,
     )
 
     assert rc == 0
@@ -975,7 +1076,7 @@ def test_cmd_write_report_writes_json_and_summary(tmp_path):
     out = tmp_path / "reports" / "auto_review_20260531.json"
     summary = tmp_path / "summary.md"
 
-    rc = main(
+    rc = _main(
         [
             "write-report",
             "--report-date",
@@ -1022,10 +1123,9 @@ def test_cmd_write_report_writes_json_and_summary(tmp_path):
     assert f"- report: {out}" in text
 
 
-def test_cmd_resume_honors_facade_merge_and_notify_monkeypatch(
-    fake_gh, read_github_output, tmp_path, monkeypatch
+def test_cmd_resume_honors_injected_deps_through_merge_and_notify(
+    fake_gh, fake_time, read_github_output, tmp_path
 ):
-    """分割後も facade 上の _merge_and_notify monkeypatch が効くこと。"""
     stop = auto_review_merge.stop_marker("codex_no_response", "99", HEAD_SHA)
     fake_gh.responses["/pulls?state=open"] = [
         {
@@ -1053,14 +1153,22 @@ def test_cmd_resume_honors_facade_merge_and_notify_monkeypatch(
         "commit": {"committer": {"date": BASELINE}}
     }
 
-    merge_calls: list[dict] = []
+    fake_gh.responses["/pulls/97"] = {"head": {"sha": HEAD_SHA}}
+    gh_calls: list[list[str]] = []
 
-    def fake_merge(**kwargs):
-        merge_calls.append(kwargs)
-        return "merge-sha-patched"
+    def fake_run_gh(command):
+        gh_calls.append(command)
+        if command[1:3] == ["pr", "view"]:
+            return json.dumps({"state": "MERGED", "mergeCommit": {"oid": "merge-sha"}})
+        return ""
 
-    monkeypatch.setattr(auto_review_merge, "_merge_and_notify", fake_merge)
-    _script_metrics(monkeypatch, [_metrics(merge_ok=True, review_complete=True)])
+    deps = replace(
+        ReviewDeps.default(),
+        client=lambda _: fake_gh,
+        clock=fake_time,
+        run_gh=fake_run_gh,
+        collect_metrics=lambda **_: _metrics(merge_ok=True, review_complete=True),
+    )
 
     out = tmp_path / "out.txt"
     summary = tmp_path / "summary.md"
@@ -1077,16 +1185,19 @@ def test_cmd_resume_honors_facade_merge_and_notify_monkeypatch(
             str(out),
             "--step-summary",
             str(summary),
-        ]
+        ],
+        deps_factory=lambda: deps,
     )
 
     assert rc == 0
-    assert len(merge_calls) == 1
-    assert merge_calls[0]["pr_number"] == "97"
-    assert merge_calls[0]["evaluated_sha"] == HEAD_SHA
+    assert [call[1:3] for call in gh_calls] == [
+        ["pr", "merge"],
+        ["pr", "view"],
+        ["workflow", "run"],
+    ]
     outputs = read_github_output(out)
     assert outputs["merged_count"] == "1"
-    assert "- merged: #97 (merge-sha-patched)" in summary.read_text(encoding="utf-8")
+    assert "- merged: #97 (merge-sha)" in summary.read_text(encoding="utf-8")
 
 
 def test_cmd_resume_stops_on_findings_without_retry(
@@ -1126,16 +1237,13 @@ def test_cmd_resume_stops_on_findings_without_retry(
         notify_calls.append(kwargs)
         return 0
 
-    monkeypatch.setattr(auto_review_merge, "notify_review_stop", fake_notify)
     ensure_calls: list[dict] = []
 
     def fake_ensure(**kwargs):
         ensure_calls.append(kwargs)
         raise AssertionError("findings 停止時に retry 投稿してはならない")
 
-    monkeypatch.setattr(auto_review_merge, "ensure_review_comment", fake_ensure)
-    _script_metrics(
-        monkeypatch,
+    _, collect = _script_metrics(
         [
             _metrics(
                 finding_count=1,
@@ -1152,7 +1260,7 @@ def test_cmd_resume_stops_on_findings_without_retry(
     monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
     monkeypatch.setenv("GITHUB_RUN_ID", "555")
 
-    rc = main(
+    rc = _main(
         [
             "resume",
             "--repo",
@@ -1171,7 +1279,11 @@ def test_cmd_resume_stops_on_findings_without_retry(
             str(out),
             "--step-summary",
             str(summary),
-        ]
+        ],
+        fake_gh,
+        collect_metrics=collect,
+        ensure_comment=fake_ensure,
+        notify_stop=fake_notify,
     )
 
     assert rc == 0
@@ -1253,9 +1365,7 @@ def test_cmd_resume_processes_only_newest_and_supersedes_older(
         notify_calls.append(kwargs)
         return 0
 
-    monkeypatch.setattr(auto_review_merge, "notify_review_stop", fake_notify)
-    calls = _script_metrics(
-        monkeypatch,
+    calls, collect = _script_metrics(
         [
             _metrics(
                 finding_count=1,
@@ -1272,7 +1382,7 @@ def test_cmd_resume_processes_only_newest_and_supersedes_older(
     monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
     monkeypatch.setenv("GITHUB_RUN_ID", "556")
 
-    rc = main(
+    rc = _main(
         [
             "resume",
             "--repo",
@@ -1289,7 +1399,10 @@ def test_cmd_resume_processes_only_newest_and_supersedes_older(
             str(out),
             "--step-summary",
             str(summary),
-        ]
+        ],
+        fake_gh,
+        collect_metrics=collect,
+        notify_stop=fake_notify,
     )
 
     assert rc == 0
