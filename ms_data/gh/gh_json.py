@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -17,10 +19,14 @@ from typing import Any
 
 GhRunner = Callable[[list[str]], str]
 
+_GH_GET_RETRY_DELAYS = (2, 4, 8)
+_GH_TRANSIENT_ERROR_PATTERN = re.compile(
+    r"HTTP 5\d\d|timeout|timed out|connection|could not resolve",
+    re.IGNORECASE,
+)
 
-def run_gh(
-    args: list[str], *, env_overrides: dict[str, str] | None = None
-) -> str:
+
+def run_gh(args: list[str], *, env_overrides: dict[str, str] | None = None) -> str:
     kwargs: dict[str, Any] = {
         "check": True,
         "text": True,
@@ -42,6 +48,41 @@ def run_gh(
             )
         raise
     return result.stdout
+
+
+def run_gh_get(
+    args: list[str],
+    *,
+    env_overrides: dict[str, str] | None = None,
+    sleeper: Callable[[float], object] = time.sleep,
+) -> str:
+    """一時的な失敗だけを再試行する、冪等な gh GET 専用 runner。"""
+
+    def runner(run_args: list[str]) -> str:
+        return run_gh(run_args, env_overrides=env_overrides)
+
+    return _run_gh_get_with_runner(args, runner=runner, sleeper=sleeper)
+
+
+def _run_gh_get_with_runner(
+    args: list[str],
+    *,
+    runner: GhRunner,
+    sleeper: Callable[[float], object] = time.sleep,
+) -> str:
+    for delay in (*_GH_GET_RETRY_DELAYS, None):
+        try:
+            return runner(args)
+        except subprocess.CalledProcessError as error:
+            stderr = error.stderr
+            is_transient = isinstance(stderr, str) and bool(
+                _GH_TRANSIENT_ERROR_PATTERN.search(stderr)
+            )
+            if not is_transient or delay is None:
+                raise
+            sleeper(delay)
+
+    raise AssertionError("unreachable")
 
 
 def flatten_pages(value: Any) -> Any:
@@ -84,7 +125,14 @@ def gh_api_json(
         cmd.extend(["-H", header])
     for key, value in (fields or {}).items():
         cmd.extend(["-f", f"{key}={value}"])
-    return parse_json_stream(runner(cmd))
+    if method == "GET" and not fields:
+        if runner is run_gh:
+            output = run_gh_get(cmd)
+        else:
+            output = _run_gh_get_with_runner(cmd, runner=runner)
+    else:
+        output = runner(cmd)
+    return parse_json_stream(output)
 
 
 def load_json_stream(path: Path) -> Any:
