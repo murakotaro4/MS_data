@@ -73,12 +73,13 @@ def load_lifecycle_metadata(
     if not directory.exists() or not directory.is_dir():
         return {}
 
+    # 期限情報だけを読む経路でも、適用経路と同じ strict 契約を先に通す。
+    update_msdata.load_official_overrides(directory)
+
     metadata: dict[tuple[str, str], dict[str, str]] = {}
     for path in official_overrides.iter_official_override_files(directory):
         data = official_overrides.load_official_override_data(path)
-        if not isinstance(data, dict):
-            continue
-        parsed = official_overrides.parse_official_override_data(data)
+        parsed = official_overrides.parse_official_override_data(data, source=path)
         if not parsed.active:
             continue
 

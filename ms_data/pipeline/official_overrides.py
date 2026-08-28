@@ -46,22 +46,36 @@ def iter_official_override_files(directory: Path) -> list[Path]:
     return sorted(directory.glob("*.json"))
 
 
-def load_official_override_data(path: Path) -> Any:
-    """official_overrides の JSON を検証せず読み込む。"""
+def load_official_override_data(path: Path) -> dict[str, Any]:
+    """official_overrides の JSON object を読み込む。"""
 
-    return load_json(path)
+    data = load_json(path)
+    if not isinstance(data, dict):
+        raise ValueError(f"official override file must be an object: {path}")
+    return data
 
 
-def parse_official_override_data(data: Any) -> ParsedOfficialOverrideData:
-    """active と entries fallback だけを解決し、raw 構造を返す。
+def parse_official_override_data(
+    data: Any, *, source: Path | str | None = None
+) -> ParsedOfficialOverrideData:
+    """active と overrides を解決し、raw 構造を返す。
 
-    data の型検証は adapter の責務。非 object を渡した場合の例外も変換しない。
+    読み込み経路によらず外形不正は ValueError として扱う。
     """
+
+    location = f": {source}" if source is not None else ""
+    if not isinstance(data, dict):
+        raise ValueError(f"official override file must be an object{location}")
+    if "overrides" not in data:
+        raise ValueError(f"official override overrides missing{location}")
+    entries = data["overrides"]
+    if not isinstance(entries, list):
+        raise ValueError(f"official override entries must be a list{location}")
 
     return ParsedOfficialOverrideData(
         data=data,
         active=data.get("active", True) is not False,
-        entries=data.get("overrides", data.get("records", [])),
+        entries=entries,
     )
 
 
@@ -86,7 +100,8 @@ def load_official_overrides(
     }
 
     values のキーは valid_value_keys（msData の正規フィールド集合）に
-    含まれている必要があり、stale_values のキーは values の部分集合に限る。
+    含まれている必要があり、stale_values は非空かつ alias 正規化後に
+    values と同じキー集合でなければならない。
     形式不正は ValueError として呼び出し側で実行を止める（黙って無視しない）。
     """
 
@@ -98,15 +113,8 @@ def load_official_overrides(
     overrides: dict[str, dict[str, OfficialOverrideValue]] = {}
     for path in iter_official_override_files(directory):
         data = load_official_override_data(path)
-        if not isinstance(data, dict):
-            raise ValueError(f"official override file must be an object: {path}")
-        parsed = parse_official_override_data(data)
-        if not parsed.active:
-            continue
+        parsed = parse_official_override_data(data, source=path)
         entries = parsed.entries
-        if not isinstance(entries, list):
-            raise ValueError(f"official override entries must be a list: {path}")
-
         for index, entry in enumerate(entries):
             if not isinstance(entry, dict):
                 raise ValueError(
@@ -132,26 +140,32 @@ def load_official_overrides(
                     f"{invalid_keys}"
                 )
 
-            raw_stale_values = entry.get("stale_values", {})
-            if not isinstance(raw_stale_values, dict):
+            raw_stale_values = entry.get("stale_values")
+            if not isinstance(raw_stale_values, dict) or not raw_stale_values:
                 raise ValueError(
-                    f"official override entry stale_values must be an object: "
+                    "official override entry stale_values must be a non-empty object: "
                     f"{path}#{index}"
                 )
             stale_values = apply_key_aliases(dict(raw_stale_values))
-            invalid_stale_keys = sorted(set(stale_values) - set(values))
-            if invalid_stale_keys:
+            missing_stale_keys = sorted(set(values) - set(stale_values))
+            extra_stale_keys = sorted(set(stale_values) - set(values))
+            if missing_stale_keys or extra_stale_keys:
                 raise ValueError(
-                    f"official override stale_values must match values keys: "
-                    f"{path}#{index} {invalid_stale_keys}"
+                    "official override stale_values keys must match values keys: "
+                    f"{path}#{index} missing={missing_stale_keys} "
+                    f"extra={extra_stale_keys}"
                 )
+
+            if not parsed.active:
+                continue
 
             name = normalize_ms_name(raw_name)
             target = overrides.setdefault(name, {})
             for key, value in values.items():
-                spec: OfficialOverrideValue = {"value": value}
-                if key in stale_values:
-                    spec["stale_value"] = stale_values[key]
+                spec: OfficialOverrideValue = {
+                    "value": value,
+                    "stale_value": stale_values[key],
+                }
                 target[key] = spec
     return overrides
 
