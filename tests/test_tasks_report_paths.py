@@ -3,7 +3,6 @@ from pathlib import Path
 
 import ms_data.tasks as tasks
 
-
 REPORT_DATE = "20260827"
 REPORT_OUTPUT_ENVS = (
     "PROVENANCE_OUT",

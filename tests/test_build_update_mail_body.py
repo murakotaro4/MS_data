@@ -2,7 +2,6 @@ from pathlib import Path
 
 from ms_data.reporting import build_update_mail_body
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 

@@ -11,7 +11,6 @@ from pathlib import Path
 from ms_data.pipeline.restore_snapshot import restore_snapshot
 from ms_data.validation import validate_msdata, validate_report_contract
 
-
 REPORT_DATE = "20260531"
 REPORT_YEAR_MONTH = f"{REPORT_DATE[:4]}/{REPORT_DATE[4:6]}"
 SOURCE_RUN_ID = "12345"

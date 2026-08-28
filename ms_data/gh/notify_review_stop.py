@@ -165,7 +165,7 @@ def notify_review_stop(
     )
     try:
         mail_sender(subject, body)
-    except Exception as exc:  # noqa: BLE001 - CLI は非ゼロで失敗を伝える
+    except Exception as exc:
         print(f"メール送信に失敗しました: {exc}", file=sys.stderr)
         return 1
     return 0

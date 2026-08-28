@@ -31,14 +31,14 @@ from ms_data.gh.auto_review_pr import (
     extract_codex_findings,
     fetch_commit_committer_date,
     fetch_resolved_review_comment_ids,
-    resolved_comment_ids_from_graphql,
     github_run_url,
     jst_report_date,
-    latest_force_push_created_at,
     later_iso8601,
+    latest_force_push_created_at,
     resolve_review_since,
     resolve_source_run_id,
     resolve_target_pr,
+    resolved_comment_ids_from_graphql,
     select_resume_candidates,
 )
 from ms_data.gh.auto_review_resume import (
@@ -65,8 +65,8 @@ from ms_data.gh.notify_review_stop import notify_review_stop
 
 __all__ = [
     "GITHUB_ACTIONS_BOT",
-    "GitHubClient",
     "JST",
+    "GitHubClient",
     "_allowed_trigger_logins",
     "_bool_text",
     "_ensure_attempt_trigger",

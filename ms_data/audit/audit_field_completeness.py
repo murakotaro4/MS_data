@@ -19,7 +19,6 @@ from ms_data.reporting.rendering import append_table as append_markdown_table
 from ms_data.reporting.rendering import value_text
 from ms_data.scraping.detail_page import BASE_REQUIRED
 
-
 ALLOWLIST_DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}\Z")
 
 REQUIRED_KEYS = frozenset(

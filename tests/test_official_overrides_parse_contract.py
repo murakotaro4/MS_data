@@ -13,7 +13,6 @@ from ms_data.audit.audit_official_overrides import load_lifecycle_metadata
 from ms_data.pipeline import update_msdata
 from ms_data.validation import validate_official_overrides_schema
 
-
 BASE_ENTRY = {
     "MS名": "基準機_LV1",
     "values": {"HP": 10000},

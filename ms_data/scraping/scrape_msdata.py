@@ -54,6 +54,26 @@ from bs4 import BeautifulSoup
 from ms_data.core.labels import clean_text, normalize_row_label
 from ms_data.net.cache_http import CacheConfig, CacheHTTP
 from ms_data.net.client import get_scraper_client
+from ms_data.scraping.change_detection import (
+    find_latest_provenance,
+    load_msdata_base_index,
+    select_changed_index_items,
+)
+from ms_data.scraping.detail_page import (
+    build_base_records,
+    find_detail_table,
+    parse_deployment,
+    parse_details,
+    parse_env_suitability,
+)
+from ms_data.scraping.fetch_state import (
+    load_detail_fetch_state,
+    remember_detail_fetch,
+    remember_detail_fetch_failure,
+    write_detail_fetch_state,
+    write_fetch_stats,
+)
+from ms_data.scraping.index_page import parse_index
 
 # この facade がサポートする公開面（テスト・CLI が参照する名前）
 # 動的参照やリポジトリ外の互換は保証しない。
@@ -64,26 +84,6 @@ from ms_data.scraping.text_values import (
     parse_ttl,
     symbol_to_bool,
     to_int,
-)
-from ms_data.scraping.index_page import parse_index
-from ms_data.scraping.detail_page import (
-    build_base_records,
-    find_detail_table,
-    parse_deployment,
-    parse_details,
-    parse_env_suitability,
-)
-from ms_data.scraping.change_detection import (
-    find_latest_provenance,
-    load_msdata_base_index,
-    select_changed_index_items,
-)
-from ms_data.scraping.fetch_state import (
-    load_detail_fetch_state,
-    remember_detail_fetch,
-    remember_detail_fetch_failure,
-    write_detail_fetch_state,
-    write_fetch_stats,
 )
 
 INDEX_URL = "https://w.atwiki.jp/battle-operation2/pages/377.html"
@@ -194,12 +194,13 @@ def cmd_details(args: argparse.Namespace) -> int:
             try:
                 text, _meta = cache.get(url)
                 # 変更がなければスキップ（オプション）
-                if getattr(args, "changed_only", False):
-                    if not _meta.get("semantic_changed", False):
-                        remember_detail_fetch(
-                            detail_state, url, item, _meta, run_started_at
-                        )
-                        continue
+                if getattr(args, "changed_only", False) and not _meta.get(
+                    "semantic_changed", False
+                ):
+                    remember_detail_fetch(
+                        detail_state, url, item, _meta, run_started_at
+                    )
+                    continue
                 per_level = parse_details(text)
                 for rec in per_level.values():
                     merged = _merge_index_fields(rec, item)

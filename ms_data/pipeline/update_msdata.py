@@ -18,18 +18,18 @@ import argparse
 import json
 import os
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
-from collections.abc import Iterable
 
 from ms_data.core.json_io import load_json
+from ms_data.core.labels import apply_key_aliases
 from ms_data.core.ms_names import (
     MS_NAME_WITH_LEVEL,
     normalize_ms_base_name,
     normalize_ms_name,
 )
 from ms_data.core.paths import OFFICIAL_OVERRIDES_DIR
-from ms_data.core.labels import apply_key_aliases
 
 # 後方互換 re-export（監査・検証モジュールとテストが本モジュール属性として参照）
 from ms_data.pipeline import official_overrides as _official_overrides
@@ -37,7 +37,6 @@ from ms_data.pipeline.official_overrides import (
     OfficialOverrideValue,
     apply_official_overrides,
 )
-
 
 CANONICAL_ORDER = (
     "MS名",

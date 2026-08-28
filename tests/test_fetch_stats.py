@@ -10,7 +10,6 @@ import ms_data.net.cache_http as cache_http
 import ms_data.scraping.scrape_msdata as sm
 from ms_data.net.cache_http import CacheConfig, CacheHTTP
 
-
 HTML = (
     "<html><title>T</title><table><tr><th></th><th>LV1</th></tr>"
     "<tr><th>機体HP</th><td>10000</td></tr></table></html>"

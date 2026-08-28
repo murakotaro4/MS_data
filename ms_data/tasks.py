@@ -13,8 +13,8 @@ import os
 import subprocess
 import sys
 import tarfile
-from pathlib import Path
 from collections.abc import Callable
+from pathlib import Path
 
 from ms_data.core.dates import today_jst
 from ms_data.core.env import env_flag as _env_flag
@@ -23,7 +23,6 @@ from ms_data.core.env import env_int as _env_int
 from ms_data.core.env import env_str as _env_str
 from ms_data.core.json_io import load_json as _load_json_file
 from ms_data.core.paths import reports_month_dir
-
 
 INDEX_URL = "https://w.atwiki.jp/battle-operation2/pages/377.html"
 

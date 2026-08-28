@@ -12,7 +12,6 @@ import pytest
 
 from ms_data.net.client import get_browser_client, get_scraper_client
 
-
 SCRAPER_USER_AGENT = "msdata-scraper/0.1 (+https://github.com/; contact=local)"
 BROWSER_USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "

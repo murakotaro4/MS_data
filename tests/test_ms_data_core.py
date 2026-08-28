@@ -24,7 +24,6 @@ from ms_data.gh.gh_json import (
 from ms_data.gh.outputs import append_step_summary, write_github_output
 from ms_data.reporting.rendering import value_text
 
-
 # --- json_io ---
 
 

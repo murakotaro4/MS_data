@@ -1,7 +1,8 @@
-import httpx
 from pathlib import Path
 
-from ms_data.net.cache_http import CacheHTTP, CacheConfig
+import httpx
+
+from ms_data.net.cache_http import CacheConfig, CacheHTTP
 
 
 def _resp(

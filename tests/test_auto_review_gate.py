@@ -1,6 +1,5 @@
 from ms_data.gh.auto_review_gate import _load_json, evaluate
 
-
 HEAD_SHA = "abc123"
 SINCE = "2026-05-31T08:45:23Z"
 CODEX_USER = {"login": "chatgpt-codex-connector"}

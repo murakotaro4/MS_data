@@ -1,5 +1,6 @@
 import pytest
 
+from ms_data.core.dates import JST as CORE_JST
 from ms_data.gh.auto_review_merge import (
     GITHUB_ACTIONS_BOT,
     JST,
@@ -24,7 +25,6 @@ from ms_data.gh.auto_review_merge import (
     select_resume_candidates,
     stop_marker,
 )
-from ms_data.core.dates import JST as CORE_JST
 
 
 def test_facade_reexports_jst_from_core_dates():

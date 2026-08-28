@@ -3,7 +3,6 @@ from datetime import datetime, timedelta, timezone
 
 from ms_data.gh import auto_review_markers, auto_review_pr, auto_review_wait
 
-
 CODEX_BOT = "chatgpt-codex-connector[bot]"
 HEAD_SHA = "abc123"
 

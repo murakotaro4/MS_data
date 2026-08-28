@@ -7,8 +7,7 @@ FakeGitHubClient / FakeTime 注入で検証する（実 gh CLI は一切呼ば�
 import json
 from types import SimpleNamespace
 
-from ms_data.gh import auto_review_merge
-from ms_data.gh import gh_json
+from ms_data.gh import auto_review_merge, gh_json
 from ms_data.gh.auto_review_merge import (
     GITHUB_ACTIONS_BOT,
     GitHubClient,

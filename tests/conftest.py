@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from ms_data.gh import auto_review_merge  # noqa: E402
+from ms_data.gh import auto_review_merge
 
 GITHUB_ACTIONS_BOT = "github-actions[bot]"
 

@@ -14,8 +14,6 @@ HTTP 取得のキャッシュ層（ETag/Last-Modified + TTL）。
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
 import datetime as dt
 import hashlib
 import json
@@ -23,6 +21,8 @@ import re
 import sys
 import time
 import urllib.parse
+from dataclasses import dataclass
+from pathlib import Path
 
 import httpx
 from bs4 import BeautifulSoup, Comment

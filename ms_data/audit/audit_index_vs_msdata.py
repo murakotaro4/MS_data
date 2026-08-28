@@ -17,10 +17,9 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import re
-from collections import Counter, defaultdict
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
-from collections.abc import Iterable
 
 from ms_data.core.json_io import load_json
 
@@ -170,7 +169,7 @@ def audit(index_path: Path, ms_path: Path) -> dict[str, Any]:
 def render_markdown(result: dict[str, Any]) -> str:
     now = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     lines: list[str] = []
-    lines.append(f"# index vs msData 監査レポート")
+    lines.append("# index vs msData 監査レポート")
     lines.append("")
     lines.append(f"generated at: {now}")
     lines.append("")
