@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-08-28T20:41:05Z",
+  "report_date": "20260829",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "a341da6f710d582593dbe720bbf80ad64bd78be4"
+  },
+  "github": {
+    "run_id": "33209223360",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "c80bdc23e3f3769b8c903b640435ba286f31cff907916fbbb059b9a90ac83484",
+      "size_bytes": 145318,
+      "record_count": 591
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "f1dc8e7dd46b841640f58db29a42fe84dde6dd62807ad2463f750e8a137a5ed3",
+      "size_bytes": 85048,
+      "record_count": 71
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "6e5f162f1e22fd990887637bea7918db099af5fc75ad1acc174b4e0aa9bb1c1e",
+      "size_bytes": 110853,
+      "record_count": 71
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "8a9cca26409bd0dee334a0964b2fc34e1c1fe56acb0842d2bafacb791492f29b",
+      "file_count": 60,
+      "size_bytes": 10212517
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "64c961ddf69f59c6250eb2b78ea82cab8c4a972b587d69400c77713eaa760966",
+      "size_bytes": 2630324,
+      "record_count": 1702
+    },
+    "diff_report": {
+      "path": "reports/2026/08/diff_msdata_20260829.md",
+      "sha256": "cf65531db822240c3eb60c826115aafcd907422fcc39d01bb9afb2b6af384185",
+      "size_bytes": 2235
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260829-run-33209223360",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260829-run-33209223360",
+    "asset_name": "raw_snapshot_20260829_run33209223360.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260829-run-33209223360"
+  }
+}
