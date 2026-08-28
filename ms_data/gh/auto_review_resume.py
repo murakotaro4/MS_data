@@ -8,6 +8,24 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from ms_data.gh.argtypes import (
+    GITHUB_ACTIONS_BOT,
+    _allowed_trigger_logins,
+    _bool_text,
+    _positive_int,
+)
+from ms_data.gh.auto_review_markers import (
+    find_latest_bot_comment,
+    recovered_marker,
+    resume_marker,
+    stop_marker,
+)
+from ms_data.gh.auto_review_pr import (
+    _head_ref,
+    _head_sha,
+    extract_codex_findings,
+    resolve_source_run_id,
+)
 from ms_data.gh.outputs import append_step_summary, write_github_output
 
 if TYPE_CHECKING:
@@ -23,7 +41,7 @@ def _facade():
 
 def _fetch_current_head_sha(client: GitHubClient, pr_number: str) -> str:
     pr = client.api_json(f"repos/{client.repo}/pulls/{pr_number}")
-    return _facade()._head_sha(pr)
+    return _head_sha(pr)
 
 
 def _merge_and_notify(
@@ -41,7 +59,7 @@ def _merge_and_notify(
     HEAD 変更・未 MERGED・merge_commit_sha 欠落は RuntimeError を送出し、
     cmd_resume を非ゼロ終了させて notify_failure に拾わせる。
     """
-    current_sha = _facade()._fetch_current_head_sha(client, pr_number)
+    current_sha = _fetch_current_head_sha(client, pr_number)
     if current_sha != evaluated_sha:
         raise RuntimeError(
             f"PR #{pr_number}: head SHA changed "
@@ -105,7 +123,7 @@ def _merge_and_notify(
             f"source_run_id={source_run_id}",
         ]
     )
-    marker = _facade().recovered_marker(resume_run_id, merge_sha, source_run_id)
+    marker = recovered_marker(resume_run_id, merge_sha, source_run_id)
     client.post_issue_comment(
         pr_number,
         f"翌朝レスキューで自動マージしました。\n\n{marker}",
@@ -168,13 +186,13 @@ def _handle_resume_findings(
     resume_run_id: str,
 ) -> None:
     """resume 中に findings を検知したとき停止マーカー投稿とメール通知を行う。"""
-    marker = _facade().stop_marker("codex_findings", resume_run_id, head_sha)
+    marker = stop_marker("codex_findings", resume_run_id, head_sha)
     message = (
         f"Codex のファイル指摘があるため、翌朝レスキューでの自動マージを停止しました。"
         f"手動で確認してください。 (run_id: {resume_run_id})"
     )
-    existing = _facade().find_latest_bot_comment(
-        client.issue_comments(pr_number), marker, {_facade().GITHUB_ACTIONS_BOT}
+    existing = find_latest_bot_comment(
+        client.issue_comments(pr_number), marker, {GITHUB_ACTIONS_BOT}
     )
     if existing is None:
         client.post_issue_comment(pr_number, f"{message}\n\n{marker}")
@@ -182,7 +200,7 @@ def _handle_resume_findings(
     file_comments = client.api_json(
         f"repos/{client.repo}/pulls/{pr_number}/comments", paginate=True
     )
-    findings = _facade().extract_codex_findings(
+    findings = extract_codex_findings(
         file_comments,
         head_sha,
         client.resolved_review_comment_ids(pr_number),
@@ -215,10 +233,10 @@ def _handle_resume_findings(
 def cmd_resume(args: argparse.Namespace) -> int:
     """翌朝レスキュー: no_response / disconnected で止まった PR を回収する。"""
     client = _facade().GitHubClient(args.repo)
-    max_candidates = _facade()._positive_int(args.max_candidates, 3)
-    retry_wait_seconds = _facade()._positive_int(args.retry_wait_seconds, 300)
-    poll_seconds = _facade()._positive_int(args.poll_seconds, 30)
-    pat_available = _facade()._bool_text(args.pat_available)
+    max_candidates = _positive_int(args.max_candidates, 3)
+    retry_wait_seconds = _positive_int(args.retry_wait_seconds, 300)
+    poll_seconds = _positive_int(args.poll_seconds, 30)
+    pat_available = _bool_text(args.pat_available)
     pat_login = str(args.pat_login or "").strip()
 
     pulls = client.api_json(
@@ -229,7 +247,7 @@ def cmd_resume(args: argparse.Namespace) -> int:
         pr_number = str(pr.get("number") or "")
         if not pr_number:
             continue
-        head_ref = _facade()._head_ref(pr)
+        head_ref = _head_ref(pr)
         if not head_ref.startswith("data/auto-update-"):
             continue
         comments_by_pr[pr_number] = client.issue_comments(pr_number)
@@ -271,7 +289,7 @@ def cmd_resume(args: argparse.Namespace) -> int:
             pr_created_at=candidate["created_at"],
             head_sha=head_sha,
         )
-        source_run_id = _facade().resolve_source_run_id(candidate["body"])
+        source_run_id = resolve_source_run_id(candidate["body"])
         print(
             f"Resume candidate PR #{pr_number} "
             f"({head_ref} @ {head_sha}) stop={candidate['stop_reason']} "
@@ -298,7 +316,7 @@ def cmd_resume(args: argparse.Namespace) -> int:
             summary_lines.append(f"- merged: #{pr_number} ({merge_sha})")
             continue
 
-        if _facade()._metrics_has_findings(metrics):
+        if _metrics_has_findings(metrics):
             _facade()._handle_resume_findings(
                 client=client,
                 pr_number=pr_number,
@@ -315,12 +333,12 @@ def cmd_resume(args: argparse.Namespace) -> int:
             print(f"PR #{pr_number}: review not ready and PAT unavailable.")
             continue
 
-        marker = _facade().resume_marker(args.run_id, head_sha)
+        marker = resume_marker(args.run_id, head_sha)
         _facade().ensure_review_comment(
             client=client,
             pr_number=pr_number,
             marker=marker,
-            allowed_logins=_facade()._allowed_trigger_logins(pat_login),
+            allowed_logins=_allowed_trigger_logins(pat_login),
             use_trigger_token=True,
         )
         metrics = _facade()._resume_wait_for_merge_ok(
@@ -342,7 +360,7 @@ def cmd_resume(args: argparse.Namespace) -> int:
             )
             merged_count += 1
             summary_lines.append(f"- merged_after_retry: #{pr_number} ({merge_sha})")
-        elif _facade()._metrics_has_findings(metrics):
+        elif _metrics_has_findings(metrics):
             _facade()._handle_resume_findings(
                 client=client,
                 pr_number=pr_number,
