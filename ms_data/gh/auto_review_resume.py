@@ -17,13 +17,11 @@ from ms_data.gh.argtypes import (
 )
 from ms_data.gh.auto_review_markers import (
     find_latest_bot_comment,
-    recovered_marker,
     resume_marker,
     stop_marker,
 )
 from ms_data.gh.auto_review_pr import (
     _head_ref,
-    _head_sha,
     extract_codex_findings,
     resolve_review_since,
     resolve_source_run_id,
@@ -33,11 +31,6 @@ from ms_data.gh.outputs import append_step_summary, write_github_output
 
 if TYPE_CHECKING:
     from ms_data.gh.auto_review_merge import GitHubClient
-
-
-def _fetch_current_head_sha(client: GitHubClient, pr_number: str) -> str:
-    pr = client.api_json(f"repos/{client.repo}/pulls/{pr_number}")
-    return _head_sha(pr)
 
 
 def _merge_and_notify(
@@ -50,82 +43,44 @@ def _merge_and_notify(
     resume_run_id: str,
     deps: ReviewDeps,
 ) -> str:
-    """評価済み SHA と一致する場合のみ merge し、notify を dispatch する。
+    """共通 merge 契約で resume マージと通知を実行する。"""
+    # auto_review_merge は本モジュールを再公開するため遅延 import する。
+    from ms_data.gh.auto_review_merge import (
+        dispatch_post_merge_notify,
+        merge_pull_request,
+        post_recovered_comment,
+    )
 
-    成功時は merge_commit_sha を返す。
-    HEAD 変更・未 MERGED・merge_commit_sha 欠落は RuntimeError を送出し、
-    cmd_resume を非ゼロ終了させて notify_failure に拾わせる。
-    """
-    current_sha = _fetch_current_head_sha(client, pr_number)
-    if current_sha != evaluated_sha:
+    result = merge_pull_request(
+        repo=client.repo,
+        pr_number=pr_number,
+        head_ref=head_ref,
+        head_sha=evaluated_sha,
+        deps=deps,
+    )
+    if not result.merged:
+        if result.skip_reason == "not_open":
+            return ""
         raise RuntimeError(
-            f"PR #{pr_number}: head SHA changed "
-            f"({evaluated_sha} -> {current_sha}); abort resume merge."
+            f"PR #{pr_number}: resume merge failed "
+            f"(reason={result.skip_reason}, state={result.pr_state})."
         )
-
-    deps.run_gh(
-        [
-            "gh",
-            "pr",
-            "merge",
-            pr_number,
-            "--repo",
-            client.repo,
-            "--merge",
-            "--delete-branch",
-            "--match-head-commit",
-            evaluated_sha,
-        ]
+    dispatch_post_merge_notify(
+        repo=client.repo,
+        merge_commit_sha=result.merge_commit_sha,
+        head_ref=result.head_ref,
+        source_run_id=source_run_id,
+        deps=deps,
     )
-    view = json.loads(
-        deps.run_gh(
-            [
-                "gh",
-                "pr",
-                "view",
-                pr_number,
-                "--repo",
-                client.repo,
-                "--json",
-                "state,mergeCommit",
-            ]
-        )
+    post_recovered_comment(
+        repo=client.repo,
+        pr_number=pr_number,
+        run_id=resume_run_id,
+        merge_commit_sha=result.merge_commit_sha,
+        source_run_id=source_run_id,
+        deps=deps,
     )
-    if str(view.get("state") or "").upper() != "MERGED":
-        raise RuntimeError(
-            f"PR #{pr_number}: merge did not reach MERGED state "
-            f"(state={view.get('state')!r})."
-        )
-    merge_commit = view.get("mergeCommit")
-    if isinstance(merge_commit, dict):
-        merge_sha = str(merge_commit.get("oid") or "")
-    else:
-        merge_sha = ""
-    if not merge_sha:
-        raise RuntimeError(f"PR #{pr_number}: merge_commit_sha missing after merge.")
-
-    deps.run_gh(
-        [
-            "gh",
-            "workflow",
-            "run",
-            "post_merge_notify.yml",
-            "--repo",
-            client.repo,
-            "-f",
-            f"merge_commit_sha={merge_sha}",
-            "-f",
-            f"head_ref={head_ref}",
-            "-f",
-            f"source_run_id={source_run_id}",
-        ]
-    )
-    marker = recovered_marker(resume_run_id, merge_sha, source_run_id)
-    client.post_issue_comment(
-        pr_number,
-        f"翌朝レスキューで自動マージしました。\n\n{marker}",
-    )
-    return merge_sha
+    return result.merge_commit_sha
 
 
 def _resume_wait_for_merge_ok(
@@ -312,6 +267,9 @@ def cmd_resume(args: argparse.Namespace, deps: ReviewDeps) -> int:
                 resume_run_id=args.run_id,
                 deps=deps,
             )
+            if not merge_sha:
+                summary_lines.append(f"- merge_skipped(not_open): #{pr_number}")
+                continue
             merged_count += 1
             summary_lines.append(f"- merged: #{pr_number} ({merge_sha})")
             continue
@@ -361,6 +319,9 @@ def cmd_resume(args: argparse.Namespace, deps: ReviewDeps) -> int:
                 resume_run_id=args.run_id,
                 deps=deps,
             )
+            if not merge_sha:
+                summary_lines.append(f"- merge_skipped(not_open): #{pr_number}")
+                continue
             merged_count += 1
             summary_lines.append(f"- merged_after_retry: #{pr_number} ({merge_sha})")
         elif _metrics_has_findings(metrics):
