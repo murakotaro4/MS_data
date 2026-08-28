@@ -12,7 +12,6 @@ from ms_data.core.json_io import load_json, load_json_or_default
 from ms_data.core.ms_names import (
     MS_NAME_WITH_LEVEL,
     extract_ms_base_name,
-    ms_name_to_series_level,
     normalize_ms_base_name,
 )
 from ms_data.core.records import load_records_by_name
@@ -70,11 +69,6 @@ def test_normalize_ms_base_name():
     assert normalize_ms_base_name("ZZガンダム") == "ΖΖガンダム"
     assert normalize_ms_base_name("ジム[WD隊仕様]") == "ジム［WD隊仕様］"
     assert normalize_ms_base_name("ガンダムMk-II") == "ガンダムMk-Ⅱ"
-
-
-def test_ms_name_to_series_level():
-    assert ms_name_to_series_level("イフリート改_LV2") == ("イフリート改", 2)
-    assert ms_name_to_series_level("イフリート改") == ("イフリート改", None)
 
 
 # --- records ---

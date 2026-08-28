@@ -23,11 +23,6 @@ LABELS_RAW_JSONL = CACHE_DIR / "labels_raw.jsonl"
 
 DATA_DIR = Path("data")
 OFFICIAL_OVERRIDES_DIR = DATA_DIR / "official_overrides"
-SKILLS_CATALOG_JSON = DATA_DIR / "skills_catalog.json"
-SKILLS_PARAMS_JSON = DATA_DIR / "skills_params.json"
-SKILL_OWNERS_JSON = DATA_DIR / "skill_owners.json"
-SKILL_OWNERS_FLAT_JSON = DATA_DIR / "skill_owners_flat.json"
-SKILLS_POLICY_JSON = DATA_DIR / "skills_policy.json"
 
 REPORTS_DIR = Path("reports")
 
