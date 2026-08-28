@@ -60,52 +60,14 @@ jobs:
 
       - name: Prepare
         run: |
-          report_date="$(date +%Y%m%d)"
-          dry_run="false"
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.dry_run }}" == "true" ]]; then
-            dry_run="true"
-          fi
-          # UPDATE_MODE: fast（平日差分）/ full（真全量・キャッシュ無視）/ revalidate（週次再検証）
-          update_mode="fast"
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            if [[ "${{ github.event.inputs.force_full }}" == "true" || "${{ github.event.inputs.mode }}" == "full" ]]; then
-              update_mode="full"
-            elif [[ "${{ github.event.inputs.mode }}" == "revalidate" ]]; then
-              update_mode="revalidate"
-            fi
-          fi
-          if [[ "${{ github.event_name }}" == "schedule" && "${{ github.event.schedule }}" == "0 9 * * 0" ]]; then
-            # 第1日曜（JST）のみ真の全量取得。それ以外の日曜は週次再検証で
-            # atwiki への転送量を削減する（更新があったページのみ再取得）。
-            # 注意: 判定は実行時の日付に基づくため、失敗した第1日曜の run を
-            # 後日 re-run すると revalidate になる。その場合は workflow_dispatch の
-            # mode=full で手動補完すること
-            if (( $(date +%-d) <= 7 )); then
-              update_mode="full"
-            else
-              update_mode="revalidate"
-            fi
-          fi
-          full_update="false"
-          if [[ "${update_mode}" == "full" ]]; then
-            full_update="true"
-          fi
-          reports_month_dir="reports/${report_date:0:4}/${report_date:4:2}"
-          echo "UPDATE_MODE=${update_mode}" >> "$GITHUB_ENV"
-          echo "REPORT_DATE=${report_date}" >> "$GITHUB_ENV"
-          echo "HEAD_REF=data/auto-update-${report_date}" >> "$GITHUB_ENV"
-          echo "DRY_RUN=${dry_run}" >> "$GITHUB_ENV"
-          echo "FULL_UPDATE=${full_update}" >> "$GITHUB_ENV"
-          echo "REPORTS_MONTH_DIR=${reports_month_dir}" >> "$GITHUB_ENV"
-          echo "DIFF_FILE=${reports_month_dir}/diff_msdata_${report_date}.md" >> "$GITHUB_ENV"
-          echo "PROVENANCE_FILE=${reports_month_dir}/provenance_${report_date}.json" >> "$GITHUB_ENV"
-          echo "ROLLBACK_FILE=${reports_month_dir}/rollback_guard_${report_date}.md" >> "$GITHUB_ENV"
-          echo "OVERRIDES_AUDIT_FILE=${reports_month_dir}/official_overrides_audit_${report_date}.md" >> "$GITHUB_ENV"
-          echo "QUALITY_FILE=${reports_month_dir}/atwiki_quality_${report_date}.json" >> "$GITHUB_ENV"
-          echo "FIELD_COMPLETENESS_FILE=${reports_month_dir}/field_completeness_${report_date}.md" >> "$GITHUB_ENV"
-          echo "RAW_ARTIFACT_NAME=raw-snapshot-${report_date}-run-${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
-          echo "RAW_SNAPSHOT_FILE=raw_snapshot_${report_date}_run${GITHUB_RUN_ID}.tar.xz" >> "$GITHUB_ENV"
-          echo "RELEASE_TAG=raw-snapshot-${report_date}-run-${GITHUB_RUN_ID}" >> "$GITHUB_ENV"
+          uv run python -m ms_data.pipeline.prepare_update_env \
+            --event-name "${{ github.event_name }}" \
+            --schedule-cron "${{ github.event.schedule }}" \
+            --input-mode "${{ github.event.inputs.mode }}" \
+            --input-force-full "${{ github.event.inputs.force_full }}" \
+            --input-dry-run "${{ github.event.inputs.dry_run }}" \
+            --run-id "${{ github.run_id }}" \
+            --github-env "$GITHUB_ENV"
 
       - name: Validate report contract (naming)
         run: |
