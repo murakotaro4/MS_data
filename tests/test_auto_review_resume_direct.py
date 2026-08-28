@@ -90,6 +90,84 @@ def test_cmd_resume_without_pat_leaves_pending(
     }
 
 
+def test_cmd_resume_treats_closed_pr_race_as_safe_skip(
+    fake_gh, fake_time, tmp_path, read_github_output
+):
+    _prepare_client(fake_gh)
+    calls: list[list[str]] = []
+
+    def run_gh(command):
+        calls.append(command)
+        assert command[1:3] == ["pr", "view"]
+        return json.dumps(
+            {"state": "CLOSED", "headRefOid": HEAD_SHA, "mergeCommit": None}
+        )
+
+    deps = _deps(
+        fake_gh, fake_time, collect_metrics=lambda **_: MERGE_OK, run_gh=run_gh
+    )
+
+    assert (
+        auto_review_resume.cmd_resume(_args(tmp_path, pat_available="false"), deps) == 0
+    )
+    assert read_github_output(tmp_path / "output.txt") == {
+        "processed": "1",
+        "merged_count": "0",
+        "pending_count": "0",
+    }
+    assert len(calls) == 1
+    assert "- merge_skipped(not_open): #97" in (tmp_path / "summary.md").read_text(
+        encoding="utf-8"
+    )
+
+
+def test_cmd_resume_treats_merged_pr_race_as_success_and_notifies(
+    fake_gh, fake_time, tmp_path, read_github_output
+):
+    _prepare_client(fake_gh)
+    calls: list[list[str]] = []
+
+    def run_gh(command):
+        calls.append(command)
+        if command[1:3] == ["pr", "view"]:
+            return json.dumps(
+                {
+                    "state": "MERGED",
+                    "headRefOid": HEAD_SHA,
+                    "mergeCommit": {"oid": "merge-sha"},
+                }
+            )
+        return ""
+
+    deps = _deps(
+        fake_gh, fake_time, collect_metrics=lambda **_: MERGE_OK, run_gh=run_gh
+    )
+
+    assert (
+        auto_review_resume.cmd_resume(_args(tmp_path, pat_available="false"), deps) == 0
+    )
+    assert read_github_output(tmp_path / "output.txt") == {
+        "processed": "1",
+        "merged_count": "1",
+        "pending_count": "0",
+    }
+    assert [call[1:3] for call in calls] == [
+        ["pr", "view"],
+        ["workflow", "run"],
+        ["api", "repos/owner/repo/issues/97/comments"],
+    ]
+    assert not any(call[1:3] == ["pr", "merge"] for call in calls)
+    assert "- merged: #97 (merge-sha)" in (tmp_path / "summary.md").read_text(
+        encoding="utf-8"
+    )
+    recovered_call = calls[-1]
+    assert auto_review_merge.recovered_marker("555", "merge-sha", "111") in next(
+        value.removeprefix("body=")
+        for value in recovered_call
+        if value.startswith("body=")
+    )
+
+
 def test_cmd_resume_posts_resume_comment_with_pat(fake_gh, fake_time, tmp_path):
     _prepare_client(fake_gh)
     ensure_calls: list[dict] = []

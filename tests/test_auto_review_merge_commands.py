@@ -1156,10 +1156,21 @@ def test_cmd_resume_honors_injected_deps_through_merge_and_notify(
     fake_gh.responses["/pulls/97"] = {"head": {"sha": HEAD_SHA}}
     gh_calls: list[list[str]] = []
 
+    views = iter(
+        [
+            {"state": "OPEN", "headRefOid": HEAD_SHA, "mergeCommit": None},
+            {
+                "state": "MERGED",
+                "headRefOid": HEAD_SHA,
+                "mergeCommit": {"oid": "merge-sha"},
+            },
+        ]
+    )
+
     def fake_run_gh(command):
         gh_calls.append(command)
         if command[1:3] == ["pr", "view"]:
-            return json.dumps({"state": "MERGED", "mergeCommit": {"oid": "merge-sha"}})
+            return json.dumps(next(views))
         return ""
 
     deps = replace(
@@ -1191,9 +1202,11 @@ def test_cmd_resume_honors_injected_deps_through_merge_and_notify(
 
     assert rc == 0
     assert [call[1:3] for call in gh_calls] == [
+        ["pr", "view"],
         ["pr", "merge"],
         ["pr", "view"],
         ["workflow", "run"],
+        ["api", "repos/owner/repo/issues/97/comments"],
     ]
     outputs = read_github_output(out)
     assert outputs["merged_count"] == "1"

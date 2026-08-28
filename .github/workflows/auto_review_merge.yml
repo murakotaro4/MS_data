@@ -221,46 +221,17 @@ jobs:
         if: steps.resolve.outputs.skip != 'true' && steps.gate.outputs.merge_ok == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          REPO: ${{ steps.prepare.outputs.repo }}
-          PR_NUMBER: ${{ steps.resolve.outputs.pr }}
-          HEAD_REF: ${{ steps.resolve.outputs.head_ref }}
-          HEAD_SHA: ${{ steps.resolve.outputs.head_sha }}
-        shell: bash
         run: |
-          set -euo pipefail
-          state="$(gh pr view "${PR_NUMBER}" --repo "${REPO}" --json state --jq '.state')"
-          if [[ "${state}" != "OPEN" ]]; then
-            echo "PR state is ${state}. Skip merge."
-            echo "merged=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          current_sha="$(gh pr view "${PR_NUMBER}" --repo "${REPO}" --json headRefOid --jq '.headRefOid')"
-          if [[ "${current_sha}" != "${HEAD_SHA}" ]]; then
-            echo "HEAD SHA mismatch: expected=${HEAD_SHA} current=${current_sha}. Skip merge."
-            {
-              echo "### Merge skipped"
-              echo "- reason: head SHA mismatch after review"
-              echo "- expected: \`${HEAD_SHA}\`"
-              echo "- current: \`${current_sha}\`"
-            } >> "$GITHUB_STEP_SUMMARY"
-            echo "merged=false" >> "$GITHUB_OUTPUT"
-            exit 1
-          fi
-
-          gh pr merge "${PR_NUMBER}" --repo "${REPO}" --merge --delete-branch --match-head-commit "${HEAD_SHA}"
-
-          merged_state="$(gh pr view "${PR_NUMBER}" --repo "${REPO}" --json state --jq '.state')"
-          if [[ "${merged_state}" != "MERGED" ]]; then
-            echo "PR state after merge attempt is ${merged_state}."
-            echo "merged=false" >> "$GITHUB_OUTPUT"
-            exit 1
-          fi
-
-          merge_commit_sha="$(gh pr view "${PR_NUMBER}" --repo "${REPO}" --json mergeCommit --jq '.mergeCommit.oid')"
-          echo "merged=true" >> "$GITHUB_OUTPUT"
-          echo "merge_commit_sha=${merge_commit_sha}" >> "$GITHUB_OUTPUT"
-          echo "head_ref=${HEAD_REF}" >> "$GITHUB_OUTPUT"
+          uv run python -m ms_data.gh.auto_review_merge merge \
+            --repo "${{ steps.prepare.outputs.repo }}" \
+            --pr-number "${{ steps.resolve.outputs.pr }}" \
+            --head-ref "${{ steps.resolve.outputs.head_ref }}" \
+            --head-sha "${{ steps.resolve.outputs.head_sha }}" \
+            --source-run-id "${{ steps.prepare.outputs.run_id }}" \
+            --github-output "$GITHUB_OUTPUT" \
+            --step-summary "$GITHUB_STEP_SUMMARY" \
+            --skip-if-not-open \
+            --dispatch-notify true
 
       - name: Write auto review report
         if: always() && steps.resolve.outputs.skip == 'false'
@@ -311,20 +282,3 @@ jobs:
           retention-days: 30
           if-no-files-found: ignore
           path: reports/auto_review_${{ steps.resolve.outputs.report_date }}.json
-
-      - name: Trigger post merge notify workflow
-        if: steps.resolve.outputs.skip != 'true' && steps.gate.outputs.merge_ok == 'true' && steps.merge.outputs.merged == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ steps.prepare.outputs.repo }}
-          MERGE_COMMIT_SHA: ${{ steps.merge.outputs.merge_commit_sha }}
-          HEAD_REF: ${{ steps.merge.outputs.head_ref }}
-          SOURCE_RUN_ID: ${{ steps.prepare.outputs.run_id }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          gh workflow run post_merge_notify.yml \
-            --repo "${REPO}" \
-            -f merge_commit_sha="${MERGE_COMMIT_SHA}" \
-            -f head_ref="${HEAD_REF}" \
-            -f source_run_id="${SOURCE_RUN_ID}"

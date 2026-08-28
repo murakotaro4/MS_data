@@ -460,7 +460,16 @@ def test_merge_and_notify_raises_on_head_sha_mismatch():
                 }
             }
 
-    with pytest.raises(RuntimeError, match="head SHA changed"):
+    deps = ReviewDeps.default()
+    deps = type(deps)(
+        **{
+            **deps.__dict__,
+            "run_gh": lambda _: (
+                '{"state":"OPEN","headRefOid":"new-sha","mergeCommit":null}'
+            ),
+        }
+    )
+    with pytest.raises(RuntimeError, match="head_sha_mismatch"):
         _merge_and_notify(
             client=_FakeClient(),  # type: ignore[arg-type]
             pr_number="97",
@@ -468,7 +477,7 @@ def test_merge_and_notify_raises_on_head_sha_mismatch():
             evaluated_sha="old-sha",
             source_run_id="111",
             resume_run_id="555",
-            deps=ReviewDeps.default(),
+            deps=deps,
         )
 
 

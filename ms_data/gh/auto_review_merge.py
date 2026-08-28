@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import time
 from collections.abc import Callable
@@ -14,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from ms_data.core.dates import JST
+from ms_data.gh import gh_json
 from ms_data.gh.argtypes import (
     GITHUB_ACTIONS_BOT,
     ReviewDeps,
@@ -50,7 +52,6 @@ from ms_data.gh.auto_review_pr import (
     select_resume_candidates,
 )
 from ms_data.gh.auto_review_resume import (
-    _fetch_current_head_sha,
     _handle_resume_findings,
     _merge_and_notify,
     _metrics_has_findings,
@@ -70,16 +71,17 @@ from ms_data.gh.auto_review_wait import (
 )
 from ms_data.gh.gh_json import gh_api_json, run_gh
 from ms_data.gh.notify_review_stop import notify_review_stop
+from ms_data.gh.outputs import append_step_summary, write_github_output
 
 __all__ = [
     "GITHUB_ACTIONS_BOT",
     "JST",
     "GitHubClient",
+    "MergeResult",
     "ReviewDeps",
     "_allowed_trigger_logins",
     "_bool_text",
     "_ensure_attempt_trigger",
-    "_fetch_current_head_sha",
     "_handle_resume_findings",
     "_head_ref",
     "_head_sha",
@@ -95,12 +97,14 @@ __all__ = [
     "cmd_check_gate",
     "cmd_establish_baseline",
     "cmd_export_findings",
+    "cmd_merge",
     "cmd_record_stop",
     "cmd_resolve_target_pr",
     "cmd_resume",
     "cmd_wait_for_review",
     "cmd_write_report",
     "collect_review_metrics",
+    "dispatch_post_merge_notify",
     "ensure_review_comment",
     "extract_codex_findings",
     "fetch_commit_committer_date",
@@ -111,8 +115,10 @@ __all__ = [
     "later_iso8601",
     "latest_force_push_created_at",
     "main",
+    "merge_pull_request",
     "notify_review_stop",
     "post_codex_trigger_comment",
+    "post_recovered_comment",
     "recovered_marker",
     "resolve_review_since",
     "resolve_source_run_id",
@@ -126,6 +132,220 @@ __all__ = [
     "stop_marker",
     "time",
 ]
+
+
+@dataclass(frozen=True)
+class MergeResult:
+    """PR マージ結果と、再実行時にも判定可能な停止理由。"""
+
+    merged: bool
+    merge_commit_sha: str
+    head_ref: str
+    skip_reason: str
+    pr_state: str
+
+
+def _view_merge_state(*, repo: str, pr_number: str, deps: ReviewDeps) -> dict[str, Any]:
+    output = gh_json._run_gh_get_with_runner(
+        [
+            "gh",
+            "pr",
+            "view",
+            pr_number,
+            "--repo",
+            repo,
+            "--json",
+            "state,headRefOid,mergeCommit",
+        ],
+        runner=deps.run_gh,
+        sleeper=deps.clock.sleep,
+    )
+    value = json.loads(output)
+    if not isinstance(value, dict):
+        raise ValueError("gh pr view returned a non-object JSON value")
+    return value
+
+
+def merge_pull_request(
+    *,
+    repo: str,
+    pr_number: str,
+    head_ref: str,
+    head_sha: str,
+    deps: ReviewDeps,
+) -> MergeResult:
+    """評価済み HEAD の PR をマージし、GitHub の確定状態を返す。"""
+    before = _view_merge_state(repo=repo, pr_number=pr_number, deps=deps)
+    state = str(before.get("state") or "").upper()
+    current_sha = str(before.get("headRefOid") or "")
+    if state == "MERGED":
+        if current_sha != head_sha:
+            return MergeResult(False, "", head_ref, "head_sha_mismatch", state)
+        merge_commit = before.get("mergeCommit")
+        merge_commit_sha = (
+            str(merge_commit.get("oid") or "") if isinstance(merge_commit, dict) else ""
+        )
+        if not merge_commit_sha:
+            return MergeResult(False, "", head_ref, "empty_merge_commit", state)
+        return MergeResult(True, merge_commit_sha, head_ref, "already_merged", state)
+    if state != "OPEN":
+        return MergeResult(False, "", head_ref, "not_open", state)
+
+    if current_sha != head_sha:
+        return MergeResult(False, "", head_ref, "head_sha_mismatch", state)
+
+    deps.run_gh(
+        [
+            "gh",
+            "pr",
+            "merge",
+            pr_number,
+            "--repo",
+            repo,
+            "--merge",
+            "--delete-branch",
+            "--match-head-commit",
+            head_sha,
+        ]
+    )
+
+    after = _view_merge_state(repo=repo, pr_number=pr_number, deps=deps)
+    state = str(after.get("state") or "").upper()
+    if state != "MERGED":
+        return MergeResult(False, "", head_ref, "not_merged_state", state)
+
+    merge_commit = after.get("mergeCommit")
+    merge_commit_sha = (
+        str(merge_commit.get("oid") or "") if isinstance(merge_commit, dict) else ""
+    )
+    if not merge_commit_sha:
+        return MergeResult(False, "", head_ref, "empty_merge_commit", state)
+    return MergeResult(True, merge_commit_sha, head_ref, "", state)
+
+
+def dispatch_post_merge_notify(
+    *,
+    repo: str,
+    merge_commit_sha: str,
+    head_ref: str,
+    source_run_id: str,
+    deps: ReviewDeps,
+) -> None:
+    deps.run_gh(
+        [
+            "gh",
+            "workflow",
+            "run",
+            "post_merge_notify.yml",
+            "--repo",
+            repo,
+            "-f",
+            f"merge_commit_sha={merge_commit_sha}",
+            "-f",
+            f"head_ref={head_ref}",
+            "-f",
+            f"source_run_id={source_run_id}",
+        ]
+    )
+
+
+def post_recovered_comment(
+    *,
+    repo: str,
+    pr_number: str,
+    run_id: str,
+    merge_commit_sha: str,
+    source_run_id: str,
+    deps: ReviewDeps,
+) -> None:
+    marker = recovered_marker(run_id, merge_commit_sha, source_run_id)
+    body = f"翌朝レスキューで自動マージしました。\n\n{marker}"
+    deps.run_gh(
+        [
+            "gh",
+            "api",
+            f"repos/{repo}/issues/{pr_number}/comments",
+            "-X",
+            "POST",
+            "-f",
+            f"body={body}",
+        ]
+    )
+
+
+def _merge_failure_summary(result: MergeResult) -> list[str]:
+    lines = ["### Merge failed", f"- reason: {result.skip_reason}"]
+    if result.pr_state:
+        lines.append(f"- pr_state: `{result.pr_state}`")
+    return lines
+
+
+def cmd_merge(args: argparse.Namespace, deps: ReviewDeps) -> int:
+    """PR マージ、通知 dispatch、resume コメントを一つの契約で実行する。"""
+    if args.comment_marker not in ("", "recovered"):
+        raise ValueError(f"unsupported comment marker: {args.comment_marker!r}")
+
+    result = merge_pull_request(
+        repo=args.repo,
+        pr_number=args.pr_number,
+        head_ref=args.head_ref,
+        head_sha=args.head_sha,
+        deps=deps,
+    )
+    if not result.merged:
+        write_github_output(
+            args.github_output,
+            {
+                "merged": "false",
+                "skip_reason": result.skip_reason,
+                "pr_state": result.pr_state,
+            },
+        )
+        if result.skip_reason == "not_open" and args.skip_if_not_open:
+            return 0
+        append_step_summary(_merge_failure_summary(result), args.step_summary)
+        return 1
+
+    # 通知が失敗しても、確定済みの merge 情報を失わないよう先に出力する。
+    write_github_output(
+        args.github_output,
+        {
+            "merged": "true",
+            "merge_commit_sha": result.merge_commit_sha,
+            "head_ref": result.head_ref,
+            "skip_reason": "",
+            "pr_state": result.pr_state,
+        },
+    )
+    try:
+        if args.dispatch_notify:
+            dispatch_post_merge_notify(
+                repo=args.repo,
+                merge_commit_sha=result.merge_commit_sha,
+                head_ref=result.head_ref,
+                source_run_id=args.source_run_id,
+                deps=deps,
+            )
+        if args.comment_marker:
+            post_recovered_comment(
+                repo=args.repo,
+                pr_number=args.pr_number,
+                run_id=args.run_id,
+                merge_commit_sha=result.merge_commit_sha,
+                source_run_id=args.source_run_id,
+                deps=deps,
+            )
+    except Exception as error:
+        append_step_summary(
+            [
+                "### Merge succeeded, notification failed",
+                f"- merge_commit_sha: `{result.merge_commit_sha}`",
+                f"- error: {error}",
+            ],
+            args.step_summary,
+        )
+        return 1
+    return 0
 
 
 @dataclass
@@ -339,6 +559,22 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument("--out", type=Path, required=True)
     export.add_argument("--github-output", type=Path, required=True)
     export.set_defaults(func=cmd_export_findings)
+
+    merge = sub.add_parser("merge")
+    merge.add_argument("--repo", required=True)
+    merge.add_argument("--pr-number", required=True)
+    merge.add_argument("--head-ref", required=True)
+    merge.add_argument("--head-sha", required=True)
+    merge.add_argument("--source-run-id", required=True)
+    merge.add_argument("--github-output", type=Path, required=True)
+    merge.add_argument("--step-summary", type=Path, default=None)
+    merge.add_argument("--skip-if-not-open", action="store_true")
+    merge.add_argument(
+        "--dispatch-notify", type=_bool_text, nargs="?", const=True, default=True
+    )
+    merge.add_argument("--comment-marker", choices=("", "recovered"), default="")
+    merge.add_argument("--run-id", default="")
+    merge.set_defaults(func=cmd_merge)
 
     resume = sub.add_parser("resume")
     resume.add_argument("--repo", required=True)
