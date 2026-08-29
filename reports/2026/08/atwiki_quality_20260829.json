@@ -1,29 +1,28 @@
 {
   "schema_version": "1",
   "report_date": "20260829",
-  "source_run_id": "33209223360",
+  "source_run_id": "33256791812",
   "index": {
     "total_count": 591,
-    "candidate_count": 29,
+    "candidate_count": 9,
     "full_update": false,
     "mode": "fast",
     "fast_path": true,
     "fallback_reason": "none",
     "age_coverage": 1.0,
     "reason_counts": {
-      "recent_update": 29,
-      "new_name": 1
+      "recent_update": 9
     }
   },
   "fetch": {
     "totals": {
-      "network_requests": 30,
-      "status_200": 30,
+      "network_requests": 10,
+      "status_200": 10,
       "status_304": 0,
       "failures": 0,
-      "body_bytes": 10198359,
+      "body_bytes": 3785139,
       "cache_hits": 0,
-      "duration_seconds": 34.333
+      "duration_seconds": 13.205
     },
     "phases": {
       "index": {
@@ -31,44 +30,44 @@
         "status_200": 1,
         "status_304": 0,
         "failures": 0,
-        "body_bytes": 852820,
+        "body_bytes": 859702,
         "cache_hits": 0,
-        "started_at": "2026-08-28T20:40:26.584176Z",
-        "duration_seconds": 2.563
+        "started_at": "2026-08-29T14:08:24.101383Z",
+        "duration_seconds": 2.939
       },
       "details": {
-        "network_requests": 29,
-        "status_200": 29,
+        "network_requests": 9,
+        "status_200": 9,
         "status_304": 0,
         "failures": 0,
-        "body_bytes": 9345539,
+        "body_bytes": 2925437,
         "cache_hits": 0,
-        "started_at": "2026-08-28T20:40:29.675540Z",
-        "duration_seconds": 31.77
+        "started_at": "2026-08-29T14:08:27.568107Z",
+        "duration_seconds": 10.266
       }
     }
   },
   "detail_fetch": {
-    "attempted_url_count": 29,
-    "successful_url_count": 29,
+    "attempted_url_count": 9,
+    "successful_url_count": 9,
     "failed_url_count": 0,
     "http_status_counts": {
-      "200": 29
+      "200": 9
     },
     "conditional_cache_hit_count": 0,
     "cache_utilization": 0.0,
     "state_entry_count": 591
   },
   "details": {
-    "json_records": 71,
-    "jsonl_records": 71
+    "json_records": 18,
+    "jsonl_records": 18
   },
   "msdata_diff": {
-    "old_count": 1701,
-    "new_count": 1702,
-    "added": 1,
+    "old_count": 1702,
+    "new_count": 1707,
+    "added": 5,
     "removed": 0,
-    "changed": 6
+    "changed": 0
   },
   "warnings": []
 }

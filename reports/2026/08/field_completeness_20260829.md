@@ -2,7 +2,7 @@
 
 ## サマリ
 
-- missing_key: 0
+- missing_key: 2
 - empty_value: 0
 - pair_missing: 0
 - suppressed: 10
@@ -12,7 +12,8 @@
 
 | MS名 | 項目 | 分類 | 値 | 理由 | review_after |
 | --- | --- | --- | --- | --- | --- |
-| なし |  |  |  |  |  |
+| ブルG【TB】_LV3 | 再出撃時間 | missing_key |  |  |  |
+| ブルG【TB】_LV4 | 再出撃時間 | missing_key |  |  |  |
 
 ## empty_value
 
