@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-08-30T14:14:28Z",
+  "report_date": "20260830",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "b4f6b6d71372ae9ba4eafdfc244395bdea6d7ddd"
+  },
+  "github": {
+    "run_id": "33316290169",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "26d41b5a57435af5bcba9871350d306ec3fe9f258f63be616171e40c3cdf6160",
+      "size_bytes": 145346,
+      "record_count": 591
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "c42108e55e5c4037d2e3c129d5525f4c907918733c327cf5fce90084e5d5a687",
+      "size_bytes": 32506,
+      "record_count": 27
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "259452f3c6e67ad1e618e190790ef33149288dad99a2f7e8e64d20f5b8132e69",
+      "size_bytes": 42363,
+      "record_count": 27
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "1688ee8bafd00fb836cae0cf1ea1716259954f2fb3c52c9e1729f8cb551b54c4",
+      "file_count": 30,
+      "size_bytes": 5428599
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "a7b2c873393ad9aee1ec640a0ee4b2b9899ab9624e2815c288ebbfb4e7e843f2",
+      "size_bytes": 2637804,
+      "record_count": 1707
+    },
+    "diff_report": {
+      "path": "reports/2026/08/diff_msdata_20260830.md",
+      "sha256": "970158d3a23d8b0135b198992a08cf0a30857d9bfa2fb642cbecbc5e763437e4",
+      "size_bytes": 2205
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260830-run-33316290169",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260830-run-33316290169",
+    "asset_name": "raw_snapshot_20260830_run33316290169.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260830-run-33316290169"
+  }
+}
