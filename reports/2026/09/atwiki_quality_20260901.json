@@ -1,28 +1,28 @@
 {
   "schema_version": "1",
   "report_date": "20260901",
-  "source_run_id": "33415374005",
+  "source_run_id": "33516140452",
   "index": {
     "total_count": 591,
-    "candidate_count": 7,
+    "candidate_count": 9,
     "full_update": false,
     "mode": "fast",
     "fast_path": true,
     "fallback_reason": "none",
     "age_coverage": 1.0,
     "reason_counts": {
-      "recent_update": 7
+      "recent_update": 9
     }
   },
   "fetch": {
     "totals": {
-      "network_requests": 8,
-      "status_200": 8,
+      "network_requests": 10,
+      "status_200": 10,
       "status_304": 0,
       "failures": 0,
-      "body_bytes": 3063054,
+      "body_bytes": 3760776,
       "cache_hits": 0,
-      "duration_seconds": 9.724
+      "duration_seconds": 13.86
     },
     "phases": {
       "index": {
@@ -30,44 +30,44 @@
         "status_200": 1,
         "status_304": 0,
         "failures": 0,
-        "body_bytes": 853729,
+        "body_bytes": 859939,
         "cache_hits": 0,
-        "started_at": "2026-08-31T16:40:19.775493Z",
-        "duration_seconds": 2.654
+        "started_at": "2026-09-01T13:53:42.109414Z",
+        "duration_seconds": 2.728
       },
       "details": {
-        "network_requests": 7,
-        "status_200": 7,
+        "network_requests": 9,
+        "status_200": 9,
         "status_304": 0,
         "failures": 0,
-        "body_bytes": 2209325,
+        "body_bytes": 2900837,
         "cache_hits": 0,
-        "started_at": "2026-08-31T16:40:22.921960Z",
-        "duration_seconds": 7.07
+        "started_at": "2026-09-01T13:53:45.354186Z",
+        "duration_seconds": 11.132
       }
     }
   },
   "detail_fetch": {
-    "attempted_url_count": 7,
-    "successful_url_count": 7,
+    "attempted_url_count": 9,
+    "successful_url_count": 9,
     "failed_url_count": 0,
     "http_status_counts": {
-      "200": 7
+      "200": 9
     },
     "conditional_cache_hit_count": 0,
     "cache_utilization": 0.0,
     "state_entry_count": 591
   },
   "details": {
-    "json_records": 16,
-    "jsonl_records": 16
+    "json_records": 22,
+    "jsonl_records": 22
   },
   "msdata_diff": {
-    "old_count": 1702,
-    "new_count": 1704,
+    "old_count": 1704,
+    "new_count": 1706,
     "added": 2,
     "removed": 0,
-    "changed": 2
+    "changed": 0
   },
   "warnings": []
 }
