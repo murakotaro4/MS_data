@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-09-03T13:13:47Z",
+  "report_date": "20260903",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "c837f1a21514becb727278c5b69a793f5e66694d"
+  },
+  "github": {
+    "run_id": "33759790607",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "d0bd8da9978fb93861166f3d589020cf00e9cf7910d4dae92011e1b9300e4baf",
+      "size_bytes": 145334,
+      "record_count": 591
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "66c60e0fa0c8c5eec378eb7074919fb9c590dcc303b08ae50d4a3430ca192149",
+      "size_bytes": 80216,
+      "record_count": 67
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "90bf3c58ddf4fb37f8c0749c3e52840a85b014d223b6385bc3964f8ee89aee1c",
+      "size_bytes": 104681,
+      "record_count": 67
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "16aca84f1a25e86d530696eab93067b353917625d97579c04c8b94ddb06a4cac",
+      "file_count": 56,
+      "size_bytes": 9126166
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "f1f34a686be51f1180ebf8dd2437cdae2c6b1db755b7a3fe740a7ec266fa37f1",
+      "size_bytes": 2638020,
+      "record_count": 1707
+    },
+    "diff_report": {
+      "path": "reports/2026/09/diff_msdata_20260903.md",
+      "sha256": "1637b9377cdf00bdf2c060811241b5e98b0c2e77af7d74e23634d276dec7bd76",
+      "size_bytes": 2982
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260903-run-33759790607",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260903-run-33759790607",
+    "asset_name": "raw_snapshot_20260903_run33759790607.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260903-run-33759790607"
+  }
+}
