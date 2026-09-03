@@ -49,6 +49,10 @@ select = [
 ]
 ignore = ["E402", "E501"]
 
+[tool.ruff.lint.isort]
+# tests/ 直下の共有ヘルパー（pytest が tests/ を sys.path に載せるため素の名前で import する）
+known-local-folder = ["auto_review_helpers", "helpers", "workflow_contract"]
+
 [tool.ruff.lint.per-file-ignores]
 # CLI と後方互換 API を提供する facade の意図的な re-export。
 "ms_data/gh/auto_review_merge.py" = ["F401"]

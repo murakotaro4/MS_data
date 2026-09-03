@@ -1,12 +1,8 @@
-import json
 from pathlib import Path
 
 import ms_data.tasks as tasks
 
-
-def _write_json(path: Path, data: object) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+from helpers import write_json
 
 
 def test_task_update_fast_skips_followup_steps_when_no_candidates(
@@ -18,8 +14,8 @@ def test_task_update_fast_skips_followup_steps_when_no_candidates(
     def fake_run_python_module(module: str, *args: str) -> int:
         calls.append((module, args))
         if module == "ms_data.scraping.scrape_msdata" and args[0] == "detect-changed":
-            _write_json(tmp_path / "cache/index_changed.json", [])
-            _write_json(
+            write_json(tmp_path / "cache/index_changed.json", [])
+            write_json(
                 tmp_path / "cache/index_changed_meta.json",
                 {
                     "candidate_count": 0,
@@ -84,7 +80,7 @@ def test_task_update_fast_runs_import_and_validate_when_candidates_exist(
     def fake_run_python_module(module: str, *args: str) -> int:
         calls.append((module, args))
         if module == "ms_data.scraping.scrape_msdata" and args[0] == "detect-changed":
-            _write_json(
+            write_json(
                 tmp_path / "cache/index_changed.json",
                 [
                     {
@@ -97,7 +93,7 @@ def test_task_update_fast_runs_import_and_validate_when_candidates_exist(
                     },
                 ],
             )
-            _write_json(
+            write_json(
                 tmp_path / "cache/index_changed_meta.json",
                 {
                     "candidate_count": 2,
@@ -200,7 +196,7 @@ def test_task_update_fast_disables_changed_only_for_index_reasoned_candidates(
     def fake_run_python_module(module: str, *args: str) -> int:
         calls.append((module, args))
         if module == "ms_data.scraping.scrape_msdata" and args[0] == "detect-changed":
-            _write_json(
+            write_json(
                 tmp_path / "cache/index_changed.json",
                 [
                     {
@@ -209,7 +205,7 @@ def test_task_update_fast_disables_changed_only_for_index_reasoned_candidates(
                     }
                 ],
             )
-            _write_json(
+            write_json(
                 tmp_path / "cache/index_changed_meta.json",
                 {
                     "candidate_count": 1,
@@ -259,11 +255,11 @@ def test_task_update_fast_disables_changed_only_in_no_network(
     def fake_run_python_module(module: str, *args: str) -> int:
         calls.append((module, args))
         if module == "ms_data.scraping.scrape_msdata" and args[0] == "detect-changed":
-            _write_json(
+            write_json(
                 tmp_path / "cache/index_changed.json",
                 [{"name": "A", "change_reasons": ["recent_update"]}],
             )
-            _write_json(
+            write_json(
                 tmp_path / "cache/index_changed_meta.json",
                 {
                     "candidate_count": 1,

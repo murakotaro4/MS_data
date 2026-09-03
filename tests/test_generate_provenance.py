@@ -4,10 +4,7 @@ from pathlib import Path
 
 from ms_data.pipeline import generate_provenance
 
-
-def _write_json(path: Path, data: object) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+from helpers import write_json
 
 
 def _write_text(path: Path, text: str) -> None:
@@ -38,10 +35,10 @@ def test_main_writes_provenance_json(tmp_path, monkeypatch):
     html_dir = tmp_path / "cache/html"
     out = tmp_path / "reports/provenance_20260222.json"
 
-    _write_json(index, [{"name": "A"}, {"name": "B"}])
+    write_json(index, [{"name": "A"}, {"name": "B"}])
     _write_text(details_jsonl, '{"MS名":"A_LV1"}\n{"MS名":"B_LV1"}\n')
-    _write_json(details_json, [{"MS名": "A_LV1"}, {"MS名": "B_LV1"}])
-    _write_json(msdata, [{"MS名": "A_LV1"}])
+    write_json(details_json, [{"MS名": "A_LV1"}, {"MS名": "B_LV1"}])
+    write_json(msdata, [{"MS名": "A_LV1"}])
     _write_text(diff, "# diff\n")
     _write_text(html_dir / "a.html", "<html>A</html>")
     _write_text(html_dir / "b.meta.json", '{"etag":"x"}')

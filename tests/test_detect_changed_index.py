@@ -4,6 +4,8 @@ from pathlib import Path
 
 import ms_data.scraping.scrape_msdata as sm
 
+from helpers import write_json
+
 
 def test_parse_index_extracts_updated_age_metadata():
     html = """
@@ -81,11 +83,6 @@ def test_parse_iso_datetime_assumes_utc_for_naive_timestamp():
     parsed = sm.parse_iso_datetime("2026-03-05T14:47:11")
     assert parsed.tzinfo is not None
     assert parsed.utcoffset().total_seconds() == 0
-
-
-def _write_json(path: Path, data: object) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def test_select_changed_index_items_ignores_unknown_cost_and_attr():
@@ -259,7 +256,7 @@ def test_cmd_detect_changed_selects_recent_and_mismatched_records(tmp_path: Path
     reports_dir = tmp_path / "reports"
     msdata_path = tmp_path / "msData.json"
 
-    _write_json(
+    write_json(
         index_path,
         [
             {
@@ -296,7 +293,7 @@ def test_cmd_detect_changed_selects_recent_and_mismatched_records(tmp_path: Path
             },
         ],
     )
-    _write_json(
+    write_json(
         msdata_path,
         [
             {
@@ -319,7 +316,7 @@ def test_cmd_detect_changed_selects_recent_and_mismatched_records(tmp_path: Path
             },
         ],
     )
-    _write_json(
+    write_json(
         reports_dir / "provenance_20260305.json",
         {"generated_at": "2026-03-05T14:47:11Z"},
     )
@@ -360,7 +357,7 @@ def test_cmd_detect_changed_selects_recent_and_mismatched_records(tmp_path: Path
 def test_find_latest_provenance_discovers_nested_year_month_layout(tmp_path: Path):
     nested = tmp_path / "reports" / "2026" / "03"
     nested.mkdir(parents=True)
-    _write_json(
+    write_json(
         nested / "provenance_20260305.json",
         {"generated_at": "2026-03-05T14:47:11Z"},
     )
@@ -379,7 +376,7 @@ def test_cmd_detect_changed_falls_back_when_previous_provenance_is_missing(
     meta_path = tmp_path / "cache/index_changed_meta.json"
     msdata_path = tmp_path / "msData.json"
 
-    _write_json(
+    write_json(
         index_path,
         [
             {
@@ -400,7 +397,7 @@ def test_cmd_detect_changed_falls_back_when_previous_provenance_is_missing(
             },
         ],
     )
-    _write_json(msdata_path, [])
+    write_json(msdata_path, [])
 
     rc = sm.cmd_detect_changed(
         argparse.Namespace(
@@ -435,7 +432,7 @@ def test_cmd_detect_changed_falls_back_when_previous_provenance_is_invalid(
     previous_provenance = tmp_path / "reports/provenance_20260305.json"
     msdata_path = tmp_path / "msData.json"
 
-    _write_json(
+    write_json(
         index_path,
         [
             {
@@ -448,7 +445,7 @@ def test_cmd_detect_changed_falls_back_when_previous_provenance_is_invalid(
             }
         ],
     )
-    _write_json(msdata_path, [])
+    write_json(msdata_path, [])
     previous_provenance.parent.mkdir(parents=True, exist_ok=True)
     previous_provenance.write_text("{invalid", encoding="utf-8")
 
@@ -483,7 +480,7 @@ def test_cmd_detect_changed_falls_back_when_generated_at_is_invalid(tmp_path: Pa
     previous_provenance = tmp_path / "reports/provenance_20260305.json"
     msdata_path = tmp_path / "msData.json"
 
-    _write_json(
+    write_json(
         index_path,
         [
             {
@@ -496,8 +493,8 @@ def test_cmd_detect_changed_falls_back_when_generated_at_is_invalid(tmp_path: Pa
             }
         ],
     )
-    _write_json(msdata_path, [])
-    _write_json(previous_provenance, {"generated_at": "bad timestamp"})
+    write_json(msdata_path, [])
+    write_json(previous_provenance, {"generated_at": "bad timestamp"})
 
     rc = sm.cmd_detect_changed(
         argparse.Namespace(
@@ -655,7 +652,7 @@ def test_cmd_detect_changed_revalidate_mode(tmp_path: Path):
     msdata_path = tmp_path / "msData.json"
     detail_state_path = tmp_path / "cache/detail_fetch_state.json"
 
-    _write_json(
+    write_json(
         index_path,
         [
             {
@@ -676,7 +673,7 @@ def test_cmd_detect_changed_revalidate_mode(tmp_path: Path):
             },
         ],
     )
-    _write_json(
+    write_json(
         msdata_path,
         [
             {
@@ -693,7 +690,7 @@ def test_cmd_detect_changed_revalidate_mode(tmp_path: Path):
             },
         ],
     )
-    _write_json(
+    write_json(
         detail_state_path,
         {
             "items": {
