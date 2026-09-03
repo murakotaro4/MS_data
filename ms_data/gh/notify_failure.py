@@ -7,31 +7,47 @@ import os
 import sys
 import tempfile
 from collections.abc import Callable
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ms_data.gh.gh_json import GhRunner, gh_api_json, run_gh
+from ms_data.gh import issue_upsert
+from ms_data.gh.gh_json import GhRunner, run_gh
+from ms_data.gh.issue_upsert import DuplicateIssue, IssueRaceResolution
+from ms_data.gh.repo_labels import LABEL_SPECS
 from ms_data.notify import send_gmail
 
 NOTIFY_CONCLUSIONS = frozenset(
     {"failure", "timed_out", "startup_failure", "action_required"}
 )
 ISSUE_LABEL = "pipeline-failure"
-ISSUE_LABEL_COLOR = "B60205"
+ISSUE_LABEL_SPEC = LABEL_SPECS[ISSUE_LABEL]
+ISSUE_LABEL_COLOR = ISSUE_LABEL_SPEC.color
+AGGREGATION_SUBJECT = "失敗情報"
 MailSender = Callable[[str, str], None]
 
-
-@dataclass(frozen=True)
-class DuplicateIssue:
-    number: int
-    body: str
-
-
-@dataclass(frozen=True)
-class IssueRaceResolution:
-    canonical_number: int
-    duplicates: tuple[DuplicateIssue, ...]
+__all__ = [
+    "AGGREGATION_SUBJECT",
+    "ISSUE_LABEL",
+    "ISSUE_LABEL_COLOR",
+    "ISSUE_LABEL_SPEC",
+    "NOTIFY_CONCLUSIONS",
+    "DuplicateIssue",
+    "IssueRaceResolution",
+    "MailSender",
+    "build_failure_details",
+    "build_failure_mail_body",
+    "build_issue_aggregation_comment",
+    "converge_duplicate_issues",
+    "ensure_failure_issue",
+    "find_open_issue",
+    "issue_title",
+    "main",
+    "notify_failure",
+    "parse_args",
+    "resolve_issue_creation_race",
+    "send_failure_mail",
+    "should_notify",
+]
 
 
 def should_notify(conclusion: str) -> bool:
@@ -88,38 +104,6 @@ def build_failure_mail_body(
     )
 
 
-def _label_names(issue: dict[str, Any]) -> set[str]:
-    labels = issue.get("labels")
-    if not isinstance(labels, list):
-        return set()
-    names: set[str] = set()
-    for label in labels:
-        if isinstance(label, str):
-            names.add(label)
-        elif isinstance(label, dict) and isinstance(label.get("name"), str):
-            names.add(label["name"])
-    return names
-
-
-def _matching_open_issues(
-    issues: list[dict[str, Any]],
-    *,
-    title: str,
-    label: str = ISSUE_LABEL,
-) -> list[dict[str, Any]]:
-    return [
-        issue
-        for issue in issues
-        if (
-            issue.get("state") == "open"
-            and issue.get("title") == title
-            and label in _label_names(issue)
-            and "pull_request" not in issue
-            and int(issue.get("number") or 0) > 0
-        )
-    ]
-
-
 def find_open_issue(
     issues: list[dict[str, Any]],
     *,
@@ -128,8 +112,7 @@ def find_open_issue(
 ) -> dict[str, Any] | None:
     """同タイトル・同ラベルの open Issue を返す。closed と PR は除外する。"""
 
-    matches = _matching_open_issues(issues, title=title, label=label)
-    return min(matches, key=lambda issue: int(issue["number"])) if matches else None
+    return issue_upsert.find_open_issue(issues, title=title, label=label)
 
 
 def resolve_issue_creation_race(
@@ -141,33 +124,17 @@ def resolve_issue_creation_race(
 ) -> IssueRaceResolution | None:
     """競合する open Issue の正本と、閉じる全非正本を返す。"""
 
-    matches = sorted(
-        _matching_open_issues(issues, title=title, label=label),
-        key=lambda issue: int(issue["number"]),
-    )
-    numbers = [int(issue["number"]) for issue in matches]
-    if len(numbers) <= 1 or created_number not in numbers:
-        return None
-    canonical_number = numbers[0]
-    duplicates = tuple(
-        DuplicateIssue(
-            number=int(issue["number"]),
-            body=str(issue.get("body") or ""),
-        )
-        for issue in matches
-        if int(issue["number"]) != canonical_number
-    )
-    return IssueRaceResolution(
-        canonical_number=canonical_number,
-        duplicates=duplicates,
+    return issue_upsert.resolve_issue_creation_race(
+        issues, title=title, created_number=created_number, label=label
     )
 
 
 def build_issue_aggregation_comment(duplicate: DuplicateIssue) -> str:
     """非正本 Issue の失敗情報を正本へ集約するコメントを組み立てる。"""
 
-    details = duplicate.body.strip() or "（重複 Issue の本文は空です）"
-    return f"Issue #{duplicate.number} から失敗情報を集約します。\n\n{details}"
+    return issue_upsert.build_issue_aggregation_comment(
+        duplicate, subject=AGGREGATION_SUBJECT
+    )
 
 
 def converge_duplicate_issues(
@@ -178,45 +145,9 @@ def converge_duplicate_issues(
 ) -> int:
     """非正本の失敗情報を正本へ集約し、理由コメント後に全件閉じる。"""
 
-    for duplicate in resolution.duplicates:
-        gh_api_json(
-            f"repos/{repo}/issues/{resolution.canonical_number}/comments",
-            method="POST",
-            fields={"body": build_issue_aggregation_comment(duplicate)},
-            runner=runner,
-        )
-        duplicate_reason = (
-            f"Issue #{resolution.canonical_number} を正本として失敗情報を集約したため、"
-            f"重複した Issue #{duplicate.number} を閉じます。"
-        )
-        gh_api_json(
-            f"repos/{repo}/issues/{duplicate.number}/comments",
-            method="POST",
-            fields={"body": duplicate_reason},
-            runner=runner,
-        )
-        gh_api_json(
-            f"repos/{repo}/issues/{duplicate.number}",
-            method="PATCH",
-            fields={"state": "closed", "state_reason": "not_planned"},
-            runner=runner,
-        )
-    return len(resolution.duplicates)
-
-
-def _fetch_open_failure_issues(
-    *,
-    repo: str,
-    runner: GhRunner,
-) -> list[dict[str, Any]]:
-    issues = gh_api_json(
-        f"repos/{repo}/issues?state=open&labels={ISSUE_LABEL}&per_page=100",
-        paginate=True,
-        runner=runner,
+    return issue_upsert.converge_duplicate_issues(
+        repo=repo, resolution=resolution, subject=AGGREGATION_SUBJECT, runner=runner
     )
-    if not isinstance(issues, list):
-        raise ValueError("GitHub issues response must be a list")
-    return issues
 
 
 def ensure_failure_issue(
@@ -231,25 +162,7 @@ def ensure_failure_issue(
 ) -> tuple[str, int]:
     """失敗 Issue を新規作成するか、既存 open Issue にコメントする。"""
 
-    runner(
-        [
-            "gh",
-            "label",
-            "create",
-            ISSUE_LABEL,
-            "--repo",
-            repo,
-            "--description",
-            "Automatic pipeline failure notification",
-            "--color",
-            ISSUE_LABEL_COLOR,
-            "--force",
-        ]
-    )
-
-    title = issue_title(workflow_name)
-    issues = _fetch_open_failure_issues(repo=repo, runner=runner)
-
+    issue_upsert.ensure_labels(repo, [ISSUE_LABEL_SPEC], runner=runner)
     body = build_failure_details(
         workflow_name=workflow_name,
         conclusion=conclusion,
@@ -257,57 +170,14 @@ def ensure_failure_issue(
         run_id=run_id,
         created_at=created_at,
     )
-    existing = find_open_issue(issues, title=title)
-    if existing is not None:
-        number = int(existing.get("number") or 0)
-        if number <= 0:
-            raise ValueError("Existing GitHub Issue has no valid number")
-        gh_api_json(
-            f"repos/{repo}/issues/{number}/comments",
-            method="POST",
-            fields={"body": body},
-            runner=runner,
-        )
-        resolution = resolve_issue_creation_race(
-            issues,
-            title=title,
-            created_number=number,
-        )
-        if resolution is not None:
-            converge_duplicate_issues(
-                repo=repo,
-                resolution=resolution,
-                runner=runner,
-            )
-            return "deduplicated", resolution.canonical_number
-        return "commented", number
-
-    created = gh_api_json(
-        f"repos/{repo}/issues",
-        method="POST",
-        fields={"title": title, "body": body, "labels[]": ISSUE_LABEL},
+    return issue_upsert.upsert_issue(
+        repo=repo,
+        title=issue_title(workflow_name),
+        body=body,
+        label=ISSUE_LABEL,
+        subject=AGGREGATION_SUBJECT,
         runner=runner,
     )
-    if not isinstance(created, dict):
-        raise ValueError("GitHub create Issue response must be an object")
-    number = int(created.get("number") or 0)
-    if number <= 0:
-        raise ValueError("Created GitHub Issue has no valid number")
-
-    issues_after_create = _fetch_open_failure_issues(repo=repo, runner=runner)
-    race_resolution = resolve_issue_creation_race(
-        issues_after_create,
-        title=title,
-        created_number=number,
-    )
-    if race_resolution is not None:
-        converge_duplicate_issues(
-            repo=repo,
-            resolution=race_resolution,
-            runner=runner,
-        )
-        return "deduplicated", race_resolution.canonical_number
-    return "created", number
 
 
 def send_failure_mail(subject: str, body: str) -> None:
@@ -391,7 +261,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--run-url", required=True)
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--created-at", required=True)
-    parser.add_argument("--repo", default=os.getenv("GITHUB_REPOSITORY"), required=False)
+    parser.add_argument(
+        "--repo", default=os.getenv("GITHUB_REPOSITORY"), required=False
+    )
     args = parser.parse_args(argv)
     if not args.repo:
         parser.error("--repo または GITHUB_REPOSITORY が必要です")
