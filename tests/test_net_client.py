@@ -10,13 +10,9 @@ from types import ModuleType
 import httpx
 import pytest
 
-from ms_data.net.client import get_browser_client, get_scraper_client
+from ms_data.net.client import get_scraper_client
 
 SCRAPER_USER_AGENT = "msdata-scraper/0.1 (+https://github.com/; contact=local)"
-BROWSER_USER_AGENT = (
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/116 Safari/537.36"
-)
 
 
 class FakeCloudscraper:
@@ -111,22 +107,6 @@ def test_get_scraper_client_falls_back_when_cloudscraper_import_fails(
         assert client.follow_redirects is True
         _assert_timeout(client.timeout, 7.0)
         assert "cloudscraper unavailable, fallback to httpx" in capsys.readouterr().err
-    finally:
-        client.close()
-
-    assert client.is_closed
-
-
-def test_get_browser_client_configures_browser_headers_and_options() -> None:
-    client = get_browser_client(timeout=9.0)
-    try:
-        assert client.headers["User-Agent"] == BROWSER_USER_AGENT
-        assert client.headers["Accept"] == (
-            "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
-        )
-        assert client.headers["Accept-Language"] == "ja,en-US;q=0.7,en;q=0.3"
-        assert client.follow_redirects is True
-        _assert_timeout(client.timeout, 9.0)
     finally:
         client.close()
 

@@ -19,7 +19,7 @@ from __future__ import annotations
 import re
 from typing import Any, NamedTuple
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from ms_data.core.labels import clean_text
 from ms_data.scraping.text_values import to_int
@@ -36,31 +36,94 @@ class FullstRow(NamedTuple):
     blocked_ms_levels: set[int]  # セルが "-"（対象外）だった MS レベル
 
 
+# 強化リスト名の候補から除外する定型見出し（部分一致）
+_FULLST_HEADER_WORDS = (
+    "強化リスト",
+    "上限開放",
+    "リスト名",
+    "MSレベル毎必要強化値",
+    "効果",
+)
+_LV_LABEL_RE = re.compile(r"LV\d+|Lv\d+|Lv", re.IGNORECASE)
+_FULLST_LV_RE = re.compile(r"Lv(\d+)", re.IGNORECASE)
+_BLOCKED_CELL_VALUES = frozenset({"-", "－"})
+FORCED_SORTIE = "強行出撃"
+
+
+def find_fullst_table(soup: BeautifulSoup) -> Tag | None:
+    """「強化リスト情報」見出し（h2/h3）直後の table を返す。無ければ None。"""
+    for hx in soup.find_all(["h2", "h3"]):
+        if "強化リスト情報" in clean_text(hx.get_text(" ")):
+            table = hx.find_next("table")
+            return table if isinstance(table, Tag) else None
+    return None
+
+
+def _row_list_name(th_texts: list[str]) -> str | None:
+    """行見出しのうち LV 表記でも定型見出しでもない最初のテキスト（強化リスト名）。"""
+    for txt in th_texts:
+        if not txt:
+            continue
+        if any(word in txt for word in _FULLST_HEADER_WORDS):
+            continue
+        if _LV_LABEL_RE.fullmatch(txt):
+            continue
+        return txt
+    return None
+
+
+def _row_fullst_lv(th_texts: list[str]) -> int | None:
+    """行見出しから強化 LV（`Lv3` 等）を読む。無ければ None。"""
+    for txt in th_texts:
+        match = _FULLST_LV_RE.fullmatch(txt)
+        if match:
+            return int(match.group(1))
+    return None
+
+
+def _parse_points_cells(
+    tds: list[Tag], ms_levels: list[int], *, list_name: str
+) -> tuple[dict[int, int], set[int], set[int]]:
+    """数値セル列を (points_by_ms, present_ms_levels, blocked_ms_levels) に読む。
+
+    末尾セルは「効果」列のため数値対象から外す。数値セルは MS レベル順に
+    並ぶ前提（LV1 が先頭セル）。"-" は対象外（blocked）だが「強行出撃」は
+    例外として blocked 扱いしない。
+    """
+    numeric_cells = tds[:-1]
+    points_by_ms: dict[int, int] = {}
+    present_ms_levels: set[int] = set()
+    blocked_ms_levels: set[int] = set()
+    for ms_lv in ms_levels:
+        idx = ms_lv - 1
+        if not 0 <= idx < len(numeric_cells):
+            continue
+        present_ms_levels.add(ms_lv)
+        raw_value = clean_text(numeric_cells[idx].get_text(" "))
+        val = to_int(raw_value)
+        if val is not None:
+            points_by_ms[ms_lv] = val
+        elif raw_value in _BLOCKED_CELL_VALUES and FORCED_SORTIE not in list_name:
+            blocked_ms_levels.add(ms_lv)
+    return points_by_ms, present_ms_levels, blocked_ms_levels
+
+
 def _collect_fullst_rows(soup: BeautifulSoup, ms_levels: list[int]) -> list[FullstRow]:
     """「強化リスト情報」テーブルを走査し、有効な行を FullstRow として収集する。
 
-    行見出し（th）のうち LV 表記でも定型見出しでもない最初のテキストを
-    強化リスト名とみなし、以降の行にも引き継ぐ（rowspan 相当の構造のため）。
-    「上限開放」の区切り行を境に section を "upper" へ切り替える。
+    強化リスト名は行見出しから読み、以降の行にも引き継ぐ（rowspan 相当の
+    構造のため）。「上限開放」の区切り行を境に section を "upper" へ切り替える。
+    必要強化値も "-" セルも無い行は採用しない（「強行出撃」は例外）。
     """
-    header = None
-    for hx in soup.find_all(["h2", "h3"]):
-        if "強化リスト情報" in clean_text(hx.get_text(" ")):
-            header = hx
-            break
-    if not header:
-        return []
-
-    table = header.find_next("table")
-    if not table:
+    table = find_fullst_table(soup)
+    if table is None:
         return []
 
     rows: list[FullstRow] = []
     current_name: str | None = None
     section = "normal"
     for tr in table.find_all("tr"):
-        row_text = clean_text(tr.get_text(" "))
-        if row_text == "上限開放":
+        if clean_text(tr.get_text(" ")) == "上限開放":
             section = "upper"
             current_name = None
             continue
@@ -68,61 +131,22 @@ def _collect_fullst_rows(soup: BeautifulSoup, ms_levels: list[int]) -> list[Full
         ths = tr.find_all("th")
         if not ths:
             continue
-
-        cand_names: list[str] = []
-        for th in ths:
-            txt = clean_text(th.get_text(" "))
-            if not txt:
-                continue
-            if any(
-                x in txt
-                for x in (
-                    "強化リスト",
-                    "上限開放",
-                    "リスト名",
-                    "MSレベル毎必要強化値",
-                    "効果",
-                )
-            ):
-                continue
-            if re.fullmatch(r"LV\d+|Lv\d+|Lv", txt, re.IGNORECASE):
-                continue
-            cand_names.append(txt)
-        if cand_names:
-            current_name = cand_names[0]
-
-        fullst_lv: int | None = None
-        for th in ths:
-            txt = clean_text(th.get_text(" "))
-            match = re.fullmatch(r"Lv(\d+)", txt, re.IGNORECASE)
-            if match:
-                fullst_lv = int(match.group(1))
-                break
+        th_texts = [clean_text(th.get_text(" ")) for th in ths]
+        list_name = _row_list_name(th_texts)
+        if list_name is not None:
+            current_name = list_name
+        fullst_lv = _row_fullst_lv(th_texts)
 
         tds = tr.find_all("td")
         if not tds or current_name is None or fullst_lv is None:
             continue
 
-        # 末尾セルは「効果」列のため数値対象から外す
-        numeric_cells = tds[:-1] if len(tds) >= 1 else tds
-        points_by_ms: dict[int, int] = {}
-        present_ms_levels: set[int] = set()
-        blocked_ms_levels: set[int] = set()
-        for ms_lv in ms_levels:
-            # 数値セルは MS レベル順に並ぶ前提（LV1 が先頭セル）
-            idx = ms_lv - 1
-            if 0 <= idx < len(numeric_cells):
-                present_ms_levels.add(ms_lv)
-                raw_value = clean_text(numeric_cells[idx].get_text(" "))
-                val = to_int(raw_value)
-                if val is not None:
-                    points_by_ms[ms_lv] = val
-                elif raw_value in {"-", "－"} and "強行出撃" not in current_name:
-                    blocked_ms_levels.add(ms_lv)
-
+        points_by_ms, present_ms_levels, blocked_ms_levels = _parse_points_cells(
+            tds, ms_levels, list_name=current_name
+        )
         if (
             not points_by_ms
-            and "強行出撃" not in current_name
+            and FORCED_SORTIE not in current_name
             and not blocked_ms_levels
         ):
             continue
@@ -159,12 +183,12 @@ def parse_fullst_by_ms_level(
             skip_fallback = False
             if (
                 pts is None
-                and "強行出撃" not in row.name
+                and FORCED_SORTIE not in row.name
                 and ms_lv in row.blocked_ms_levels
             ):
                 skip_fallback = True
             elif pts is None and (
-                "強行出撃" not in row.name or ms_lv not in row.present_ms_levels
+                FORCED_SORTIE not in row.name or ms_lv not in row.present_ms_levels
             ):
                 continue
             by_name.setdefault((row.section, row.name), []).append(
@@ -195,7 +219,7 @@ def fullst_sort_key(item: dict[str, Any]) -> tuple[int, bool, int]:
     name = str(item.get("name", ""))
     points = item.get("points")
     point_value = points if isinstance(points, int) else 0
-    return (0 if name == "強行出撃" else 1, points is not None, point_value)
+    return (0 if name == FORCED_SORTIE else 1, points is not None, point_value)
 
 
 def fullst_entry_key(item: dict[str, Any]) -> tuple[Any, Any, Any]:
