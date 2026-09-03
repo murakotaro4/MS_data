@@ -177,17 +177,21 @@ def task_test_cov() -> int:
     return _run_python_module("pytest", "-q", "--cov")
 
 
+# `ci` が順に実行するターゲット（失敗した時点で停止）
+CI_TARGETS: tuple[str, ...] = (
+    "validate-report-contract",
+    "validate-generated-reports",
+    "validate-official-overrides-schema",
+    "verify-snapshot-restore",
+    "lint",
+    "test-cov",
+    "validate-strict",
+)
+
+
 def task_ci() -> int:
     """品質チェック一括（lint / カバレッジ付きテスト / 各種検証）。"""
-    for task_name in (
-        "validate-report-contract",
-        "validate-generated-reports",
-        "validate-official-overrides-schema",
-        "verify-snapshot-restore",
-        "lint",
-        "test-cov",
-        "validate-strict",
-    ):
+    for task_name in CI_TARGETS:
         rc = TASKS[task_name]()
         if rc != 0:
             return rc
@@ -266,60 +270,84 @@ def task_validate_generated_reports() -> int:
 # ---------------------------------------------------------------------------
 
 
-def task_scrape_index() -> int:
-    args = [
+SCRAPE_MODULE = "ms_data.scraping.scrape_msdata"
+
+
+def _scrape(*args: str) -> int:
+    return _run_python_module(SCRAPE_MODULE, *args)
+
+
+def _index_argv(ttl: str) -> list[str]:
+    """`index` サブコマンドの引数（scrape-index / update-fast 共用）。"""
+    return [
         "index",
         "--url",
         _env("INDEX_URL", INDEX_URL),
         "--out",
         _env("INDEX_OUT", DEFAULT_INDEX_OUT),
         "--ttl",
-        _env("TTL", DEFAULT_TTL),
+        ttl,
         *_network_flags(),
     ]
-    return _run_python_module("ms_data.scraping.scrape_msdata", *args)
+
+
+def _fetch_rate_limit_ttl(ttl: str) -> list[str]:
+    """詳細取得系サブコマンド共通の `--rate/--limit/--ttl`。"""
+    return [
+        "--rate",
+        str(_env_float("RATE", DEFAULT_RATE)),
+        "--limit",
+        str(_env_int("LIMIT", 0)),
+        "--ttl",
+        ttl,
+    ]
+
+
+def _details_argv(
+    *,
+    input_path: str | None,
+    ttl: str,
+    changed_only: bool,
+) -> list[str]:
+    """`details`（input_path あり）/ `all`（None）サブコマンドの引数。"""
+    args = ["details", "--in", input_path] if input_path is not None else ["all"]
+    args.extend(
+        [
+            "--out",
+            _env("DETAILS_OUT", DEFAULT_DETAILS_OUT),
+            *_fetch_rate_limit_ttl(ttl),
+            "--detail-fetch-state-out",
+            _detail_fetch_state(),
+            *_network_flags(),
+        ]
+    )
+    if changed_only:
+        args.append("--changed-only")
+    return args
+
+
+def task_scrape_index() -> int:
+    return _scrape(*_index_argv(_env("TTL", DEFAULT_TTL)))
 
 
 def task_scrape_details() -> int:
-    args = [
-        "details",
-        "--in",
-        _env("DETAILS_IN", DEFAULT_INDEX_OUT),
-        "--out",
-        _env("DETAILS_OUT", DEFAULT_DETAILS_OUT),
-        "--rate",
-        str(_env_float("RATE", DEFAULT_RATE)),
-        "--limit",
-        str(_env_int("LIMIT", 0)),
-        "--ttl",
-        _env("TTL", DEFAULT_TTL),
-        "--detail-fetch-state-out",
-        _detail_fetch_state(),
-        *_network_flags(),
-    ]
-    if _env_flag("CHANGED_ONLY"):
-        args.append("--changed-only")
-    return _run_python_module("ms_data.scraping.scrape_msdata", *args)
+    return _scrape(
+        *_details_argv(
+            input_path=_env("DETAILS_IN", DEFAULT_INDEX_OUT),
+            ttl=_env("TTL", DEFAULT_TTL),
+            changed_only=_env_flag("CHANGED_ONLY"),
+        )
+    )
 
 
 def task_scrape_all() -> int:
-    args = [
-        "all",
-        "--out",
-        _env("DETAILS_OUT", DEFAULT_DETAILS_OUT),
-        "--rate",
-        str(_env_float("RATE", DEFAULT_RATE)),
-        "--limit",
-        str(_env_int("LIMIT", 0)),
-        "--ttl",
-        _env("TTL", DEFAULT_TTL),
-        "--detail-fetch-state-out",
-        _detail_fetch_state(),
-        *_network_flags(),
-    ]
-    if _env_flag("CHANGED_ONLY"):
-        args.append("--changed-only")
-    return _run_python_module("ms_data.scraping.scrape_msdata", *args)
+    return _scrape(
+        *_details_argv(
+            input_path=None,
+            ttl=_env("TTL", DEFAULT_TTL),
+            changed_only=_env_flag("CHANGED_ONLY"),
+        )
+    )
 
 
 def task_detect_changed() -> int:
@@ -354,7 +382,53 @@ def task_detect_changed() -> int:
         args.append("--force-full")
     if _env_flag("REVALIDATE"):
         args.append("--revalidate")
-    return _run_python_module("ms_data.scraping.scrape_msdata", *args)
+    return _scrape(*args)
+
+
+def _load_detect_changed_outputs() -> tuple[list[dict], dict] | None:
+    """detect-changed の出力 2 ファイルを読み、形が不正なら None（エラー出力済み）。"""
+    try:
+        changed_index = _load_json_file(Path(_changed_index_out()))
+        meta = _load_json_file(Path(_changed_meta_out()))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"ERROR: failed to read detect-changed outputs: {exc}", file=sys.stderr)
+        return None
+
+    if not isinstance(changed_index, list) or not isinstance(meta, dict):
+        print(
+            "ERROR: invalid detect-changed output shape "
+            f"(index={type(changed_index).__name__}, meta={type(meta).__name__})",
+            file=sys.stderr,
+        )
+        return None
+    return changed_index, meta
+
+
+def _fetch_changed_details(changed_index: list[dict], meta: dict, ttl: str) -> int:
+    """候補ページの詳細を取得する。理由が recent_update のみなら --changed-only。"""
+    use_changed_only = _can_use_changed_only(changed_index, meta) and not _env_flag(
+        "NO_NET"
+    )
+    return _scrape(
+        *_details_argv(
+            input_path=_changed_index_out(),
+            ttl="0s" if use_changed_only else ttl,
+            changed_only=use_changed_only,
+        )
+    )
+
+
+def _import_and_validate_if_details() -> int:
+    """details 出力が空でなければ import-details → validate-strict。"""
+    details_jsonl = Path(_env("DETAILS_OUT", DEFAULT_DETAILS_OUT))
+    if not details_jsonl.exists() or details_jsonl.stat().st_size == 0:
+        print("update-fast: details output is empty, skip import/validate")
+        return 0
+
+    rc = task_import_details()
+    if rc != 0:
+        return rc
+    return task_validate_strict()
 
 
 def task_update_fast() -> int:
@@ -369,20 +443,8 @@ def task_update_fast() -> int:
     4. 取得結果があれば import-details → validate-strict
     """
     ttl = _fast_ttl()
-    rate = str(_env_float("RATE", DEFAULT_RATE))
-    limit = str(_env_int("LIMIT", 0))
 
-    rc = _run_python_module(
-        "ms_data.scraping.scrape_msdata",
-        "index",
-        "--url",
-        _env("INDEX_URL", INDEX_URL),
-        "--out",
-        _env("INDEX_OUT", DEFAULT_INDEX_OUT),
-        "--ttl",
-        ttl,
-        *_network_flags(),
-    )
+    rc = _scrape(*_index_argv(ttl))
     if rc != 0:
         return rc
 
@@ -390,86 +452,32 @@ def task_update_fast() -> int:
     if rc != 0:
         return rc
 
-    try:
-        changed_index = _load_json_file(Path(_changed_index_out()))
-        meta = _load_json_file(Path(_changed_meta_out()))
-    except (OSError, json.JSONDecodeError) as exc:
-        print(f"ERROR: failed to read detect-changed outputs: {exc}", file=sys.stderr)
+    outputs = _load_detect_changed_outputs()
+    if outputs is None:
         return 1
+    changed_index, meta = outputs
 
-    if not isinstance(changed_index, list) or not isinstance(meta, dict):
-        print(
-            "ERROR: invalid detect-changed output shape "
-            f"(index={type(changed_index).__name__}, meta={type(meta).__name__})",
-            file=sys.stderr,
-        )
-        return 1
-
-    candidate_count = int(meta.get("candidate_count", 0))
-    if candidate_count <= 0:
+    if int(meta.get("candidate_count", 0)) <= 0:
         print("update-fast: no candidate pages, skip details/import/validate")
         return 0
 
-    use_changed_only = (
-        isinstance(changed_index, list)
-        and _can_use_changed_only(changed_index, meta)
-        and not _env_flag("NO_NET")
-    )
-    detail_ttl = "0s" if use_changed_only else ttl
-
-    details_args = [
-        "details",
-        "--in",
-        _changed_index_out(),
-        "--out",
-        _env("DETAILS_OUT", DEFAULT_DETAILS_OUT),
-        "--rate",
-        rate,
-        "--limit",
-        limit,
-        "--ttl",
-        detail_ttl,
-        "--detail-fetch-state-out",
-        _detail_fetch_state(),
-        *_network_flags(),
-    ]
-    if use_changed_only:
-        details_args.append("--changed-only")
-
-    rc = _run_python_module(
-        "ms_data.scraping.scrape_msdata",
-        *details_args,
-    )
+    rc = _fetch_changed_details(changed_index, meta, ttl)
     if rc != 0:
         return rc
 
-    details_jsonl = Path(_env("DETAILS_OUT", DEFAULT_DETAILS_OUT))
-    if not details_jsonl.exists() or details_jsonl.stat().st_size == 0:
-        print("update-fast: details output is empty, skip import/validate")
-        return 0
-
-    rc = task_import_details()
-    if rc != 0:
-        return rc
-    return task_validate_strict()
+    return _import_and_validate_if_details()
 
 
 def task_labels() -> int:
-    args = [
+    return _scrape(
         "labels",
         "--in",
         _env("INDEX_OUT", DEFAULT_INDEX_OUT),
         "--out",
         _env("LABELS_OUT", DEFAULT_LABELS_OUT),
-        "--rate",
-        str(_env_float("RATE", DEFAULT_RATE)),
-        "--limit",
-        str(_env_int("LIMIT", 0)),
-        "--ttl",
-        _env("TTL", DEFAULT_TTL),
+        *_fetch_rate_limit_ttl(_env("TTL", DEFAULT_TTL)),
         *_network_flags(),
-    ]
-    return _run_python_module("ms_data.scraping.scrape_msdata", *args)
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -694,8 +702,6 @@ def task_audit_official_overrides() -> int:
 
 
 def task_audit_field_completeness() -> int:
-    report_date = _report_date()
-    reports_dir = _env("REPORTS_DIR", DEFAULT_REPORTS_DIR)
     args = [
         "--msdata",
         _env("MSDATA", DEFAULT_MSDATA),
@@ -705,7 +711,7 @@ def task_audit_field_completeness() -> int:
             DEFAULT_FIELD_COMPLETENESS_ALLOWLIST,
         ),
         "--out",
-        f"{paths.reports_month_dir(report_date, base_dir=reports_dir)}/field_completeness_{report_date}.md",
+        _report_out("FIELD_COMPLETENESS_OUT", "field_completeness", "md"),
     ]
     today = _env_str("TODAY")
     if today:
