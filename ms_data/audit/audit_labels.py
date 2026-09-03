@@ -13,6 +13,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
+from ms_data.core import paths
 from ms_data.core.labels import FIELD_MAP, clean_text
 
 # 監査から除外する normalized ラベル（データ項目ではないもの）
@@ -89,8 +90,8 @@ def write_report(stats: Stats, out: Path) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--in", dest="input", default="cache/labels_raw.jsonl")
-    ap.add_argument("--out", dest="out", default="reports/label_audit_latest.md")
+    ap.add_argument("--in", dest="input", default=paths.LABELS_RAW_JSONL.as_posix())
+    ap.add_argument("--out", dest="out", default=paths.LABEL_AUDIT_LATEST.as_posix())
     args = ap.parse_args(argv)
 
     stats = analyze(load_jsonl(Path(args.input)))

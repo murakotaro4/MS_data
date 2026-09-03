@@ -22,6 +22,7 @@ from typing import Any
 
 from jsonschema import Draft7Validator
 
+from ms_data.core import paths
 from ms_data.core.json_io import load_json
 from ms_data.core.labels import KEY_ALIASES
 from ms_data.core.ms_names import extract_ms_base_name
@@ -100,9 +101,7 @@ def find_semantic_errors(records: Iterable[dict[str, Any]]) -> list[str]:
 
     for record in records:
         ms_name = record.get("MS名")
-        base_name = (
-            extract_ms_base_name(ms_name) if isinstance(ms_name, str) else None
-        )
+        base_name = extract_ms_base_name(ms_name) if isinstance(ms_name, str) else None
 
         if base_name:
             attr = record.get("属性")
@@ -172,7 +171,7 @@ def find_semantic_errors(records: Iterable[dict[str, Any]]) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("path", type=Path, nargs="?", default=Path("msData.json"))
+    ap.add_argument("path", type=Path, nargs="?", default=paths.MSDATA)
     ap.add_argument("--schema", type=Path, default=SCHEMA_PATH)
     ap.add_argument("--fail-on-typo", action="store_true")
     args = ap.parse_args(argv)
