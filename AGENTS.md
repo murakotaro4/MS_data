@@ -14,7 +14,7 @@
     - `validation/`: スキーマ・契約検証（validate_* / verify_snapshot_restore）
     - `audit/`: 監査・巻き戻り検出（audit_* / detect_msdata_rollbacks）
     - `reporting/`: レポート生成・整理（report_msdata_diff / msdata_diff_model / rendering / build_atwiki_quality_report / build_update_mail_body / prune_reports）
-    - `gh/`: GitHub 連携（auto_review_gate / auto_review_merge / cleanup_auto_update_prs / post_merge_assets / notify_failure / gh_json / outputs）
+    - `gh/`: GitHub 連携（auto_review_gate / auto_review_merge / cleanup_auto_update_prs / post_merge_assets / notify_failure / pr_payload(PR payload アクセサ・source_run_id マーカー) / gh_json / outputs）
     - `notify/`: メール送信（send_gmail）
     - `tasks.py`: 全ターゲットのディスパッチャ（ワークフロー・開発者の共通入口）
   - `tests/`: ユニットテスト
@@ -74,6 +74,7 @@
 - atwiki取得品質: `reports/YYYY/MM/atwiki_quality_YYYYMMDD.json` に HTTP 状態・304件数・失敗推定・レコード数・差分件数を記録。しきい値超過は warnings として PR 本文・Step Summary に警告（`ATWIKI_QUALITY_*` 変数で調整）。
 - notify failure: `workflow_run` で 6 ワークフロー（`data update` / `auto review merge` / `resume auto review` / `post merge notify` / `cleanup auto update prs` / `reports prune`）の `failure` / `timed_out` / `startup_failure` / `action_required` を監視し、GMAIL Secrets によるメール送信と `pipeline-failure` ラベル付き Issue 起票を行う（`ms_data/gh/notify_failure.py`、stdlib のみで動作、重複 Issue の自己修復あり）。
 - ci の changes ジョブ: PR がデータ・レポート・md のみの変更なら checks（ubuntu/windows マトリクス）をスキップ。`tests/` 配下と削除は `code=true`。changes ジョブ自身が report-contract / msData / generated-reports の軽量検証を実施。actionlint は checks ジョブ（ubuntu）で実行。
+- `.github/actions/resolve-codex-pat`: `CODEX_TRIGGER_PAT` のログイン解決（`pat_available` / `pat_login` を出力、失敗時は警告のみで bot 名義へフォールバック）。`auto review merge` / `resume auto review` で共用。
 - `.github/actions/setup-uv-env`: Python 3.11 + uv + `uv sync --dev` の composite action。`ci` / `data update` / `auto review merge` / `resume auto review` / `post merge notify` / `reports prune` で共用（Python バージョン変更はここが主変更点）。`notify failure` と `cleanup auto update prs` は uv 不要のため未使用。
 - CI runner: Windows は `windows-2025-vs2026` を明示使用。`windows-latest` へ戻す場合は GitHub の runner image 移行状況を確認。
 - 互換期間: レポート再編時の旧パス互換は原則検討するが、v3 の年月階層化（`reports/YYYY/MM/`）は破壊的移行として実施済み（`legacy_path_support: false`、旧パスへの転送なし）。日付付きレポートの旧フラット `path_patterns` は撤去済み（直下に残す undated / テンプレートのみ許容）。

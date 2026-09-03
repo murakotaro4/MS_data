@@ -5,15 +5,13 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from ms_data.core.paths import reports_month_dir
 from ms_data.gh import outputs as gh_outputs
-from ms_data.gh.auto_review_pr import HEAD_REF_DATE_RE as HEAD_REF_RE
-
-SOURCE_RUN_RE = re.compile(r"source_run_id[:=\s]*([0-9]+)")
+from ms_data.gh.pr_payload import HEAD_REF_DATE_RE as HEAD_REF_RE
+from ms_data.gh.pr_payload import source_run_id_from_body
 
 
 @dataclass(frozen=True)
@@ -37,14 +35,15 @@ class PostMergeAssets:
 
 
 def resolve_source_run_id(source_run_id_input: str, pr_body: str) -> str:
+    """workflow_dispatch 入力を優先し、無ければ PR 本文のマーカーから解決する。"""
     if source_run_id_input.strip():
         return source_run_id_input.strip()
-    match = SOURCE_RUN_RE.search(pr_body)
-    if not match:
+    run_id = source_run_id_from_body(pr_body)
+    if not run_id:
         raise ValueError(
             "source_run_id を解決できません。PR本文または workflow_dispatch 入力に指定してください。"
         )
-    return match.group(1)
+    return run_id
 
 
 def resolve_assets(
