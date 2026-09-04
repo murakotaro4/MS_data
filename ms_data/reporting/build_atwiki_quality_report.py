@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from ms_data.core import paths
 from ms_data.core.json_io import load_json_or_default as _load_json
 from ms_data.gh.outputs import append_step_summary, write_github_output
 from ms_data.reporting import report_msdata_diff
@@ -316,27 +317,21 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--report-date", required=True)
     parser.add_argument("--source-run-id", required=True)
-    parser.add_argument("--index", type=Path, default=Path("cache/index.json"))
+    parser.add_argument("--index", type=Path, default=paths.INDEX_JSON)
+    parser.add_argument("--changed-index", type=Path, default=paths.CHANGED_INDEX_JSON)
     parser.add_argument(
-        "--changed-index", type=Path, default=Path("cache/index_changed.json")
-    )
-    parser.add_argument(
-        "--changed-meta", type=Path, default=Path("cache/index_changed_meta.json")
+        "--changed-meta", type=Path, default=paths.CHANGED_INDEX_META_JSON
     )
     parser.add_argument(
         "--detail-fetch-state",
         type=Path,
-        default=Path("cache/detail_fetch_state.json"),
+        default=paths.DETAIL_FETCH_STATE_JSON,
     )
-    parser.add_argument("--details-json", type=Path, default=Path("cache/details.json"))
-    parser.add_argument(
-        "--details-jsonl", type=Path, default=Path("cache/details.jsonl")
-    )
+    parser.add_argument("--details-json", type=Path, default=paths.DETAILS_JSON)
+    parser.add_argument("--details-jsonl", type=Path, default=paths.DETAILS_JSONL)
     parser.add_argument("--before-msdata", type=Path, default=None)
-    parser.add_argument("--current-msdata", type=Path, default=Path("msData.json"))
-    parser.add_argument(
-        "--fetch-stats", type=Path, default=Path("cache/fetch_stats.json")
-    )
+    parser.add_argument("--current-msdata", type=Path, default=paths.MSDATA)
+    parser.add_argument("--fetch-stats", type=Path, default=paths.FETCH_STATS_JSON)
     parser.add_argument("--full-update", action="store_true")
     parser.add_argument("--max-failure-rate", type=float, default=0.10)
     parser.add_argument("--min-detail-record-ratio", type=float, default=0.80)

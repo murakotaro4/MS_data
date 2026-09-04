@@ -23,12 +23,10 @@ from ms_data.core.env import env_float as _env_float
 from ms_data.core.env import env_int as _env_int
 from ms_data.core.env import env_str as _env_str
 from ms_data.core.json_io import load_json as _load_json_file
-
-INDEX_URL = "https://w.atwiki.jp/battle-operation2/pages/377.html"
+from ms_data.scraping.defaults import DEFAULT_RATE, DEFAULT_TTL, INDEX_URL
 
 # 既定パス・既定値（対応する環境変数で上書き可能）
 DEFAULT_MSDATA = paths.MSDATA.as_posix()  # MSDATA
-DEFAULT_TTL = "7d"  # TTL
 DEFAULT_INDEX_OUT = paths.INDEX_JSON.as_posix()  # INDEX_OUT
 DEFAULT_DETAILS_OUT = paths.DETAILS_JSONL.as_posix()  # DETAILS_OUT
 DEFAULT_DETAILS_JSON = paths.DETAILS_JSON.as_posix()  # DETAILS_JSON
@@ -44,7 +42,6 @@ DEFAULT_REPORT_SCHEMA_DIR = paths.REPORT_SCHEMAS_DIR.as_posix()
 DEFAULT_CHANGED_INDEX_OUT = paths.CHANGED_INDEX_JSON.as_posix()
 DEFAULT_CHANGED_META_OUT = paths.CHANGED_INDEX_META_JSON.as_posix()
 DEFAULT_DETAIL_FETCH_STATE = paths.DETAIL_FETCH_STATE_JSON.as_posix()
-DEFAULT_FETCH_STATS = paths.FETCH_STATS_JSON.as_posix()
 DEFAULT_FIELD_COMPLETENESS_ALLOWLIST = paths.FIELD_COMPLETENESS_ALLOWLIST.as_posix()
 
 
@@ -291,7 +288,7 @@ def task_scrape_details() -> int:
         "--out",
         _env("DETAILS_OUT", DEFAULT_DETAILS_OUT),
         "--rate",
-        str(_env_float("RATE", 2.0)),
+        str(_env_float("RATE", DEFAULT_RATE)),
         "--limit",
         str(_env_int("LIMIT", 0)),
         "--ttl",
@@ -311,7 +308,7 @@ def task_scrape_all() -> int:
         "--out",
         _env("DETAILS_OUT", DEFAULT_DETAILS_OUT),
         "--rate",
-        str(_env_float("RATE", 2.0)),
+        str(_env_float("RATE", DEFAULT_RATE)),
         "--limit",
         str(_env_int("LIMIT", 0)),
         "--ttl",
@@ -372,7 +369,7 @@ def task_update_fast() -> int:
     4. 取得結果があれば import-details → validate-strict
     """
     ttl = _fast_ttl()
-    rate = str(_env_float("RATE", 2.0))
+    rate = str(_env_float("RATE", DEFAULT_RATE))
     limit = str(_env_int("LIMIT", 0))
 
     rc = _run_python_module(
@@ -465,7 +462,7 @@ def task_labels() -> int:
         "--out",
         _env("LABELS_OUT", DEFAULT_LABELS_OUT),
         "--rate",
-        str(_env_float("RATE", 2.0)),
+        str(_env_float("RATE", DEFAULT_RATE)),
         "--limit",
         str(_env_int("LIMIT", 0)),
         "--ttl",
@@ -543,7 +540,7 @@ def task_provenance() -> int:
         "--ttl",
         _env("TTL", DEFAULT_TTL),
         "--rate",
-        str(_env_float("RATE", 2.0)),
+        str(_env_float("RATE", DEFAULT_RATE)),
         "--limit",
         str(_env_int("LIMIT", 0)),
         "--artifact-name",
@@ -620,7 +617,7 @@ def task_atwiki_quality_report() -> int:
         "--details-jsonl",
         _env("DETAILS_OUT", DEFAULT_DETAILS_OUT),
         "--before-msdata",
-        _env("BEFORE", "msData.before.json"),
+        _env("BEFORE", paths.MSDATA_BEFORE.as_posix()),
         "--current-msdata",
         _env("MSDATA", DEFAULT_MSDATA),
         "--out",
