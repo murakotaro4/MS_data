@@ -34788,6 +34788,7 @@
     "格闘判定力": "中",
     "レアリティ": "☆",
     "必要階級": "",
+    "必要リサイクルチケット": 85,
     "fullst": [
       {
         "name": "プロペラントタンク",
@@ -89577,32 +89578,32 @@
       {
         "name": "耐実弾装甲補強",
         "level": 1,
-        "points": null
+        "points": 820
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 1650
       },
       {
         "name": "フレーム補強",
         "level": 1,
-        "points": null
+        "points": 2200
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 2750
       },
       {
         "name": "対汎用攻撃プログラム",
         "level": 3,
-        "points": null
+        "points": 5500
       },
       {
         "name": "フレーム補強",
         "level": 4,
-        "points": null
+        "points": 8250
       }
     ]
   },
@@ -100655,32 +100656,32 @@
       {
         "name": "耐実弾装甲補強",
         "level": 1,
-        "points": null
+        "points": 870
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 1740
       },
       {
         "name": "フレーム補強",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 2320
       },
       {
         "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 2910
       },
       {
         "name": "対汎用攻撃プログラム",
         "level": 3,
-        "points": null
+        "points": 5820
       },
       {
         "name": "フレーム補強",
         "level": 4,
-        "points": null
+        "points": 8730
       }
     ]
   },
@@ -103945,7 +103946,7 @@
     "環境適正_宇宙": false,
     "環境適正_水中": false,
     "コスト": 750,
-    "HP": 25000,
+    "HP": 27000,
     "耐実弾補正": 30,
     "耐ビーム補正": 30,
     "耐格闘補正": 24,
