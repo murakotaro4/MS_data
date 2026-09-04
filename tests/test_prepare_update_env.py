@@ -4,6 +4,8 @@ import pytest
 
 from ms_data.pipeline import prepare_update_env
 
+from workflow_contract import assert_absent, assert_contains, workflow_step
+
 
 @pytest.mark.parametrize(
     ("event_name", "schedule_cron", "input_mode", "force_full", "today", "expected"),
@@ -158,18 +160,20 @@ def test_dry_run_is_only_enabled_for_workflow_dispatch():
 
 
 def test_data_update_prepare_uses_module_without_legacy_bash():
-    workflow = (
-        Path(__file__).resolve().parents[1] / ".github/workflows/data_update.yml"
-    ).read_text(encoding="utf-8")
-    start = workflow.index("      - name: Prepare\n")
-    end = workflow.index("\n      - name: Validate report contract", start)
-    block = workflow[start:end]
+    block = workflow_step(
+        "data_update.yml",
+        start="      - name: Prepare\n",
+        end="\n      - name: Validate report contract",
+    )
 
-    assert "uv run python -m ms_data.pipeline.prepare_update_env" in block
-    assert '--event-name "${{ github.event_name }}"' in block
-    assert '--schedule-cron "${{ github.event.schedule }}"' in block
-    assert '--run-id "${{ github.run_id }}"' in block
-    assert '--github-env "$GITHUB_ENV"' in block
-    assert "date +%Y%m%d" not in block
-    assert "update_mode=" not in block
-    assert 'echo "UPDATE_MODE=' not in block
+    assert_contains(
+        block,
+        [
+            "uv run python -m ms_data.pipeline.prepare_update_env",
+            '--event-name "${{ github.event_name }}"',
+            '--schedule-cron "${{ github.event.schedule }}"',
+            '--run-id "${{ github.run_id }}"',
+            '--github-env "$GITHUB_ENV"',
+        ],
+    )
+    assert_absent(block, ["date +%Y%m%d", "update_mode=", 'echo "UPDATE_MODE='])

@@ -1,50 +1,46 @@
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[1]
-
-
-def _workflow_text(name: str) -> str:
-    return (ROOT / ".github/workflows" / name).read_text(encoding="utf-8")
-
-
-def _step_block(text: str, *, start: str, end: str) -> str:
-    start_index = text.index(start)
-    end_index = text.index(end, start_index)
-    return text[start_index:end_index]
+from workflow_contract import assert_absent, assert_contains, workflow_step
 
 
 def test_post_merge_notify_builds_mail_body_from_diff_and_guard_reports():
-    text = _workflow_text("post_merge_notify.yml")
-    block = _step_block(
-        text,
+    block = workflow_step(
+        "post_merge_notify.yml",
         start="- id: mail_body",
         end="- name: Send merged msData mail",
     )
 
-    assert "uv run python -m ms_data.reporting.build_update_mail_body" in block
-    assert '--changed "true"' in block
-    assert "--source-run-id" in block
-    assert "--release-url" in block
-    assert "--diff-path" in block
-    assert "--rollback-guard-path" in block
-    assert "--official-overrides-audit-path" in block
+    assert_contains(
+        block,
+        [
+            "uv run python -m ms_data.reporting.build_update_mail_body",
+            '--changed "true"',
+            "--source-run-id",
+            "--release-url",
+            "--diff-path",
+            "--rollback-guard-path",
+            "--official-overrides-audit-path",
+        ],
+    )
 
 
 def test_data_update_no_change_mail_keeps_detection_and_guard_context_only():
-    text = _workflow_text("data_update.yml")
-    block = _step_block(
-        text,
+    block = workflow_step(
+        "data_update.yml",
         start="- id: no_change_mail",
         end="- name: Send no-change mail",
     )
 
-    assert "uv run python -m ms_data.reporting.build_update_mail_body" in block
-    assert '--changed "false"' in block
-    assert "--candidate-count" in block
-    assert "--fast-path" in block
-    assert "--age-coverage" in block
-    assert "--fallback-reason" in block
-    assert "--run-id" in block
-    assert "--rollback-guard-path" in block
-    assert "--official-overrides-audit-path" in block
-    assert "--diff-path" not in block
+    assert_contains(
+        block,
+        [
+            "uv run python -m ms_data.reporting.build_update_mail_body",
+            '--changed "false"',
+            "--candidate-count",
+            "--fast-path",
+            "--age-coverage",
+            "--fallback-reason",
+            "--run-id",
+            "--rollback-guard-path",
+            "--official-overrides-audit-path",
+        ],
+    )
+    assert_absent(block, ["--diff-path"])
