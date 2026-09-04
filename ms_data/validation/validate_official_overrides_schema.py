@@ -9,6 +9,7 @@ from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from ms_data.core import paths
 from ms_data.core.json_io import load_json as _load_json
 from ms_data.pipeline import official_overrides, update_msdata
 
@@ -88,9 +89,7 @@ def validate(
 
     try:
         update_msdata.load_official_overrides(overrides_dir)
-    except (
-        Exception
-    ) as exc:
+    except Exception as exc:
         messages.append(f"{overrides_dir}: semantic validation failed: {exc}")
     return messages
 
@@ -105,7 +104,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--schema",
         type=Path,
-        default=Path("schema/official_overrides.schema.json"),
+        default=paths.OFFICIAL_OVERRIDES_SCHEMA,
     )
     args = parser.parse_args(argv)
 

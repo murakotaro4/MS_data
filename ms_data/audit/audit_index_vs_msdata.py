@@ -21,6 +21,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from ms_data.core import paths
 from ms_data.core.json_io import load_json
 
 
@@ -240,8 +241,8 @@ def render_markdown(result: dict[str, Any]) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--index", type=Path, default=Path("cache/index.json"))
-    ap.add_argument("--ms", type=Path, default=Path("msData.json"))
+    ap.add_argument("--index", type=Path, default=paths.INDEX_JSON)
+    ap.add_argument("--ms", type=Path, default=paths.MSDATA)
     ap.add_argument("--out", type=Path, default=None)
     args = ap.parse_args(argv)
 
@@ -249,7 +250,7 @@ def main(argv: list[str] | None = None) -> int:
     out_path = args.out
     if out_path is None:
         out_path = (
-            Path("reports")
+            paths.REPORTS_DIR
             / f"index_ms_audit_{dt.datetime.now().strftime('%Y%m%d')}.md"
         )
     out_path.parent.mkdir(parents=True, exist_ok=True)

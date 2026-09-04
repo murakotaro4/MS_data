@@ -9,6 +9,7 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
+from ms_data.core import paths
 from ms_data.core.json_io import load_json as _load_json
 
 JSON_SCHEMA_REPORTS = {
@@ -107,8 +108,8 @@ def validate_reports(reports_dir: Path, schema_dir: Path) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--reports-dir", type=Path, default=Path("reports"))
-    parser.add_argument("--schema-dir", type=Path, default=Path("schema/reports"))
+    parser.add_argument("--reports-dir", type=Path, default=paths.REPORTS_DIR)
+    parser.add_argument("--schema-dir", type=Path, default=paths.REPORT_SCHEMAS_DIR)
     args = parser.parse_args(argv)
 
     messages = validate_reports(args.reports_dir, args.schema_dir)
