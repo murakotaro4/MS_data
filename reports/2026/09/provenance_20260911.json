@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-09-11T13:12:36Z",
+  "report_date": "20260911",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "132c094feba7b88bebe5da7a8663230bd90b7983"
+  },
+  "github": {
+    "run_id": "34602957537",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "9604225f841b3a431cb59ee7ceb9549b8726f9e3a01f269b4e2c3299f8a31948",
+      "size_bytes": 145616,
+      "record_count": 592
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "b11f6bf604dfc5f406db9bf085af49d2beba370f780c08c7f4dc8fdaea361f23",
+      "size_bytes": 51977,
+      "record_count": 44
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "f74ad2479b00b0d8e9505e3b63745c04351cb4cfbcfc6155db895025301affe5",
+      "size_bytes": 67959,
+      "record_count": 44
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "a0a8233444a8f357bd66f848bd1f636bf81d7a91a4a40b0864a2f278f5485ab3",
+      "file_count": 34,
+      "size_bytes": 5875497
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "177ea76584c22c366f984513aec6d9c62fe1ad7c1f08e41f3890f8210e59d69c",
+      "size_bytes": 2645729,
+      "record_count": 1712
+    },
+    "diff_report": {
+      "path": "reports/2026/09/diff_msdata_20260911.md",
+      "sha256": "5bba3989debaaf9f079e6a5ebc6702ef8dee77e79feac8b64ff072377ad7bd63",
+      "size_bytes": 1649
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260911-run-34602957537",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260911-run-34602957537",
+    "asset_name": "raw_snapshot_20260911_run34602957537.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260911-run-34602957537"
+  }
+}
