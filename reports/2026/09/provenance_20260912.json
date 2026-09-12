@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-09-12T12:36:31Z",
+  "report_date": "20260912",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "132c094feba7b88bebe5da7a8663230bd90b7983"
+  },
+  "github": {
+    "run_id": "34694110968",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "c9e7892e280e6a9e1faf980dd5bd8e32249ba8291f006ceab6018cfd8889100e",
+      "size_bytes": 145629,
+      "record_count": 592
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "8cd6f3d1dde2c8ed1216f4beba42edd2dfb7d7a22e7881c9a097f66f0ceb6755",
+      "size_bytes": 30495,
+      "record_count": 26
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "377ed857d42541b3324b34fea2e646e09bb9178f8f306725262044336615da38",
+      "size_bytes": 39907,
+      "record_count": 26
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "c2cfa1645da663e76f7b3efd94b681b39c936b58c69a6c97ce4edc9ce35009fc",
+      "file_count": 20,
+      "size_bytes": 3629591
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "177ea76584c22c366f984513aec6d9c62fe1ad7c1f08e41f3890f8210e59d69c",
+      "size_bytes": 2645729,
+      "record_count": 1712
+    },
+    "diff_report": {
+      "path": "reports/2026/09/diff_msdata_20260912.md",
+      "sha256": "ba460066b6ee0f55bbe39fab92be5c233daa453a4b9b72fbdbaf12acccdecf9c",
+      "size_bytes": 1649
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260912-run-34694110968",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260912-run-34694110968",
+    "asset_name": "raw_snapshot_20260912_run34694110968.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260912-run-34694110968"
+  }
+}
