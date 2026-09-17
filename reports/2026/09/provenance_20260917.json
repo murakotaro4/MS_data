@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-09-17T14:04:38Z",
+  "report_date": "20260917",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "b627809ab65373b2acb9468b9180a2546567a735"
+  },
+  "github": {
+    "run_id": "35231122305",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "ad9b7e3edc38cd889b74d0f82a448fb980594033dcfa4dd4d27f5bf5a32ac8bf",
+      "size_bytes": 146134,
+      "record_count": 594
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "afc7e1645db4dab301b7489e88264bd2efc8fa487bd5480065d21ebe535d9fd5",
+      "size_bytes": 31733,
+      "record_count": 27
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "c6cc5854b88aa2dc09bcddaed5919c251bbbf597e7e18dee6ce625acd2282a14",
+      "size_bytes": 41510,
+      "record_count": 27
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "2a2072bf911200e40961e3c2b1c905b7e6ac0066640996df64ee321946432801",
+      "file_count": 28,
+      "size_bytes": 4753958
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "b917ef8ef0837e8a4dc17c62a82e6f74b4808aca3a82c9f9b1e961207be7301b",
+      "size_bytes": 2648717,
+      "record_count": 1714
+    },
+    "diff_report": {
+      "path": "reports/2026/09/diff_msdata_20260917.md",
+      "sha256": "bb79ff02e62f654a69ca1f2067234f2f03630118f4c7443d87b9cc26fd819bf7",
+      "size_bytes": 1561
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260917-run-35231122305",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260917-run-35231122305",
+    "asset_name": "raw_snapshot_20260917_run35231122305.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260917-run-35231122305"
+  }
+}
