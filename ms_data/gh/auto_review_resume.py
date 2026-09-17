@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -184,18 +185,44 @@ def _handle_resume_findings(
         )
 
 
-def cmd_resume(args: argparse.Namespace, deps: ReviewDeps) -> int:
-    """翌朝レスキュー: no_response / disconnected で止まった PR を回収する。"""
-    client = deps.client(args.repo)
-    max_candidates = _positive_int(args.max_candidates, 3)
-    retry_wait_seconds = _positive_int(args.retry_wait_seconds, 300)
-    poll_seconds = _positive_int(args.poll_seconds, 30)
-    pat_available = _bool_text(args.pat_available)
-    pat_login = str(args.pat_login or "").strip()
+@dataclass(frozen=True)
+class ResumeParams:
+    """cmd_resume の実行パラメータ（argparse から正規化済み）。"""
 
-    pulls = client.api_json(
-        f"repos/{args.repo}/pulls?state=open&base=main&per_page=100"
-    )
+    run_id: str
+    retry_wait_seconds: int
+    poll_seconds: int
+    pat_available: bool
+    pat_login: str
+
+    @classmethod
+    def from_args(cls, args: argparse.Namespace) -> ResumeParams:
+        return cls(
+            run_id=str(args.run_id),
+            retry_wait_seconds=_positive_int(args.retry_wait_seconds, 300),
+            poll_seconds=_positive_int(args.poll_seconds, 30),
+            pat_available=_bool_text(args.pat_available),
+            pat_login=str(args.pat_login or "").strip(),
+        )
+
+    @property
+    def can_retrigger(self) -> bool:
+        return self.pat_available and bool(self.pat_login)
+
+
+@dataclass(frozen=True)
+class ResumeOutcome:
+    """候補 1 件の処理結果。summary_line は Step Summary にそのまま載せる。"""
+
+    kind: str  # merged / merge_skipped / stopped_findings / pending
+    summary_line: str
+
+
+def _collect_resume_candidates(
+    *, client: GitHubClient, repo: str, max_candidates: int
+) -> list[dict[str, Any]]:
+    """open な自動更新 PR とそのコメントを集め、resume 候補を選ぶ。"""
+    pulls = client.api_json(f"repos/{repo}/pulls?state=open&base=main&per_page=100")
     comments_by_pr: dict[str, list[dict[str, Any]]] = {}
     for pr in pulls:
         pr_number = str(pr.get("number") or "")
@@ -206,15 +233,167 @@ def cmd_resume(args: argparse.Namespace, deps: ReviewDeps) -> int:
             continue
         comments_by_pr[pr_number] = client.issue_comments(pr_number)
 
-    candidates = select_resume_candidates(
+    return select_resume_candidates(
         pulls=pulls,
         comments_by_pr=comments_by_pr,
-        repo=args.repo,
+        repo=repo,
         max_candidates=max_candidates,
     )
 
-    merged_count = 0
-    pending_count = 0
+
+def _merge_outcome(
+    *,
+    client: GitHubClient,
+    candidate: dict[str, Any],
+    source_run_id: str,
+    params: ResumeParams,
+    deps: ReviewDeps,
+    label: str,
+) -> ResumeOutcome:
+    """merge_ok な候補をマージし、結果を outcome に変換する。"""
+    pr_number = candidate["pr_number"]
+    merge_sha = _merge_and_notify(
+        client=client,
+        pr_number=pr_number,
+        head_ref=candidate["head_ref"],
+        evaluated_sha=candidate["head_sha"],
+        source_run_id=source_run_id,
+        resume_run_id=params.run_id,
+        deps=deps,
+    )
+    if not merge_sha:
+        return ResumeOutcome(
+            "merge_skipped", f"- merge_skipped(not_open): #{pr_number}"
+        )
+    return ResumeOutcome("merged", f"- {label}: #{pr_number} ({merge_sha})")
+
+
+def _findings_outcome(
+    *,
+    client: GitHubClient,
+    candidate: dict[str, Any],
+    params: ResumeParams,
+    deps: ReviewDeps,
+) -> ResumeOutcome:
+    _handle_resume_findings(
+        client=client,
+        pr_number=candidate["pr_number"],
+        head_sha=candidate["head_sha"],
+        report_date=candidate["report_date"],
+        resume_run_id=params.run_id,
+        deps=deps,
+    )
+    return ResumeOutcome(
+        "stopped_findings", f"- stopped_findings: #{candidate['pr_number']}"
+    )
+
+
+def _retrigger_and_wait(
+    *,
+    client: GitHubClient,
+    candidate: dict[str, Any],
+    since: str,
+    params: ResumeParams,
+    deps: ReviewDeps,
+) -> dict[str, Any]:
+    """PAT 名義で `@codex review` を再投稿し、merge_ok になるまで待つ。"""
+    head_sha = candidate["head_sha"]
+    deps.ensure_comment(
+        client=client,
+        pr_number=candidate["pr_number"],
+        marker=resume_marker(params.run_id, head_sha),
+        allowed_logins=_allowed_trigger_logins(params.pat_login),
+        use_trigger_token=True,
+    )
+    return _resume_wait_for_merge_ok(
+        client=client,
+        pr_number=candidate["pr_number"],
+        head_sha=head_sha,
+        since=since,
+        retry_wait_seconds=params.retry_wait_seconds,
+        poll_seconds=params.poll_seconds,
+        deps=deps,
+    )
+
+
+def _process_resume_candidate(
+    *,
+    client: GitHubClient,
+    candidate: dict[str, Any],
+    params: ResumeParams,
+    deps: ReviewDeps,
+) -> ResumeOutcome:
+    """候補 1 件を「即マージ → findings → 再トリガー待ち」の順で処理する。"""
+    pr_number = candidate["pr_number"]
+    head_sha = candidate["head_sha"]
+    since = resolve_review_since(
+        client=client,
+        pr_number=pr_number,
+        pr_created_at=candidate["created_at"],
+        head_sha=head_sha,
+    )
+    source_run_id = resolve_source_run_id(candidate["body"])
+    print(
+        f"Resume candidate PR #{pr_number} "
+        f"({candidate['head_ref']} @ {head_sha}) stop={candidate['stop_reason']} "
+        f"since={since}"
+    )
+
+    metrics = deps.collect_metrics(
+        client=client,
+        pr_number=pr_number,
+        head_sha=head_sha,
+        trigger_comment_ids=[],
+        since=since,
+    )
+    if metrics.get("merge_ok"):
+        return _merge_outcome(
+            client=client,
+            candidate=candidate,
+            source_run_id=source_run_id,
+            params=params,
+            deps=deps,
+            label="merged",
+        )
+    if _metrics_has_findings(metrics):
+        return _findings_outcome(
+            client=client, candidate=candidate, params=params, deps=deps
+        )
+    if not params.can_retrigger:
+        print(f"PR #{pr_number}: review not ready and PAT unavailable.")
+        return ResumeOutcome("pending", f"- pending(no_pat): #{pr_number}")
+
+    metrics = _retrigger_and_wait(
+        client=client, candidate=candidate, since=since, params=params, deps=deps
+    )
+    if metrics.get("merge_ok"):
+        return _merge_outcome(
+            client=client,
+            candidate=candidate,
+            source_run_id=source_run_id,
+            params=params,
+            deps=deps,
+            label="merged_after_retry",
+        )
+    if _metrics_has_findings(metrics):
+        return _findings_outcome(
+            client=client, candidate=candidate, params=params, deps=deps
+        )
+    print(f"PR #{pr_number}: still no mergeable Codex response after retry.")
+    return ResumeOutcome("pending", f"- pending(no_response): #{pr_number}")
+
+
+def cmd_resume(args: argparse.Namespace, deps: ReviewDeps) -> int:
+    """翌朝レスキュー: no_response / disconnected で止まった PR を回収する。"""
+    client = deps.client(args.repo)
+    params = ResumeParams.from_args(args)
+
+    candidates = _collect_resume_candidates(
+        client=client,
+        repo=args.repo,
+        max_candidates=_positive_int(args.max_candidates, 3),
+    )
+
     summary_lines = [
         "### Auto Review Resume",
         f"- candidates: {len(candidates)}",
@@ -232,112 +411,17 @@ def cmd_resume(args: argparse.Namespace, deps: ReviewDeps) -> int:
             f"({item['head_ref']}): newer candidate exists; leave to cleanup."
         )
 
+    merged_count = 0
+    pending_count = 0
     for candidate in candidates:
-        pr_number = candidate["pr_number"]
-        head_sha = candidate["head_sha"]
-        head_ref = candidate["head_ref"]
-        report_date = candidate["report_date"]
-        since = resolve_review_since(
-            client=client,
-            pr_number=pr_number,
-            pr_created_at=candidate["created_at"],
-            head_sha=head_sha,
+        outcome = _process_resume_candidate(
+            client=client, candidate=candidate, params=params, deps=deps
         )
-        source_run_id = resolve_source_run_id(candidate["body"])
-        print(
-            f"Resume candidate PR #{pr_number} "
-            f"({head_ref} @ {head_sha}) stop={candidate['stop_reason']} "
-            f"since={since}"
-        )
-
-        metrics = deps.collect_metrics(
-            client=client,
-            pr_number=pr_number,
-            head_sha=head_sha,
-            trigger_comment_ids=[],
-            since=since,
-        )
-        if metrics.get("merge_ok"):
-            merge_sha = _merge_and_notify(
-                client=client,
-                pr_number=pr_number,
-                head_ref=head_ref,
-                evaluated_sha=head_sha,
-                source_run_id=source_run_id,
-                resume_run_id=args.run_id,
-                deps=deps,
-            )
-            if not merge_sha:
-                summary_lines.append(f"- merge_skipped(not_open): #{pr_number}")
-                continue
+        summary_lines.append(outcome.summary_line)
+        if outcome.kind == "merged":
             merged_count += 1
-            summary_lines.append(f"- merged: #{pr_number} ({merge_sha})")
-            continue
-
-        if _metrics_has_findings(metrics):
-            _handle_resume_findings(
-                client=client,
-                pr_number=pr_number,
-                head_sha=head_sha,
-                report_date=report_date,
-                resume_run_id=args.run_id,
-                deps=deps,
-            )
-            summary_lines.append(f"- stopped_findings: #{pr_number}")
-            continue
-
-        if not (pat_available and pat_login):
+        elif outcome.kind == "pending":
             pending_count += 1
-            summary_lines.append(f"- pending(no_pat): #{pr_number}")
-            print(f"PR #{pr_number}: review not ready and PAT unavailable.")
-            continue
-
-        marker = resume_marker(args.run_id, head_sha)
-        deps.ensure_comment(
-            client=client,
-            pr_number=pr_number,
-            marker=marker,
-            allowed_logins=_allowed_trigger_logins(pat_login),
-            use_trigger_token=True,
-        )
-        metrics = _resume_wait_for_merge_ok(
-            client=client,
-            pr_number=pr_number,
-            head_sha=head_sha,
-            since=since,
-            retry_wait_seconds=retry_wait_seconds,
-            poll_seconds=poll_seconds,
-            deps=deps,
-        )
-        if metrics.get("merge_ok"):
-            merge_sha = _merge_and_notify(
-                client=client,
-                pr_number=pr_number,
-                head_ref=head_ref,
-                evaluated_sha=head_sha,
-                source_run_id=source_run_id,
-                resume_run_id=args.run_id,
-                deps=deps,
-            )
-            if not merge_sha:
-                summary_lines.append(f"- merge_skipped(not_open): #{pr_number}")
-                continue
-            merged_count += 1
-            summary_lines.append(f"- merged_after_retry: #{pr_number} ({merge_sha})")
-        elif _metrics_has_findings(metrics):
-            _handle_resume_findings(
-                client=client,
-                pr_number=pr_number,
-                head_sha=head_sha,
-                report_date=report_date,
-                resume_run_id=args.run_id,
-                deps=deps,
-            )
-            summary_lines.append(f"- stopped_findings: #{pr_number}")
-        else:
-            pending_count += 1
-            summary_lines.append(f"- pending(no_response): #{pr_number}")
-            print(f"PR #{pr_number}: still no mergeable Codex response after retry.")
 
     write_github_output(
         args.github_output,
