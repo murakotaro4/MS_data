@@ -171,46 +171,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh label create official-overrides \
+          uv run python -m ms_data.gh.notify_override_due \
             --repo "${GITHUB_REPOSITORY}" \
-            --description "Touches official override audit path" \
-            --color "5319E7" \
-            --force
-          gh label create override-due \
-            --repo "${GITHUB_REPOSITORY}" \
-            --description "official_overrides review/remove date reached" \
-            --color "B60205" \
-            --force
-
-          body_path="$RUNNER_TEMP/official_overrides_due.md"
-          cat > "$body_path" <<EOF
-          official_overrides の期限確認が必要です。
-
-          - report_date: ${REPORT_DATE}
-          - review_due: ${{ steps.official_overrides_audit.outputs.review_due }}
-          - remove_due: ${{ steps.official_overrides_audit.outputs.remove_due }}
-          - audit_report: ${OVERRIDES_AUDIT_FILE}
-          - workflow_run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
-
-          remove_due が 1 件以上ある場合は、該当 override を撤去できるか確認してください。
-          EOF
-
-          issue_number="$(gh issue list \
-            --repo "${GITHUB_REPOSITORY}" \
-            --state open \
-            --search "official_overrides 期限確認 in:title" \
-            --json number \
-            --jq '.[0].number // ""')"
-          if [[ -n "${issue_number}" ]]; then
-            gh issue comment "${issue_number}" --repo "${GITHUB_REPOSITORY}" --body-file "$body_path"
-          else
-            gh issue create \
-              --repo "${GITHUB_REPOSITORY}" \
-              --title "official_overrides 期限確認" \
-              --body-file "$body_path" \
-              --label official-overrides \
-              --label override-due
-          fi
+            --report-date "${REPORT_DATE}" \
+            --review-due "${{ steps.official_overrides_audit.outputs.review_due }}" \
+            --remove-due "${{ steps.official_overrides_audit.outputs.remove_due }}" \
+            --audit-report "${OVERRIDES_AUDIT_FILE}" \
+            --run-url "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --step-summary "$GITHUB_STEP_SUMMARY"
 
       - id: detection
         name: Read change detection summary
@@ -419,26 +387,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh label create data-update \
+          uv run python -m ms_data.gh.repo_labels \
             --repo "${GITHUB_REPOSITORY}" \
-            --description "msData automated data update" \
-            --color "1D76DB" \
-            --force
-          gh label create rollback-guard \
-            --repo "${GITHUB_REPOSITORY}" \
-            --description "Includes rollback guard report" \
-            --color "D93F0B" \
-            --force
-          gh label create official-overrides \
-            --repo "${GITHUB_REPOSITORY}" \
-            --description "Touches official override audit path" \
-            --color "5319E7" \
-            --force
-          gh label create atwiki-quality \
-            --repo "${GITHUB_REPOSITORY}" \
-            --description "Includes atwiki fetch quality report" \
-            --color "0E8A16" \
-            --force
+            data-update rollback-guard official-overrides atwiki-quality
 
       - name: Create pull request
         if: steps.changes.outputs.changed == 'true' && env.DRY_RUN != 'true'
