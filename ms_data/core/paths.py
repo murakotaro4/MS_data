@@ -9,6 +9,8 @@ from __future__ import annotations
 from pathlib import Path
 
 MSDATA = Path("msData.json")
+# data update ワークフローが更新前の msData を退避する一時ファイル
+MSDATA_BEFORE = Path("msData.before.json")
 
 SCHEMA_DIR = Path("schema")
 MSDATA_SCHEMA = SCHEMA_DIR / "msData.schema.json"
@@ -32,6 +34,8 @@ FIELD_COMPLETENESS_ALLOWLIST = DATA_DIR / "field_completeness_allowlist.json"
 
 REPORTS_DIR = Path("reports")
 REPORTS_MANIFEST = Path("reports_manifest.json")
+# 日付なし（undated）レポート: ラベル監査の最新版
+LABEL_AUDIT_LATEST = REPORTS_DIR / "label_audit_latest.md"
 
 
 def reports_month_dir(report_date: str, base_dir: str = "reports") -> str:

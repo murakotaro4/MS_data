@@ -28,13 +28,13 @@
   uv run python -m ms_data.scraping.scrape_msdata details \
       --in cache/index.json \
       --out cache/details.jsonl \
-      --rate 1.0
+      --rate 2.0
 - 一気通貫（出力JSONL）:
   uv run python -m ms_data.scraping.scrape_msdata all \
       --out cache/details.jsonl
 
 注意
-- レート制限を守ってください（既定: 1 req/sec）。
+- レート制限を守ってください（既定: 2.0 req/sec）。
 - 取得HTMLの構造は変わる可能性があります。
 """
 from __future__ import annotations
@@ -51,6 +51,7 @@ from typing import Any
 import httpx
 from bs4 import BeautifulSoup
 
+from ms_data.core import paths
 from ms_data.core.labels import clean_text, normalize_row_label
 from ms_data.net.cache_http import CacheConfig, CacheHTTP
 from ms_data.net.client import get_scraper_client
@@ -59,6 +60,7 @@ from ms_data.scraping.change_detection import (
     load_msdata_base_index,
     select_changed_index_items,
 )
+from ms_data.scraping.defaults import DEFAULT_RATE, DEFAULT_TTL, INDEX_URL
 from ms_data.scraping.detail_page import (
     build_base_records,
     find_detail_table,
@@ -85,8 +87,6 @@ from ms_data.scraping.text_values import (
     symbol_to_bool,
     to_int,
 )
-
-INDEX_URL = "https://w.atwiki.jp/battle-operation2/pages/377.html"
 
 
 def get_client(timeout: float = 30.0) -> httpx.Client:
@@ -233,7 +233,7 @@ def cmd_details(args: argparse.Namespace) -> int:
 
 def cmd_all(args: argparse.Namespace) -> int:
     """index → details を連続実行する。"""
-    tmp_index = Path("cache/index.json")
+    tmp_index = paths.INDEX_JSON
     tmp_index.parent.mkdir(parents=True, exist_ok=True)
     # index
     cache = _build_cache(args)
@@ -433,15 +433,15 @@ def build_parser() -> argparse.ArgumentParser:
         "index", help="一覧ページから機体URLを抽出（キャッシュ対応）"
     )
     p_idx.add_argument("--url", default=INDEX_URL)
-    p_idx.add_argument("--out", default="cache/index.json")
+    p_idx.add_argument("--out", default=paths.INDEX_JSON.as_posix())
     p_idx.add_argument(
-        "--ttl", default="7d", help="キャッシュTTL（例: 7d, 72h, 3600s）"
+        "--ttl", default=DEFAULT_TTL, help="キャッシュTTL（例: 7d, 72h, 3600s）"
     )
     p_idx.add_argument("--no-network", action="store_true")
     p_idx.add_argument("--force", action="store_true")
     p_idx.add_argument(
         "--fetch-stats-out",
-        default="cache/fetch_stats.json",
+        default=paths.FETCH_STATS_JSON.as_posix(),
         help="ネットワーク取得統計の出力先（空文字で無効化）",
     )
     p_idx.set_defaults(func=cmd_index)
@@ -450,16 +450,16 @@ def build_parser() -> argparse.ArgumentParser:
         "details", help="詳細ページからステータスを抽出しJSONL出力（キャッシュ対応）"
     )
     p_det.add_argument("--in", dest="input", required=True)
-    p_det.add_argument("--out", default="cache/details.jsonl")
-    p_det.add_argument("--rate", type=float, default=1.0, help="req/sec")
+    p_det.add_argument("--out", default=paths.DETAILS_JSONL.as_posix())
+    p_det.add_argument("--rate", type=float, default=DEFAULT_RATE, help="req/sec")
     p_det.add_argument(
         "--limit", type=int, default=0, help="最大レコード数（0=制限なし）"
     )
-    p_det.add_argument("--ttl", default="7d", help="キャッシュTTL")
+    p_det.add_argument("--ttl", default=DEFAULT_TTL, help="キャッシュTTL")
     p_det.add_argument("--no-network", action="store_true")
     p_det.add_argument("--force", action="store_true")
     p_det.add_argument(
-        "--detail-fetch-state-out", default="cache/detail_fetch_state.json"
+        "--detail-fetch-state-out", default=paths.DETAIL_FETCH_STATE_JSON.as_posix()
     )
     p_det.add_argument(
         "--changed-only",
@@ -468,20 +468,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_det.add_argument(
         "--fetch-stats-out",
-        default="cache/fetch_stats.json",
+        default=paths.FETCH_STATS_JSON.as_posix(),
         help="ネットワーク取得統計の出力先（空文字で無効化）",
     )
     p_det.set_defaults(func=cmd_details)
 
     p_all = sub.add_parser("all", help="index→details を連続実行")
-    p_all.add_argument("--out", default="cache/details.jsonl")
-    p_all.add_argument("--rate", type=float, default=1.0)
+    p_all.add_argument("--out", default=paths.DETAILS_JSONL.as_posix())
+    p_all.add_argument("--rate", type=float, default=DEFAULT_RATE)
     p_all.add_argument("--limit", type=int, default=0)
-    p_all.add_argument("--ttl", default="7d")
+    p_all.add_argument("--ttl", default=DEFAULT_TTL)
     p_all.add_argument("--no-network", action="store_true")
     p_all.add_argument("--force", action="store_true")
     p_all.add_argument(
-        "--detail-fetch-state-out", default="cache/detail_fetch_state.json"
+        "--detail-fetch-state-out", default=paths.DETAIL_FETCH_STATE_JSON.as_posix()
     )
     p_all.add_argument(
         "--changed-only",
@@ -490,7 +490,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_all.add_argument(
         "--fetch-stats-out",
-        default="cache/fetch_stats.json",
+        default=paths.FETCH_STATS_JSON.as_posix(),
         help="ネットワーク取得統計の出力先（空文字で無効化）",
     )
     p_all.set_defaults(func=cmd_all)
@@ -500,14 +500,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="MS一覧の更新経過から再取得対象ページだけを抽出",
     )
     p_detect.add_argument("--in", dest="input", required=True)
-    p_detect.add_argument("--out", default="cache/index_changed.json")
-    p_detect.add_argument("--meta-out", default="cache/index_changed_meta.json")
-    p_detect.add_argument("--reports-dir", default="reports")
+    p_detect.add_argument("--out", default=paths.CHANGED_INDEX_JSON.as_posix())
+    p_detect.add_argument(
+        "--meta-out", default=paths.CHANGED_INDEX_META_JSON.as_posix()
+    )
+    p_detect.add_argument("--reports-dir", default=paths.REPORTS_DIR.as_posix())
     p_detect.add_argument("--previous-provenance", default="")
-    p_detect.add_argument("--msdata", default="msData.json")
+    p_detect.add_argument("--msdata", default=paths.MSDATA.as_posix())
     p_detect.add_argument("--freshness-window", default="1h")
     p_detect.add_argument(
-        "--detail-fetch-state", default="cache/detail_fetch_state.json"
+        "--detail-fetch-state", default=paths.DETAIL_FETCH_STATE_JSON.as_posix()
     )
     p_detect.add_argument("--stale-detail-days", default="14")
     p_detect.add_argument("--min-age-coverage", type=float, default=0.95)
@@ -524,10 +526,10 @@ def build_parser() -> argparse.ArgumentParser:
         "labels", help="行見出しの揺らぎ監査用データを抽出（キャッシュ対応）"
     )
     p_lbl.add_argument("--in", dest="input", required=True)
-    p_lbl.add_argument("--out", default="cache/labels_raw.jsonl")
-    p_lbl.add_argument("--rate", type=float, default=1.0, help="req/sec")
+    p_lbl.add_argument("--out", default=paths.LABELS_RAW_JSONL.as_posix())
+    p_lbl.add_argument("--rate", type=float, default=DEFAULT_RATE, help="req/sec")
     p_lbl.add_argument("--limit", type=int, default=0)
-    p_lbl.add_argument("--ttl", default="7d")
+    p_lbl.add_argument("--ttl", default=DEFAULT_TTL)
     p_lbl.add_argument("--no-network", action="store_true")
     p_lbl.add_argument("--force", action="store_true")
     p_lbl.set_defaults(func=cmd_labels)
