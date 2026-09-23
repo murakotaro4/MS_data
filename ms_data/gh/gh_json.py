@@ -12,7 +12,7 @@ import re
 import subprocess
 import sys
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -110,11 +110,17 @@ def gh_api_json(
     endpoint: str,
     *,
     method: str = "GET",
-    fields: dict[str, str] | None = None,
+    fields: dict[str, str | Sequence[str]] | None = None,
     headers: list[str] | None = None,
     paginate: bool = False,
     runner: GhRunner = run_gh,
 ) -> Any:
+    """`gh api` を実行して JSON を返す。
+
+    fields の値がシーケンスの場合は同じキーで `-f` を繰り返す
+    （`labels[]` のような配列パラメータ用）。
+    """
+
     cmd = ["gh", "api", endpoint]
     if method != "GET":
         cmd.extend(["-X", method])
@@ -123,7 +129,9 @@ def gh_api_json(
     for header in headers or []:
         cmd.extend(["-H", header])
     for key, value in (fields or {}).items():
-        cmd.extend(["-f", f"{key}={value}"])
+        values = [value] if isinstance(value, str) else list(value)
+        for item in values:
+            cmd.extend(["-f", f"{key}={item}"])
     if method == "GET" and not fields:
         if runner is run_gh:
             output = run_gh_get(cmd)
