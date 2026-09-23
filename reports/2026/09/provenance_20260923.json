@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-09-23T14:03:19Z",
+  "report_date": "20260923",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "d4f96540cfeac88b2872ac2e70876840e4469082"
+  },
+  "github": {
+    "run_id": "35871325195",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "73717ac31ca594a030e0b75a55c3256af1d0cdbc647c9db448996e3889293b2a",
+      "size_bytes": 146139,
+      "record_count": 594
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "e545457ef3e0af3dc624a3f12ab5a2a2ac33485be75f2cd5a60905a92566516f",
+      "size_bytes": 11357,
+      "record_count": 9
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "89dc28890d4d544dbd621e60400891e60f71a606388422f2987f5e91a40b9b3a",
+      "size_bytes": 14712,
+      "record_count": 9
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "57d3deeb4c27ea2dcea82951e0ed2dabc2514fa9c342963716ba3107a02029b9",
+      "file_count": 8,
+      "size_bytes": 1781634
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "16a4a16a716db23ad3c0f844db60f6f9ae28ae0666976c453b200b9095c2afa2",
+      "size_bytes": 2650565,
+      "record_count": 1715
+    },
+    "diff_report": {
+      "path": "reports/2026/09/diff_msdata_20260923.md",
+      "sha256": "cdce7b8284f6fb245e77a4fae21a8c2aef12a5ba4d0819f51e11cbab45c7ac72",
+      "size_bytes": 1152
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260923-run-35871325195",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260923-run-35871325195",
+    "asset_name": "raw_snapshot_20260923_run35871325195.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260923-run-35871325195"
+  }
+}
