@@ -1,9 +1,10 @@
-import json
 from pathlib import Path
 
 import pytest
 
 from ms_data.audit import audit_field_completeness
+
+from helpers import write_json
 
 
 def _record(name: str = "テスト機_LV1") -> dict[str, object]:
@@ -20,10 +21,6 @@ def _record(name: str = "テスト機_LV1") -> dict[str, object]:
     return record
 
 
-def _write_json(path: Path, data: object) -> None:
-    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-
-
 def _run(
     tmp_path: Path,
     records: list[dict[str, object]],
@@ -34,8 +31,8 @@ def _run(
     msdata = tmp_path / "msData.json"
     allowlist = tmp_path / "allowlist.json"
     report = tmp_path / "report.md"
-    _write_json(msdata, records)
-    _write_json(allowlist, {"version": 1, "entries": entries or []})
+    write_json(msdata, records)
+    write_json(allowlist, {"version": 1, "entries": entries or []})
     code = audit_field_completeness.main(
         [
             "--msdata",

@@ -1,12 +1,8 @@
-import json
 from pathlib import Path
 
 from ms_data.validation import validate_official_overrides_schema
 
-
-def _write_json(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+from helpers import write_json
 
 
 def _schema_path():
@@ -15,7 +11,7 @@ def _schema_path():
 
 def test_validate_official_overrides_schema_accepts_valid_file(tmp_path):
     overrides_dir = tmp_path / "official_overrides"
-    _write_json(
+    write_json(
         overrides_dir / "valid.json",
         {
             "schema_version": "1",
@@ -54,7 +50,7 @@ def test_validate_official_overrides_schema_accepts_empty_directory(tmp_path):
 
 def test_validate_official_overrides_schema_rejects_missing_stale_value(tmp_path):
     overrides_dir = tmp_path / "official_overrides"
-    _write_json(
+    write_json(
         overrides_dir / "invalid.json",
         {
             "schema_version": "1",
@@ -78,7 +74,7 @@ def test_validate_official_overrides_schema_rejects_missing_stale_value(tmp_path
 
 def test_validate_official_overrides_schema_rejects_key_mismatch(tmp_path):
     overrides_dir = tmp_path / "official_overrides"
-    _write_json(
+    write_json(
         overrides_dir / "invalid.json",
         {
             "schema_version": "1",

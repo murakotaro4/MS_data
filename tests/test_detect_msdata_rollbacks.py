@@ -1,11 +1,6 @@
-import json
-
 from ms_data.audit import detect_msdata_rollbacks
 
-
-def _write_json(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+from helpers import write_json
 
 
 def test_detect_protected_rollback_fails(tmp_path):
@@ -13,7 +8,7 @@ def test_detect_protected_rollback_fails(tmp_path):
     old = tmp_path / "old.json"
     new = tmp_path / "new.json"
     out = tmp_path / "rollback.md"
-    _write_json(
+    write_json(
         overrides_dir / "20260528.json",
         {
             "schema_version": "1",
@@ -26,8 +21,8 @@ def test_detect_protected_rollback_fails(tmp_path):
             ],
         },
     )
-    _write_json(old, [{"MS名": "ザクⅢ改_LV1", "HP": 27000}])
-    _write_json(new, [{"MS名": "ザクⅢ改_LV1", "HP": 23500}])
+    write_json(old, [{"MS名": "ザクⅢ改_LV1", "HP": 27000}])
+    write_json(new, [{"MS名": "ザクⅢ改_LV1", "HP": 23500}])
 
     rc = detect_msdata_rollbacks.main(
         [
@@ -52,12 +47,12 @@ def test_detect_protected_rollback_fails(tmp_path):
 def test_numeric_decrease_is_reported_without_failure(tmp_path):
     overrides_dir = tmp_path / "official_overrides"
     overrides_dir.mkdir()
-    _write_json(overrides_dir / "empty.json", {"schema_version": "1", "overrides": []})
+    write_json(overrides_dir / "empty.json", {"schema_version": "1", "overrides": []})
     old = tmp_path / "old.json"
     new = tmp_path / "new.json"
     out = tmp_path / "rollback.md"
-    _write_json(old, [{"MS名": "テスト機_LV1", "HP": 20000}])
-    _write_json(new, [{"MS名": "テスト機_LV1", "HP": 19000}])
+    write_json(old, [{"MS名": "テスト機_LV1", "HP": 20000}])
+    write_json(new, [{"MS名": "テスト機_LV1", "HP": 19000}])
 
     rc = detect_msdata_rollbacks.main(
         [
@@ -80,18 +75,18 @@ def test_numeric_decrease_is_reported_without_failure(tmp_path):
 def test_mixed_level_change_is_reported(tmp_path):
     overrides_dir = tmp_path / "official_overrides"
     overrides_dir.mkdir()
-    _write_json(overrides_dir / "empty.json", {"schema_version": "1", "overrides": []})
+    write_json(overrides_dir / "empty.json", {"schema_version": "1", "overrides": []})
     old = tmp_path / "old.json"
     new = tmp_path / "new.json"
     out = tmp_path / "rollback.md"
-    _write_json(
+    write_json(
         old,
         [
             {"MS名": "テスト機_LV1", "HP": 20000},
             {"MS名": "テスト機_LV2", "HP": 21000},
         ],
     )
-    _write_json(
+    write_json(
         new,
         [
             {"MS名": "テスト機_LV1", "HP": 22000},

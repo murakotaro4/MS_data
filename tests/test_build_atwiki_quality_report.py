@@ -1,11 +1,6 @@
-import json
-
 from ms_data.reporting.build_atwiki_quality_report import build_report
 
-
-def _write_json(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+from helpers import write_json
 
 
 def test_build_atwiki_quality_report_counts_fetch_quality_and_diff(tmp_path):
@@ -18,21 +13,21 @@ def test_build_atwiki_quality_report_counts_fetch_quality_and_diff(tmp_path):
     before = tmp_path / "before.json"
     current = tmp_path / "current.json"
 
-    _write_json(
+    write_json(
         index,
         [
             {"name": "A", "url": "https://example.test/a"},
             {"name": "B", "url": "https://example.test/b"},
         ],
     )
-    _write_json(
+    write_json(
         changed_index,
         [
             {"name": "A", "url": "https://example.test/a"},
             {"name": "B", "url": "https://example.test/b"},
         ],
     )
-    _write_json(
+    write_json(
         changed_meta,
         {
             "candidate_count": 2,
@@ -42,7 +37,7 @@ def test_build_atwiki_quality_report_counts_fetch_quality_and_diff(tmp_path):
             "reason_counts": {"recent_update": 2},
         },
     )
-    _write_json(
+    write_json(
         detail_fetch_state,
         {
             "items": {
@@ -50,10 +45,10 @@ def test_build_atwiki_quality_report_counts_fetch_quality_and_diff(tmp_path):
             }
         },
     )
-    _write_json(details_json, [{"MS名": "A_LV1"}, {"MS名": "B_LV1"}])
+    write_json(details_json, [{"MS名": "A_LV1"}, {"MS名": "B_LV1"}])
     details_jsonl.write_text('{"MS名":"A_LV1"}\n{"MS名":"B_LV1"}\n', encoding="utf-8")
-    _write_json(before, [{"MS名": "A_LV1", "HP": 100}])
-    _write_json(current, [{"MS名": "A_LV1", "HP": 120}, {"MS名": "B_LV1", "HP": 100}])
+    write_json(before, [{"MS名": "A_LV1", "HP": 100}])
+    write_json(current, [{"MS名": "A_LV1", "HP": 120}, {"MS名": "B_LV1", "HP": 100}])
 
     report = build_report(
         report_date="20260531",
@@ -96,22 +91,22 @@ def test_build_atwiki_quality_report_ignores_previous_run_success(tmp_path):
     before = tmp_path / "before.json"
     current = tmp_path / "current.json"
 
-    _write_json(
+    write_json(
         index,
         [
             {"name": "A", "url": "https://example.test/a"},
             {"name": "B", "url": "https://example.test/b"},
         ],
     )
-    _write_json(
+    write_json(
         changed_index,
         [
             {"name": "A", "url": "https://example.test/a"},
             {"name": "B", "url": "https://example.test/b"},
         ],
     )
-    _write_json(changed_meta, {"candidate_count": 2})
-    _write_json(
+    write_json(changed_meta, {"candidate_count": 2})
+    write_json(
         detail_fetch_state,
         {
             "run_started_at": "2026-05-31T12:00:00Z",
@@ -130,10 +125,10 @@ def test_build_atwiki_quality_report_ignores_previous_run_success(tmp_path):
             },
         },
     )
-    _write_json(details_json, [])
+    write_json(details_json, [])
     details_jsonl.write_text("", encoding="utf-8")
-    _write_json(before, [])
-    _write_json(current, [])
+    write_json(before, [])
+    write_json(current, [])
 
     report = build_report(
         report_date="20260531",
@@ -163,10 +158,10 @@ def test_build_atwiki_quality_report_warns_on_large_full_update(tmp_path):
     before = tmp_path / "before.json"
     current = tmp_path / "current.json"
 
-    _write_json(index, [{"name": "A", "url": "https://example.test/a"}])
-    _write_json(changed_index, [{"name": "A", "url": "https://example.test/a"}])
-    _write_json(changed_meta, {"candidate_count": 1, "fast_path": False})
-    _write_json(
+    write_json(index, [{"name": "A", "url": "https://example.test/a"}])
+    write_json(changed_index, [{"name": "A", "url": "https://example.test/a"}])
+    write_json(changed_meta, {"candidate_count": 1, "fast_path": False})
+    write_json(
         detail_fetch_state,
         {
             "items": {
@@ -174,10 +169,10 @@ def test_build_atwiki_quality_report_warns_on_large_full_update(tmp_path):
             }
         },
     )
-    _write_json(details_json, [{"MS名": "A_LV1"}])
+    write_json(details_json, [{"MS名": "A_LV1"}])
     details_jsonl.write_text('{"MS名":"A_LV1"}\n', encoding="utf-8")
-    _write_json(before, [{"MS名": "A_LV1", "HP": 100}])
-    _write_json(current, [{"MS名": "A_LV1", "HP": 120}])
+    write_json(before, [{"MS名": "A_LV1", "HP": 100}])
+    write_json(current, [{"MS名": "A_LV1", "HP": 120}])
 
     report = build_report(
         report_date="20260531",
@@ -209,16 +204,16 @@ def test_build_atwiki_quality_report_embeds_fetch_stats(tmp_path):
     details_jsonl = tmp_path / "cache/details.jsonl"
     fetch_stats = tmp_path / "cache/fetch_stats.json"
 
-    _write_json(index, [{"name": "A", "url": "https://example.test/a"}])
-    _write_json(changed_index, [])
-    _write_json(
+    write_json(index, [{"name": "A", "url": "https://example.test/a"}])
+    write_json(changed_index, [])
+    write_json(
         changed_meta,
         {"candidate_count": 0, "mode": "revalidate", "fallback_reason": "revalidate"},
     )
-    _write_json(detail_fetch_state, {"items": {}})
-    _write_json(details_json, [])
+    write_json(detail_fetch_state, {"items": {}})
+    write_json(details_json, [])
     details_jsonl.write_text("", encoding="utf-8")
-    _write_json(
+    write_json(
         fetch_stats,
         {
             "phases": {
@@ -256,7 +251,7 @@ def test_build_atwiki_quality_report_embeds_fetch_stats(tmp_path):
 
 def test_build_atwiki_quality_report_handles_missing_fetch_stats(tmp_path):
     index = tmp_path / "cache/index.json"
-    _write_json(index, [])
+    write_json(index, [])
 
     report = build_report(
         report_date="20260611",

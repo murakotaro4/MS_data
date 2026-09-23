@@ -1,39 +1,9 @@
-import json
-from pathlib import Path
-
 import pytest
 
 import ms_data.validation.validate_msdata as vm
 
-
-def make_record(ms_name: str = "テスト機_LV1", **overrides):
-    record = {
-        "MS名": ms_name,
-        "wiki_url": "https://example.com/ms/test",
-        "属性": "汎用",
-        "コスト": 300,
-        "HP": 12000,
-        "耐実弾補正": 10,
-        "耐ビーム補正": 12,
-        "耐格闘補正": 8,
-        "射撃補正": 20,
-        "格闘補正": 15,
-        "スピード": 125,
-        "高速移動": 190,
-        "スラスター": 65,
-        "旋回_地上_通常時": 75,
-        "近スロット": 10,
-        "中スロット": 8,
-        "遠スロット": 6,
-        "出撃_地上可": True,
-        "出撃_宇宙可": True,
-    }
-    record.update(overrides)
-    return record
-
-
-def write_json(path: Path, data: object) -> None:
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+from helpers import make_ms_record as make_record
+from helpers import write_json
 
 
 def test_validate_msdata_main_accepts_valid_minimal_data(tmp_path):

@@ -1,18 +1,14 @@
-import json
 from pathlib import Path
 
 from ms_data.validation import validate_generated_reports
 
-
-def _write_json(path: Path, data: object) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+from helpers import write_json
 
 
 def test_validate_generated_reports_accepts_current_report_shapes(tmp_path: Path):
     reports = tmp_path / "reports"
     schema_dir = Path("schema/reports")
-    _write_json(
+    write_json(
         reports / "atwiki_quality_20260531.json",
         {
             "schema_version": "1",
@@ -44,7 +40,7 @@ def test_validate_generated_reports_accepts_current_report_shapes(tmp_path: Path
             "warnings": [],
         },
     )
-    _write_json(
+    write_json(
         reports / "auto_review_20260531.json",
         {
             "schema_version": "1",
@@ -120,7 +116,7 @@ def test_validate_generated_reports_rejects_missing_required_json_field(
 ):
     reports = tmp_path / "reports"
     schema_dir = Path("schema/reports")
-    _write_json(
+    write_json(
         reports / "atwiki_quality_20260531.json",
         {
             "schema_version": "1",
