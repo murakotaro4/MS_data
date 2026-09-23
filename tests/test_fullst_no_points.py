@@ -627,3 +627,36 @@ def test_fullst_only_strong_sortie_remains_single_entry():
         assert len(fullst) == 1
         assert fullst[0]["name"] == "強行出撃"
         assert fullst[0]["points"] is None
+
+
+def test_fullst_row_helpers_split_headers_and_cells():
+    from bs4 import BeautifulSoup
+
+    from ms_data.scraping import fullst
+
+    assert fullst._row_list_name(["強化リスト", "Lv1", "スラスター強化"]) == (
+        "スラスター強化"
+    )
+    assert fullst._row_list_name(["", "LV2", "MSレベル毎必要強化値"]) is None
+    assert fullst._row_fullst_lv(["スラスター強化", "Lv3"]) == 3
+    assert fullst._row_fullst_lv(["スラスター強化", "LV"]) is None
+
+    soup = BeautifulSoup(
+        "<h3>強化リスト情報</h3><table><tr><td>10</td><td>-</td><td>効果</td></tr></table>",
+        "lxml",
+    )
+    table = fullst.find_fullst_table(soup)
+    assert table is not None
+    tds = table.find_all("td")
+    points, present, blocked = fullst._parse_points_cells(
+        tds, [1, 2, 3], list_name="スラスター強化"
+    )
+    assert points == {1: 10}
+    assert present == {1, 2}
+    assert blocked == {2}
+
+    # 強行出撃は "-" を対象外扱いにしない
+    _, _, blocked_forced = fullst._parse_points_cells(tds, [1, 2], list_name="強行出撃")
+    assert blocked_forced == set()
+
+    assert fullst.find_fullst_table(BeautifulSoup("<h3>別見出し</h3>", "lxml")) is None

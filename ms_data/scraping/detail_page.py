@@ -267,6 +267,32 @@ def find_detail_table(soup: BeautifulSoup) -> tuple[Tag | None, Tag | None]:
 _TEXT_FIELDS = ("格闘判定力", "カウンター", "レアリティ", "必要階級")
 
 
+def extract_row_labels(table: Tag | None) -> tuple[list[str], list[str]]:
+    """ステータス表の行見出しを (raw, normalized) の重複なしリストで返す。
+
+    ラベル監査（`scrape_msdata labels` → `audit_labels`）用。出現順を保つ。
+    """
+    raw_labels: list[str] = []
+    normalized_labels: list[str] = []
+    if table is None:
+        return raw_labels, normalized_labels
+    seen_raw: set[str] = set()
+    seen_norm: set[str] = set()
+    for tr in table.find_all("tr"):
+        th = tr.find("th")
+        if not th:
+            continue
+        rname = clean_text(th.get_text(" "))
+        nname = normalize_row_label(rname)
+        if rname and rname not in seen_raw:
+            raw_labels.append(rname)
+            seen_raw.add(rname)
+        if nname and nname not in seen_norm:
+            normalized_labels.append(nname)
+            seen_norm.add(nname)
+    return raw_labels, normalized_labels
+
+
 def build_base_records(
     table: Tag, name: str, levels: list[int]
 ) -> dict[int, dict[str, Any]]:

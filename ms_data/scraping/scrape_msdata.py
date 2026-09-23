@@ -61,6 +61,7 @@ from ms_data.scraping.change_detection import (
 )
 from ms_data.scraping.detail_page import (
     build_base_records,
+    extract_row_labels,
     find_detail_table,
     parse_deployment,
     parse_details,
@@ -389,23 +390,7 @@ def cmd_labels(args: argparse.Namespace) -> int:
                 soup = BeautifulSoup(text, "lxml")
                 # ステータス表の検出ロジックは parse_details と同じ方針
                 _tbl_div, table = find_detail_table(soup)
-                raw_labels: list[str] = []
-                normalized_labels: list[str] = []
-                if table:
-                    seen_raw = set()
-                    seen_norm = set()
-                    for tr in table.find_all("tr"):
-                        th = tr.find("th")
-                        if not th:
-                            continue
-                        rname = clean_text(th.get_text(" "))
-                        nname = normalize_row_label(rname)
-                        if rname and rname not in seen_raw:
-                            raw_labels.append(rname)
-                            seen_raw.add(rname)
-                        if nname and nname not in seen_norm:
-                            normalized_labels.append(nname)
-                            seen_norm.add(nname)
+                raw_labels, normalized_labels = extract_row_labels(table)
                 row = {
                     "url": url,
                     "title": soup.title.get_text(" ") if soup.title else "",
