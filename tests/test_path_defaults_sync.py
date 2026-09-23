@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 from pathlib import Path
 from types import ModuleType
 
@@ -14,8 +15,10 @@ from ms_data.audit import (
     detect_msdata_rollbacks,
 )
 from ms_data.core import paths
+from ms_data.net.cache_http import CacheConfig
 from ms_data.pipeline import generate_provenance, update_msdata
 from ms_data.reporting import build_atwiki_quality_report, prune_reports
+from ms_data.scraping import defaults as scrape_defaults
 from ms_data.scraping import scrape_msdata
 from ms_data.validation import (
     validate_generated_reports,
@@ -44,7 +47,6 @@ PATH_DEFAULTS = (
     (paths.CHANGED_INDEX_JSON, tasks.DEFAULT_CHANGED_INDEX_OUT),
     (paths.CHANGED_INDEX_META_JSON, tasks.DEFAULT_CHANGED_META_OUT),
     (paths.DETAIL_FETCH_STATE_JSON, tasks.DEFAULT_DETAIL_FETCH_STATE),
-    (paths.FETCH_STATS_JSON, tasks.DEFAULT_FETCH_STATS),
     (
         paths.FIELD_COMPLETENESS_ALLOWLIST,
         tasks.DEFAULT_FIELD_COMPLETENESS_ALLOWLIST,
@@ -198,7 +200,11 @@ def _capture_main_args(
             [],
             {"index": paths.INDEX_JSON, "ms": paths.MSDATA},
         ),
-        (audit_labels, [], {"input": paths.LABELS_RAW_JSONL}),
+        (
+            audit_labels,
+            [],
+            {"input": paths.LABELS_RAW_JSONL, "out": paths.LABEL_AUDIT_LATEST},
+        ),
         (
             detect_msdata_rollbacks,
             ["--old", "old.json", "--new", "new.json", "--out", "out.md"],
@@ -261,3 +267,55 @@ def test_load_official_overrides_default_remains_path(
     assert update_msdata.load_official_overrides() == {}
     assert isinstance(received, Path)
     assert received == paths.OFFICIAL_OVERRIDES_DIR
+
+
+def test_cache_config_root_defaults_to_html_cache_dir() -> None:
+    assert CacheConfig().root == paths.HTML_CACHE_DIR
+
+
+def test_tasks_msdata_before_uses_paths_constant() -> None:
+    assert paths.MSDATA_BEFORE.as_posix() == "msData.before.json"
+
+
+@pytest.mark.parametrize(
+    "argv",
+    (
+        ["details", "--in", "input.json"],
+        ["all"],
+        ["labels", "--in", "input.json"],
+    ),
+)
+def test_scrape_msdata_rate_and_ttl_defaults_match_shared_defaults(
+    argv: list[str],
+) -> None:
+    args = scrape_msdata.build_parser().parse_args(argv)
+    assert args.rate == scrape_defaults.DEFAULT_RATE == 2.0
+    assert args.ttl == scrape_defaults.DEFAULT_TTL
+
+
+def test_index_url_and_ttl_are_single_sourced() -> None:
+    assert tasks.INDEX_URL is scrape_defaults.INDEX_URL
+    assert scrape_msdata.INDEX_URL is scrape_defaults.INDEX_URL
+    assert tasks.DEFAULT_TTL is scrape_defaults.DEFAULT_TTL
+    assert scrape_msdata.build_parser().parse_args(["index"]).url == tasks.INDEX_URL
+
+
+_LITERAL_PATH_DEFAULT = re.compile(
+    r"""default=(?:Path\()?["'](?:cache/|reports(?:/|["'])|msData|schema/|data/|reports_manifest)"""
+)
+
+
+def test_no_literal_repository_path_defaults_outside_core_paths() -> None:
+    """パス既定の直書き再発防止: ms_data/ 配下の argparse default を走査する。"""
+
+    package_root = Path(tasks.__file__).resolve().parent
+    offenders: list[str] = []
+    for source in package_root.rglob("*.py"):
+        if source.name == "paths.py":
+            continue
+        for lineno, line in enumerate(
+            source.read_text(encoding="utf-8").splitlines(), start=1
+        ):
+            if _LITERAL_PATH_DEFAULT.search(line):
+                offenders.append(f"{source.relative_to(package_root)}:{lineno}")
+    assert offenders == []
