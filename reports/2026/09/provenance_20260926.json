@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-09-26T13:36:11Z",
+  "report_date": "20260926",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "aa5dca51aa60d2aed6d516e9c0aeac10083ec1d4"
+  },
+  "github": {
+    "run_id": "36245681886",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "46d5a380c8e0ad9afdb47a82d898817c7aaf3f0be41f50cdba6b1172171d4670",
+      "size_bytes": 146344,
+      "record_count": 595
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "59f895ec68bbaa43d2200291e889200148a2c25561e3630b05cbd5a22b29307b",
+      "size_bytes": 35780,
+      "record_count": 31
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "8f00319839d09d18b286b622c8998ed72b9b782c6fc474781d4a5ea02730602e",
+      "size_bytes": 46953,
+      "record_count": 31
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "5ff12c4445edadf0b95c06bda7daf6cd896f1a0244a745cccc2ce2c2e4e6f3cd",
+      "file_count": 32,
+      "size_bytes": 5425702
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "cfad6593ef13244ff2fc1b1536543e0079023e652178d469110d5a0107bb756c",
+      "size_bytes": 2652184,
+      "record_count": 1716
+    },
+    "diff_report": {
+      "path": "reports/2026/09/diff_msdata_20260926.md",
+      "sha256": "9f9c391610c0faeff71b9d723cc1299205d644512daedfcb70ae5a0a6aeb1128",
+      "size_bytes": 2731
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260926-run-36245681886",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260926-run-36245681886",
+    "asset_name": "raw_snapshot_20260926_run36245681886.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260926-run-36245681886"
+  }
+}
