@@ -696,6 +696,32 @@ def task_audit_official_overrides() -> int:
     return _run_python_module("ms_data.audit.audit_official_overrides", *args)
 
 
+def task_notify_override_due() -> int:
+    """official_overrides 期限確認 Issue の作成・追記（同件数なら追記スキップ）。
+
+    REVIEW_DUE / REMOVE_DUE は audit-official-overrides の outputs を渡す。
+    """
+    report_date = _report_date()
+    args = [
+        "--repo",
+        _require_env("GITHUB_REPOSITORY"),
+        "--report-date",
+        report_date,
+        "--review-due",
+        _env("REVIEW_DUE", "0"),
+        "--remove-due",
+        _env("REMOVE_DUE", "0"),
+        "--audit-report",
+        _report_out("OFFICIAL_OVERRIDES_AUDIT_OUT", "official_overrides_audit", "md"),
+        "--run-url",
+        _require_env("RUN_URL"),
+    ]
+    step_summary = _env_str("GITHUB_STEP_SUMMARY")
+    if step_summary:
+        args.extend(["--step-summary", step_summary])
+    return _run_python_module("ms_data.gh.notify_override_due", *args)
+
+
 def task_audit_field_completeness() -> int:
     report_date = _report_date()
     reports_dir = _env("REPORTS_DIR", DEFAULT_REPORTS_DIR)
@@ -747,6 +773,7 @@ TASKS: dict[str, Callable[[], int]] = {
     "rollback-guard": task_rollback_guard,
     "audit-official-overrides": task_audit_official_overrides,
     "audit-field-completeness": task_audit_field_completeness,
+    "notify-override-due": task_notify_override_due,
     "validate-official-overrides-schema": task_validate_official_overrides_schema,
     "atwiki-quality-report": task_atwiki_quality_report,
     "validate-report-contract": task_validate_report_contract,
