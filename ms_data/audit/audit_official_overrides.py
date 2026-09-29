@@ -8,6 +8,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
+from ms_data.core import paths
 from ms_data.core.dates import JST
 from ms_data.core.records import load_records_by_name
 from ms_data.gh.outputs import append_step_summary, write_github_output
@@ -314,7 +315,7 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=update_msdata.OFFICIAL_OVERRIDES_DIR,
     )
-    parser.add_argument("--current", type=Path, default=Path("msData.json"))
+    parser.add_argument("--current", type=Path, default=paths.MSDATA)
     parser.add_argument("--raw", type=Path, default=None)
     parser.add_argument("--before", type=Path, default=None)
     parser.add_argument("--out", type=Path, required=True)

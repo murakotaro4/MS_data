@@ -22,6 +22,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
+from ms_data.core import paths
 from ms_data.core.json_io import load_json
 from ms_data.core.labels import apply_key_aliases
 from ms_data.core.ms_names import (
@@ -153,7 +154,7 @@ def load_index_url_map(path: Path) -> dict[str, str]:
 # import 時に cache/index.json を読み込むモジュール状態。
 # テストが本モジュール属性として monkeypatch する前提のため、
 # 名前・初期化タイミングを変更しないこと。
-INDEX_URL_MAP = load_index_url_map(Path("cache/index.json"))
+INDEX_URL_MAP = load_index_url_map(paths.INDEX_JSON)
 
 
 def _normalize_name_and_url(rec: dict[str, Any]) -> None:
@@ -341,7 +342,7 @@ def main(argv: list[str] | None = None) -> int:
         "-o",
         "--output",
         type=Path,
-        default=Path("msData.json"),
+        default=paths.MSDATA,
         help="出力先（既定: msData.json）",
     )
     ap.add_argument(
