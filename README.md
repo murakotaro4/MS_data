@@ -30,6 +30,23 @@ Release（`raw-snapshot-*`）は取得時の生 HTML スナップショットと
 
 毎日 18:00 JST に GitHub Actions が atwiki を取得し、差分があれば PR 作成 → Codex 自動レビュー → 自動マージ → Release 保存・メール通知を行います。失敗時は `notify failure` がメールと Issue で通知します。詳細は [AGENTS.md](AGENTS.md)。
 
+### official_overrides の期限確認
+
+`review_after` / `remove_after` に到達した値の対象ページは、通常の差分候補に
+`official_override_due` の理由で追加します。対象だけTTLを無視して再取得・解析し、
+`NO_NET=1` の場合はキャッシュを使いますが、上流確認済みの撤去候補にはしません。
+
+監査は `cache/index.json`、`cache/index_changed_meta.json` と
+`cache/detail_fetch_state.json` を照合し、今回未取得・取得失敗・解析失敗・値欠損・
+キャッシュのみ・一致／不一致を区別します。取得状態にはURLごとの試行時刻、取得時刻、
+HTTP結果とoverride適用前の解析値を保存し、選定記録とともにraw snapshotへ含めます。
+期限到達値がある日は、データ差分がなくてもsnapshotをartifactへ保存します。
+旧形式の取得記録や `--raw` ファイルだけでは撤去候補にしません。
+
+`remove_after` 到達値の取得証拠が不足すると、品質レポートに
+`official_override_evidence_missing` が出ます。overrideの削除は自動化しません。
+独立した次回取得の結果も確認してから判断してください。
+
 ## 開発者向けクイックスタート
 
 前提: Python 3.11+ / [uv](https://github.com/astral-sh/uv)

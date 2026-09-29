@@ -299,7 +299,7 @@ jobs:
             --body "${{ steps.no_change_mail.outputs.path }}"
 
       - name: Generate reports and snapshot
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true' || steps.official_overrides_audit.outputs.due_count > 0
         run: |
           uv run python -m ms_data.reporting.report_msdata_diff \
             --old msData.before.json \
@@ -322,7 +322,7 @@ jobs:
           uv run python -m ms_data.tasks snapshot
 
       - name: Validate generated update reports
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true' || steps.official_overrides_audit.outputs.due_count > 0
         run: |
           test -f "${PROVENANCE_FILE}"
           uv run python -m ms_data.validation.validate_generated_reports \
@@ -372,7 +372,7 @@ jobs:
             ${{ env.OVERRIDES_AUDIT_FILE }}
 
       - name: Upload raw snapshot artifact
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true' || steps.official_overrides_audit.outputs.due_count > 0
         uses: actions/upload-artifact@v7
         with:
           name: ${{ env.RAW_ARTIFACT_NAME }}

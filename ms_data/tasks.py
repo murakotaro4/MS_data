@@ -135,7 +135,8 @@ def _can_use_changed_only(changed_index: list[dict], meta: dict) -> bool:
     """
     if not bool(meta.get("fast_path", False)):
         return False
-    changed_only_safe_reasons = {"recent_update"}
+    # 期限確認ページは details 内で強制取得・解析するため、他の候補の最適化を妨げない。
+    changed_only_safe_reasons = {"recent_update", "official_override_due"}
     for item in changed_index:
         reasons = item.get("change_reasons")
         if not isinstance(reasons, list):
@@ -298,6 +299,8 @@ def task_scrape_details() -> int:
         _env("TTL", DEFAULT_TTL),
         "--detail-fetch-state-out",
         _detail_fetch_state(),
+        "--overrides-dir",
+        _env("OFFICIAL_OVERRIDES_DIR", DEFAULT_OVERRIDES_DIR),
         *_network_flags(),
     ]
     if _env_flag("CHANGED_ONLY"):
@@ -318,6 +321,8 @@ def task_scrape_all() -> int:
         _env("TTL", DEFAULT_TTL),
         "--detail-fetch-state-out",
         _detail_fetch_state(),
+        "--overrides-dir",
+        _env("OFFICIAL_OVERRIDES_DIR", DEFAULT_OVERRIDES_DIR),
         *_network_flags(),
     ]
     if _env_flag("CHANGED_ONLY"):
@@ -342,6 +347,8 @@ def task_detect_changed() -> int:
         _env("FRESHNESS_WINDOW", "1h"),
         "--detail-fetch-state",
         _detail_fetch_state(),
+        "--overrides-dir",
+        _env("OFFICIAL_OVERRIDES_DIR", DEFAULT_OVERRIDES_DIR),
         "--stale-detail-days",
         _env("STALE_DETAIL_DAYS", "14"),
         "--min-age-coverage",
@@ -434,6 +441,8 @@ def task_update_fast() -> int:
         detail_ttl,
         "--detail-fetch-state-out",
         _detail_fetch_state(),
+        "--overrides-dir",
+        _env("OFFICIAL_OVERRIDES_DIR", DEFAULT_OVERRIDES_DIR),
         *_network_flags(),
     ]
     if use_changed_only:
@@ -566,6 +575,9 @@ def task_snapshot() -> int:
         Path(_env("INDEX_OUT", DEFAULT_INDEX_OUT)),
         Path(_env("DETAILS_OUT", DEFAULT_DETAILS_OUT)),
         Path(_env("DETAILS_JSON", DEFAULT_DETAILS_JSON)),
+        Path(_detail_fetch_state()),
+        Path(_changed_meta_out()),
+        Path(_changed_index_out()),
         Path(_provenance_out()),
     ]
     diff_path = Path(_report_out("DIFF_OUT", "diff_msdata", "md"))
@@ -615,6 +627,8 @@ def task_atwiki_quality_report() -> int:
         _changed_meta_out(),
         "--detail-fetch-state",
         _detail_fetch_state(),
+        "--overrides-dir",
+        _env("OFFICIAL_OVERRIDES_DIR", DEFAULT_OVERRIDES_DIR),
         "--details-json",
         _env("DETAILS_JSON", DEFAULT_DETAILS_JSON),
         "--details-jsonl",
@@ -677,6 +691,12 @@ def task_audit_official_overrides() -> int:
         _env("OFFICIAL_OVERRIDES_DIR", DEFAULT_OVERRIDES_DIR),
         "--current",
         _env("CURRENT", DEFAULT_MSDATA),
+        "--index",
+        _env("INDEX_OUT", DEFAULT_INDEX_OUT),
+        "--detail-fetch-state",
+        _detail_fetch_state(),
+        "--changed-meta",
+        _changed_meta_out(),
         "--out",
         _report_out("OFFICIAL_OVERRIDES_AUDIT_OUT", "official_overrides_audit", "md"),
     ]
