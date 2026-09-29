@@ -66,3 +66,27 @@ def test_apply_required_value_fallbacks_skips_non_dict_records():
     apply_required_value_fallbacks(per_level, [1, 2, 3])
     assert per_level[2] == "not-a-record"
     assert per_level[3]["スラスター"] == 55
+
+
+def test_extract_row_labels_dedupes_and_normalizes():
+    from bs4 import BeautifulSoup
+
+    from ms_data.scraping.detail_page import extract_row_labels
+
+    html = """
+    <table>
+      <tr><th>HP</th><td>1</td></tr>
+      <tr><th>射撃補則</th><td>2</td></tr>
+      <tr><th>HP</th><td>3</td></tr>
+      <tr><td>no th</td></tr>
+      <tr><th></th><td>empty</td></tr>
+    </table>
+    """
+    table = BeautifulSoup(html, "lxml").find("table")
+
+    raw, normalized = extract_row_labels(table)
+
+    assert raw == ["HP", "射撃補則"]
+    assert normalized[0] == "HP"
+    assert "射撃補正" in normalized or "射撃補則" in normalized
+    assert extract_row_labels(None) == ([], [])
