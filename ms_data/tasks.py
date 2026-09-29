@@ -415,6 +415,15 @@ def task_update_fast() -> int:
         )
         return 1
 
+    # 候補ゼロ・全件取得失敗でも、今回の空結果をsnapshotへ保存する。
+    # 前回のdetailsを残すと取得証拠を取り違えるため、先に両形式を初期化する。
+    for path, empty in (
+        (Path(_env("DETAILS_OUT", DEFAULT_DETAILS_OUT)), ""),
+        (Path(_env("DETAILS_JSON", DEFAULT_DETAILS_JSON)), "[]\n"),
+    ):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(empty, encoding="utf-8")
+
     candidate_count = int(meta.get("candidate_count", 0))
     if candidate_count <= 0:
         print("update-fast: no candidate pages, skip details/import/validate")
