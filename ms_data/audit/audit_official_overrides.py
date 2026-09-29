@@ -48,6 +48,9 @@ def _classify(
         return "upstream_current"
     if raw_available and raw_value == stale_value:
         return "protected_by_override"
+    if raw_available:
+        # 不完全なLVが取り込み対象外でも、上流の第三値は今回の取得証拠で判定する。
+        return "source_changed"
     if before_value == override_value:
         return "already_protected"
     return "current_matches_override"

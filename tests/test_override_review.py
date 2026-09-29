@@ -398,6 +398,7 @@ def test_due_review_preserves_recent_page_optimization():
         ("complete", "match"),
         ("missing_hp", "value_missing"),
         ("missing_lv", "parse_failed"),
+        ("third_value_incomplete", "mismatch"),
     ],
 )
 def test_real_parser_keeps_missing_value_evidence(
@@ -412,6 +413,10 @@ def test_real_parser_keeps_missing_value_evidence(
         html = html.replace("<tr><th>機体HP</th><td>10000</td></tr>", "")
     elif mode == "missing_lv":
         html = html.replace("LV1", "")
+    elif mode == "third_value_incomplete":
+        html = html.replace("10000", "9500").replace(
+            "<tr><th>スピード</th><td>125</td></tr>", ""
+        )
     client = httpx.Client(
         transport=httpx.MockTransport(lambda request: httpx.Response(200, text=html))
     )
@@ -441,3 +446,7 @@ def test_real_parser_keeps_missing_value_evidence(
     assert rows[0]["evidence_status"] == expected
     assert counts["upstream_current"] == (1 if mode == "complete" else 0)
     assert bool(args.out.read_text(encoding="utf-8").strip()) == (mode == "complete")
+    if mode == "third_value_incomplete":
+        assert rows[0]["status"] == "source_changed"
+        assert rows[0]["raw"] == 9500
+        assert rows[0]["current"] == 10000
