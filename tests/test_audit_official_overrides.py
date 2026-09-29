@@ -1,16 +1,11 @@
-import json
-
 from ms_data.audit import audit_official_overrides
 
-
-def _write_json(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+from helpers import write_json
 
 
 def test_audit_reports_protected_and_upstream_current(tmp_path):
     overrides_dir = tmp_path / "official_overrides"
-    _write_json(
+    write_json(
         overrides_dir / "20260528.json",
         {
             "schema_version": "1",
@@ -29,9 +24,9 @@ def test_audit_reports_protected_and_upstream_current(tmp_path):
     raw = tmp_path / "raw.json"
     current = tmp_path / "current.json"
     out = tmp_path / "audit.md"
-    _write_json(before, [{"MS名": "ザクⅢ改_LV1", "HP": 27000, "スピード": 145}])
-    _write_json(raw, [{"MS名": "ザクⅢ改_LV1", "HP": 23500, "スピード": 145}])
-    _write_json(current, [{"MS名": "ザクⅢ改_LV1", "HP": 27000, "スピード": 145}])
+    write_json(before, [{"MS名": "ザクⅢ改_LV1", "HP": 27000, "スピード": 145}])
+    write_json(raw, [{"MS名": "ザクⅢ改_LV1", "HP": 23500, "スピード": 145}])
+    write_json(current, [{"MS名": "ザクⅢ改_LV1", "HP": 27000, "スピード": 145}])
 
     rc = audit_official_overrides.main(
         [
@@ -61,7 +56,7 @@ def test_audit_reports_protected_and_upstream_current(tmp_path):
 
 def test_audit_treats_missing_raw_override_record_as_not_upstream_current(tmp_path):
     overrides_dir = tmp_path / "official_overrides"
-    _write_json(
+    write_json(
         overrides_dir / "20260528.json",
         {
             "schema_version": "1",
@@ -78,9 +73,9 @@ def test_audit_treats_missing_raw_override_record_as_not_upstream_current(tmp_pa
     raw = tmp_path / "raw.json"
     current = tmp_path / "current.json"
     out = tmp_path / "audit.md"
-    _write_json(before, [{"MS名": "ザクⅢ改_LV1", "HP": 27000}])
-    _write_json(raw, [{"MS名": "別機体_LV1", "HP": 12500}])
-    _write_json(current, [{"MS名": "ザクⅢ改_LV1", "HP": 27000}])
+    write_json(before, [{"MS名": "ザクⅢ改_LV1", "HP": 27000}])
+    write_json(raw, [{"MS名": "別機体_LV1", "HP": 12500}])
+    write_json(current, [{"MS名": "ザクⅢ改_LV1", "HP": 27000}])
 
     rc = audit_official_overrides.main(
         [
@@ -105,7 +100,7 @@ def test_audit_treats_missing_raw_override_record_as_not_upstream_current(tmp_pa
 
 def test_audit_fails_when_current_value_is_stale(tmp_path):
     overrides_dir = tmp_path / "official_overrides"
-    _write_json(
+    write_json(
         overrides_dir / "20260528.json",
         {
             "schema_version": "1",
@@ -120,7 +115,7 @@ def test_audit_fails_when_current_value_is_stale(tmp_path):
     )
     current = tmp_path / "current.json"
     out = tmp_path / "audit.md"
-    _write_json(current, [{"MS名": "ザクⅢ改_LV1", "HP": 23500}])
+    write_json(current, [{"MS名": "ザクⅢ改_LV1", "HP": 23500}])
 
     rc = audit_official_overrides.main(
         [
@@ -140,7 +135,7 @@ def test_audit_fails_when_current_value_is_stale(tmp_path):
 
 def test_audit_can_fail_when_override_remove_date_is_due(tmp_path):
     overrides_dir = tmp_path / "official_overrides"
-    _write_json(
+    write_json(
         overrides_dir / "20260528.json",
         {
             "schema_version": "1",
@@ -156,7 +151,7 @@ def test_audit_can_fail_when_override_remove_date_is_due(tmp_path):
     )
     current = tmp_path / "current.json"
     out = tmp_path / "audit.md"
-    _write_json(current, [{"MS名": "ザクⅢ改_LV1", "HP": 27000}])
+    write_json(current, [{"MS名": "ザクⅢ改_LV1", "HP": 27000}])
 
     rc = audit_official_overrides.main(
         [
@@ -179,7 +174,7 @@ def test_audit_can_fail_when_override_remove_date_is_due(tmp_path):
 
 def test_audit_writes_github_output_and_step_summary(tmp_path):
     overrides_dir = tmp_path / "official_overrides"
-    _write_json(
+    write_json(
         overrides_dir / "20260528.json",
         {
             "schema_version": "1",
@@ -198,7 +193,7 @@ def test_audit_writes_github_output_and_step_summary(tmp_path):
     out = tmp_path / "audit.md"
     github_output = tmp_path / "github_output.txt"
     step_summary = tmp_path / "summary.md"
-    _write_json(current, [{"MS名": "ザクⅢ改_LV1", "HP": 27000}])
+    write_json(current, [{"MS名": "ザクⅢ改_LV1", "HP": 27000}])
 
     rc = audit_official_overrides.main(
         [

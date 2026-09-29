@@ -1,14 +1,10 @@
-import json
 from pathlib import Path
 
 import pytest
 
 from ms_data.validation import validate_report_contract
 
-
-def _write_json(path: Path, data: object) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+from helpers import write_json
 
 
 def _manifest() -> dict:
@@ -52,7 +48,7 @@ def _manifest() -> dict:
 
 def test_data_update_mode_ok(tmp_path: Path) -> None:
     manifest = tmp_path / "reports_manifest.json"
-    _write_json(manifest, _manifest())
+    write_json(manifest, _manifest())
 
     rc = validate_report_contract.main(
         [
@@ -83,7 +79,7 @@ def test_data_update_mode_ok(tmp_path: Path) -> None:
 
 def test_data_update_mode_release_tag_mismatch(tmp_path: Path) -> None:
     manifest = tmp_path / "reports_manifest.json"
-    _write_json(manifest, _manifest())
+    write_json(manifest, _manifest())
 
     rc = validate_report_contract.main(
         [
@@ -142,7 +138,7 @@ def test_manifest_rejects_unknown_entry_type(tmp_path: Path) -> None:
         ],
     }
     manifest = tmp_path / "reports_manifest.json"
-    _write_json(manifest, bad)
+    write_json(manifest, bad)
 
     rc = validate_report_contract.main(
         [
@@ -159,7 +155,7 @@ def test_manifest_rejects_unknown_entry_type(tmp_path: Path) -> None:
 
 def test_ci_mode_rejects_unknown_report_file(tmp_path: Path) -> None:
     manifest = tmp_path / "reports_manifest.json"
-    _write_json(manifest, _manifest())
+    write_json(manifest, _manifest())
     reports_dir = tmp_path / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
     (reports_dir / "diff_msdata_20260320.md").write_text("ok", encoding="utf-8")
@@ -192,7 +188,7 @@ def test_custom_reports_dir_uses_manifest_logical_root(
     ] = "logical_reports/provenance_{report_date}.json"
     manifest_data["entries"][0]["path_patterns"] = ["logical_reports/diff_msdata_*.md"]
     manifest = Path("reports_manifest.json")
-    _write_json(manifest, manifest_data)
+    write_json(manifest, manifest_data)
     reports_dir = Path("custom_dir")
     reports_dir.mkdir(parents=True)
     (reports_dir / "diff_msdata_20260320.md").write_text("ok", encoding="utf-8")
@@ -241,7 +237,7 @@ def test_custom_reports_dir_uses_manifest_logical_root(
 def test_ci_mode_rejects_nested_reports_suffix(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.chdir(tmp_path)
     manifest = Path("reports_manifest.json")
-    _write_json(manifest, _manifest())
+    write_json(manifest, _manifest())
     nested_dir = Path("custom_dir/foo/reports")
     nested_dir.mkdir(parents=True)
     (nested_dir / "diff_msdata_20260320.md").write_text("ng", encoding="utf-8")
@@ -269,7 +265,7 @@ def test_data_update_mode_year_month_patterns(tmp_path: Path) -> None:
         "provenance_pattern"
     ] = "reports/{report_year}/{report_month}/provenance_{report_date}.json"
     manifest = tmp_path / "reports_manifest.json"
-    _write_json(manifest, manifest_data)
+    write_json(manifest, manifest_data)
 
     rc = validate_report_contract.main(
         [
@@ -307,7 +303,7 @@ def test_data_update_mode_accepts_windows_native_report_paths(tmp_path: Path) ->
         "provenance_pattern"
     ] = "reports/{report_year}/{report_month}/provenance_{report_date}.json"
     manifest = tmp_path / "reports_manifest.json"
-    _write_json(manifest, manifest_data)
+    write_json(manifest, manifest_data)
 
     rc = validate_report_contract.main(
         [
@@ -346,7 +342,7 @@ def test_data_update_mode_rejects_parent_directory_in_report_pattern(
     manifest_data = _manifest()
     manifest_data["naming"][pattern_key] = "reports/../outside_{report_date}.md"
     manifest = tmp_path / "reports_manifest.json"
-    _write_json(manifest, manifest_data)
+    write_json(manifest, manifest_data)
 
     rc = validate_report_contract.main(
         [

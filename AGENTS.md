@@ -83,6 +83,7 @@
 - Python: インデント4スペース、型ヒント必須（`str | None` 形式を推奨）。命名はファイル/関数 lower_snake_case、クラス CapWords。
 - ツール: `black`（88列）/ `ruff` / `pytest` を uv で管理。
 - テスト: `tests/test_*.py`。変換/検証ロジックは目安80%以上をカバーし、エッジケースと不正入力を含める。
+- テスト共有ヘルパー: `tests/helpers.py`（MS レコード factory `make_ms_record` / `make_minimal_ms_record`、`write_json`）、`tests/workflow_contract.py`（ワークフローのステップ切り出しと必須/禁止部分文字列アサート）、`tests/auto_review_helpers.py`（auto_review cmd_* 用スタブ）。`from helpers import ...` のように素の名前で import する（`__init__.py` は置かない）。
 - 共通処理は `ms_data/core` 等の既存ユーティリティを再利用し、コピペ実装を作らない。
 
 ## コミット・プルリクエスト

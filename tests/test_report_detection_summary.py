@@ -2,6 +2,8 @@ from pathlib import Path
 
 from ms_data.pipeline import report_detection_summary
 
+from workflow_contract import assert_absent, assert_contains, workflow_step
+
 
 def _args(
     meta: Path, github_output: Path, step_summary: Path, *, update_mode: str = "fast"
@@ -76,17 +78,20 @@ def test_invalid_json_returns_nonzero_with_explicit_error(tmp_path: Path, capsys
 
 
 def test_data_update_uses_detection_summary_module_without_inline_python():
-    workflow = (
-        Path(__file__).resolve().parents[1] / ".github/workflows/data_update.yml"
-    ).read_text(encoding="utf-8")
-    start = workflow.index("      - id: detection\n")
-    end = workflow.index("\n      - id: quality\n", start)
-    block = workflow[start:end]
+    block = workflow_step(
+        "data_update.yml",
+        start="      - id: detection\n",
+        end="\n      - id: quality\n",
+    )
 
-    assert "uv run python -m ms_data.pipeline.report_detection_summary" in block
-    assert "--meta cache/index_changed_meta.json" in block
-    assert '--update-mode "${UPDATE_MODE}"' in block
-    assert '--github-output "$GITHUB_OUTPUT"' in block
-    assert '--step-summary "$GITHUB_STEP_SUMMARY"' in block
-    assert "python - <<'PY'" not in block
-    assert "json.loads" not in block
+    assert_contains(
+        block,
+        [
+            "uv run python -m ms_data.pipeline.report_detection_summary",
+            "--meta cache/index_changed_meta.json",
+            '--update-mode "${UPDATE_MODE}"',
+            '--github-output "$GITHUB_OUTPUT"',
+            '--step-summary "$GITHUB_STEP_SUMMARY"',
+        ],
+    )
+    assert_absent(block, ["python - <<'PY'", "json.loads"])
