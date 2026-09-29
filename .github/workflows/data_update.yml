@@ -389,6 +389,7 @@ jobs:
           FALLBACK_REASON: ${{ steps.detection.outputs.fallback_reason }}
         run: |
           body_path="$RUNNER_TEMP/msdata_no_change_mail.txt"
+          html_path="$RUNNER_TEMP/msdata_no_change_mail.html"
           uv run python -m ms_data.reporting.build_update_mail_body \
             --report-date "${REPORT_DATE}" \
             --result "成功（差分なし）" \
@@ -400,8 +401,10 @@ jobs:
             --run-id "${GITHUB_RUN_ID}" \
             --rollback-guard-path "${ROLLBACK_FILE}" \
             --official-overrides-audit-path "${OVERRIDES_AUDIT_FILE}" \
-            --out "$body_path"
+            --out "$body_path" \
+            --html-out "$html_path"
           echo "path=$body_path" >> "$GITHUB_OUTPUT"
+          echo "html_path=$html_path" >> "$GITHUB_OUTPUT"
 
       - name: Send no-change mail
         if: github.event_name == 'schedule' && steps.changes.outputs.changed == 'false' && env.DRY_RUN != 'true'
@@ -412,7 +415,8 @@ jobs:
         run: |
           uv run python -m ms_data.notify.send_gmail \
             --subject "msData 定期更新実行報告（差分なし, ${{ env.REPORT_DATE }}）" \
-            --body "${{ steps.no_change_mail.outputs.path }}"
+            --body "${{ steps.no_change_mail.outputs.path }}" \
+            --html-body "${{ steps.no_change_mail.outputs.html_path }}"
 
       - name: Ensure pull request labels
         if: steps.changes.outputs.changed == 'true' && env.DRY_RUN != 'true'
