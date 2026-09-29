@@ -30,6 +30,10 @@ Release（`raw-snapshot-*`）は取得時の生 HTML スナップショットと
 
 毎日 18:00 JST に GitHub Actions が atwiki を取得し、差分があれば PR 作成 → Codex 自動レビュー → 自動マージ → Release 保存・メール通知を行います。失敗時は `notify failure` がメールと Issue で通知します。詳細は [AGENTS.md](AGENTS.md)。
 
+更新通知は、機体ごとのカードに LV 別の変更前・変更後と数値の増減量を載せる HTML メールです。追加・削除レコードの主要ステータスと fullst 明細も、差分レポートに記載された内容を省略せず掲載します。要確認の監査結果は上部に、監査サマリと実行情報は末尾に表示します。差分なしの日は短い結果通知になります。テキスト版を同じメールに併記し、マージ後の `msData.json` 添付も維持します。
+
+送信せずにプレビューを作成する場合は、`uv run python -m ms_data.reporting.build_update_mail_body` の既存引数に `--html-out <出力先.html>` を追加してください。送信 CLI は任意の `--html-body <本文.html>` に対応し、省略時は従来どおりテキストのみ送信します。
+
 ### official_overrides の期限確認
 
 `review_after` / `remove_after` に到達した値の対象ページは、通常の差分候補に

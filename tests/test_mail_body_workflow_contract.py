@@ -28,6 +28,10 @@ def test_post_merge_notify_builds_mail_body_from_diff_and_guard_reports():
     assert "--diff-path" in block
     assert "--rollback-guard-path" in block
     assert "--official-overrides-audit-path" in block
+    assert '--html-out "$html_path"' in block
+    send = text[text.index("- name: Send merged msData mail") :]
+    assert '--html-body "${{ steps.mail_body.outputs.html_path }}"' in send
+    assert '--attach "msData.json"' in send
 
 
 def test_data_update_no_change_mail_keeps_detection_and_guard_context_only():
@@ -48,6 +52,13 @@ def test_data_update_no_change_mail_keeps_detection_and_guard_context_only():
     assert "--rollback-guard-path" in block
     assert "--official-overrides-audit-path" in block
     assert "--diff-path" not in block
+    assert '--html-out "$html_path"' in block
+    send = _step_block(
+        text,
+        start="- name: Send no-change mail",
+        end="- name: Ensure pull request labels",
+    )
+    assert '--html-body "${{ steps.no_change_mail.outputs.html_path }}"' in send
 
 
 def test_no_change_success_mail_runs_after_snapshot_and_uploads():
