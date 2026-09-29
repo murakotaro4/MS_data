@@ -33,8 +33,37 @@ def test_audit_reports_protected_and_upstream_current(tmp_path):
     _write_json(raw, [{"MS名": "ザクⅢ改_LV1", "HP": 23500, "スピード": 145}])
     _write_json(current, [{"MS名": "ザクⅢ改_LV1", "HP": 27000, "スピード": 145}])
 
+    index = tmp_path / "index.json"
+    state = tmp_path / "state.json"
+    meta = tmp_path / "meta.json"
+    url = "https://example.test/1"
+    _write_json(index, [{"name": "ザクⅢ改", "url": url}])
+    _write_json(meta, {"generated_at": "2026-05-31T00:00:00Z"})
+    _write_json(
+        state,
+        {
+            "run_started_at": "2026-05-31T00:01:00Z",
+            "items": {
+                url: {
+                    "attempted_at": "2026-05-31T00:01:00Z",
+                    "fetched_at": "2026-05-31T00:01:01Z",
+                    "ok": True,
+                    "http_status": 200,
+                    "network_fetched": True,
+                    "parse_status": "parsed",
+                    "override_values": {"ザクⅢ改_LV1": {"HP": 23500, "スピード": 145}},
+                }
+            },
+        },
+    )
     rc = audit_official_overrides.main(
         [
+            "--index",
+            str(index),
+            "--detail-fetch-state",
+            str(state),
+            "--changed-meta",
+            str(meta),
             "--overrides-dir",
             str(overrides_dir),
             "--before",

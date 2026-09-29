@@ -51,9 +51,14 @@ from typing import Any
 import httpx
 from bs4 import BeautifulSoup
 
-from ms_data.core.labels import clean_text, normalize_row_label
+from ms_data.core.dates import JST
+from ms_data.core.labels import apply_key_aliases, clean_text, normalize_row_label
+from ms_data.core.ms_names import normalize_ms_base_name, normalize_ms_name
+from ms_data.core.paths import OFFICIAL_OVERRIDES_DIR
 from ms_data.net.cache_http import CacheConfig, CacheHTTP
 from ms_data.net.client import get_scraper_client
+from ms_data.pipeline import update_msdata
+from ms_data.pipeline.override_review import due_base_names, include_due_items
 from ms_data.scraping.change_detection import (
     find_latest_provenance,
     load_msdata_base_index,
@@ -61,6 +66,7 @@ from ms_data.scraping.change_detection import (
 )
 from ms_data.scraping.detail_page import (
     build_base_records,
+    filter_complete_records,
     find_detail_table,
     parse_deployment,
     parse_details,
@@ -185,32 +191,82 @@ def cmd_details(args: argparse.Namespace) -> int:
     detail_state = load_detail_fetch_state(detail_state_path)
     run_started_at = datetime.now(timezone.utc)
     t_start = time.monotonic()
+    overrides_dir = Path(getattr(args, "overrides_dir", OFFICIAL_OVERRIDES_DIR))
+    overrides = update_msdata.load_official_overrides(overrides_dir)
+    due = due_base_names(overrides_dir, run_started_at.astimezone(JST).date())
     written = 0
     with out.open("w", encoding="utf-8") as f:
         for item in data:
             url = item.get("url")
             if not url:
                 continue
+            expiry_review = normalize_ms_base_name(item.get("name", "")) in due
+            stage = "fetch_failed"
+            _meta: dict[str, Any] = {}
+            network_before = cache.stats.get("network_requests", 0)
             try:
-                text, _meta = cache.get(url)
+                if expiry_review:
+                    original_force = cache.cfg.force
+                    cache.cfg.force = True
+                    try:
+                        text, _meta = cache.get(url)
+                    finally:
+                        cache.cfg.force = original_force
+                else:
+                    text, _meta = cache.get(url)
+                stage = "parse_failed"
                 # 変更がなければスキップ（オプション）
-                if getattr(args, "changed_only", False) and not _meta.get(
-                    "semantic_changed", False
+                if (
+                    not expiry_review
+                    and getattr(args, "changed_only", False)
+                    and not _meta.get("semantic_changed", False)
                 ):
                     remember_detail_fetch(
                         detail_state, url, item, _meta, run_started_at
                     )
+                    detail_state[url]["parse_status"] = "skipped"
                     continue
-                per_level = parse_details(text)
+                parsed_levels = (
+                    parse_details(text, include_incomplete=True)
+                    if expiry_review
+                    else parse_details(text)
+                )
+                per_level = (
+                    filter_complete_records(parsed_levels)
+                    if expiry_review
+                    else parsed_levels
+                )
+                override_values: dict[str, dict[str, Any]] = {}
+                for rec in parsed_levels.values():
+                    merged = _merge_index_fields(rec, item)
+                    name = normalize_ms_name(merged["MS名"])
+                    if name in overrides:
+                        normalized = apply_key_aliases(merged)
+                        override_values[name] = {
+                            field: normalized.get(field) for field in overrides[name]
+                        }
                 for rec in per_level.values():
                     merged = _merge_index_fields(rec, item)
                     f.write(json.dumps(merged, ensure_ascii=False))
                     f.write("\n")
                     written += 1
                 remember_detail_fetch(detail_state, url, item, _meta, run_started_at)
+                detail_state[url].update(
+                    parse_status="parsed" if parsed_levels else "failed",
+                    override_values=override_values,
+                    network_fetched=cache.stats.get("network_requests", 0)
+                    > network_before,
+                    content_sha256=_meta.get("content_sha256"),
+                )
             except Exception as e:
                 remember_detail_fetch_failure(
                     detail_state, url, item, e, run_started_at
+                )
+                detail_state[url].update(
+                    failure_stage=stage,
+                    response_fetched_at=_meta.get("fetched_at", ""),
+                    http_status=_meta.get("http_status")
+                    or getattr(getattr(e, "response", None), "status_code", None),
                 )
                 print(f"WARN: failed {url}: {e}", file=sys.stderr)
             if args.limit and written >= args.limit:
@@ -269,6 +325,7 @@ def cmd_all(args: argparse.Namespace) -> int:
             args, "detail_fetch_state_out", "cache/detail_fetch_state.json"
         ),
         fetch_stats_out=fetch_stats_out,
+        overrides_dir=getattr(args, "overrides_dir", OFFICIAL_OVERRIDES_DIR),
     )
     return cmd_details(dargs)
 
@@ -338,6 +395,13 @@ def cmd_detect_changed(args: argparse.Namespace) -> int:
         min_age_coverage=float(args.min_age_coverage),
         detail_fetch_state=detail_fetch_state,
         stale_detail_seconds=stale_detail_seconds,
+    )
+    selected = include_due_items(
+        data,
+        selected,
+        meta,
+        Path(getattr(args, "overrides_dir", OFFICIAL_OVERRIDES_DIR)),
+        now.astimezone(JST).date(),
     )
     meta["generated_at"] = (
         now.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -471,6 +535,7 @@ def build_parser() -> argparse.ArgumentParser:
         default="cache/fetch_stats.json",
         help="ネットワーク取得統計の出力先（空文字で無効化）",
     )
+    p_det.add_argument("--overrides-dir", type=Path, default=OFFICIAL_OVERRIDES_DIR)
     p_det.set_defaults(func=cmd_details)
 
     p_all = sub.add_parser("all", help="index→details を連続実行")
@@ -493,6 +558,7 @@ def build_parser() -> argparse.ArgumentParser:
         default="cache/fetch_stats.json",
         help="ネットワーク取得統計の出力先（空文字で無効化）",
     )
+    p_all.add_argument("--overrides-dir", type=Path, default=OFFICIAL_OVERRIDES_DIR)
     p_all.set_defaults(func=cmd_all)
 
     p_detect = sub.add_parser(
@@ -518,6 +584,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="一覧の更新経過と前回取得時刻を直接比較して再取得対象を選ぶ（週次再検証）",
     )
     p_detect.add_argument("--now", default="")
+    p_detect.add_argument("--overrides-dir", type=Path, default=OFFICIAL_OVERRIDES_DIR)
     p_detect.set_defaults(func=cmd_detect_changed)
 
     p_lbl = sub.add_parser(
