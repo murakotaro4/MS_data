@@ -109,11 +109,11 @@ def test_actual_46_values_unselected_then_confirmed(tmp_path):
     fixture = ROOT / "tests/fixtures/override_review"
     write_json(
         directory / "overrides.json",
-        json.loads((fixture / "overrides.json").read_text()),
+        json.loads((fixture / "overrides.json").read_text(encoding="utf-8")),
     )
     overrides = update_msdata.load_official_overrides(directory)
     metadata = load_lifecycle_metadata(directory)
-    index = json.loads((fixture / "index.json").read_text())
+    index = json.loads((fixture / "index.json").read_text(encoding="utf-8"))
     current = [
         {
             "MS名": name,
@@ -148,7 +148,7 @@ def test_actual_46_values_unselected_then_confirmed(tmp_path):
         )
         == 0
     )
-    cli_selection = json.loads((tmp_path / "selected.json").read_text())
+    cli_selection = json.loads((tmp_path / "selected.json").read_text(encoding="utf-8"))
     assert cli_selection == selected
     assert len(selected) == 7
     assert meta["reason_counts"] == {"official_override_due": 7}
@@ -307,7 +307,7 @@ def test_details_expiry_review_bypasses_ttl_and_semantic_skip(
     assert sm.cmd_details(args) == 0
     assert len(calls) == (0 if mode == "offline" else 1)
     assert cache.cfg.force is False
-    state = json.loads(args.detail_fetch_state_out.read_text())
+    state = json.loads(args.detail_fetch_state_out.read_text(encoding="utf-8"))
     rows, counts, _ = build_audit(
         overrides=update_msdata.load_official_overrides(directory),
         current_records={NAME: {"HP": 10000}},
@@ -335,7 +335,7 @@ def test_details_expiry_review_bypasses_ttl_and_semantic_skip(
 def test_due_dates_entry_precedence_and_inactive(tmp_path):
     directory = make_overrides(tmp_path)
     path = directory / "test.json"
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
     data["overrides"][0]["remove_after"] = "2027-01-01"
     write_json(path, data)
     assert due_base_names(directory, date(2026, 9, 30)) == set()
@@ -404,7 +404,9 @@ def test_real_parser_keeps_missing_value_evidence(
     monkeypatch, tmp_path, mode, expected
 ):
     directory = make_overrides(tmp_path)
-    html = (ROOT / "tests/fixtures/parse_details_space_only.html").read_text()
+    html = (ROOT / "tests/fixtures/parse_details_space_only.html").read_text(
+        encoding="utf-8"
+    )
     html = html.replace("14500", "10000")
     if mode == "missing_hp":
         html = html.replace("<tr><th>機体HP</th><td>10000</td></tr>", "")
@@ -433,9 +435,9 @@ def test_real_parser_keeps_missing_value_evidence(
         before_records={},
         raw_records={},
         index=index,
-        fetch_state=json.loads(args.detail_fetch_state_out.read_text()),
+        fetch_state=json.loads(args.detail_fetch_state_out.read_text(encoding="utf-8")),
         selection_time=selected_at,
     )
     assert rows[0]["evidence_status"] == expected
     assert counts["upstream_current"] == (1 if mode == "complete" else 0)
-    assert bool(args.out.read_text().strip()) == (mode == "complete")
+    assert bool(args.out.read_text(encoding="utf-8").strip()) == (mode == "complete")
