@@ -57,6 +57,49 @@ def test_cli_builds_card_mail_and_keeps_original_plain_body(tmp_path: Path) -> N
     assert "2026 / 06 / 01" in soup.get_text()
 
 
+@pytest.mark.parametrize("same_path_text", [True, False])
+@pytest.mark.parametrize("existing", [True, False])
+def test_cli_rejects_same_plain_and_html_output_path_before_writing(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    same_path_text: bool,
+    existing: bool,
+) -> None:
+    output_dir = tmp_path / "output"
+    out = output_dir / "body.txt"
+    html_out = out if same_path_text else output_dir / "foo" / ".." / "body.txt"
+    if existing:
+        output_dir.mkdir()
+        (output_dir / "foo").mkdir()
+        out.write_text("既存内容\n", encoding="utf-8")
+
+    with pytest.raises(SystemExit) as exc_info:
+        build_update_mail_body.main(
+            [
+                "--report-date",
+                "20260930",
+                "--result",
+                "検証",
+                "--changed",
+                "false",
+                "--out",
+                str(out),
+                "--html-out",
+                str(html_out),
+            ]
+        )
+
+    assert exc_info.value.code == 2
+    assert (
+        "--out と --html-out には異なるパスを指定してください。"
+        in capsys.readouterr().err
+    )
+    if existing:
+        assert out.read_text(encoding="utf-8") == "既存内容\n"
+    else:
+        assert not output_dir.exists()
+
+
 def test_same_machine_addition_removal_and_changes_share_one_card() -> None:
     old = [
         {"MS名": "Ex-Sガンダム_LV1", "HP": 18000},
