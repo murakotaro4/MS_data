@@ -100,6 +100,39 @@ def test_cli_rejects_same_plain_and_html_output_path_before_writing(
         assert not output_dir.exists()
 
 
+def test_cli_rejects_hard_linked_plain_and_html_output_paths(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    out = tmp_path / "body.txt"
+    html_out = tmp_path / "body.html"
+    out.write_text("既存内容\n", encoding="utf-8")
+    html_out.hardlink_to(out)
+
+    with pytest.raises(SystemExit) as exc_info:
+        build_update_mail_body.main(
+            [
+                "--report-date",
+                "20260930",
+                "--result",
+                "検証",
+                "--changed",
+                "false",
+                "--out",
+                str(out),
+                "--html-out",
+                str(html_out),
+            ]
+        )
+
+    assert exc_info.value.code == 2
+    assert (
+        "--out と --html-out には異なるパスを指定してください。"
+        in capsys.readouterr().err
+    )
+    assert out.read_text(encoding="utf-8") == "既存内容\n"
+    assert html_out.read_text(encoding="utf-8") == "既存内容\n"
+
+
 def test_same_machine_addition_removal_and_changes_share_one_card() -> None:
     old = [
         {"MS名": "Ex-Sガンダム_LV1", "HP": 18000},

@@ -192,7 +192,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--html-out", type=Path, help="HTML 版の出力先（任意）")
     args = parser.parse_args(argv)
 
-    if args.html_out is not None and args.out.resolve() == args.html_out.resolve():
+    same_output = args.html_out is not None and (
+        args.out.resolve() == args.html_out.resolve()
+        or (
+            args.out.exists()
+            and args.html_out.exists()
+            and args.out.samefile(args.html_out)
+        )
+    )
+    if same_output:
         parser.error("--out と --html-out には異なるパスを指定してください。")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
