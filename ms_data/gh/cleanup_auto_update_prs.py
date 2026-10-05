@@ -11,10 +11,10 @@ from typing import Any
 from urllib.parse import urlparse
 
 from ms_data.core.dates import parse_yyyymmdd_jst, today_jst
-from ms_data.gh import gh_json
-from ms_data.gh.auto_review_pr import HEAD_REF_DATE_RE as HEAD_REF_RE
+from ms_data.gh import gh_json, pr_payload
 from ms_data.gh.gh_json import run_gh
 from ms_data.gh.outputs import append_step_summary
+from ms_data.gh.pr_payload import HEAD_REF_DATE_RE as HEAD_REF_RE
 
 AUTO_UPDATE_BRANCH_RE = re.compile(r"^data/auto-update-.+$")
 
@@ -176,25 +176,14 @@ def _pull_state(pull: dict[str, Any]) -> str:
     return str(pull.get("state") or "").upper()
 
 
-def _head_ref(pull: dict[str, Any]) -> str:
-    head = pull.get("head") if isinstance(pull.get("head"), dict) else {}
-    return str(pull.get("headRefName") or head.get("ref") or "")
-
-
-def _base_ref(pull: dict[str, Any]) -> str:
-    base = pull.get("base") if isinstance(pull.get("base"), dict) else {}
-    return str(pull.get("baseRefName") or base.get("ref") or "")
-
-
-def _head_oid(pull: dict[str, Any]) -> str:
-    head = pull.get("head") if isinstance(pull.get("head"), dict) else {}
-    return str(pull.get("headRefOid") or head.get("sha") or "")
+# PR payload アクセサは pr_payload に集約（REST / GraphQL 両キー対応）
+_head_ref = pr_payload.head_ref
+_base_ref = pr_payload.base_ref
+_head_oid = pr_payload.head_sha
 
 
 def _head_belongs_to_repo(pull: dict[str, Any], repo: str) -> bool:
-    head = pull.get("head") if isinstance(pull.get("head"), dict) else {}
-    head_repo = head.get("repo") if isinstance(head.get("repo"), dict) else {}
-    full_name = str(head_repo.get("full_name") or "")
+    full_name = pr_payload.head_repo_full_name(pull)
     return not full_name or full_name == repo
 
 
@@ -263,9 +252,7 @@ def cleanup_merged_branches(
         for pull in pulls
         if _pull_state(pull) == "OPEN" and _head_belongs_to_repo(pull, repo)
     }
-    open_bases = {
-        _base_ref(pull) for pull in pulls if _pull_state(pull) == "OPEN"
-    }
+    open_bases = {_base_ref(pull) for pull in pulls if _pull_state(pull) == "OPEN"}
 
     for branch in branches:
         if branch == default_branch:
@@ -300,9 +287,7 @@ def cleanup_merged_branches(
             continue
 
         merged_oids = {
-            _head_oid(pull)
-            for pull in branch_pulls
-            if _pull_state(pull) == "MERGED"
+            _head_oid(pull) for pull in branch_pulls if _pull_state(pull) == "MERGED"
         }
         if not merged_oids:
             results.append(

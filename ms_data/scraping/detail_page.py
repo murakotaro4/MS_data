@@ -516,10 +516,13 @@ def filter_complete_records(
     }
 
 
-def parse_details(html: str) -> dict[int, dict[str, Any]]:
+def parse_details(
+    html: str, *, include_incomplete: bool = False
+) -> dict[int, dict[str, Any]]:
     """詳細ページ HTML から LV ごとの正規化済みレコードを抽出する。
 
     適用順序の依存関係はモジュール docstring を参照。
+    include_incomplete は監査用。欠損値を確認するため不完全なLVも残す。
     """
     soup = BeautifulSoup(html, "lxml")
     name = extract_title(soup)
@@ -540,4 +543,4 @@ def parse_details(html: str) -> dict[int, dict[str, Any]]:
     normalize_turn_values(per_level, levels)
     apply_required_value_fallbacks(per_level, levels)
     apply_fullst_fallback(per_level, levels, parse_fullst_by_ms_level(soup, levels))
-    return filter_complete_records(per_level)
+    return per_level if include_incomplete else filter_complete_records(per_level)

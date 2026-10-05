@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-09-10T13:18:18Z",
+  "report_date": "20260910",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "388a3b7bc4247e961c9fb9a55923fde7143286d9"
+  },
+  "github": {
+    "run_id": "34481736559",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "d7a1e21a38773b81de772b4195d66e97e25e162acfd4d9c59b2df521b2d92f5c",
+      "size_bytes": 145620,
+      "record_count": 592
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "e348b393af1b69ec2b7fb5c702de4387928f3fc67c33630440374cd3ae170798",
+      "size_bytes": 44838,
+      "record_count": 38
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "febfd84f67983f742fb39610646262b73b134e5a0ec4ba2f142d86e14169c2be",
+      "size_bytes": 58618,
+      "record_count": 38
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "c7c0d09960e28cd4527991044b9773861f3b6aa9e5affda7064dd823e9e42300",
+      "file_count": 34,
+      "size_bytes": 5804827
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "730a40306cb4d9f290dca153d53ff3c30369ca00dfaca145aab1dfbf7323e0d0",
+      "size_bytes": 2641305,
+      "record_count": 1709
+    },
+    "diff_report": {
+      "path": "reports/2026/09/diff_msdata_20260910.md",
+      "sha256": "20a8ff29a14c873e3a1e0ed1876611d0cb06b57cdc28414bc15eca9b38a153b9",
+      "size_bytes": 3364
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260910-run-34481736559",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260910-run-34481736559",
+    "asset_name": "raw_snapshot_20260910_run34481736559.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260910-run-34481736559"
+  }
+}

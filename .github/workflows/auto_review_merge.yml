@@ -90,25 +90,9 @@ jobs:
       - id: pat
         name: Resolve Codex trigger PAT
         if: steps.resolve.outputs.skip != 'true'
-        env:
-          CODEX_TRIGGER_PAT: ${{ secrets.CODEX_TRIGGER_PAT }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          pat_available=false
-          pat_login=""
-          if [[ -n "${CODEX_TRIGGER_PAT}" ]]; then
-            if login="$(GH_TOKEN="${CODEX_TRIGGER_PAT}" gh api user --jq .login)" && [[ -n "${login}" ]]; then
-              pat_available=true
-              pat_login="${login}"
-            else
-              echo "Warning: CODEX_TRIGGER_PAT is set but login resolution failed; falling back without PAT."
-              pat_available=false
-              pat_login=""
-            fi
-          fi
-          echo "pat_available=${pat_available}" >> "$GITHUB_OUTPUT"
-          echo "pat_login=${pat_login}" >> "$GITHUB_OUTPUT"
+        uses: ./.github/actions/resolve-codex-pat
+        with:
+          pat: ${{ secrets.CODEX_TRIGGER_PAT }}
 
       - id: wait
         name: Wait for Codex response with retries

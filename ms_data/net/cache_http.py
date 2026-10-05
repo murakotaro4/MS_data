@@ -27,10 +27,12 @@ from pathlib import Path
 import httpx
 from bs4 import BeautifulSoup, Comment
 
+from ms_data.core import paths
+
 
 @dataclass
 class CacheConfig:
-    root: Path = Path("cache/html")
+    root: Path = paths.HTML_CACHE_DIR
     ttl_seconds: int = 7 * 24 * 3600  # 7日
     no_network: bool = False
     force: bool = False

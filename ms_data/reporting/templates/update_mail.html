@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>msData 更新通知</title>
+  <style>
+    body { margin:0; padding:0; background:#f3f6fa; color:#18222f; font-family:Arial,"Noto Sans JP","Yu Gothic",sans-serif; font-size:16px; line-height:1.65; }
+    .mail { width:100%; max-width:660px; background:#ffffff; border-radius:14px; }
+    .padding { padding:28px; }
+    .kicker,.date { color:#566276; font-size:12px; }
+    .date { text-align:right; }
+    h1 { font-size:24px; line-height:1.4; font-weight:600; margin:20px 0 8px; }
+    .result { color:#215fbc; margin:0 0 20px; }
+    .stats { width:100%; table-layout:fixed; border-spacing:6px 0; margin:20px 0 0; }
+    .stats td { width:33.33%; padding:12px 4px; background:#edf4ff; text-align:center; border-radius:8px; }
+    .stat-label { color:#566276; font-size:12px; }
+    .stat-value { font-size:28px; font-weight:600; font-variant-numeric:tabular-nums; }
+    .counts-note { margin:8px 0 22px; color:#566276; font-size:12px; }
+    .machine { border:1px solid #e0e6ee; border-radius:10px; padding:18px; margin:0 0 16px; background:#ffffff; overflow-wrap:anywhere; word-wrap:break-word; }
+    .machine-name { font-size:19px; line-height:1.5; margin:0 0 8px; font-weight:600; }
+    .kind { color:#566276; font-size:12px; margin:14px 0 6px; }
+    .level { font-size:14px; margin:16px 0 8px; color:#18222f; font-weight:600; }
+    .change { margin:0 0 12px; font-variant-numeric:tabular-nums; }
+    .field { font-size:12px; color:#566276; }
+    .before,.arrow { color:#566276; }
+    .after { color:#215fbc; font-weight:600; }
+    .delta { display:inline-block; background:#edf4ff; color:#215fbc; border-radius:4px; padding:1px 7px; font-size:12px; white-space:nowrap; }
+    .values { width:100%; border-collapse:collapse; table-layout:fixed; margin-bottom:12px; font-size:14px; }
+    .values th,.values td { padding:5px 0; border-bottom:1px solid #eef1f5; vertical-align:top; overflow-wrap:anywhere; word-wrap:break-word; }
+    .values th { width:48%; padding-right:10px; color:#566276; text-align:left; font-size:12px; font-weight:400; }
+    .warning { border-left:4px solid #bc6c16; background:#fff4df; color:#613c12; padding:14px 18px; margin:18px 0; border-radius:6px; }
+    .warning h2 { font-size:16px; margin:0 0 8px; }
+    .warning ul { margin:0; padding-left:22px; font-size:14px; }
+    .no-change { margin:22px 0; }
+    .footer { border-top:1px solid #e0e6ee; margin-top:24px; padding-top:14px; }
+    .footer-heading { font-size:12px; margin:12px 0 6px; color:#566276; font-weight:600; }
+    .note { font-size:12px; color:#566276; margin:4px 0; overflow-wrap:anywhere; word-wrap:break-word; }
+    a { color:#215fbc; text-decoration:underline; overflow-wrap:anywhere; word-wrap:break-word; }
+    @media screen and (max-width:480px) {
+      .padding { padding:20px 14px !important; }
+      .machine { padding:14px !important; }
+      h1 { font-size:21px !important; }
+      .machine-name { font-size:17px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background:#f3f6fa;color:#18222f;font-family:Arial,'Yu Gothic',sans-serif;font-size:16px;line-height:1.65">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#f3f6fa">
+    <tr><td align="center" style="padding:18px 8px">
+      <table class="mail" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;max-width:660px;background:#ffffff">
+        <tr><td class="padding" style="padding:28px">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td class="kicker">MS DATA · 更新通知</td><td class="date">${date}</td>
+          </tr></table>
+          <h1>${title}</h1>
+          <p class="result">${result}</p>
+          ${warnings}
+          ${stats}
+          ${content}
+          <div class="footer">${footer}</div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>

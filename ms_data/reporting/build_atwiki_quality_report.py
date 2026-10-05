@@ -9,8 +9,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from ms_data.audit.audit_official_overrides import build_audit
+from ms_data.core import paths
 from ms_data.core.json_io import load_json_or_default as _load_json
+from ms_data.core.paths import OFFICIAL_OVERRIDES_DIR
 from ms_data.gh.outputs import append_step_summary, write_github_output
+from ms_data.pipeline import update_msdata
+from ms_data.pipeline.override_review import load_lifecycle_metadata, parse_date
 from ms_data.reporting import report_msdata_diff
 
 
@@ -128,6 +133,18 @@ def evaluate_quality_warnings(
             )
         )
 
+    missing_evidence = int(
+        report.get("official_overrides", {}).get("missing_evidence_count", 0)
+    )
+    if missing_evidence:
+        warnings.append(
+            _warning(
+                "official_override_evidence_missing",
+                "期限到達したoverrideに今回の取得証拠が不足しています。撤去可否は監査の取得状態を確認してください。",
+                observed=missing_evidence,
+                threshold=0,
+            )
+        )
     return warnings
 
 
@@ -183,6 +200,7 @@ def build_report(
     before_msdata_path: Path | None,
     current_msdata_path: Path | None,
     fetch_stats_path: Path | None = None,
+    overrides_dir: Path = OFFICIAL_OVERRIDES_DIR,
     full_update: bool = False,
     max_failure_rate: float = 0.10,
     min_detail_record_ratio: float = 0.80,
@@ -303,6 +321,28 @@ def build_report(
             "changed": changed,
         },
     }
+    rows, _, _ = build_audit(
+        overrides=update_msdata.load_official_overrides(overrides_dir),
+        current_records=current_index,
+        raw_records={},
+        before_records=before_index,
+        lifecycle_metadata=load_lifecycle_metadata(overrides_dir),
+        today=parse_date(report_date),
+        index=index_data,
+        fetch_state=detail_state,
+        selection_time=changed_meta.get("generated_at"),
+    )
+    due_rows = [row for row in rows if row["lifecycle"] == "remove_due"]
+    evidence_counts = Counter(row["evidence_status"] for row in due_rows)
+    report["official_overrides"] = {
+        "remove_due_count": len(due_rows),
+        "evidence_counts": dict(evidence_counts),
+        "missing_evidence_count": sum(
+            count
+            for status, count in evidence_counts.items()
+            if status not in {"match", "mismatch"}
+        ),
+    }
     report["warnings"] = evaluate_quality_warnings(
         report,
         max_failure_rate=max_failure_rate,
@@ -316,27 +356,22 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--report-date", required=True)
     parser.add_argument("--source-run-id", required=True)
-    parser.add_argument("--index", type=Path, default=Path("cache/index.json"))
+    parser.add_argument("--index", type=Path, default=paths.INDEX_JSON)
+    parser.add_argument("--changed-index", type=Path, default=paths.CHANGED_INDEX_JSON)
     parser.add_argument(
-        "--changed-index", type=Path, default=Path("cache/index_changed.json")
-    )
-    parser.add_argument(
-        "--changed-meta", type=Path, default=Path("cache/index_changed_meta.json")
+        "--changed-meta", type=Path, default=paths.CHANGED_INDEX_META_JSON
     )
     parser.add_argument(
         "--detail-fetch-state",
         type=Path,
-        default=Path("cache/detail_fetch_state.json"),
+        default=paths.DETAIL_FETCH_STATE_JSON,
     )
-    parser.add_argument("--details-json", type=Path, default=Path("cache/details.json"))
-    parser.add_argument(
-        "--details-jsonl", type=Path, default=Path("cache/details.jsonl")
-    )
+    parser.add_argument("--details-json", type=Path, default=paths.DETAILS_JSON)
+    parser.add_argument("--details-jsonl", type=Path, default=paths.DETAILS_JSONL)
     parser.add_argument("--before-msdata", type=Path, default=None)
-    parser.add_argument("--current-msdata", type=Path, default=Path("msData.json"))
-    parser.add_argument(
-        "--fetch-stats", type=Path, default=Path("cache/fetch_stats.json")
-    )
+    parser.add_argument("--current-msdata", type=Path, default=paths.MSDATA)
+    parser.add_argument("--fetch-stats", type=Path, default=paths.FETCH_STATS_JSON)
+    parser.add_argument("--overrides-dir", type=Path, default=OFFICIAL_OVERRIDES_DIR)
     parser.add_argument("--full-update", action="store_true")
     parser.add_argument("--max-failure-rate", type=float, default=0.10)
     parser.add_argument("--min-detail-record-ratio", type=float, default=0.80)
@@ -359,6 +394,7 @@ def main(argv: list[str] | None = None) -> int:
         current_msdata_path=args.current_msdata,
         fetch_stats_path=args.fetch_stats,
         full_update=args.full_update,
+        overrides_dir=args.overrides_dir,
         max_failure_rate=args.max_failure_rate,
         min_detail_record_ratio=args.min_detail_record_ratio,
         full_diff_warning_count=args.full_diff_warning_count,

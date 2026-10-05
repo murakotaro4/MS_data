@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from ms_data.core import paths
 from ms_data.core.dates import parse_yyyymmdd_jst, today_jst
 from ms_data.core.json_io import load_json
 from ms_data.gh.outputs import append_step_summary
@@ -126,7 +127,7 @@ def render_summary(actions: list[PruneAction], *, applied: bool) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--manifest", type=Path, default=Path("reports_manifest.json"))
+    parser.add_argument("--manifest", type=Path, default=paths.REPORTS_MANIFEST)
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--today", default=today_jst())
     parser.add_argument(

@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-09-16T14:00:36Z",
+  "report_date": "20260916",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "132c094feba7b88bebe5da7a8663230bd90b7983"
+  },
+  "github": {
+    "run_id": "35105554358",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "6fb97e866918447d381eaf99c6c890183d29526b45a1c4ebccaa4a9682c40e50",
+      "size_bytes": 145679,
+      "record_count": 592
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "a11ddbd72fc3f1689ad6b79fc1b4f34d6f0ddd1d40e67312c2f8915ff82a5bfe",
+      "size_bytes": 26999,
+      "record_count": 23
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "7d2f66dbe77f15d4317eb3dce4789d1dd187584923d92c76a3f05fd36763d8df",
+      "size_bytes": 35308,
+      "record_count": 23
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "e7c93a164a1d51bd9bd46c1c7e395a2594074e8703f3346d4df640b7d20f5b04",
+      "file_count": 20,
+      "size_bytes": 3582922
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "b811d3f4497e26d565979bf3b846ea7e4f4e765b6f9f077ca5f9f9b0e3ef4ed5",
+      "size_bytes": 2645726,
+      "record_count": 1712
+    },
+    "diff_report": {
+      "path": "reports/2026/09/diff_msdata_20260916.md",
+      "sha256": "7838dd8eee076175317117d5a029556aa0c9335ea5e40cec6006084478cf1c43",
+      "size_bytes": 2235
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260916-run-35105554358",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260916-run-35105554358",
+    "asset_name": "raw_snapshot_20260916_run35105554358.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260916-run-35105554358"
+  }
+}

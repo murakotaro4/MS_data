@@ -171,46 +171,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh label create official-overrides \
+          uv run python -m ms_data.gh.notify_override_due \
             --repo "${GITHUB_REPOSITORY}" \
-            --description "Touches official override audit path" \
-            --color "5319E7" \
-            --force
-          gh label create override-due \
-            --repo "${GITHUB_REPOSITORY}" \
-            --description "official_overrides review/remove date reached" \
-            --color "B60205" \
-            --force
-
-          body_path="$RUNNER_TEMP/official_overrides_due.md"
-          cat > "$body_path" <<EOF
-          official_overrides の期限確認が必要です。
-
-          - report_date: ${REPORT_DATE}
-          - review_due: ${{ steps.official_overrides_audit.outputs.review_due }}
-          - remove_due: ${{ steps.official_overrides_audit.outputs.remove_due }}
-          - audit_report: ${OVERRIDES_AUDIT_FILE}
-          - workflow_run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
-
-          remove_due が 1 件以上ある場合は、該当 override を撤去できるか確認してください。
-          EOF
-
-          issue_number="$(gh issue list \
-            --repo "${GITHUB_REPOSITORY}" \
-            --state open \
-            --search "official_overrides 期限確認 in:title" \
-            --json number \
-            --jq '.[0].number // ""')"
-          if [[ -n "${issue_number}" ]]; then
-            gh issue comment "${issue_number}" --repo "${GITHUB_REPOSITORY}" --body-file "$body_path"
-          else
-            gh issue create \
-              --repo "${GITHUB_REPOSITORY}" \
-              --title "official_overrides 期限確認" \
-              --body-file "$body_path" \
-              --label official-overrides \
-              --label override-due
-          fi
+            --report-date "${REPORT_DATE}" \
+            --review-due "${{ steps.official_overrides_audit.outputs.review_due }}" \
+            --remove-due "${{ steps.official_overrides_audit.outputs.remove_due }}" \
+            --due-fingerprint "${{ steps.official_overrides_audit.outputs.due_fingerprint }}" \
+            --audit-report "${OVERRIDES_AUDIT_FILE}" \
+            --run-url "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            --step-summary "$GITHUB_STEP_SUMMARY"
 
       - id: detection
         name: Read change detection summary
@@ -266,40 +235,8 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - id: no_change_mail
-        name: Build no-change mail body
-        if: github.event_name == 'schedule' && steps.changes.outputs.changed == 'false' && env.DRY_RUN != 'true'
-        env:
-          FALLBACK_REASON: ${{ steps.detection.outputs.fallback_reason }}
-        run: |
-          body_path="$RUNNER_TEMP/msdata_no_change_mail.txt"
-          uv run python -m ms_data.reporting.build_update_mail_body \
-            --report-date "${REPORT_DATE}" \
-            --result "成功（差分なし）" \
-            --changed "false" \
-            --candidate-count "${{ steps.detection.outputs.candidate_count }}" \
-            --fast-path "${{ steps.detection.outputs.fast_path }}" \
-            --age-coverage "${{ steps.detection.outputs.age_coverage }}" \
-            --fallback-reason "$FALLBACK_REASON" \
-            --run-id "${GITHUB_RUN_ID}" \
-            --rollback-guard-path "${ROLLBACK_FILE}" \
-            --official-overrides-audit-path "${OVERRIDES_AUDIT_FILE}" \
-            --out "$body_path"
-          echo "path=$body_path" >> "$GITHUB_OUTPUT"
-
-      - name: Send no-change mail
-        if: github.event_name == 'schedule' && steps.changes.outputs.changed == 'false' && env.DRY_RUN != 'true'
-        env:
-          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          GMAIL_TO: ${{ secrets.GMAIL_TO }}
-        run: |
-          uv run python -m ms_data.notify.send_gmail \
-            --subject "msData 定期更新実行報告（差分なし, ${{ env.REPORT_DATE }}）" \
-            --body "${{ steps.no_change_mail.outputs.path }}"
-
       - name: Generate reports and snapshot
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true' || steps.official_overrides_audit.outputs.due_count > 0
         run: |
           uv run python -m ms_data.reporting.report_msdata_diff \
             --old msData.before.json \
@@ -322,7 +259,7 @@ jobs:
           uv run python -m ms_data.tasks snapshot
 
       - name: Validate generated update reports
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true' || steps.official_overrides_audit.outputs.due_count > 0
         run: |
           test -f "${PROVENANCE_FILE}"
           uv run python -m ms_data.validation.validate_generated_reports \
@@ -372,7 +309,7 @@ jobs:
             ${{ env.OVERRIDES_AUDIT_FILE }}
 
       - name: Upload raw snapshot artifact
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true' || steps.official_overrides_audit.outputs.due_count > 0
         uses: actions/upload-artifact@v7
         with:
           name: ${{ env.RAW_ARTIFACT_NAME }}
@@ -414,31 +351,50 @@ jobs:
             echo "- dry_run_artifact: msdata-dry-run-${REPORT_DATE}-run-${GITHUB_RUN_ID}"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - id: no_change_mail
+        name: Build no-change mail body
+        if: github.event_name == 'schedule' && steps.changes.outputs.changed == 'false' && env.DRY_RUN != 'true'
+        env:
+          FALLBACK_REASON: ${{ steps.detection.outputs.fallback_reason }}
+        run: |
+          body_path="$RUNNER_TEMP/msdata_no_change_mail.txt"
+          html_path="$RUNNER_TEMP/msdata_no_change_mail.html"
+          uv run python -m ms_data.reporting.build_update_mail_body \
+            --report-date "${REPORT_DATE}" \
+            --result "成功（差分なし）" \
+            --changed "false" \
+            --candidate-count "${{ steps.detection.outputs.candidate_count }}" \
+            --fast-path "${{ steps.detection.outputs.fast_path }}" \
+            --age-coverage "${{ steps.detection.outputs.age_coverage }}" \
+            --fallback-reason "$FALLBACK_REASON" \
+            --run-id "${GITHUB_RUN_ID}" \
+            --rollback-guard-path "${ROLLBACK_FILE}" \
+            --official-overrides-audit-path "${OVERRIDES_AUDIT_FILE}" \
+            --out "$body_path" \
+            --html-out "$html_path"
+          echo "path=$body_path" >> "$GITHUB_OUTPUT"
+          echo "html_path=$html_path" >> "$GITHUB_OUTPUT"
+
+      - name: Send no-change mail
+        if: github.event_name == 'schedule' && steps.changes.outputs.changed == 'false' && env.DRY_RUN != 'true'
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GMAIL_TO: ${{ secrets.GMAIL_TO }}
+        run: |
+          uv run python -m ms_data.notify.send_gmail \
+            --subject "msData 定期更新実行報告（差分なし, ${{ env.REPORT_DATE }}）" \
+            --body "${{ steps.no_change_mail.outputs.path }}" \
+            --html-body "${{ steps.no_change_mail.outputs.html_path }}"
+
       - name: Ensure pull request labels
         if: steps.changes.outputs.changed == 'true' && env.DRY_RUN != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh label create data-update \
+          uv run python -m ms_data.gh.repo_labels \
             --repo "${GITHUB_REPOSITORY}" \
-            --description "msData automated data update" \
-            --color "1D76DB" \
-            --force
-          gh label create rollback-guard \
-            --repo "${GITHUB_REPOSITORY}" \
-            --description "Includes rollback guard report" \
-            --color "D93F0B" \
-            --force
-          gh label create official-overrides \
-            --repo "${GITHUB_REPOSITORY}" \
-            --description "Touches official override audit path" \
-            --color "5319E7" \
-            --force
-          gh label create atwiki-quality \
-            --repo "${GITHUB_REPOSITORY}" \
-            --description "Includes atwiki fetch quality report" \
-            --color "0E8A16" \
-            --force
+            data-update rollback-guard official-overrides atwiki-quality
 
       - name: Create pull request
         if: steps.changes.outputs.changed == 'true' && env.DRY_RUN != 'true'

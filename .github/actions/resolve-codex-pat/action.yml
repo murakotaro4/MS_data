@@ -1,0 +1,43 @@
+name: Resolve Codex trigger PAT
+description: >-
+  CODEX_TRIGGER_PAT が有効ならログイン名を解決して pat_available=true を返す。
+  未設定・解決失敗時は警告のみで pat_available=false にフォールバックする
+  （auto review merge / resume auto review 共用）。
+
+inputs:
+  pat:
+    description: Codex trigger PAT (pass secrets.CODEX_TRIGGER_PAT; may be empty)
+    required: false
+    default: ""
+
+outputs:
+  pat_available:
+    description: "true when the PAT resolved to a login"
+    value: ${{ steps.resolve.outputs.pat_available }}
+  pat_login:
+    description: Login of the PAT owner (empty when unavailable)
+    value: ${{ steps.resolve.outputs.pat_login }}
+
+runs:
+  using: composite
+  steps:
+    - id: resolve
+      shell: bash
+      env:
+        CODEX_TRIGGER_PAT: ${{ inputs.pat }}
+      run: |
+        set -euo pipefail
+        pat_available=false
+        pat_login=""
+        if [[ -n "${CODEX_TRIGGER_PAT}" ]]; then
+          if login="$(GH_TOKEN="${CODEX_TRIGGER_PAT}" gh api user --jq .login)" && [[ -n "${login}" ]]; then
+            pat_available=true
+            pat_login="${login}"
+          else
+            echo "Warning: CODEX_TRIGGER_PAT is set but login resolution failed; falling back without PAT."
+            pat_available=false
+            pat_login=""
+          fi
+        fi
+        echo "pat_available=${pat_available}" >> "$GITHUB_OUTPUT"
+        echo "pat_login=${pat_login}" >> "$GITHUB_OUTPUT"

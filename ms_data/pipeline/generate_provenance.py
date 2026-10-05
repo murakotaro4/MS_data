@@ -12,7 +12,7 @@ msData 更新時の生成元証跡（provenance）を JSON で出力する。
     --diff reports/2026/02/diff_msdata_20260221.md \
     --html-dir cache/html \
     --out reports/2026/02/provenance_20260221.json \
-    --ttl 7d --rate 1.0 --limit 0
+    --ttl 7d --rate 2.0 --limit 0
 """
 from __future__ import annotations
 
@@ -24,6 +24,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from ms_data.core import paths
 
 
 def now_iso() -> str:
@@ -204,12 +206,12 @@ def build_provenance(args: argparse.Namespace) -> dict[str, Any]:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--date", required=True, help="レポート日付（YYYYMMDD）")
-    ap.add_argument("--index", default="cache/index.json")
-    ap.add_argument("--details-jsonl", default="cache/details.jsonl")
-    ap.add_argument("--details-json", default="cache/details.json")
-    ap.add_argument("--msdata", default="msData.json")
+    ap.add_argument("--index", default=paths.INDEX_JSON.as_posix())
+    ap.add_argument("--details-jsonl", default=paths.DETAILS_JSONL.as_posix())
+    ap.add_argument("--details-json", default=paths.DETAILS_JSON.as_posix())
+    ap.add_argument("--msdata", default=paths.MSDATA.as_posix())
     ap.add_argument("--diff", required=True)
-    ap.add_argument("--html-dir", default="cache/html")
+    ap.add_argument("--html-dir", default=paths.HTML_CACHE_DIR.as_posix())
     ap.add_argument("--out", required=True)
     ap.add_argument("--ttl", default="")
     ap.add_argument("--rate", default="")

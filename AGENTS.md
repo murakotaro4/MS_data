@@ -9,12 +9,12 @@
   - `ms_data/`: Python パッケージ本体
     - `core/`: 共通ユーティリティ（json_io / paths / ms_names / records / env / labels / dates）
     - `net/`: HTTP クライアントとキャッシュ（client / cache_http）
-    - `scraping/`: atwiki 取得（scrape_msdata(facade・CLI) / index_page(一覧解析) / detail_page(詳細解析) / fullst(強化リスト) / text_values(値パース) / change_detection(差分検出) / fetch_state(取得状態)）
+    - `scraping/`: atwiki 取得（scrape_msdata(facade・CLI) / index_page(一覧解析) / detail_page(詳細解析) / fullst(強化リスト) / text_values(値パース) / change_detection(差分検出) / fetch_state(取得状態) / defaults(INDEX_URL・TTL・RATE の既定値 SSOT)）
     - `pipeline/`: 取り込み・正規化（update_msdata / jsonl_to_json / generate_provenance / restore_snapshot / official_overrides）
     - `validation/`: スキーマ・契約検証（validate_* / verify_snapshot_restore）
     - `audit/`: 監査・巻き戻り検出（audit_* / detect_msdata_rollbacks）
     - `reporting/`: レポート生成・整理（report_msdata_diff / msdata_diff_model / rendering / build_atwiki_quality_report / build_update_mail_body / prune_reports）
-    - `gh/`: GitHub 連携（auto_review_gate / auto_review_merge / cleanup_auto_update_prs / post_merge_assets / notify_failure / gh_json / outputs）
+    - `gh/`: GitHub 連携（auto_review_gate / auto_review_merge / cleanup_auto_update_prs / post_merge_assets / notify_failure / notify_override_due / issue_upsert / repo_labels / gh_json / outputs）
     - `notify/`: メール送信（send_gmail）
     - `tasks.py`: 全ターゲットのディスパッチャ（ワークフロー・開発者の共通入口）
   - `tests/`: ユニットテスト
@@ -38,7 +38,7 @@
 ## スクレイピングとデータ仕様
 - SSOT: index（`cache/index.json`）の `name` を真実のソースとし、詳細抽出の `MS名` も index 表記で固定（LVは `_LVn` を付与）。読み込み・マージ時にも index 準拠へ正規化します。
 - キャッシュ: `ms_data/net/cache_http.py`（TTL・If-None-Match/If-Modified-Since 対応）。保存先 `cache/html/<slug>.html` + `*.meta.json`。注意: atwiki は ETag/Last-Modified を返さない（2026-06 実測）ため 304 は期待できず、負荷軽減は取得対象の絞り込み（`detect-changed` / `REVALIDATE`）で行う。
-- レート制限: 既定 2.0 req/sec。atwiki への負荷を考慮し過度な緩和は避ける。待機は実際のネットワーク取得時のみ（キャッシュヒットは待機しない）。2回目以降は `NO_NET=1` でキャッシュのみ利用可。
+- レート制限: tasks 既定 2.0 req/sec（`ms_data/scraping/defaults.py` の `DEFAULT_RATE`）、直接CLIは既定1.0 req/sec（`DEFAULT_CLI_RATE`）。atwiki への負荷を考慮し過度な緩和は避ける。待機は実際のネットワーク取得時のみ（キャッシュヒットは待機しない）。2回目以降は `NO_NET=1` でキャッシュのみ利用可。
 - 取得計測: 実行ごとに `cache/fetch_stats.json` へフェーズ別（index/details）のリクエスト数・200/304件数・失敗数・受信バイト数・所要秒数を記録。`reports/YYYY/MM/atwiki_quality_YYYYMMDD.json` の `fetch` セクションに転記され、負荷削減の検証に使う。`body_bytes` は Content-Encoding 展開後のボディ長（実転送量は圧縮分小さい。実行間の相対比較には影響なし）。index フェーズ書き込み時に前回実行分をリセットする。
 - データ構造: 配列（各要素=MSの1レベル）。主キー相当は `MS名`（例: `XXX_LV1`）。
 - 必須項目: `MS名`, `属性`（汎用/強襲/支援）, `コスト`, `HP`, `スピード`, `スラスター`, `高速移動`, `射撃補正`, `格闘補正`, `耐ビーム補正`, `耐実弾補正`, `耐格闘補正`, `近/中/遠スロット`。旋回は anyOf（`旋回_地上_通常時` または `旋回_宇宙_通常時`）で宇宙専用機を許容。
@@ -53,11 +53,11 @@
 ## GitHub Actions 運用
 - 定期実行: `data update` は毎日 18:00 JST に実行（cron は月〜土 `0 9 * * 1-6` と日曜 `0 9 * * 0` の2本）で実行し、差分があれば `data/auto-update-YYYYMMDD` の PR を作成します。日曜は第1日曜（JST）のみ真の全量取得（`FORCE_FULL=1`+`FORCE=1`）、それ以外の日曜は週次再検証（`REVALIDATE=1`: 更新があったページのみ再取得）で atwiki への負荷を抑えます（判定は Prepare ステップの `UPDATE_MODE`）。`workflow_dispatch` の `mode` 入力（auto/full/revalidate）で手動指定も可能。注意: 第1日曜判定は実行時の日付に基づくため、失敗した第1日曜の run を後日 re-run すると revalidate になります。その場合は `mode=full` の手動 dispatch で全量を補完してください（補完しなくても `STALE_DETAIL_DAYS` 超過後に平日更新が順次取り直す自己修復はあります）。
 - 自動レビュー/マージ: `auto review merge` は `data update` 成功後の `workflow_run` で起動する。Codex 側 Automatic reviews を優先し、ファイル指摘が 0 件なら自動マージする。attempt 1 から `@codex review` を投稿する（初回は review マーカー、リトライは retry マーカー）。投稿名義は Secret `CODEX_TRIGGER_PAT`（fine-grained: Issues read/write・Pull requests read/write・Metadata read）があれば PAT（人間）名義、なければ bot（github-actions）名義（2026-07-20〜27 の Codex 側 bot 名義拒絶が解消したことを確認済み。再発時は停止メール→手動 `@codex review` → resume 回収で運用）。merge は常に `github.token`（PAT は使わない）。merge 直前に HEAD SHA を再確認し、不一致ならスキップする。
-- 対象PRの解決: `data/auto-update-YYYYMMDD`（workflow_run.created_at の JST 日付）を優先し、無ければ open な最新 `data/auto-update-*` にフォールバック。
+- 対象PRの解決: `data/auto-update-YYYYMMDD`（workflow_run.created_at の JST 日付）を優先し、無ければ open な最新 `data/auto-update-*` にフォールバック。 PR payload のアクセサ（head/base ref・sha、REST/GraphQL 両キー対応）と `source_run_id:N` マーカー解釈は `ms_data/gh/pr_payload.py` に集約（auto_review / cleanup / post_merge で共用）。
 - dry-run: `data update` の `workflow_dispatch` で `dry_run=true` を指定すると、取得・監査・artifact 作成まで実行し PR 作成と通知は行いません。
 - 古いPR整理: `cleanup auto update prs` が毎日 20:30 JST に実行され、`keep_days` 超過の open PR を close（head ブランチも削除）。
 - レポート整理: `reports prune` が毎月1日 18:00 JST に実行され、`reports_manifest.json` の `prune`（max_age_days / keep_min）に基づき期限切れレポートの削除 PR を作成します。この PR は自動マージ対象外のため人間がレビューしてマージします。
-- PRラベル: 自動更新 PR には `data-update` / `rollback-guard` / `official-overrides` / `atwiki-quality` を付与。
+- PRラベル: 自動更新 PR には `data-update` / `rollback-guard` / `official-overrides` / `atwiki-quality` を付与。ラベル名・説明・色の SSOT は `ms_data/gh/repo_labels.py`（`uv run python -m ms_data.gh.repo_labels <names...>` で冪等作成、Issue 通知モジュールも同定義を参照）。
 - reports 運用SSOT: 命名規約・分類・保持方針は `reports_manifest.json` が正。契約検証は `uv run python -m ms_data.validation.validate_report_contract`、生成物検証は `uv run python -m ms_data.tasks validate-generated-reports`。
 - 手動更新レポート: 手動でデータ更新した場合は `reports/YYYY/MM/msdata_update_YYYYMMDD.md` を `reports/msdata_update_template.md` に沿って作成（新規追加機体は主要パラメータを網羅、既存更新は変更前後の値を明記）。
 - 失敗時の挙動: findings / no_response / disconnected で停止した場合は自動マージせず PR を残し、`GMAIL_ADDRESS` 宛（本人のみ）に停止メールを送信して手動対応。
@@ -69,11 +69,12 @@
 - 巻き戻り対策: `reports/YYYY/MM/rollback_guard_YYYYMMDD.md` と `reports/YYYY/MM/official_overrides_audit_YYYYMMDD.md` を生成。protected rollback は自動更新を失敗させます。
 - 生データアーカイブ: 実行ごとに `raw_snapshot_*.tar.xz` を artifact（90日）へ、マージ後に Release tag `raw-snapshot-YYYYMMDD-run-<run_id>` へ恒久保存。
 - 復元手順: 対象コミットの provenance から `release.tag` を取得し、`uv run python -m ms_data.tasks restore-snapshot SNAPSHOT=... OUT_DIR=restore_tmp` で `cache/` と `reports/` を再構成（ファイルが HEAD から prune 済みでも `git log -- <path>` + `git show` で provenance 自体を辿れます）。復元CI: `verify-snapshot-restore`。
-- official_overrides 期限管理: 各 entry に `review_after` / `remove_after` を設定。期限到達時は `data update` が Step Summary に件数を出し、protected rollback 0 件なら Issue `official_overrides 期限確認` を作成/追記。スキーマは `schema/official_overrides.schema.json`（`MS名` / `values` / `stale_values` 必須）。
+- official_overrides 期限管理: 各 entry に `review_after` / `remove_after` を設定。期限到達時は `data update` が Step Summary に件数を出し、protected rollback 0 件なら Issue `official_overrides 期限確認` を作成/追記（`ms_data/gh/notify_override_due.py`）。直前の通知と `review_due` / `remove_due` および監査出力 `due_fingerprint`（期限対象・補正値・期限設定の SHA256）がすべて同じなら skipped にして日次の同文コメントを抑止。件数が同じでも対象や設定の変更時は通知する。本文末尾の `<!-- override-due ... fingerprint=... -->` マーカーで追跡し、識別子のない旧通知には一度追記して比較基準を確立する。識別子未指定の呼出しでは抑止しない。スキーマは `schema/official_overrides.schema.json`（`MS名` / `values` / `stale_values` 必須）。
 - official_overrides 期限確認 Issue の対応手順（大規模調整のたびに繰り返す）: 監査レポートの状態別に、`upstream_current`（atwiki 反映済み）と `source_changed`（stale 不一致で不発化）は entry を撤去、`protected_by_override`（未反映）は存続させ `review_after` を延長。全 entry 撤去後はファイルごと削除する（ディレクトリは `.gitkeep` で維持。空でも `validate-official-overrides-schema` は OK）。例: Issue #113 → PR #145。
 - atwiki取得品質: `reports/YYYY/MM/atwiki_quality_YYYYMMDD.json` に HTTP 状態・304件数・失敗推定・レコード数・差分件数を記録。しきい値超過は warnings として PR 本文・Step Summary に警告（`ATWIKI_QUALITY_*` 変数で調整）。
 - notify failure: `workflow_run` で 6 ワークフロー（`data update` / `auto review merge` / `resume auto review` / `post merge notify` / `cleanup auto update prs` / `reports prune`）の `failure` / `timed_out` / `startup_failure` / `action_required` を監視し、GMAIL Secrets によるメール送信と `pipeline-failure` ラベル付き Issue 起票を行う（`ms_data/gh/notify_failure.py`、stdlib のみで動作、重複 Issue の自己修復あり）。
 - ci の changes ジョブ: PR がデータ・レポート・md のみの変更なら checks（ubuntu/windows マトリクス）をスキップ。`tests/` 配下と削除は `code=true`。changes ジョブ自身が report-contract / msData / generated-reports の軽量検証を実施。actionlint は checks ジョブ（ubuntu）で実行。
+- `.github/actions/resolve-codex-pat`: `CODEX_TRIGGER_PAT` のログイン解決（`pat_available` / `pat_login` を出力、失敗時は警告のみで bot 名義へフォールバック）。`auto review merge` / `resume auto review` で共用。
 - `.github/actions/setup-uv-env`: Python 3.11 + uv + `uv sync --dev` の composite action。`ci` / `data update` / `auto review merge` / `resume auto review` / `post merge notify` / `reports prune` で共用（Python バージョン変更はここが主変更点）。`notify failure` と `cleanup auto update prs` は uv 不要のため未使用。
 - CI runner: Windows は `windows-2025-vs2026` を明示使用。`windows-latest` へ戻す場合は GitHub の runner image 移行状況を確認。
 - 互換期間: レポート再編時の旧パス互換は原則検討するが、v3 の年月階層化（`reports/YYYY/MM/`）は破壊的移行として実施済み（`legacy_path_support: false`、旧パスへの転送なし）。日付付きレポートの旧フラット `path_patterns` は撤去済み（直下に残す undated / テンプレートのみ許容）。
@@ -84,6 +85,7 @@
 - ツール: `black`（88列）/ `ruff` / `pytest` を uv で管理。
 - テスト: `tests/test_*.py`。変換/検証ロジックは目安80%以上をカバーし、エッジケースと不正入力を含める。
 - 共通処理は `ms_data/core` 等の既存ユーティリティを再利用し、コピペ実装を作らない。
+- 既定パスは `ms_data/core/paths.py` を SSOT とし、各 CLI の argparse `default=` はそこを参照する（`tests/test_path_defaults_sync.py` が直書きの再発を検出する）。
 
 ## コミット・プルリクエスト
 - コミットメッセージは日本語。Conventional Commits を採用: `feat:` `fix:` `docs:` `chore:` `refactor:` `test:` `data:`（データのみ変更）。
