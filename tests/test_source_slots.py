@@ -3,8 +3,9 @@
 import json
 import tarfile
 from copy import deepcopy
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -12,7 +13,9 @@ import ms_data.tasks as tasks
 from ms_data.audit import audit_official_overrides, source_slots
 from ms_data.pipeline import official_overrides, update_msdata
 from ms_data.reporting import build_update_mail_body
+from ms_data.validation import validate_official_overrides_schema
 from ms_data.validation.validate_generated_reports import validate_reports
+from ms_data.validation.validate_msdata import find_semantic_errors, validate_schema
 
 from helpers import make_ms_record, write_json
 from workflow_contract import step_block, workflow_text
@@ -48,6 +51,234 @@ def approval() -> dict:
             }
         }
     }
+
+
+@pytest.mark.parametrize("today", [TODAY, EXPIRED], ids=["active", "expired"])
+@pytest.mark.parametrize("state", ["missing", "null", "replacement", "third_value"])
+def test_nullable_source_field_does_not_abort_healthy_mixed_records(today, state):
+    field = "格闘判定力"
+    target, healthy = "任意項目_LV1", "正常機体_LV1"
+    before = {
+        target: make_ms_record(target, **{field: "中"}),
+        healthy: make_ms_record(healthy),
+    }
+    incoming = {
+        target: make_ms_record(target, HP=13000),
+        healthy: make_ms_record(healthy, HP=14000),
+    }
+    if state != "missing":
+        incoming[target][field] = {
+            "null": None,
+            "replacement": "中",
+            "third_value": "強",
+        }[state]
+    overrides = {
+        target: {
+            field: {
+                "value": "中",
+                "stale_value": None,
+                "source_error_confirmed": True,
+                "expires_after": "2026-10-19",
+            }
+        }
+    }
+    original_before, original_incoming = json.dumps(before), json.dumps(incoming)
+    assert (
+        validate_schema(list(incoming.values()), ROOT / "schema/msData.schema.json")
+        == []
+    )
+    adopted, audit = source_slots.quarantine_sources(
+        before, incoming, overrides, today=today
+    )
+    assert adopted[healthy]["HP"] == 14000
+    assert not audit["global_errors"]
+    assert find_semantic_errors(list(adopted.values())) == []
+    if state in {"missing", "null"}:
+        assert adopted[target][field] == "中"
+        assert audit["findings"][0]["observed"] is None
+        if today == EXPIRED:
+            assert adopted[target] == before[target]
+            assert audit["status"] == "partial_hold"
+            assert audit["findings"][0]["action"] == "retained_previous"
+        else:
+            assert adopted[target]["HP"] == 13000
+            assert audit["status"] == "approved_correction"
+            assert audit["findings"][0]["action"] == "approved_override"
+    else:
+        assert adopted[target] == incoming[target]
+        assert audit["findings"] == []
+        assert audit["status"] == "ok"
+    assert (json.dumps(before), json.dumps(incoming)) == (
+        original_before,
+        original_incoming,
+    )
+
+
+@pytest.mark.parametrize("invalid", ["schema", "semantic", "protected_rollback"])
+def test_nullable_source_field_does_not_mask_global_validation_failures(invalid):
+    target, healthy, field = "任意項目_LV1", "正常機体_LV1", "格闘判定力"
+    before = {
+        target: make_ms_record(target, **{field: "中"}),
+        healthy: make_ms_record(healthy, HP=15000),
+    }
+    incoming = {
+        target: make_ms_record(target, HP=13000),
+        healthy: make_ms_record(healthy, HP=14000),
+    }
+    overrides = {
+        target: {
+            field: {
+                "value": "中",
+                "stale_value": None,
+                "source_error_confirmed": True,
+                "expires_after": "2026-10-19",
+            }
+        }
+    }
+    if invalid == "schema":
+        incoming[target]["HP"] = "malformed"
+    elif invalid == "semantic":
+        incoming[target]["fullst"] = [
+            {"name": "A", "level": 1, "points": 100},
+            {"name": "B", "level": 1, "points": 50},
+        ]
+    else:
+        overrides[healthy] = {
+            "HP": {"value": 15000, "stale_value": 14000, "expires_after": "2026-10-04"}
+        }
+    adopted, audit = source_slots.quarantine_sources(
+        before, incoming, overrides, today=TODAY
+    )
+    assert audit["status"] == "global_validation_error"
+    assert audit["global_errors"] and audit["held_record_count"] == 0
+    assert audit["findings"][0]["observed"] is None
+    assert audit["findings"][0]["action"] == "global_safety_stop_not_quarantined"
+    assert adopted[target]["HP"] == incoming[target]["HP"]
+    if invalid == "protected_rollback":
+        _, counts, _ = audit_official_overrides.build_audit(
+            overrides=overrides,
+            current_records=adopted,
+            raw_records=incoming,
+            before_records=before,
+            source_slot_audit=audit,
+            today=TODAY,
+        )
+        assert counts["protected_rollback"] == 1
+
+
+@pytest.mark.parametrize("state", ["missing", "null"])
+def test_nullable_source_field_preserves_legacy_override_without_confirmation(state):
+    name, field = "任意項目_LV1", "格闘判定力"
+    raw = make_ms_record(name)
+    if state == "null":
+        raw[field] = None
+    overrides = {name: {field: {"value": "中", "stale_value": None}}}
+    adopted, audit = source_slots.quarantine_sources(
+        {}, {name: raw}, overrides, today=TODAY
+    )
+    assert adopted[name][field] == "中"
+    assert audit["status"] == "ok"
+    assert field not in raw or raw[field] is None
+
+
+@pytest.mark.parametrize("today", [TODAY, EXPIRED], ids=["active", "expired"])
+@pytest.mark.parametrize("state", ["missing", "null"])
+def test_nullable_source_field_cli_import_keeps_raw_and_continues_mixed_batch(
+    tmp_path, monkeypatch, today, state
+):
+    target, healthy, field = "任意項目_LV1", "正常機体_LV1", "格闘判定力"
+    before = {
+        target: make_ms_record(target, **{field: "中"}),
+        healthy: make_ms_record(healthy),
+    }
+    incoming = {
+        target: make_ms_record(target, HP=13000),
+        healthy: make_ms_record(healthy, HP=14000),
+    }
+    if state == "null":
+        incoming[target][field] = None
+    base, source, audit_path, raw_path = (
+        tmp_path / name
+        for name in ("msData.json", "input.json", "audit.json", "raw.json")
+    )
+    write_json(base, list(before.values()))
+    write_json(source, list(incoming.values()))
+    overrides_dir = tmp_path / "overrides"
+    write_json(
+        overrides_dir / "nullable.json",
+        {
+            "schema_version": "1",
+            "active": True,
+            "overrides": [
+                {
+                    "MS名": target,
+                    "values": {field: "中"},
+                    "stale_values": {field: None},
+                    "source_error_confirmed": True,
+                    "expires_after": "2026-10-19",
+                }
+            ],
+        },
+    )
+    assert (
+        validate_official_overrides_schema.main(
+            [
+                "--overrides-dir",
+                str(overrides_dir),
+                "--schema",
+                str(ROOT / "schema/official_overrides.schema.json"),
+            ]
+        )
+        == 0
+    )
+    monkeypatch.setattr(
+        update_msdata,
+        "datetime",
+        SimpleNamespace(
+            now=lambda tz: datetime(today.year, today.month, today.day, 12, tzinfo=tz)
+        ),
+    )
+    assert (
+        update_msdata.main(
+            [
+                "--in-place",
+                "--output",
+                str(base),
+                "--official-overrides-dir",
+                str(overrides_dir),
+                "--source-slot-audit-out",
+                str(audit_path),
+                "--official-overrides-raw-out",
+                str(raw_path),
+                str(source),
+            ]
+        )
+        == 0
+    )
+    adopted = {r["MS名"]: r for r in json.loads(base.read_text(encoding="utf-8"))}
+    raw = {r["MS名"]: r for r in json.loads(raw_path.read_text(encoding="utf-8"))}
+    audit = json.loads(audit_path.read_text(encoding="utf-8"))
+    assert raw[target] == incoming[target]
+    assert (field in raw[target]) is (state == "null")
+    assert adopted[healthy]["HP"] == 14000
+    assert adopted[target][field] == "中"
+    assert audit["findings"][0]["observed"] is None
+    assert adopted[target]["HP"] == (12000 if today == EXPIRED else 13000)
+    assert audit["held_record_count"] == (1 if today == EXPIRED else 0)
+    specs = update_msdata.load_official_overrides(overrides_dir)
+    _, counts, _ = audit_official_overrides.build_audit(
+        overrides=specs,
+        current_records=adopted,
+        raw_records=raw,
+        before_records=before,
+        source_slot_audit=audit,
+        today=today,
+    )
+    assert counts["protected_rollback"] == 0
+    assert (
+        validate_schema(list(adopted.values()), ROOT / "schema/msData.schema.json")
+        == []
+    )
 
 
 def test_quarantine_rejects_entire_lv_and_continues_other_machine_and_level():

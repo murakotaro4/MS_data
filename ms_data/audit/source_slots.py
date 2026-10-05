@@ -142,7 +142,7 @@ def quarantine_sources(
                     "MS名": name,
                     "level": int(match["level"]) if match else None,
                     "field": field,
-                    "observed": record[field],
+                    "observed": record.get(field),
                     "comparison": {},
                     "slot_totals": [],
                     "wiki_url": record.get("wiki_url", ""),
