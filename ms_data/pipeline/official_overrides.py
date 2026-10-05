@@ -12,9 +12,11 @@ schema/official_overrides.schema.json）。
 
 from __future__ import annotations
 
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, NamedTuple, TypedDict
 
+from ms_data.core.dates import JST
 from ms_data.core.json_io import load_json
 from ms_data.core.labels import apply_key_aliases
 from ms_data.core.ms_names import normalize_ms_name
@@ -30,6 +32,9 @@ class OfficialOverrideValue(TypedDict, total=False):
 
     value: Any
     stale_value: Any
+    expires_after: str
+    source_error_confirmed: bool
+    allow_source_anomaly: bool
 
 
 class ParsedOfficialOverrideData(NamedTuple):
@@ -161,18 +166,50 @@ def load_official_overrides(
 
             name = normalize_ms_name(raw_name)
             target = overrides.setdefault(name, {})
+            extra: dict[str, Any] = {}
+            expiry = entry.get("expires_after", data.get("expires_after"))
+            if expiry is not None:
+                if not isinstance(expiry, str):
+                    raise ValueError(f"invalid expires_after: {path}#{index}")
+                if date.fromisoformat(expiry).isoformat() != expiry:
+                    raise ValueError(f"invalid expires_after: {path}#{index}")
+                extra["expires_after"] = expiry
+            for flag in ("source_error_confirmed", "allow_source_anomaly"):
+                if flag in entry:
+                    if not isinstance(entry[flag], bool):
+                        raise ValueError(f"invalid {flag}: {path}#{index}")
+                    extra[flag] = entry[flag]
+            if (
+                any(
+                    extra.get(flag)
+                    for flag in ("source_error_confirmed", "allow_source_anomaly")
+                )
+                and not expiry
+            ):
+                raise ValueError(
+                    f"source slot approval requires expires_after: {path}#{index}"
+                )
             for key, value in values.items():
                 spec: OfficialOverrideValue = {
                     "value": value,
                     "stale_value": stale_values[key],
+                    **extra,
                 }
                 target[key] = spec
     return overrides
 
 
+def override_is_active(spec: OfficialOverrideValue, today: date) -> bool:
+    """任意の適用期限のみを判定。review/remove期限の既存運用は変えない。"""
+    expiry = spec.get("expires_after")
+    return not expiry or today <= date.fromisoformat(expiry)
+
+
 def apply_official_overrides(
     records_by_name: dict[str, dict[str, Any]],
     overrides: dict[str, dict[str, OfficialOverrideValue]],
+    *,
+    today: date | None = None,
 ) -> int:
     """既存/取得済みレコードへ公式オーバーライドを適用する。
 
@@ -183,11 +220,14 @@ def apply_official_overrides(
     """
 
     changed = 0
+    today = today or datetime.now(JST).date()
     for name, values in overrides.items():
         record = records_by_name.get(name)
         if record is None:
             continue
         for key, spec in values.items():
+            if not override_is_active(spec, today):
+                continue
             value = spec["value"]
             current = record.get(key)
             if current == value:

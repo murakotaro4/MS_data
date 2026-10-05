@@ -21,6 +21,7 @@ WARNING_LABELS = {
     "source_changed": "取得値が想定と異なる公式補正",
     "review_due": "公式補正の確認期限到達",
     "remove_due": "公式補正の撤去判断期限到達",
+    "held_record_count": "LV単位の部分保留（要対応）",
 }
 _MD_UNESCAPE = re.compile(r"\\([\\`*_\[\]()#+\-.!|<>])")
 _NUMBER = re.compile(r"[+-]?(?:0|[1-9]\d*)(?:\.\d+)?\Z")
@@ -177,7 +178,7 @@ def _cards(sections: dict[str, list[str]]) -> str:
 
 def _warnings(sections: dict[str, list[str]]) -> str:
     items: list[str] = []
-    for heading in ("巻き戻りガード", "official_overrides監査"):
+    for heading in ("巻き戻りガード", "official_overrides監査", "取得元スロット監査"):
         for line in sections.get(heading, []):
             match = re.fullmatch(r"- ([a-z_]+): (\d+)", line.strip())
             if match and match[1] in WARNING_LABELS and int(match[2]) > 0:
