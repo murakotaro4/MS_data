@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 from collections import Counter
 from datetime import date, datetime
 from pathlib import Path
@@ -259,8 +261,36 @@ def render_markdown(
     return "\n".join(lines) + "\n"
 
 
+def build_due_fingerprint(rows: list[dict[str, Any]]) -> str:
+    """期限対象と補正設定を識別する。取得時刻など日次で変わる情報は除外する。"""
+
+    keys = (
+        "MS名",
+        "field",
+        "lifecycle",
+        "review_after",
+        "remove_after",
+        "override",
+        "stale",
+        "override_file",
+    )
+    targets = [
+        {key: row[key] for key in keys}
+        for row in rows
+        if row["lifecycle"] in {"review_due", "remove_due"}
+    ]
+    targets.sort(key=lambda row: (row["MS名"], row["field"]))
+    payload = json.dumps(
+        targets, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
 def _write_github_output(
-    path: Path, counts: Counter[str], lifecycle_counts: Counter[str]
+    path: Path,
+    counts: Counter[str],
+    lifecycle_counts: Counter[str],
+    rows: list[dict[str, Any]],
 ) -> None:
     due_count = lifecycle_counts.get("review_due", 0) + lifecycle_counts.get(
         "remove_due", 0
@@ -271,6 +301,7 @@ def _write_github_output(
         "review_due": lifecycle_counts.get("review_due", 0),
         "remove_due": lifecycle_counts.get("remove_due", 0),
         "due_count": due_count,
+        "due_fingerprint": build_due_fingerprint(rows),
         "due_summary": (
             f"review_due={lifecycle_counts.get('review_due', 0)},"
             f"remove_due={lifecycle_counts.get('remove_due', 0)}"
@@ -338,7 +369,7 @@ def main(argv: list[str] | None = None) -> int:
         render_markdown(rows, counts, lifecycle_counts), encoding="utf-8"
     )
     if args.github_output is not None:
-        _write_github_output(args.github_output, counts, lifecycle_counts)
+        _write_github_output(args.github_output, counts, lifecycle_counts, rows)
     _append_step_summary(counts, lifecycle_counts, args.step_summary)
 
     if args.fail_on_protected_rollback and counts.get("protected_rollback", 0) > 0:

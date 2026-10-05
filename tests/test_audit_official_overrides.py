@@ -1,4 +1,8 @@
 import json
+import re
+from datetime import date
+
+import pytest
 
 from ms_data.audit import audit_official_overrides
 
@@ -251,4 +255,77 @@ def test_audit_writes_github_output_and_step_summary(tmp_path):
     assert "review_due=1" in output_text
     assert "remove_due=0" in output_text
     assert "due_count=1" in output_text
+    assert re.search(r"^due_fingerprint=[0-9a-f]{64}$", output_text, re.MULTILINE)
     assert "### official_overrides 期限監査" in step_summary.read_text(encoding="utf-8")
+
+
+def _due_rows():
+    rows, _, _ = audit_official_overrides.build_audit(
+        overrides={
+            "ザクⅢ改_LV1": {
+                "HP": {"value": 27000, "stale_value": 23500},
+                "スピード": {"value": 145, "stale_value": 140},
+            }
+        },
+        current_records={},
+        raw_records={},
+        before_records={},
+        lifecycle_metadata={
+            ("ザクⅢ改_LV1", field): {
+                "file": "20260528.json",
+                "review_after": "2026-05-01",
+                "remove_after": "2026-06-30",
+            }
+            for field in ("HP", "スピード")
+        },
+        today=date(2026, 5, 31),
+    )
+    return rows
+
+
+def test_due_fingerprint_ignores_row_order_and_daily_fetch_metadata():
+    rows = _due_rows()
+    next_day = [
+        {
+            **row,
+            "attempted_at": "2026-06-01T00:00:00Z",
+            "fetched_at": "2026-06-01T00:00:01Z",
+            "before": 0,
+            "raw": 1,
+            "current": 2,
+            "status": "upstream_current",
+            "evidence_status": "match",
+        }
+        for row in reversed(rows)
+    ]
+    scheduled = {**rows[0], "MS名": "別機体_LV1", "lifecycle": "scheduled"}
+
+    fingerprint = audit_official_overrides.build_due_fingerprint(rows)
+    assert audit_official_overrides.build_due_fingerprint(next_day) == fingerprint
+    assert (
+        audit_official_overrides.build_due_fingerprint([*rows, scheduled])
+        == fingerprint
+    )
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("MS名", "別機体_LV1"),
+        ("field", "スラスター"),
+        ("lifecycle", "remove_due"),
+        ("review_after", "2026-05-02"),
+        ("remove_after", "2026-07-01"),
+        ("override", 27500),
+        ("stale", 24000),
+        ("override_file", "20260601.json"),
+    ],
+)
+def test_due_fingerprint_changes_when_same_count_targets_or_settings_change(key, value):
+    rows = _due_rows()
+    changed = [{**rows[0], key: value}, rows[1]]
+
+    assert len(rows) == len(changed)
+    assert audit_official_overrides.build_due_fingerprint(
+        rows
+    ) != audit_official_overrides.build_due_fingerprint(changed)
