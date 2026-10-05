@@ -160,6 +160,20 @@ def build_body(args: argparse.Namespace) -> str:
         lines.extend(["", "## official_overrides監査", ""])
         lines.extend(override_lines)
 
+    source_audit = _read(getattr(args, "source_slot_audit_path", None))
+    if source_audit:
+        # 部分保留専用の本人通知へ原値・比較値・処置を欠落なく渡す。
+        lines.extend(
+            [
+                "",
+                *[
+                    line
+                    for line in source_audit.splitlines()
+                    if not line.startswith("# ")
+                ],
+            ]
+        )
+
     if args.detail_url:
         lines.extend(["", f"詳細: {args.detail_url}"])
 
@@ -188,6 +202,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--diff-path", type=_path_arg, default=None)
     parser.add_argument("--rollback-guard-path", type=_path_arg, default=None)
     parser.add_argument("--official-overrides-audit-path", type=_path_arg, default=None)
+    parser.add_argument("--source-slot-audit-path", type=_path_arg, default=None)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--html-out", type=Path, help="HTML 版の出力先（任意）")
     args = parser.parse_args(argv)

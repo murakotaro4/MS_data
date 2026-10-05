@@ -19,10 +19,13 @@ import json
 import os
 import sys
 from collections.abc import Iterable
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from ms_data.audit.source_slots import quarantine_sources
 from ms_data.core import paths
+from ms_data.core.dates import JST
 from ms_data.core.json_io import load_json
 from ms_data.core.labels import apply_key_aliases
 from ms_data.core.ms_names import (
@@ -36,8 +39,11 @@ from ms_data.core.paths import OFFICIAL_OVERRIDES_DIR
 from ms_data.pipeline import official_overrides as _official_overrides
 from ms_data.pipeline.official_overrides import (
     OfficialOverrideValue,
-    apply_official_overrides,
 )
+from ms_data.pipeline.official_overrides import (
+    apply_official_overrides as apply_official_overrides,
+)
+from ms_data.scraping.fetch_state import load_detail_fetch_state
 
 CANONICAL_ORDER = (
     "MS名",
@@ -370,6 +376,13 @@ def main(argv: list[str] | None = None) -> int:
         help="公式調整オーバーライド適用前の入力取得レコードを書き出す",
     )
     ap.add_argument("--no-sort", action="store_true", help="配列の並び替えを行わない")
+    audit_out = os.getenv("SOURCE_SLOT_AUDIT_OUT")
+    ap.add_argument(
+        "--source-slot-audit-out",
+        type=Path,
+        default=Path(audit_out) if audit_out else None,
+        help="取得元スロットの部分保留・原値・補正証拠を書き出す",
+    )
     ap.add_argument("--dry-run", action="store_true", help="書き込みを行わない")
     args = ap.parse_args(argv)
 
@@ -392,7 +405,7 @@ def main(argv: list[str] | None = None) -> int:
 
     new_records = list(iter_records_from_files(args.inputs)) if args.inputs else []
     merged_old = merge_by_msname(base_records)
-    merged_new = merge_by_msname([*base_records, *new_records])
+    incoming = merge_by_msname(new_records)
 
     if args.official_overrides_raw_out is not None:
         write_records_snapshot(
@@ -401,19 +414,53 @@ def main(argv: list[str] | None = None) -> int:
             sort=not args.no_sort,
         )
 
-    if not args.no_official_overrides:
-        try:
+    try:
+        official_overrides = {}
+        if not args.no_official_overrides:
             official_overrides = load_official_overrides(args.official_overrides_dir)
-            changed = apply_official_overrides(merged_new, official_overrides)
-        except Exception as exc:
-            print(f"エラー: 公式調整オーバーライドの適用に失敗: {exc}", file=sys.stderr)
-            return 1
-        if changed:
-            print(
-                "official-overrides: "
-                f"{len(official_overrides)} records / {changed} values applied",
-                file=sys.stderr,
-            )
+        merged_new, audit = quarantine_sources(
+            merged_old,
+            incoming,
+            official_overrides,
+            today=datetime.now(JST).date(),
+        )
+    except Exception as exc:
+        print(
+            f"エラー: 公式調整オーバーライド・取得元監査に失敗: {exc}", file=sys.stderr
+        )
+        return 1
+    if official_overrides:
+        print(
+            f"official-overrides: {len(official_overrides)} records configured",
+            file=sys.stderr,
+        )
+    if audit["findings"] or audit["global_errors"]:
+        print(
+            f"source-slot-audit: {audit['status']} / held={audit['held_record_count']}",
+            file=sys.stderr,
+        )
+    if args.source_slot_audit_out is not None:
+        fetch_state = load_detail_fetch_state(
+            Path(os.getenv("DETAIL_FETCH_STATE", str(paths.DETAIL_FETCH_STATE_JSON)))
+        )
+        for row in audit["findings"]:
+            state = fetch_state.get(row["wiki_url"], {})
+            row["fetch_evidence"] = {
+                key: state.get(key)
+                for key in (
+                    "attempted_at",
+                    "fetched_at",
+                    "http_status",
+                    "network_fetched",
+                    "parse_status",
+                    "semantic_sha256",
+                )
+            }
+            row["fetched_at"] = state.get("fetched_at")
+        args.source_slot_audit_out.parent.mkdir(parents=True, exist_ok=True)
+        args.source_slot_audit_out.write_text(
+            json.dumps(audit, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
 
     print(diff_summary(merged_old, merged_new), file=sys.stderr)
 

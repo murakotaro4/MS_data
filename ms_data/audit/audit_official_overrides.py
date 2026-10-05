@@ -16,6 +16,7 @@ from ms_data.core.json_io import load_json_or_default
 from ms_data.core.records import load_records_by_name
 from ms_data.gh.outputs import append_step_summary, write_github_output
 from ms_data.pipeline import update_msdata
+from ms_data.pipeline.official_overrides import override_is_active
 from ms_data.pipeline.override_review import (
     audit_date,
     classify_lifecycle,
@@ -70,6 +71,7 @@ def build_audit(
     index: list[dict[str, Any]] | None = None,
     fetch_state: dict[str, Any] | None = None,
     selection_time: Any = None,
+    source_slot_audit: dict[str, Any] | None = None,
 ) -> tuple[list[dict[str, Any]], Counter[str], Counter[str]]:
     # raw_records は旧呼び出しとの互換用。撤去判定には今回の取得証拠のみを使う。
     rows: list[dict[str, Any]] = []
@@ -102,6 +104,23 @@ def build_audit(
                 stale_value=stale_value,
                 raw_available=raw_available,
             )
+            # 新しい期限付き取得元補正で、候補拒否後に未確認の公開済み値を
+            # そのまま保持した場合だけ区別。旧overrideと実際の巻き戻りは維持。
+            if (
+                status == "protected_rollback"
+                and spec.get("source_error_confirmed") is True
+                and not override_is_active(spec, today)
+                and before_value == current_value == stale_value
+                and before_records.get(name) == current_records.get(name)
+                and _is_unverified_source_hold(
+                    source_slot_audit,
+                    name,
+                    raw_records,
+                    before_records,
+                    current_records,
+                )
+            ):
+                status = "source_hold_unverified_previous"
             counts[status] += 1
             lifecycle = lifecycle_metadata.get((name, field), {})
             lifecycle_status = classify_lifecycle(lifecycle, today)
@@ -124,6 +143,35 @@ def build_audit(
                 }
             )
     return rows, counts, lifecycle_counts
+
+
+def _is_unverified_source_hold(
+    audit: dict[str, Any] | None,
+    name: str,
+    raw_records: dict[str, dict[str, Any]],
+    before_records: dict[str, dict[str, Any]],
+    current_records: dict[str, dict[str, Any]],
+) -> bool:
+    if not isinstance(audit, dict) or audit.get("status") != "partial_hold":
+        return False
+    if audit.get("global_errors") or not isinstance(audit.get("findings"), list):
+        return False
+    for row in audit["findings"]:
+        if not isinstance(row, dict):
+            continue
+        field = row.get("field")
+        if (
+            row.get("MS名") == name
+            and row.get("action") == "previous_unverified_retained"
+            and name in raw_records
+            and isinstance(field, str)
+            and field in raw_records[name]
+            and row.get("observed") == raw_records[name][field]
+            and row.get("previous") == before_records[name].get(field)
+            and row.get("adopted") == current_records[name].get(field)
+        ):
+            return True
+    return False
 
 
 def _append_table(lines: list[str], rows: list[dict[str, Any]]) -> None:
@@ -255,7 +303,13 @@ def render_markdown(
     attention = [
         row
         for row in rows
-        if row["status"] in {"protected_rollback", "source_changed", "missing_current"}
+        if row["status"]
+        in {
+            "protected_rollback",
+            "source_changed",
+            "missing_current",
+            "source_hold_unverified_previous",
+        }
     ]
     _append_table(lines, attention)
     lines.append("")
@@ -333,6 +387,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--current", type=Path, default=paths.MSDATA)
     parser.add_argument("--raw", type=Path, default=None)
+    parser.add_argument("--source-slot-audit", type=Path, default=None)
     parser.add_argument("--index", type=Path, default=paths.INDEX_JSON)
     parser.add_argument(
         "--detail-fetch-state", type=Path, default=paths.DETAIL_FETCH_STATE_JSON
@@ -364,6 +419,11 @@ def main(argv: list[str] | None = None) -> int:
         index=load_json_or_default(args.index, []),
         fetch_state=load_json_or_default(args.detail_fetch_state, {}),
         selection_time=load_json_or_default(args.changed_meta, {}).get("generated_at"),
+        source_slot_audit=(
+            load_json_or_default(args.source_slot_audit, {})
+            if args.source_slot_audit
+            else None
+        ),
     )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(

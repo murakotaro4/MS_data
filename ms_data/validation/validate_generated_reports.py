@@ -103,6 +103,18 @@ def validate_reports(reports_dir: Path, schema_dir: Path) -> list[str]:
             )
         )
 
+    for path in sorted(reports_dir.rglob("source_slot_audit_*.md")):
+        messages.extend(
+            _require_text(
+                path,
+                [
+                    "# 取得元スロット監査",
+                    "- held_record_count:",
+                    "- approved_record_count:",
+                    "## 部分保留エラー・補正証拠",
+                ],
+            )
+        )
     return messages
 
 

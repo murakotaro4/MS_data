@@ -448,6 +448,18 @@ def task_update_fast() -> int:
     4. 取得結果があれば import-details → validate-strict
     """
     ttl = _fast_ttl()
+    raw_out = _env_str("OFFICIAL_OVERRIDE_RAW_OUT")
+    if raw_out:
+        raw_path = Path(raw_out)
+        raw_path.parent.mkdir(parents=True, exist_ok=True)
+        raw_path.write_text("[]\n", encoding="utf-8")
+    audit_out = _env_str("SOURCE_SLOT_AUDIT_OUT")
+    if audit_out:
+        from ms_data.audit.source_slots import empty_audit
+
+        audit_path = Path(audit_out)
+        audit_path.parent.mkdir(parents=True, exist_ok=True)
+        audit_path.write_text(json.dumps(empty_audit()) + "\n", encoding="utf-8")
 
     rc = _scrape(*_index_argv(ttl))
     if rc != 0:
@@ -593,6 +605,13 @@ def task_snapshot() -> int:
     diff_path = Path(_report_out("DIFF_OUT", "diff_msdata", "md"))
     if diff_path.exists():
         files.append(diff_path)
+    for source_path in (
+        _env_str("SOURCE_SLOT_AUDIT_OUT"),
+        _env_str("SOURCE_SLOT_REPORT_OUT"),
+        _env_str("OFFICIAL_OVERRIDE_RAW_OUT"),
+    ):
+        if source_path:
+            files.append(Path(source_path))
 
     snapshot_path.parent.mkdir(parents=True, exist_ok=True)
     with tarfile.open(snapshot_path, "w:xz") as archive:
@@ -723,6 +742,9 @@ def task_audit_official_overrides() -> int:
         args.append("--fail-on-protected-rollback")
     if _env_flag("FAIL_ON_REMOVE_DUE"):
         args.append("--fail-on-remove-due")
+    source_audit = _env_str("SOURCE_SLOT_AUDIT_OUT")
+    if source_audit:
+        args.extend(["--source-slot-audit", source_audit])
     return _run_python_module("ms_data.audit.audit_official_overrides", *args)
 
 

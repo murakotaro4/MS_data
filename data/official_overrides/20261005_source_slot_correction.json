@@ -1,0 +1,24 @@
+{
+  "schema_version": "1",
+  "active": true,
+  "title": "ガブスレイLV2中距離スロットの本人確認済み一時補正",
+  "reason": "2026-10-05に本人が22を確認し補正を承認。Wiki表・20261004保存HTMLとdetailsの12は誤値。Wiki調整履歴も22。",
+  "policy": "元値が12の場合のみ22。第三値・取得元修正後は上書きしない。原値は取得元監査に残す。期限後は再補正せず対象LV更新を保留。",
+  "review_after": "2026-10-12",
+  "remove_after": "2026-10-19",
+  "sources": [
+    {"type": "owner_confirmation", "url": "https://github.com/murakotaro4/MS_data/issues/296", "title": "2026-10-05 本人確認・承認：中スロット22"},
+    {"type": "wiki", "url": "https://w.atwiki.jp/battle-operation2/pages/2283.html", "title": "ガブスレイ：スロット表12／調整履歴22の不整合"},
+    {"type": "raw_snapshot", "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261004-run-37209726511", "title": "ハッシュ検証済み保存原本：ガブスレイLV2中スロット12"}
+  ],
+  "overrides": [
+    {
+      "MS名": "ガブスレイ_LV2",
+      "values": {"中スロット": 22},
+      "stale_values": {"中スロット": 12},
+      "expires_after": "2026-10-19",
+      "source_error_confirmed": true,
+      "note": "本人確認日2026-10-05。適用期限はJSTで2026-10-19まで。review_afterは再確認、remove_afterは撤去判断、expires_afterは再補正の終了。既知誤値12の保留根拠は撤去まで保持。"
+    }
+  ]
+}

@@ -32,6 +32,9 @@
     "remove_after": {
       "$ref": "#/$defs/date"
     },
+    "expires_after": {
+      "$ref": "#/$defs/date"
+    },
     "sources": {
       "type": "array",
       "items": {
@@ -109,6 +112,9 @@
         "remove_after": {
           "$ref": "#/$defs/date"
         },
+        "expires_after": {"$ref": "#/$defs/date"},
+        "source_error_confirmed": {"type": "boolean"},
+        "allow_source_anomaly": {"type": "boolean"},
         "note": {
           "type": "string"
         }

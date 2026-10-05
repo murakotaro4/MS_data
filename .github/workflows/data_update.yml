@@ -50,6 +50,8 @@ jobs:
       # 先にリセットするよう 40 日に設定し、平日 fast 更新での無駄な再取得を防ぐ
       STALE_DETAIL_DAYS: 40
       ARTIFACT_RETENTION_DAYS: 90
+      SOURCE_SLOT_AUDIT_OUT: cache/source_slot_audit.json
+      OFFICIAL_OVERRIDE_RAW_OUT: cache/msData.before_official_overrides.json
       ATWIKI_QUALITY_MAX_FAILURE_RATE: ${{ vars.ATWIKI_QUALITY_MAX_FAILURE_RATE || '0.10' }}
       ATWIKI_QUALITY_MIN_DETAIL_RECORD_RATIO: ${{ vars.ATWIKI_QUALITY_MIN_DETAIL_RECORD_RATIO || '0.80' }}
       ATWIKI_QUALITY_FULL_DIFF_WARNING_COUNT: ${{ vars.ATWIKI_QUALITY_FULL_DIFF_WARNING_COUNT || '200' }}
@@ -133,6 +135,17 @@ jobs:
           FAST_TTL="${TTL}" RATE="${RATE}" LIMIT="${LIMIT}" MSDATA=msData.json \
             uv run python -m ms_data.tasks update-fast
 
+      - id: source_slots
+        name: Report per-level source slot holds
+        run: |
+          report_path="${REPORTS_MONTH_DIR}/source_slot_audit_${REPORT_DATE}.md"
+          uv run python -m ms_data.audit.source_slots \
+            --audit-json "${SOURCE_SLOT_AUDIT_OUT}" \
+            --report-out "$report_path" \
+            --github-output "$GITHUB_OUTPUT" \
+            --step-summary "$GITHUB_STEP_SUMMARY"
+          echo "SOURCE_SLOT_REPORT_OUT=$report_path" >> "$GITHUB_ENV"
+
       - name: Run rollback guard
         run: |
           mkdir -p "${REPORTS_MONTH_DIR}"
@@ -160,6 +173,7 @@ jobs:
           uv run python -m ms_data.audit.audit_official_overrides \
             --before msData.before.json \
             --raw cache/msData.before_official_overrides.json \
+            --source-slot-audit "${SOURCE_SLOT_AUDIT_OUT}" \
             --current msData.json \
             --out "${OVERRIDES_AUDIT_FILE}" \
             --today "${REPORT_DATE}" \
@@ -216,6 +230,7 @@ jobs:
           test -f "${FIELD_COMPLETENESS_FILE}"
           test -f "${OVERRIDES_AUDIT_FILE}"
           test -f "${QUALITY_FILE}"
+          test -f "${SOURCE_SLOT_REPORT_OUT}"
           uv run python -m ms_data.validation.validate_generated_reports \
             --reports-dir reports \
             --schema-dir schema/reports
@@ -236,7 +251,7 @@ jobs:
           fi
 
       - name: Generate reports and snapshot
-        if: steps.changes.outputs.changed == 'true' || steps.official_overrides_audit.outputs.due_count > 0
+        if: steps.changes.outputs.changed == 'true' || steps.official_overrides_audit.outputs.due_count > 0 || steps.source_slots.outputs.finding_count > 0
         run: |
           uv run python -m ms_data.reporting.report_msdata_diff \
             --old msData.before.json \
@@ -245,6 +260,7 @@ jobs:
             --note "巻き戻りガード: ${ROLLBACK_FILE}" \
             --note "official_overrides監査: ${OVERRIDES_AUDIT_FILE}" \
             --note "atwiki品質: ${QUALITY_FILE}" \
+            --note "取得元スロット監査: ${SOURCE_SLOT_REPORT_OUT}" \
             --print-summary | tee reports/diff_summary.txt
           REPORT_DATE="${REPORT_DATE}" \
           PROVENANCE_OUT="${PROVENANCE_FILE}" \
@@ -259,7 +275,7 @@ jobs:
           uv run python -m ms_data.tasks snapshot
 
       - name: Validate generated update reports
-        if: steps.changes.outputs.changed == 'true' || steps.official_overrides_audit.outputs.due_count > 0
+        if: steps.changes.outputs.changed == 'true' || steps.official_overrides_audit.outputs.due_count > 0 || steps.source_slots.outputs.finding_count > 0
         run: |
           test -f "${PROVENANCE_FILE}"
           uv run python -m ms_data.validation.validate_generated_reports \
@@ -307,9 +323,12 @@ jobs:
             ${{ env.ROLLBACK_FILE }}
             ${{ env.FIELD_COMPLETENESS_FILE }}
             ${{ env.OVERRIDES_AUDIT_FILE }}
+            ${{ env.SOURCE_SLOT_REPORT_OUT }}
+            ${{ env.SOURCE_SLOT_AUDIT_OUT }}
+            ${{ env.OFFICIAL_OVERRIDE_RAW_OUT }}
 
       - name: Upload raw snapshot artifact
-        if: steps.changes.outputs.changed == 'true' || steps.official_overrides_audit.outputs.due_count > 0
+        if: steps.changes.outputs.changed == 'true' || steps.official_overrides_audit.outputs.due_count > 0 || steps.source_slots.outputs.finding_count > 0
         uses: actions/upload-artifact@v7
         with:
           name: ${{ env.RAW_ARTIFACT_NAME }}
@@ -323,6 +342,8 @@ jobs:
             ${{ env.FIELD_COMPLETENESS_FILE }}
             ${{ env.OVERRIDES_AUDIT_FILE }}
             ${{ env.QUALITY_FILE }}
+            ${{ env.SOURCE_SLOT_REPORT_OUT }}
+            ${{ env.SOURCE_SLOT_AUDIT_OUT }}
 
       - name: Upload dry-run reports
         if: always() && env.DRY_RUN == 'true'
@@ -339,6 +360,8 @@ jobs:
             ${{ env.OVERRIDES_AUDIT_FILE }}
             ${{ env.QUALITY_FILE }}
             ${{ env.RAW_SNAPSHOT_FILE }}
+            ${{ env.SOURCE_SLOT_REPORT_OUT }}
+            ${{ env.SOURCE_SLOT_AUDIT_OUT }}
 
       - name: Dry-run summary
         if: always() && env.DRY_RUN == 'true'
@@ -353,7 +376,7 @@ jobs:
 
       - id: no_change_mail
         name: Build no-change mail body
-        if: github.event_name == 'schedule' && steps.changes.outputs.changed == 'false' && env.DRY_RUN != 'true'
+        if: github.event_name == 'schedule' && steps.changes.outputs.changed == 'false' && steps.source_slots.outputs.held_record_count == '0' && env.DRY_RUN != 'true'
         env:
           FALLBACK_REASON: ${{ steps.detection.outputs.fallback_reason }}
         run: |
@@ -376,7 +399,7 @@ jobs:
           echo "html_path=$html_path" >> "$GITHUB_OUTPUT"
 
       - name: Send no-change mail
-        if: github.event_name == 'schedule' && steps.changes.outputs.changed == 'false' && env.DRY_RUN != 'true'
+        if: github.event_name == 'schedule' && steps.changes.outputs.changed == 'false' && steps.source_slots.outputs.held_record_count == '0' && env.DRY_RUN != 'true'
         env:
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
@@ -412,6 +435,8 @@ jobs:
             - official_overrides期限: ${{ steps.official_overrides_audit.outputs.due_summary }}
             - atwiki品質: ${{ env.QUALITY_FILE }}
             - atwiki品質警告: ${{ steps.quality.outputs.warning_summary }}
+            - 取得元スロット監査: ${{ env.SOURCE_SLOT_REPORT_OUT }}
+            - LV単位の部分保留件数: ${{ steps.source_slots.outputs.held_record_count }}（対象LV候補のみ不採用・他レコードは通常継続）
             - provenance: ${{ env.PROVENANCE_FILE }}
             - source_run_id: ${{ github.run_id }}
             - source_artifact: ${{ env.RAW_ARTIFACT_NAME }}
@@ -430,3 +455,39 @@ jobs:
             ${{ env.FIELD_COMPLETENESS_FILE }}
             ${{ env.OVERRIDES_AUDIT_FILE }}
             ${{ env.QUALITY_FILE }}
+            ${{ env.SOURCE_SLOT_REPORT_OUT }}
+
+      - id: partial_hold_body
+        name: Build partial hold owner mail
+        if: steps.source_slots.outputs.held_record_count > 0 && env.DRY_RUN != 'true'
+        continue-on-error: true
+        run: |
+          uv run python -m ms_data.reporting.build_update_mail_body \
+            --report-date "${REPORT_DATE}" \
+            --result "部分保留エラー（対応要・正常な更新候補は通常レビュー継続）" \
+            --changed "${{ steps.changes.outputs.changed }}" \
+            --run-id "${GITHUB_RUN_ID}" \
+            --diff-path "${DIFF_FILE}" \
+            --source-slot-audit-path "${SOURCE_SLOT_REPORT_OUT}" \
+            --out "$RUNNER_TEMP/msdata_partial_hold.txt" \
+            --html-out "$RUNNER_TEMP/msdata_partial_hold.html"
+
+      - id: partial_hold_mail
+        name: Send partial hold owner mail
+        if: steps.partial_hold_body.outcome == 'success' && env.DRY_RUN != 'true'
+        continue-on-error: true
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: |
+          uv run python -m ms_data.notify.send_gmail \
+            --to "$GMAIL_ADDRESS" \
+            --subject "msData 部分保留エラー（対応要, ${REPORT_DATE}）" \
+            --body "$RUNNER_TEMP/msdata_partial_hold.txt" \
+            --html-body "$RUNNER_TEMP/msdata_partial_hold.html"
+
+      - name: Report partial hold notification failure
+        if: steps.partial_hold_body.outcome == 'failure' || steps.partial_hold_mail.outcome == 'failure'
+        run: |
+          echo "::warning::部分保留通知の生成・送信失敗。監査artifactとStep Summaryを確認してください。正常レコードのPR作成は継続済みです。"
+          echo "- 部分保留通知: 生成・送信失敗・監査artifactに対応要の記録あり" >> "$GITHUB_STEP_SUMMARY"
