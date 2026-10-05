@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-09-04T13:07:47Z",
+  "report_date": "20260904",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "f7be20ff6c0f72918f0930c6c4a59695a7a01b8f"
+  },
+  "github": {
+    "run_id": "33876260447",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "cffa9ae2f463148c0d67355b16afba5831a03d4dc455b55a255eaa29335bc7c1",
+      "size_bytes": 145340,
+      "record_count": 591
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "08429b8fc142816d3512da2268f1dbdcd74ab1dfc610fb566b4409ace123512d",
+      "size_bytes": 70243,
+      "record_count": 59
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "71a4908fcfdf0c6f236807f9125a36c522ec70bb62dd70175810cfd966bfe5e5",
+      "size_bytes": 91748,
+      "record_count": 59
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "9cdb0ba720127964a6cb60eda20c47526c224f451903058a7a71b9a9ed3f58fb",
+      "file_count": 46,
+      "size_bytes": 7622468
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "cbeddc0cb1e4df333804206f548a0cd694cbd0259417fcbf737fd12fde92c401",
+      "size_bytes": 2638063,
+      "record_count": 1707
+    },
+    "diff_report": {
+      "path": "reports/2026/09/diff_msdata_20260904.md",
+      "sha256": "2fe0ecfec6ac2777378727084127e61dd0da07eaa8198167d3f54c4451fbbea6",
+      "size_bytes": 2524
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260904-run-33876260447",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260904-run-33876260447",
+    "asset_name": "raw_snapshot_20260904_run33876260447.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260904-run-33876260447"
+  }
+}

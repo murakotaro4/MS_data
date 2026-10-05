@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-09-27T14:31:36Z",
+  "report_date": "20260927",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "f4639fa2c0c3516afb728dd545186b598db0edad"
+  },
+  "github": {
+    "run_id": "36326185715",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "ca1d0e06109df973f1bbb81ce115c515a1cf03aeb5d2322f6cf4a5f9360ca2ec",
+      "size_bytes": 146308,
+      "record_count": 595
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "4f8ead5632706206fb9d6c3b4c552c5f31c077831ea2eeb3104af8e0422f3d85",
+      "size_bytes": 63532,
+      "record_count": 54
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "3399ae39a653b3543e44d273b2e4c7f29e638b7eb72041dcd330a28674393f2e",
+      "size_bytes": 83132,
+      "record_count": 54
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "0f2aa6abeb339a63a3e81a287bcd7dbbc69bd7208654bb695cfe8929359a0f29",
+      "file_count": 44,
+      "size_bytes": 7305193
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "140dbd9a9621eea0cd3a786558e3cdc85f420fec7b1579b46f2f5fd8f6506d91",
+      "size_bytes": 2656744,
+      "record_count": 1719
+    },
+    "diff_report": {
+      "path": "reports/2026/09/diff_msdata_20260927.md",
+      "sha256": "ffc9f97d49a0e5b5b4740d11645a9d78e8d7fcb83f6285200e7c9ef2816ae358",
+      "size_bytes": 2550
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260927-run-36326185715",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260927-run-36326185715",
+    "asset_name": "raw_snapshot_20260927_run36326185715.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260927-run-36326185715"
+  }
+}

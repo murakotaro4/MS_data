@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-09-25T14:24:22Z",
+  "report_date": "20260925",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "e49d01d68dfc410cc2e045147021432be18725db"
+  },
+  "github": {
+    "run_id": "36147170750",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "6fb393cb28cf4e6ba8a2c045629371e80d4d33ac56cc40047a8dcc366c789cff",
+      "size_bytes": 146345,
+      "record_count": 595
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "fd389d85aa563af723b16e0592e1addc5a09afc81acd5d40e89b506e35992426",
+      "size_bytes": 64758,
+      "record_count": 55
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "6c275840418bbb7b3e5477a387b128ecfac5c2cebcd2158b6d1e1f8895e88ec1",
+      "size_bytes": 84679,
+      "record_count": 55
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "9cbfdd74eee34791958594d94891d6e653d9e8c0550416ba146b6349a31defb7",
+      "file_count": 48,
+      "size_bytes": 7935688
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "6954981de89ee9b3b852ca98a082f07e32893a4b6c3909fe119c2f7b58b96156",
+      "size_bytes": 2652183,
+      "record_count": 1716
+    },
+    "diff_report": {
+      "path": "reports/2026/09/diff_msdata_20260925.md",
+      "sha256": "3623d59b1a7aac18a6003520d7f5a65be1630ca71a181aaa55d38ebca99c9f7f",
+      "size_bytes": 2443
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260925-run-36147170750",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260925-run-36147170750",
+    "asset_name": "raw_snapshot_20260925_run36147170750.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260925-run-36147170750"
+  }
+}

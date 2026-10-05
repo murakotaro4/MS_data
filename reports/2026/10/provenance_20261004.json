@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-10-04T14:46:24Z",
+  "report_date": "20261004",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "3977907a1c0a80da090e3906c841ea8c194f751e"
+  },
+  "github": {
+    "run_id": "37209726511",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "1ad5f3a08d3077654414912f7eb3f9b925bf9f6918543e0ec038e967ceef0298",
+      "size_bytes": 146554,
+      "record_count": 596
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "285ccc3bd05d7adf726e6ea5b9ae1696e30451d82dbaefd57bd7fef9d84310a6",
+      "size_bytes": 2036484,
+      "record_count": 1722
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "2aa150632e25b26ca2e8ddd84aad050f2b4dbae4e45e789ba62c84fb7d82050a",
+      "size_bytes": 2661992,
+      "record_count": 1722
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "aceb03abbc56ddf59e6df3b8c468cabccf21c11219a9cdc0fe74f1005dafb13d",
+      "file_count": 1194,
+      "size_bytes": 183054339
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "47d4193c4c90a85a1400469e903281e13ededc7ad6a6471a5dfa895e543b28e0",
+      "size_bytes": 2661993,
+      "record_count": 1722
+    },
+    "diff_report": {
+      "path": "reports/2026/10/diff_msdata_20261004.md",
+      "sha256": "29e93d51f327a36de32066b09382f5f83c6916ef3d5588b846689525eab5525c",
+      "size_bytes": 1846
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20261004-run-37209726511",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20261004-run-37209726511",
+    "asset_name": "raw_snapshot_20261004_run37209726511.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261004-run-37209726511"
+  }
+}

@@ -13,3 +13,6 @@ DEFAULT_TTL = "7d"
 
 # atwiki への負荷を考慮した既定レート（req/sec）。過度な緩和は避ける。
 DEFAULT_RATE = 2.0
+
+# 直接CLIの既定は従来の1 req/secを維持（tasksは2 req/sec）。
+DEFAULT_CLI_RATE = 1.0
