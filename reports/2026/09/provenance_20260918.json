@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-09-18T13:22:00Z",
+  "report_date": "20260918",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "6d52ad69e5146058c9b3dc97305e03be7b1db8cd"
+  },
+  "github": {
+    "run_id": "35349718053",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "8a301f5b52195bcdff89f12ce6c4793f3446a4c916d656fdec4a1945e7009ab8",
+      "size_bytes": 146094,
+      "record_count": 594
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "8b7b90af90396b1fc4ca300525b64a2678c057d3121dc620232e540b95a1b606",
+      "size_bytes": 66483,
+      "record_count": 56
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "7149d15e1a2d1f459df04b8815c5bc0c7c35bb6abf04e3222064971c7ff5ea7b",
+      "size_bytes": 86877,
+      "record_count": 56
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "53187c9b4c2b8a420c1d59acc5a7bdbd9128179ebba71b5286f12fc51fda6dfe",
+      "file_count": 44,
+      "size_bytes": 7165739
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "8754e5aa52e8432168fc0cc43d735e1e64fb4010ac64b01722d6138ac241f265",
+      "size_bytes": 2650519,
+      "record_count": 1715
+    },
+    "diff_report": {
+      "path": "reports/2026/09/diff_msdata_20260918.md",
+      "sha256": "7bff4dacb36a258797bf09d30f2671b6c1cc35a86e9e57797161d3027932abf2",
+      "size_bytes": 2723
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260918-run-35349718053",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260918-run-35349718053",
+    "asset_name": "raw_snapshot_20260918_run35349718053.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260918-run-35349718053"
+  }
+}

@@ -2,7 +2,8 @@
 
 `audit_official_overrides` の outputs を受け取り、`official_overrides 期限確認`
 Issue を 1 本に集約する。既存 Issue の直前の通知と件数（review_due / remove_due）
-が同じなら追記せず skipped とし、日次の同文コメントを抑止する。
+および期限対象の fingerprint が同じなら追記せず skipped とする。
+対象の入れ替わりを通知しつつ、日次の同文コメントを抑止する。
 """
 
 from __future__ import annotations
@@ -27,7 +28,8 @@ AGGREGATION_SUBJECT = "期限情報"
 
 _MARKER_RE = re.compile(
     r"<!--\s*override-due\s+report_date=(?P<report_date>\d{8})"
-    r"\s+review_due=(?P<review_due>\d+)\s+remove_due=(?P<remove_due>\d+)\s*-->"
+    r"\s+review_due=(?P<review_due>\d+)\s+remove_due=(?P<remove_due>\d+)"
+    r"(?:\s+fingerprint=(?P<fingerprint>[0-9a-f]{64}))?\s*-->"
 )
 # マーカー導入前のコメント（箇条書きのみ）からも件数を読む
 _LEGACY_REVIEW_RE = re.compile(r"^- review_due:\s*(\d+)\s*$", re.MULTILINE)
@@ -36,14 +38,18 @@ _LEGACY_REMOVE_RE = re.compile(r"^- remove_due:\s*(\d+)\s*$", re.MULTILINE)
 
 @dataclass(frozen=True)
 class DueCounts:
+    """期限件数と、監査結果から得た対象・補正設定の識別子。"""
+
     review_due: int
     remove_due: int
+    fingerprint: str | None = None
 
 
 def build_marker(report_date: str, counts: DueCounts) -> str:
+    fingerprint = f" fingerprint={counts.fingerprint}" if counts.fingerprint else ""
     return (
         f"<!-- override-due report_date={report_date} "
-        f"review_due={counts.review_due} remove_due={counts.remove_due} -->"
+        f"review_due={counts.review_due} remove_due={counts.remove_due}{fingerprint} -->"
     )
 
 
@@ -81,6 +87,7 @@ def parse_due_counts(text: str) -> DueCounts | None:
         return DueCounts(
             review_due=int(match.group("review_due")),
             remove_due=int(match.group("remove_due")),
+            fingerprint=match.group("fingerprint"),
         )
     review = _LEGACY_REVIEW_RE.search(text)
     remove = _LEGACY_REMOVE_RE.search(text)
@@ -104,9 +111,9 @@ def latest_notified_counts(
 
 
 def should_comment(previous: DueCounts | None, current: DueCounts) -> bool:
-    """件数が前回通知と異なるときだけ追記する（前回が読めなければ追記）。"""
+    """件数・対象が同じ場合だけ抑止する。識別子がなければ安全側で追記する。"""
 
-    return previous is None or previous != current
+    return not current.fingerprint or previous != current
 
 
 def ensure_override_due_issue(
@@ -156,6 +163,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--report-date", required=True, help="YYYYMMDD")
     parser.add_argument("--review-due", type=int, required=True)
     parser.add_argument("--remove-due", type=int, required=True)
+    parser.add_argument("--due-fingerprint", default=None)
     parser.add_argument("--audit-report", required=True)
     parser.add_argument("--run-url", required=True)
     parser.add_argument("--step-summary", default=None)
@@ -164,12 +172,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         parser.error("--repo または GITHUB_REPOSITORY が必要です")
     if args.review_due < 0 or args.remove_due < 0:
         parser.error("--review-due / --remove-due は 0 以上で指定してください")
+    if args.due_fingerprint is not None and not re.fullmatch(
+        r"[0-9a-f]{64}", args.due_fingerprint
+    ):
+        parser.error(
+            "--due-fingerprint は監査出力の SHA256（64 桁の小文字16進数）を指定してください"
+        )
     return args
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    counts = DueCounts(review_due=args.review_due, remove_due=args.remove_due)
+    counts = DueCounts(
+        review_due=args.review_due,
+        remove_due=args.remove_due,
+        fingerprint=args.due_fingerprint,
+    )
     if counts.review_due == 0 and counts.remove_due == 0:
         print("official_overrides due: 0 件のため Issue 通知をスキップします")
         return 0

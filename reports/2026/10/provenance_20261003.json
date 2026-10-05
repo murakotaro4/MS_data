@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-10-02T15:20:49Z",
+  "report_date": "20261003",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "636e1c3976c0e51098c6b633f6d288e690b950b4"
+  },
+  "github": {
+    "run_id": "37026156225",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "6f8716c027d797864b5318fb6fd14bd0978fd70c0375be0476889e0cfcb858ae",
+      "size_bytes": 146538,
+      "record_count": 596
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "6046abe3fa84545860f91e70f32e23f730a49b39b81125f2ba6e6a52921e542c",
+      "size_bytes": 186624,
+      "record_count": 157
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "c9cb50dce684a5e76d2b50e2ac8247115a94aa92208d03303a6bf3a6cc8fb4f6",
+      "size_bytes": 243703,
+      "record_count": 157
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "e5391a4d26168983f5451d46988aa3bbbb72d1e1c67a05aed79f2955bcbe1560",
+      "file_count": 126,
+      "size_bytes": 20035661
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "5a2d4cd118bbbfa977fcbc442f6c901da2b29f09a8a79882a93cfe1cdd3d7917",
+      "size_bytes": 2658766,
+      "record_count": 1720
+    },
+    "diff_report": {
+      "path": "reports/2026/10/diff_msdata_20261003.md",
+      "sha256": "cb2ba047450289f9eb0d2b9a2bb3c8247e02ee77c68cd31231948fc029a947ce",
+      "size_bytes": 2182
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20261003-run-37026156225",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20261003-run-37026156225",
+    "asset_name": "raw_snapshot_20261003_run37026156225.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261003-run-37026156225"
+  }
+}

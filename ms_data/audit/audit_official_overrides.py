@@ -3,15 +3,24 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 from collections import Counter
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
 from ms_data.core.dates import JST
+from ms_data.core.json_io import load_json_or_default
 from ms_data.core.records import load_records_by_name
 from ms_data.gh.outputs import append_step_summary, write_github_output
-from ms_data.pipeline import official_overrides, update_msdata
+from ms_data.pipeline import update_msdata
+from ms_data.pipeline.override_review import (
+    audit_date,
+    classify_lifecycle,
+    load_lifecycle_metadata,
+    value_evidence,
+)
 from ms_data.reporting.rendering import append_table as _append_markdown_table
 from ms_data.reporting.rendering import value_text as _value_text
 
@@ -41,82 +50,12 @@ def _classify(
         return "upstream_current"
     if raw_available and raw_value == stale_value:
         return "protected_by_override"
+    if raw_available:
+        # 不完全なLVが取り込み対象外でも、上流の第三値は今回の取得証拠で判定する。
+        return "source_changed"
     if before_value == override_value:
         return "already_protected"
     return "current_matches_override"
-
-
-def _parse_date(value: str) -> date:
-    value = value.strip()
-    if len(value) == 8 and value.isdigit():
-        return datetime.strptime(value, "%Y%m%d").date()
-    return date.fromisoformat(value)
-
-
-def _today(value: str | None) -> date:
-    if value:
-        return _parse_date(value)
-    return datetime.now(JST).date()
-
-
-def _date_text(value: Any) -> str:
-    return value if isinstance(value, str) else ""
-
-
-def load_lifecycle_metadata(
-    directory: Path,
-) -> dict[tuple[str, str], dict[str, str]]:
-    """override 値単位の期限メタデータを読み込む。"""
-
-    if not directory.exists() or not directory.is_dir():
-        return {}
-
-    # 期限情報だけを読む経路でも、適用経路と同じ strict 契約を先に通す。
-    update_msdata.load_official_overrides(directory)
-
-    metadata: dict[tuple[str, str], dict[str, str]] = {}
-    for path in official_overrides.iter_official_override_files(directory):
-        data = official_overrides.load_official_override_data(path)
-        parsed = official_overrides.parse_official_override_data(data, source=path)
-        if not parsed.active:
-            continue
-
-        file_review_after = _date_text(parsed.data.get("review_after"))
-        file_remove_after = _date_text(parsed.data.get("remove_after"))
-        entries = parsed.entries
-        if not isinstance(entries, list):
-            continue
-
-        for entry in entries:
-            if not isinstance(entry, dict):
-                continue
-            raw_name = entry.get("MS名")
-            raw_values = entry.get("values")
-            if not isinstance(raw_name, str) or not isinstance(raw_values, dict):
-                continue
-            values = update_msdata.apply_key_aliases(dict(raw_values))
-            name = update_msdata.normalize_ms_name(raw_name)
-            review_after = _date_text(entry.get("review_after")) or file_review_after
-            remove_after = _date_text(entry.get("remove_after")) or file_remove_after
-            for field in values:
-                metadata[(name, field)] = {
-                    "file": path.name,
-                    "review_after": review_after,
-                    "remove_after": remove_after,
-                }
-    return metadata
-
-
-def classify_lifecycle(meta: dict[str, str], today: date) -> str:
-    remove_after = meta.get("remove_after", "")
-    review_after = meta.get("review_after", "")
-    if remove_after and today >= _parse_date(remove_after):
-        return "remove_due"
-    if review_after and today >= _parse_date(review_after):
-        return "review_due"
-    if remove_after or review_after:
-        return "scheduled"
-    return "not_set"
 
 
 def build_audit(
@@ -127,11 +66,14 @@ def build_audit(
     before_records: dict[str, dict[str, Any]],
     lifecycle_metadata: dict[tuple[str, str], dict[str, str]] | None = None,
     today: date | None = None,
+    index: list[dict[str, Any]] | None = None,
+    fetch_state: dict[str, Any] | None = None,
+    selection_time: Any = None,
 ) -> tuple[list[dict[str, Any]], Counter[str], Counter[str]]:
+    # raw_records は旧呼び出しとの互換用。撤去判定には今回の取得証拠のみを使う。
     rows: list[dict[str, Any]] = []
     counts: Counter[str] = Counter()
     lifecycle_counts: Counter[str] = Counter()
-    raw_available = bool(raw_records)
     lifecycle_metadata = lifecycle_metadata or {}
     today = today or datetime.now(JST).date()
 
@@ -141,7 +83,15 @@ def build_audit(
             override_value = spec.get("value")
             stale_value = spec.get("stale_value")
             before_value = before_records.get(name, {}).get(field)
-            raw_value = raw_records.get(name, {}).get(field)
+            evidence = value_evidence(
+                name, field, index or [], fetch_state or {}, selection_time, today
+            )
+            raw_value = evidence["raw"]
+            raw_available = evidence["evidence_status"] == "available"
+            if raw_available:
+                evidence["evidence_status"] = (
+                    "match" if raw_value == override_value else "mismatch"
+                )
             current_value = current_records.get(name, {}).get(field)
             status = _classify(
                 before_value=before_value,
@@ -157,6 +107,7 @@ def build_audit(
             lifecycle_counts[lifecycle_status] += 1
             rows.append(
                 {
+                    **evidence,
                     "MS名": name,
                     "field": field,
                     "status": status,
@@ -243,6 +194,42 @@ def render_markdown(
     for status in ("review_due", "remove_due"):
         lines.append(f"- {status}: {lifecycle_counts.get(status, 0)}")
     lines.append("")
+    incomplete = [
+        row
+        for row in rows
+        if row["lifecycle"] == "remove_due"
+        and row["evidence_status"] not in {"match", "mismatch"}
+    ]
+    lines.append(f"- 期限到達値の取得証拠不足: {len(incomplete)}")
+    if incomplete:
+        lines.append(
+            "警告: 取得証拠が不足しています。品質警告なしという表示だけでは撤去を判断できません。"
+        )
+    lines.append("## 取得証拠")
+    lines.append("")
+    lines.append(
+        "not_fetched=今回未取得、fetch_failed=取得失敗、parse_failed=解析失敗、"
+        "value_missing=解析後の値欠損、cached_only=キャッシュのみ、"
+        "not_parsed=未解析、match=一致、mismatch=不一致。"
+    )
+    _append_markdown_table(
+        lines,
+        ["MS名", "項目", "取得状態", "URL", "試行時刻", "取得時刻", "HTTP", "解析値"],
+        (
+            [
+                row["MS名"],
+                row["field"],
+                row["evidence_status"],
+                row["url"],
+                row["attempted_at"],
+                row["fetched_at"],
+                _value_text(row["http_status"]),
+                _value_text(row["raw"]),
+            ]
+            for row in rows
+        ),
+    )
+    lines.append("")
     lines.append("## 期限確認")
     lines.append("")
     due_rows = [row for row in rows if row["lifecycle"] in {"review_due", "remove_due"}]
@@ -274,8 +261,36 @@ def render_markdown(
     return "\n".join(lines) + "\n"
 
 
+def build_due_fingerprint(rows: list[dict[str, Any]]) -> str:
+    """期限対象と補正設定を識別する。取得時刻など日次で変わる情報は除外する。"""
+
+    keys = (
+        "MS名",
+        "field",
+        "lifecycle",
+        "review_after",
+        "remove_after",
+        "override",
+        "stale",
+        "override_file",
+    )
+    targets = [
+        {key: row[key] for key in keys}
+        for row in rows
+        if row["lifecycle"] in {"review_due", "remove_due"}
+    ]
+    targets.sort(key=lambda row: (row["MS名"], row["field"]))
+    payload = json.dumps(
+        targets, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
 def _write_github_output(
-    path: Path, counts: Counter[str], lifecycle_counts: Counter[str]
+    path: Path,
+    counts: Counter[str],
+    lifecycle_counts: Counter[str],
+    rows: list[dict[str, Any]],
 ) -> None:
     due_count = lifecycle_counts.get("review_due", 0) + lifecycle_counts.get(
         "remove_due", 0
@@ -286,6 +301,7 @@ def _write_github_output(
         "review_due": lifecycle_counts.get("review_due", 0),
         "remove_due": lifecycle_counts.get("remove_due", 0),
         "due_count": due_count,
+        "due_fingerprint": build_due_fingerprint(rows),
         "due_summary": (
             f"review_due={lifecycle_counts.get('review_due', 0)},"
             f"remove_due={lifecycle_counts.get('remove_due', 0)}"
@@ -316,6 +332,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--current", type=Path, default=Path("msData.json"))
     parser.add_argument("--raw", type=Path, default=None)
+    parser.add_argument("--index", type=Path, default=Path("cache/index.json"))
+    parser.add_argument(
+        "--detail-fetch-state", type=Path, default=Path("cache/detail_fetch_state.json")
+    )
+    parser.add_argument(
+        "--changed-meta", type=Path, default=Path("cache/index_changed_meta.json")
+    )
     parser.add_argument("--before", type=Path, default=None)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--today", default=None)
@@ -336,14 +359,17 @@ def main(argv: list[str] | None = None) -> int:
         raw_records=raw_records,
         before_records=before_records,
         lifecycle_metadata=lifecycle_metadata,
-        today=_today(args.today),
+        today=audit_date(args.today),
+        index=load_json_or_default(args.index, []),
+        fetch_state=load_json_or_default(args.detail_fetch_state, {}),
+        selection_time=load_json_or_default(args.changed_meta, {}).get("generated_at"),
     )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(
         render_markdown(rows, counts, lifecycle_counts), encoding="utf-8"
     )
     if args.github_output is not None:
-        _write_github_output(args.github_output, counts, lifecycle_counts)
+        _write_github_output(args.github_output, counts, lifecycle_counts, rows)
     _append_step_summary(counts, lifecycle_counts, args.step_summary)
 
     if args.fail_on_protected_rollback and counts.get("protected_rollback", 0) > 0:
