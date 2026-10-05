@@ -10,6 +10,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
+from ms_data.core import paths
 from ms_data.core.dates import JST
 from ms_data.core.json_io import load_json_or_default
 from ms_data.core.records import load_records_by_name
@@ -330,14 +331,14 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=update_msdata.OFFICIAL_OVERRIDES_DIR,
     )
-    parser.add_argument("--current", type=Path, default=Path("msData.json"))
+    parser.add_argument("--current", type=Path, default=paths.MSDATA)
     parser.add_argument("--raw", type=Path, default=None)
-    parser.add_argument("--index", type=Path, default=Path("cache/index.json"))
+    parser.add_argument("--index", type=Path, default=paths.INDEX_JSON)
     parser.add_argument(
-        "--detail-fetch-state", type=Path, default=Path("cache/detail_fetch_state.json")
+        "--detail-fetch-state", type=Path, default=paths.DETAIL_FETCH_STATE_JSON
     )
     parser.add_argument(
-        "--changed-meta", type=Path, default=Path("cache/index_changed_meta.json")
+        "--changed-meta", type=Path, default=paths.CHANGED_INDEX_META_JSON
     )
     parser.add_argument("--before", type=Path, default=None)
     parser.add_argument("--out", type=Path, required=True)
