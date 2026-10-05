@@ -1,21 +1,9 @@
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[1]
-
-
-def _workflow_text(name: str) -> str:
-    return (ROOT / ".github/workflows" / name).read_text(encoding="utf-8")
-
-
-def _step_block(text: str, *, start: str, end: str) -> str:
-    start_index = text.index(start)
-    end_index = text.index(end, start_index)
-    return text[start_index:end_index]
+from workflow_contract import step_block, workflow_text
 
 
 def test_post_merge_notify_builds_mail_body_from_diff_and_guard_reports():
-    text = _workflow_text("post_merge_notify.yml")
-    block = _step_block(
+    text = workflow_text("post_merge_notify.yml")
+    block = step_block(
         text,
         start="- id: mail_body",
         end="- name: Send merged msData mail",
@@ -35,8 +23,8 @@ def test_post_merge_notify_builds_mail_body_from_diff_and_guard_reports():
 
 
 def test_data_update_no_change_mail_keeps_detection_and_guard_context_only():
-    text = _workflow_text("data_update.yml")
-    block = _step_block(
+    text = workflow_text("data_update.yml")
+    block = step_block(
         text,
         start="- id: no_change_mail",
         end="- name: Send no-change mail",
@@ -53,7 +41,7 @@ def test_data_update_no_change_mail_keeps_detection_and_guard_context_only():
     assert "--official-overrides-audit-path" in block
     assert "--diff-path" not in block
     assert '--html-out "$html_path"' in block
-    send = _step_block(
+    send = step_block(
         text,
         start="- name: Send no-change mail",
         end="- name: Ensure pull request labels",
@@ -62,7 +50,7 @@ def test_data_update_no_change_mail_keeps_detection_and_guard_context_only():
 
 
 def test_no_change_success_mail_runs_after_snapshot_and_uploads():
-    text = _workflow_text("data_update.yml")
+    text = workflow_text("data_update.yml")
     send = text.index("- name: Send no-change mail")
     for step in (
         "Generate reports and snapshot",

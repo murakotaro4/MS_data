@@ -1,7 +1,5 @@
 """audit_index_vs_msdata（index と msData の突合監査）のテスト。"""
 
-import json
-
 import pytest
 
 from ms_data.audit.audit_index_vs_msdata import (
@@ -12,9 +10,7 @@ from ms_data.audit.audit_index_vs_msdata import (
     render_markdown,
 )
 
-
-def _write_json(path, payload):
-    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+from helpers import write_json
 
 
 def test_extract_base_levels_groups_lv_suffix():
@@ -54,7 +50,7 @@ def test_normalize_towards_index_rules(name, expected, expected_rules):
 
 def test_audit_detects_diffs(tmp_path):
     index_path = tmp_path / "index.json"
-    _write_json(
+    write_json(
         index_path,
         [
             {"name": "ガンダム", "属性": "汎用", "cost": 300},
@@ -64,7 +60,7 @@ def test_audit_detects_diffs(tmp_path):
         ],
     )
     ms_path = tmp_path / "msData.json"
-    _write_json(
+    write_json(
         ms_path,
         [
             {"MS名": "ガンダム_LV1", "属性": "汎用", "コスト": 300},
@@ -121,9 +117,9 @@ def test_render_markdown_reports_no_diff():
 
 def test_main_writes_markdown_report(tmp_path, capsys):
     index_path = tmp_path / "index.json"
-    _write_json(index_path, [{"name": "ガンダム", "属性": "汎用", "cost": 300}])
+    write_json(index_path, [{"name": "ガンダム", "属性": "汎用", "cost": 300}])
     ms_path = tmp_path / "msData.json"
-    _write_json(ms_path, [{"MS名": "ガンダム_LV1", "属性": "汎用", "コスト": 300}])
+    write_json(ms_path, [{"MS名": "ガンダム_LV1", "属性": "汎用", "コスト": 300}])
     out = tmp_path / "audit.md"  # 既定の reports/ に書かないよう必ず --out を渡す
 
     rc = main(["--index", str(index_path), "--ms", str(ms_path), "--out", str(out)])

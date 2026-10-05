@@ -3,10 +3,7 @@ from pathlib import Path
 
 import ms_data.tasks as tasks
 
-
-def _write_json(path: Path, data: object) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+from helpers import write_json
 
 
 def test_task_update_fast_skips_followup_steps_when_no_candidates(
@@ -18,8 +15,8 @@ def test_task_update_fast_skips_followup_steps_when_no_candidates(
     def fake_run_python_module(module: str, *args: str) -> int:
         calls.append((module, args))
         if module == "ms_data.scraping.scrape_msdata" and args[0] == "detect-changed":
-            _write_json(tmp_path / "cache/index_changed.json", [])
-            _write_json(
+            write_json(tmp_path / "cache/index_changed.json", [])
+            write_json(
                 tmp_path / "cache/index_changed_meta.json",
                 {
                     "candidate_count": 0,
@@ -86,7 +83,7 @@ def test_task_update_fast_runs_import_and_validate_when_candidates_exist(
     def fake_run_python_module(module: str, *args: str) -> int:
         calls.append((module, args))
         if module == "ms_data.scraping.scrape_msdata" and args[0] == "detect-changed":
-            _write_json(
+            write_json(
                 tmp_path / "cache/index_changed.json",
                 [
                     {
@@ -99,7 +96,7 @@ def test_task_update_fast_runs_import_and_validate_when_candidates_exist(
                     },
                 ],
             )
-            _write_json(
+            write_json(
                 tmp_path / "cache/index_changed_meta.json",
                 {
                     "candidate_count": 2,
@@ -206,7 +203,7 @@ def test_task_update_fast_disables_changed_only_for_index_reasoned_candidates(
     def fake_run_python_module(module: str, *args: str) -> int:
         calls.append((module, args))
         if module == "ms_data.scraping.scrape_msdata" and args[0] == "detect-changed":
-            _write_json(
+            write_json(
                 tmp_path / "cache/index_changed.json",
                 [
                     {
@@ -215,7 +212,7 @@ def test_task_update_fast_disables_changed_only_for_index_reasoned_candidates(
                     }
                 ],
             )
-            _write_json(
+            write_json(
                 tmp_path / "cache/index_changed_meta.json",
                 {
                     "candidate_count": 1,
@@ -265,11 +262,11 @@ def test_task_update_fast_disables_changed_only_in_no_network(
     def fake_run_python_module(module: str, *args: str) -> int:
         calls.append((module, args))
         if module == "ms_data.scraping.scrape_msdata" and args[0] == "detect-changed":
-            _write_json(
+            write_json(
                 tmp_path / "cache/index_changed.json",
                 [{"name": "A", "change_reasons": ["recent_update"]}],
             )
-            _write_json(
+            write_json(
                 tmp_path / "cache/index_changed_meta.json",
                 {
                     "candidate_count": 1,
@@ -364,7 +361,7 @@ def test_empty_fetch_preserves_snapshot_inputs_without_import(monkeypatch, tmp_p
     monkeypatch.setenv("RAW_SNAPSHOT_FILE", "snapshot.tar.xz")
     from ms_data.pipeline import generate_provenance
 
-    _write_json(Path("msData.json"), [{"MS名": "保持_LV1", "HP": 10000}])
+    write_json(Path("msData.json"), [{"MS名": "保持_LV1", "HP": 10000}])
     before = Path("msData.json").read_bytes()
     diff = Path("reports/2026/09/diff_msdata_20260930.md")
     diff.parent.mkdir(parents=True)
@@ -375,23 +372,23 @@ def test_empty_fetch_preserves_snapshot_inputs_without_import(monkeypatch, tmp_p
             assert module == "ms_data.pipeline.generate_provenance"
             return generate_provenance.main(list(args))
         if args[0] == "index":
-            _write_json(
+            write_json(
                 Path("cache/index.json"),
                 [{"name": "対象", "url": "https://example.test/1"}],
             )
             Path("cache/html").mkdir(exist_ok=True)
         elif args[0] == "detect-changed":
-            _write_json(
+            write_json(
                 Path("cache/index_changed.json"),
                 [{"name": "対象", "change_reasons": ["official_override_due"]}],
             )
-            _write_json(
+            write_json(
                 Path("cache/index_changed_meta.json"),
                 {"candidate_count": 1, "fast_path": True},
             )
         elif args[0] == "details":
             Path("cache/details.jsonl").write_text("", encoding="utf-8")
-            _write_json(
+            write_json(
                 Path("cache/detail_fetch_state.json"),
                 {"items": {"https://example.test/1": {"ok": False}}},
             )
@@ -406,7 +403,7 @@ def test_empty_fetch_preserves_snapshot_inputs_without_import(monkeypatch, tmp_p
     # 初回（JSONなし）と、前回のJSONが残る場合の双方で今回の空結果を保存する。
     for old in (None, [{"MS名": "古い証拠_LV1"}]):
         if old is not None:
-            _write_json(Path("cache/details.json"), old)
+            write_json(Path("cache/details.json"), old)
         assert tasks.task_update_fast() == 0
         assert json.loads(Path("cache/details.json").read_text(encoding="utf-8")) == []
         assert Path("msData.json").read_bytes() == before

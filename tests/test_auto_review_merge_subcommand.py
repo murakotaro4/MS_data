@@ -7,6 +7,8 @@ import pytest
 from ms_data.gh.argtypes import ReviewDeps
 from ms_data.gh.auto_review_merge import build_parser, cmd_merge, main
 
+from workflow_contract import ROOT, assert_contains, step_block, workflow_text
+
 
 def _view(state: str, *, head_sha: str = "head-sha", merge_sha: str = "") -> str:
     return json.dumps(
@@ -313,25 +315,28 @@ def test_cmd_merge_rejects_invalid_comment_marker_before_merge(fake_time, tmp_pa
 
 
 def test_auto_review_merge_workflow_uses_merge_subcommand_once():
-    workflow = Path(".github/workflows/auto_review_merge.yml").read_text(
+    workflow = workflow_text("auto_review_merge.yml")
+    command_module = (ROOT / "ms_data/gh/auto_review_merge.py").read_text(
         encoding="utf-8"
     )
-    command_module = Path("ms_data/gh/auto_review_merge.py").read_text(encoding="utf-8")
 
-    assert "- id: merge" in workflow
     assert workflow.count("ms_data.gh.auto_review_merge merge") == 1
-    assert '--repo "${{ steps.prepare.outputs.repo }}"' in workflow
-    assert '--pr-number "${{ steps.resolve.outputs.pr }}"' in workflow
-    assert '--head-sha "${{ steps.resolve.outputs.head_sha }}"' in workflow
-    assert '--source-run-id "${{ steps.prepare.outputs.run_id }}"' in workflow
-    merge_step = workflow[
-        workflow.index("- id: merge") : workflow.index(
-            "- name: Write auto review report"
-        )
-    ]
+    assert_contains(
+        workflow,
+        [
+            "- id: merge",
+            '--repo "${{ steps.prepare.outputs.repo }}"',
+            '--pr-number "${{ steps.resolve.outputs.pr }}"',
+            '--head-sha "${{ steps.resolve.outputs.head_sha }}"',
+            '--source-run-id "${{ steps.prepare.outputs.run_id }}"',
+            "steps.merge.outputs.merged",
+            "steps.merge.outcome",
+        ],
+    )
+    merge_step = step_block(
+        workflow, start="- id: merge", end="- name: Write auto review report"
+    )
     assert "--skip-if-not-open" in merge_step
-    assert "steps.merge.outputs.merged" in workflow
-    assert "steps.merge.outcome" in workflow
     for output_name in ("merged", "merge_commit_sha", "head_ref"):
         assert f'"{output_name}"' in command_module
     assert "gh pr merge" not in workflow
