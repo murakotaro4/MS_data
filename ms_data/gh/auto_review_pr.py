@@ -5,63 +5,34 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from ms_data.core.dates import JST
+from ms_data.gh import pr_payload
 from ms_data.gh.argtypes import GITHUB_ACTIONS_BOT, ReviewDeps
 from ms_data.gh.auto_review_gate import is_active_finding
 from ms_data.gh.auto_review_markers import parse_stop_marker
 from ms_data.gh.gh_json import login_of as _login
 from ms_data.gh.outputs import write_github_output
+from ms_data.gh.pr_payload import HEAD_REF_DATE_RE
 
 if TYPE_CHECKING:
     from ms_data.gh.auto_review_merge import GitHubClient
 
 RESUME_STOP_REASONS = frozenset({"codex_no_response", "codex_disconnected"})
-SOURCE_RUN_ID_RE = re.compile(r"source_run_id:(\d+)")
-HEAD_REF_DATE_RE = re.compile(r"^data/auto-update-(\d{8})$")
 REVIEW_THREADS_PAGE_SIZE = 100
 REVIEW_THREAD_COMMENTS_PAGE_SIZE = 100
 MAX_REVIEW_THREAD_PAGES = 50
 MAX_THREAD_COMMENT_PAGES = 20
 
 
-def _head_ref(item: dict[str, Any]) -> str:
-    head = item.get("head")
-    if not isinstance(head, dict):
-        return ""
-    value = head.get("ref")
-    return value if isinstance(value, str) else ""
-
-
-def _head_sha(item: dict[str, Any]) -> str:
-    head = item.get("head")
-    if not isinstance(head, dict):
-        return ""
-    value = head.get("sha")
-    return value if isinstance(value, str) else ""
-
-
-def _base_ref(item: dict[str, Any]) -> str:
-    base = item.get("base")
-    if not isinstance(base, dict):
-        return ""
-    value = base.get("ref")
-    return value if isinstance(value, str) else ""
-
-
-def _head_repo_full_name(item: dict[str, Any]) -> str:
-    head = item.get("head")
-    if not isinstance(head, dict):
-        return ""
-    repo = head.get("repo")
-    if not isinstance(repo, dict):
-        return ""
-    value = repo.get("full_name")
-    return value if isinstance(value, str) else ""
+# PR payload アクセサは pr_payload に集約（本モジュール内の旧名は互換 alias）
+_head_ref = pr_payload.head_ref
+_head_sha = pr_payload.head_sha
+_base_ref = pr_payload.base_ref
+_head_repo_full_name = pr_payload.head_repo_full_name
 
 
 def jst_report_date(run_created_at: str) -> str:
@@ -380,8 +351,7 @@ def github_run_url() -> str:
 
 def resolve_source_run_id(body: str) -> str:
     """PR body の ``source_run_id:N`` マーカーから run id を取り出す。"""
-    match = SOURCE_RUN_ID_RE.search(body or "")
-    return match.group(1) if match else ""
+    return pr_payload.source_run_id_from_body(body)
 
 
 def resolve_target_pr(
