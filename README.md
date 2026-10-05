@@ -30,6 +30,33 @@ Release（`raw-snapshot-*`）は取得時の生 HTML スナップショットと
 
 毎日 18:00 JST に GitHub Actions が atwiki を取得し、差分があれば PR 作成 → Codex 自動レビュー → 自動マージ → Release 保存・メール通知を行います。失敗時は `notify failure` がメールと Issue で通知します。詳細は [AGENTS.md](AGENTS.md)。
 
+更新通知は、機体ごとのカードに LV 別の変更前・変更後と数値の増減量を載せる HTML メールです。追加・削除レコードの主要ステータスと fullst 明細も、差分レポートに記載された内容を省略せず掲載します。要確認の監査結果は上部に、監査サマリと実行情報は末尾に表示します。差分なしの日は短い結果通知になります。テキスト版を同じメールに併記し、マージ後の `msData.json` 添付も維持します。
+
+送信せずにプレビューを作成する場合は、`uv run python -m ms_data.reporting.build_update_mail_body` の既存引数に `--html-out <出力先.html>` を追加してください。送信 CLI は任意の `--html-body <本文.html>` に対応し、省略時は従来どおりテキストのみ送信します。
+
+### official_overrides の期限確認
+
+`review_after` / `remove_after` に到達した値の対象ページは、通常の差分候補に
+`official_override_due` の理由で追加します。対象だけTTLを無視して再取得・解析し、
+`NO_NET=1` の場合はキャッシュを使いますが、上流確認済みの撤去候補にはしません。
+
+監査は `cache/index.json`、`cache/index_changed_meta.json` と
+`cache/detail_fetch_state.json` を照合し、今回未取得・取得失敗・解析失敗・値欠損・
+キャッシュのみ・一致／不一致を区別します。取得状態にはURLごとの試行時刻、取得時刻、
+HTTP結果とoverride適用前の解析値を保存し、選定記録とともにraw snapshotへ含めます。
+期限到達値がある日は、データ差分がなくてもsnapshotをartifactへ保存します。
+旧形式の取得記録や `--raw` ファイルだけでは撤去候補にしません。
+
+`remove_after` 到達値の取得証拠が不足すると、品質レポートに
+`official_override_evidence_missing` が出ます。overrideの削除は自動化しません。
+独立した次回取得の結果も確認してから判断してください。
+
+期限確認 Issue は、直前の通知と件数・期限対象・補正値・期限設定が同じなら
+日次の追記を抑止します。同じ件数でも対象が入れ替わると通知します。
+監査出力の `due_fingerprint` を通知マーカーに記録し、識別子のない旧通知には
+一度追記して比較基準を確立します。完了済み Issue は再開せず、次の期限到達時に
+新しい Issue を作成します。
+
 ## 開発者向けクイックスタート
 
 前提: Python 3.11+ / [uv](https://github.com/astral-sh/uv)

@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import ms_data.tasks as tasks
@@ -62,6 +63,8 @@ def test_task_update_fast_skips_followup_steps_when_no_candidates(
                 "1h",
                 "--detail-fetch-state",
                 "cache/detail_fetch_state.json",
+                "--overrides-dir",
+                "data/official_overrides",
                 "--stale-detail-days",
                 "14",
                 "--min-age-coverage",
@@ -159,6 +162,8 @@ def test_task_update_fast_runs_import_and_validate_when_candidates_exist(
                 "1h",
                 "--detail-fetch-state",
                 "cache/detail_fetch_state.json",
+                "--overrides-dir",
+                "data/official_overrides",
                 "--stale-detail-days",
                 "14",
                 "--min-age-coverage",
@@ -181,6 +186,8 @@ def test_task_update_fast_runs_import_and_validate_when_candidates_exist(
                 "0s",
                 "--detail-fetch-state-out",
                 "cache/detail_fetch_state.json",
+                "--overrides-dir",
+                "data/official_overrides",
                 "--changed-only",
             ),
         ),
@@ -344,3 +351,64 @@ def test_task_detect_changed_omits_revalidate_flag_by_default(
 
     assert rc == 0
     assert "--revalidate" not in calls[0][1]
+
+
+def test_empty_fetch_preserves_snapshot_inputs_without_import(monkeypatch, tmp_path):
+    import tarfile
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("REPORT_DATE", "20260930")
+    monkeypatch.setenv("RAW_SNAPSHOT_FILE", "snapshot.tar.xz")
+    from ms_data.pipeline import generate_provenance
+
+    write_json(Path("msData.json"), [{"MS名": "保持_LV1", "HP": 10000}])
+    before = Path("msData.json").read_bytes()
+    diff = Path("reports/2026/09/diff_msdata_20260930.md")
+    diff.parent.mkdir(parents=True)
+    diff.write_text("差分なし\n", encoding="utf-8")
+
+    def fake_run(module, *args):
+        if module != "ms_data.scraping.scrape_msdata":
+            assert module == "ms_data.pipeline.generate_provenance"
+            return generate_provenance.main(list(args))
+        if args[0] == "index":
+            write_json(
+                Path("cache/index.json"),
+                [{"name": "対象", "url": "https://example.test/1"}],
+            )
+            Path("cache/html").mkdir(exist_ok=True)
+        elif args[0] == "detect-changed":
+            write_json(
+                Path("cache/index_changed.json"),
+                [{"name": "対象", "change_reasons": ["official_override_due"]}],
+            )
+            write_json(
+                Path("cache/index_changed_meta.json"),
+                {"candidate_count": 1, "fast_path": True},
+            )
+        elif args[0] == "details":
+            Path("cache/details.jsonl").write_text("", encoding="utf-8")
+            write_json(
+                Path("cache/detail_fetch_state.json"),
+                {"items": {"https://example.test/1": {"ok": False}}},
+            )
+        return 0
+
+    monkeypatch.setattr(tasks, "_run_python_module", fake_run)
+    monkeypatch.setattr(
+        tasks,
+        "task_import_details",
+        lambda: (_ for _ in ()).throw(AssertionError("must not import")),
+    )
+    # 初回（JSONなし）と、前回のJSONが残る場合の双方で今回の空結果を保存する。
+    for old in (None, [{"MS名": "古い証拠_LV1"}]):
+        if old is not None:
+            write_json(Path("cache/details.json"), old)
+        assert tasks.task_update_fast() == 0
+        assert json.loads(Path("cache/details.json").read_text(encoding="utf-8")) == []
+        assert Path("msData.json").read_bytes() == before
+        assert tasks.task_snapshot() == 0
+        with tarfile.open("snapshot.tar.xz") as archive:
+            assert json.load(archive.extractfile("cache/details.json")) == []
+            assert archive.extractfile("cache/details.jsonl").read() == b""
+            assert "cache/detail_fetch_state.json" in archive.getnames()

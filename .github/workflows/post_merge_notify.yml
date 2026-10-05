@@ -196,6 +196,7 @@ jobs:
           SOURCE_RUN_ID: ${{ steps.report.outputs.source_run_id }}
         run: |
           body_path="$RUNNER_TEMP/msdata_merged_mail.txt"
+          html_path="$RUNNER_TEMP/msdata_merged_mail.html"
           uv run python -m ms_data.reporting.build_update_mail_body \
             --report-date "${{ steps.report.outputs.report_date }}" \
             --result "マージ済み" \
@@ -205,8 +206,10 @@ jobs:
             --diff-path "${{ steps.report.outputs.report_path }}" \
             --rollback-guard-path "${{ steps.report.outputs.rollback_guard_path }}" \
             --official-overrides-audit-path "${{ steps.report.outputs.official_overrides_audit_path }}" \
-            --out "$body_path"
+            --out "$body_path" \
+            --html-out "$html_path"
           echo "path=$body_path" >> "$GITHUB_OUTPUT"
+          echo "html_path=$html_path" >> "$GITHUB_OUTPUT"
 
       - name: Send merged msData mail
         if: steps.release.outputs.created == 'true' || github.run_attempt != '1' || (github.event_name == 'workflow_dispatch' && github.event.inputs.send_mail == 'true')
@@ -218,4 +221,5 @@ jobs:
           uv run python -m ms_data.notify.send_gmail \
             --subject "msData 更新反映通知 (${{ steps.report.outputs.report_date }})" \
             --body "${{ steps.mail_body.outputs.path }}" \
+            --html-body "${{ steps.mail_body.outputs.html_path }}" \
             --attach "msData.json"

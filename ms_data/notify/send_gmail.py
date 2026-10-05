@@ -2,7 +2,7 @@
 """
 Gmail SMTP でレポート本文を送信する。
 
-- 本文はテキストとして送信
+- 本文はテキストとして送信、`--html-body` 指定時は HTML 版を併記
 - `--attach` で添付ファイルを追加可能
 - 宛先は `GMAIL_TO` のカンマ区切り複数指定に対応
 
@@ -27,10 +27,11 @@ def parse_recipients(raw: str | None) -> list[str]:
     return [x for x in recipients if x]
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--subject", required=True)
     ap.add_argument("--body", type=Path, required=True)
+    ap.add_argument("--html-body", type=Path, help="HTML 本文のパス（任意）")
     ap.add_argument("--to", default=os.getenv("GMAIL_TO"))
     ap.add_argument(
         "--attach",
@@ -39,7 +40,7 @@ def main() -> int:
         default=[],
         help="添付ファイルのパス（複数指定可）",
     )
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     gmail_address = os.getenv("GMAIL_ADDRESS")
     app_password = os.getenv("GMAIL_APP_PASSWORD")
@@ -55,6 +56,8 @@ def main() -> int:
     msg["From"] = gmail_address
     msg["To"] = ", ".join(recipients)
     msg.set_content(body_text)
+    if args.html_body is not None:
+        msg.add_alternative(args.html_body.read_text(encoding="utf-8"), subtype="html")
 
     for attach_path in args.attach:
         if not attach_path.exists():
