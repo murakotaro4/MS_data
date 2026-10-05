@@ -190,7 +190,9 @@ def test_expired_unverified_hold_continues_through_downstream_override_audit(tmp
         )
         == 0
     )
-    assert "source_hold_unverified_previous" in (tmp_path / "official.md").read_text()
+    assert "source_hold_unverified_previous" in (tmp_path / "official.md").read_text(
+        encoding="utf-8"
+    )
 
 
 @pytest.mark.parametrize(
@@ -461,12 +463,14 @@ def test_cli_keeps_raw_array_fetch_evidence_and_only_updates_healthy_records(
         )
         == 0
     )
-    adopted = {r["MS名"]: r for r in json.loads(before_path.read_text())}
-    original = {r["MS名"]: r for r in json.loads(snapshot.read_text())}
+    adopted = {
+        r["MS名"]: r for r in json.loads(before_path.read_text(encoding="utf-8"))
+    }
+    original = {r["MS名"]: r for r in json.loads(snapshot.read_text(encoding="utf-8"))}
     assert adopted[NAME]["中スロット"] == 22
     assert adopted["ガブスレイ_LV3"]["HP"] == 16000
     assert original[NAME]["中スロット"] == 12
-    row = json.loads(audit_path.read_text())["findings"][0]
+    row = json.loads(audit_path.read_text(encoding="utf-8"))["findings"][0]
     assert row["fetched_at"] == "2026-10-04T14:37:53Z"
     assert row["fetch_evidence"]["http_status"] == 200
 
@@ -501,10 +505,10 @@ def test_fast_task_clears_previous_partial_error_even_on_empty_runs(
     )
     assert tasks.task_update_fast() == 0
     assert (
-        json.loads(Path("cache/source_slot_audit.json").read_text())
+        json.loads(Path("cache/source_slot_audit.json").read_text(encoding="utf-8"))
         == source_slots.empty_audit()
     )
-    assert json.loads(Path("cache/raw.json").read_text()) == []
+    assert json.loads(Path("cache/raw.json").read_text(encoding="utf-8")) == []
 
 
 def test_snapshot_keeps_raw_and_quarantine_evidence_without_data_changes(
@@ -603,9 +607,9 @@ def test_partial_error_report_mail_and_html_keep_evidence_and_warning(tmp_path):
         )
         == 0
     )
-    assert "held_record_count=1" in output.read_text()
-    assert "finding_count=1" in output.read_text()
-    assert "partial_hold" in summary.read_text()
+    assert "held_record_count=1" in output.read_text(encoding="utf-8")
+    assert "finding_count=1" in output.read_text(encoding="utf-8")
+    assert "partial_hold" in summary.read_text(encoding="utf-8")
     assert validate_reports(tmp_path / "reports", ROOT / "schema/reports") == []
     plain, html = tmp_path / "mail.txt", tmp_path / "mail.html"
     assert (
@@ -628,7 +632,7 @@ def test_partial_error_report_mail_and_html_keep_evidence_and_warning(tmp_path):
         == 0
     )
     for path in (plain, html):
-        text = path.read_text()
+        text = path.read_text(encoding="utf-8")
         for evidence in (
             NAME,
             "12",
@@ -640,7 +644,7 @@ def test_partial_error_report_mail_and_html_keep_evidence_and_warning(tmp_path):
             "https://example.com/ms/test",
         ):
             assert evidence in text
-    assert "LV単位の部分保留（要対応）: 1件" in html.read_text()
+    assert "LV単位の部分保留（要対応）: 1件" in html.read_text(encoding="utf-8")
 
 
 def test_generated_report_validation_rejects_incomplete_source_report(tmp_path):
