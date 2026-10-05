@@ -38,7 +38,7 @@ def resolve_source_run_id(source_run_id_input: str, pr_body: str) -> str:
     """workflow_dispatch 入力を優先し、無ければ PR 本文のマーカーから解決する。"""
     if source_run_id_input.strip():
         return source_run_id_input.strip()
-    run_id = source_run_id_from_body(pr_body)
+    run_id = source_run_id_from_body(pr_body, allow_legacy=True)
     if not run_id:
         raise ValueError(
             "source_run_id を解決できません。PR本文または workflow_dispatch 入力に指定してください。"

@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-09-06T12:45:06Z",
+  "report_date": "20260906",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "28030c3dad871b85ed1ec2ef51be1dcf6ab18aaa"
+  },
+  "github": {
+    "run_id": "34033450730",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "2d204ba43d6c3580a5be25a4f000887483e7d674c303fe43de66153babdcb3b2",
+      "size_bytes": 145382,
+      "record_count": 591
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "24700e4438e72e219e655c371900ea47732d7c6db16889bdcb397fc98020c695",
+      "size_bytes": 2019224,
+      "record_count": 1708
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "7419f36feb6cf693ab0e0a98977b958a93d84329957eaa1d771a4d9baf94ae9e",
+      "size_bytes": 2639550,
+      "record_count": 1708
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "5b7f34e56d1a768ebb95e4c51180a83e96d387fb1fede6b95456f5e7e136c193",
+      "file_count": 1184,
+      "size_bytes": 178771262
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "5bcc3c3181d87ffccde106fa45c800d09e2857365d5f106862bce19bf7d2e922",
+      "size_bytes": 2639551,
+      "record_count": 1708
+    },
+    "diff_report": {
+      "path": "reports/2026/09/diff_msdata_20260906.md",
+      "sha256": "2e7d674b9b7fbfb5b363dbf085641f757aba6c53e7d6e7d62bd175453417bff9",
+      "size_bytes": 1282
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20260906-run-34033450730",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20260906-run-34033450730",
+    "asset_name": "raw_snapshot_20260906_run34033450730.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20260906-run-34033450730"
+  }
+}

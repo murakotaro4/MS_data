@@ -8,6 +8,8 @@ import sys
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from ms_data.core import paths
+
 DATE_RE = re.compile(r"^\d{8}$")
 
 # reports_manifest.schema.json の entry.type と一致させる
@@ -217,13 +219,13 @@ def _validate_ci(args: argparse.Namespace, manifest: dict[str, Any]) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--manifest", default="reports_manifest.json")
+    ap.add_argument("--manifest", default=paths.REPORTS_MANIFEST.as_posix())
     ap.add_argument(
         "--mode",
         choices=("ci", "data-update", "post-merge", "auto-review"),
         required=True,
     )
-    ap.add_argument("--reports-dir", default="reports")
+    ap.add_argument("--reports-dir", default=paths.REPORTS_DIR.as_posix())
     ap.add_argument("--report-date", default="")
     ap.add_argument("--source-run-id", default="")
     ap.add_argument("--head-ref", default="")

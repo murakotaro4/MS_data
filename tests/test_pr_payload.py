@@ -93,8 +93,15 @@ def test_post_merge_resolve_source_run_id_shares_marker_parser():
     assert (
         post_merge_assets.resolve_source_run_id("", "<!-- source_run_id:7 -->") == "7"
     )
+    for body in (
+        "source_run_id=7",
+        "source_run_id 7",
+        "source_run_id: 7",
+        "source_run_id7",
+    ):
+        assert post_merge_assets.resolve_source_run_id("", body) == "7"
     with pytest.raises(ValueError):
-        post_merge_assets.resolve_source_run_id("", "source_run_id=7")
+        post_merge_assets.resolve_source_run_id("", "missing marker")
 
 
 def test_resume_params_from_args_normalizes_values():

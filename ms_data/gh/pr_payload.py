@@ -12,6 +12,7 @@ from typing import Any
 
 # 自動更新 PR 本文の run id マーカー（data_update.yml の `<!-- source_run_id:N -->`）
 SOURCE_RUN_ID_RE = re.compile(r"source_run_id:(\d+)")
+LEGACY_SOURCE_RUN_ID_RE = re.compile(r"source_run_id[:=\s]*(\d+)")
 # 自動更新 PR の head ブランチ（日付部を捕捉）
 HEAD_REF_DATE_RE = re.compile(r"^data/auto-update-(\d{8})$")
 
@@ -48,7 +49,8 @@ def head_repo_full_name(pull: dict[str, Any]) -> str:
     return _nested_str(pull, "head", "repo", "full_name")
 
 
-def source_run_id_from_body(body: str | None) -> str:
-    """PR body の ``source_run_id:N`` マーカーから run id を取り出す（無ければ空）。"""
-    match = SOURCE_RUN_ID_RE.search(body or "")
+def source_run_id_from_body(body: str | None, *, allow_legacy: bool = False) -> str:
+    """PR body の ``source_run_id:N`` マーカーから run id を取り出す（資産復元は旧形式も許容）。"""
+    pattern = LEGACY_SOURCE_RUN_ID_RE if allow_legacy else SOURCE_RUN_ID_RE
+    match = pattern.search(body or "")
     return match.group(1) if match else ""
