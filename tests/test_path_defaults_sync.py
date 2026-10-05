@@ -289,7 +289,7 @@ def test_scrape_msdata_rate_and_ttl_defaults_match_shared_defaults(
     argv: list[str],
 ) -> None:
     args = scrape_msdata.build_parser().parse_args(argv)
-    assert args.rate == scrape_defaults.DEFAULT_RATE == 2.0
+    assert args.rate == scrape_defaults.DEFAULT_CLI_RATE == 1.0
     assert args.ttl == scrape_defaults.DEFAULT_TTL
 
 
@@ -319,3 +319,7 @@ def test_no_literal_repository_path_defaults_outside_core_paths() -> None:
             if _LITERAL_PATH_DEFAULT.search(line):
                 offenders.append(f"{source.relative_to(package_root)}:{lineno}")
     assert offenders == []
+
+
+def test_tasks_rate_default_remains_two_requests_per_second() -> None:
+    assert tasks.DEFAULT_RATE == scrape_defaults.DEFAULT_RATE == 2.0

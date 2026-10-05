@@ -117,6 +117,8 @@ def test_cmd_details_records_current_fetch_failure(monkeypatch, tmp_path: Path):
     detail_state = tmp_path / "detail_fetch_state.json"
 
     class FailingCache:
+        stats = {"network_requests": 0}
+
         def __init__(self, *_args, **_kwargs):
             pass
 

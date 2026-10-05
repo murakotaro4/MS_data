@@ -18,7 +18,15 @@ def capture(monkeypatch):
         return 0
 
     monkeypatch.setattr(tasks, "_run_python_module", fake_run_python_module)
-    for name in ("NO_NET", "FORCE", "CHANGED_ONLY", "RATE", "LIMIT", "TTL"):
+    for name in (
+        "NO_NET",
+        "FORCE",
+        "CHANGED_ONLY",
+        "RATE",
+        "LIMIT",
+        "TTL",
+        "OFFICIAL_OVERRIDES_DIR",
+    ):
         monkeypatch.delenv(name, raising=False)
     return calls
 
@@ -63,6 +71,8 @@ def test_scrape_details_argv_order_with_flags(capture, monkeypatch):
         tasks.DEFAULT_TTL,
         "--detail-fetch-state-out",
         "cache/detail_fetch_state.json",
+        "--overrides-dir",
+        "data/official_overrides",
         "--no-network",
         "--force",
         "--changed-only",
@@ -85,6 +95,8 @@ def test_scrape_all_argv_has_no_input_and_shares_shape(capture):
         tasks.DEFAULT_TTL,
         "--detail-fetch-state-out",
         "cache/detail_fetch_state.json",
+        "--overrides-dir",
+        "data/official_overrides",
     )
     assert "--changed-only" not in args
 

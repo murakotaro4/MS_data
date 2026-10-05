@@ -19,6 +19,41 @@ def _out_arg(args: tuple[str, ...]) -> str:
     return args[args.index("--out") + 1]
 
 
+def test_notify_override_due_task_forwards_audit_identity_and_report_path(monkeypatch):
+    fingerprint = "a" * 64
+    env = {
+        "REPORT_DATE": REPORT_DATE,
+        "REPORTS_DIR": "custom_dir",
+        "GITHUB_REPOSITORY": "owner/repo",
+        "REVIEW_DUE": "2",
+        "REMOVE_DUE": "1",
+        "DUE_FINGERPRINT": fingerprint,
+        "RUN_URL": "https://github.com/owner/repo/actions/runs/123",
+        "GITHUB_STEP_SUMMARY": "summary.md",
+    }
+    for key, value in env.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.delenv("OFFICIAL_OVERRIDES_AUDIT_OUT", raising=False)
+    calls = []
+
+    def run(module, *args):
+        calls.append((module, args))
+        return 0
+
+    monkeypatch.setattr(tasks, "_run_python_module", run)
+    assert tasks.TASKS["notify-override-due"]() == 0
+    module, args = calls[0]
+    assert module == "ms_data.gh.notify_override_due"
+    options = dict(zip(args[::2], args[1::2], strict=True))
+    assert options["--due-fingerprint"] == fingerprint
+    assert options["--review-due"] == "2"
+    assert options["--remove-due"] == "1"
+    assert options["--audit-report"] == (
+        f"custom_dir/2026/08/official_overrides_audit_{REPORT_DATE}.md"
+    )
+    assert options["--step-summary"] == "summary.md"
+
+
 def _collect_report_outputs(
     monkeypatch, tmp_path: Path, expected_snapshot_diff: str
 ) -> dict[str, str]:
