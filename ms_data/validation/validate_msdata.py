@@ -133,7 +133,12 @@ def find_semantic_errors(records: Iterable[dict[str, Any]]) -> list[str]:
                     break
                 prev_order = order
 
-                key = (item.get("name"), item.get("level"), order)
+                name = item.get("name")
+                level = item.get("level")
+                # 不正な識別値は schema 検証に任せ、重複検査の例外終了を防ぐ。
+                if not isinstance(name, str) or not isinstance(level, (int, float)):
+                    continue
+                key = (name, level, order)
                 if points is not None:
                     if key in seen_entries:
                         errors.append(

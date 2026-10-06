@@ -13,6 +13,70 @@ def test_validate_msdata_main_accepts_valid_minimal_data(tmp_path):
 
 
 @pytest.mark.parametrize(
+    ("field", "value"),
+    [("name", []), ("name", {}), ("level", []), ("level", {})],
+    ids=["name-list", "name-object", "level-list", "level-object"],
+)
+def test_validate_msdata_reports_unhashable_fullst_identifiers(
+    tmp_path, capsys, field, value
+):
+    invalid = {"name": "AD-PA", "level": 1, "points": 100, field: value}
+    duplicate = {"name": "AD-FCS", "level": 1, "points": 200}
+    path = tmp_path / "msData.json"
+    write_json(path, [make_record(fullst=[invalid, duplicate, duplicate])])
+
+    assert vm.main([str(path)]) == 1
+    stderr = capsys.readouterr().err
+    assert "Schema errors" in stderr
+    assert "is not of type" in stderr
+    assert "duplicated fullst entry detected" in stderr
+
+
+def test_validate_msdata_accepts_integer_valued_float_fullst_level(tmp_path):
+    path = tmp_path / "msData.json"
+    write_json(
+        path,
+        [make_record(fullst=[{"name": "AD-PA", "level": 1.0, "points": 100}])],
+    )
+    assert vm.main([str(path)]) == 0
+
+
+def test_validate_msdata_detects_duplicate_integer_and_float_fullst_levels(
+    tmp_path, capsys
+):
+    path = tmp_path / "msData.json"
+    write_json(
+        path,
+        [
+            make_record(
+                fullst=[
+                    {"name": "AD-PA", "level": 1, "points": 100},
+                    {"name": "AD-PA", "level": 1.0, "points": 100},
+                ]
+            )
+        ],
+    )
+    assert vm.main([str(path)]) == 1
+    stderr = capsys.readouterr().err
+    assert "Schema errors" not in stderr
+    assert "duplicated fullst entry detected" in stderr
+
+
+def test_find_semantic_errors_checks_order_with_invalid_fullst_identifier():
+    errors = vm.find_semantic_errors(
+        [
+            make_record(
+                fullst=[
+                    {"name": [], "level": 1, "points": 300},
+                    {"name": "AD-PA", "level": 1, "points": 100},
+                ]
+            )
+        ]
+    )
+    assert any("fullst points must be sorted ascending" in error for error in errors)
+
+
+@pytest.mark.parametrize(
     "rank",
     ["225", "1,234", "２２５", " 225 ", "１，２３４"],
 )
