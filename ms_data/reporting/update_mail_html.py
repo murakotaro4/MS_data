@@ -14,18 +14,153 @@ DETAIL_LABELS = {
     "削除レコード一覧": "レコード削除",
     "変更レコード一覧": "変更",
 }
-WARNING_LABELS = {
-    "protected_rollback": "保護対象の巻き戻り",
-    "numeric_decrease": "数値低下の確認候補",
-    "mixed_level_change": "LV間で増減が混在する候補",
-    "source_changed": "取得値が想定と異なる公式補正",
-    "review_due": "公式補正の確認期限到達",
-    "remove_due": "公式補正の撤去判断期限到達",
-    "held_record_count": "LV単位の部分保留（要対応）",
+MAIL_FIELDS = {
+    "candidate_count": (
+        "再取得候補ページ数",
+        "ページ",
+        "URL重複排除後の選定数。変更件数・取得成功数ではありません。",
+    ),
+    "fast_path": (
+        "高速選定",
+        "",
+        "更新経過時間などから再取得対象を絞る方式です。",
+    ),
+    "age_coverage": (
+        "一覧の更新経過時間読み取り率",
+        "",
+        "一覧で更新経過時間を読めた割合（0〜1、1.0は100%）。詳細取得の成功率ではありません。",
+    ),
+    "fallback_reason": ("選定方式の切替理由", "", "再取得対象の選定理由です。"),
+    "protected_rollback": (
+        "保護対象の巻き戻り",
+        "項目",
+        "補正の保護対象が既知の旧値になった検出数（機体＋LV＋項目）。自動更新の停止対象です。",
+    ),
+    "numeric_decrease": (
+        "数値低下の確認候補",
+        "項目",
+        "前回より下がった監視対象の整数項目数（機体＋LV＋項目）。誤り確定ではありません。",
+    ),
+    "mixed_level_change": (
+        "LV間で増減が混在する候補",
+        "組",
+        "同じ機体の同じ項目で前回比の増加と減少がLV間に混在する、機体＋項目の組数です。",
+    ),
+    "protected_by_override": (
+        "登録補正で保護された項目",
+        "項目",
+        "今回の取得元が既知の旧値で、採用値が登録補正値を維持した機体＋LV＋項目の数です。",
+    ),
+    "upstream_current": (
+        "取得元が補正値と一致する項目",
+        "項目",
+        "今回の取得値が補正値と一致した機体＋LV＋項目の数。次回確認後に撤去を検討します。",
+    ),
+    "source_changed": (
+        "補正の想定と異なる項目",
+        "項目",
+        "採用値が補正値と異なる、または取得値が補正値・既知の旧値のどちらでもない、機体＋LV＋項目の数です。",
+    ),
+    "review_due": (
+        "登録補正の再確認期限到達",
+        "項目",
+        "review_afterに到達した機体＋LV＋項目の数（remove_dueを除く）。確認完了数ではありません。",
+    ),
+    "remove_due": (
+        "登録補正の撤去判断期限到達",
+        "項目",
+        "remove_afterに到達した機体＋LV＋項目の数。撤去完了数ではありません。",
+    ),
+    "held_record_count": (
+        "LV単位の部分保留",
+        "レコード",
+        "要対応。未承認異常で採用を保留した機体＋LVの数。他の正常候補は更新を継続します。",
+    ),
+    "approved_record_count": (
+        "承認済み補正を採用したレコード数",
+        "レコード",
+        "取得元異常に本人確認済みの有効な補正を適用した、機体＋LVの数です。",
+    ),
+    "fallback_corrected_record_count": (
+        "前値を承認済み補正で修復して保持した数",
+        "レコード",
+        "候補を保留し、前値に有効な補正を適用して保持した機体＋LVの数です。",
+    ),
+    "previous_unverified_count": (
+        "未確認の前値を保持した数",
+        "レコード",
+        "正常な前値がなく、公開済みの未確認値を保持した機体＋LVの数。要対応です。",
+    ),
+    "status": ("取得元スロット監査の状態", "", "部分保留や補正の処置を示します。"),
+    "run_id": ("今回の実行ID", "", "今回のGitHub Actions実行を識別します。"),
+    "source_run_id": (
+        "データ更新元の実行ID",
+        "",
+        "取得・更新を行ったGitHub Actions実行を識別します。",
+    ),
+    "msData.json変更": ("データ変更", "", "公開データの差分の有無です。"),
+    "レコード数": (
+        "レコード数",
+        "",
+        "1レコードは機体の1LV分。+は追加、-は削除、~は変更のレコード数です。",
+    ),
+}
+WARNING_KEYS = {
+    "protected_rollback",
+    "numeric_decrease",
+    "mixed_level_change",
+    "source_changed",
+    "review_due",
+    "remove_due",
+    "held_record_count",
+}
+FALLBACK_REASONS = {
+    "none": ("切替なし", "全件取得への切替はありません。"),
+    "force_full": ("全件取得指定", "指定により全ページを再取得候補にしました。"),
+    "missing_previous_provenance": (
+        "前回実行情報なし",
+        "前回の実行時刻が不明なため、全ページを再取得候補にしました。",
+    ),
+    "low_age_coverage": (
+        "更新経過時間の読み取り不足",
+        "一覧の更新経過時間を十分に読めず、全ページを再取得候補にしました。",
+    ),
+    "revalidate": (
+        "週次再検証",
+        "ページ更新時刻と前回取得時刻を比較して選定します。全件取得とは限りません。",
+    ),
 }
 _MD_UNESCAPE = re.compile(r"\\([\\`*_\[\]()#+\-.!|<>])")
 _NUMBER = re.compile(r"[+-]?(?:0|[1-9]\d*)(?:\.\d+)?\Z")
 _COUNTS = re.compile(r"レコード数: (\d+) → (\d+) \| \+(\d+) -(\d+) ~(\d+)")
+
+
+def _mail_field(key: str, value: str) -> str:
+    """生の値を再計算せず、HTML・テキスト共通の説明を付ける。"""
+    if key not in MAIL_FIELDS:
+        return f"{key}: {value}"
+    label, unit, description = MAIL_FIELDS[key]
+    if key == "fallback_reason" and value in FALLBACK_REASONS:
+        reason, description = FALLBACK_REASONS[value]
+        value = f"{reason}（{value}）"
+    elif key in {"fast_path", "msData.json変更"} and value in {"true", "false"}:
+        states = ("有効", "無効") if key == "fast_path" else ("あり", "なし")
+        value = f"{states[value == 'false']}（{value}）"
+    if label != key:
+        label = f"{label}（{key}）"
+    return f"{label}: {value}{unit} — {description}"
+
+
+def _mail_line(line: str) -> str:
+    if line.startswith("- ") and ": " in line:
+        key, value = line[2:].split(": ", 1)
+        return f"- {_mail_field(key, value)}"
+    return line
+
+
+def localize_mail_body(body: str) -> str:
+    """内部の英語キーを保った本文から、送信用の日本語テキストを作る。"""
+    return "\n".join(_mail_line(line) for line in body.splitlines()) + "\n"
 
 
 def _plain(text: str) -> str:
@@ -146,7 +281,7 @@ def _blocks(lines: list[str]) -> str:
                 )
             continue
         if line:
-            parts.append(f'<p class="note">{_text(line)}</p>')
+            parts.append(f'<p class="note">{_text(_mail_line(line))}</p>')
         index += 1
     return "".join(parts)
 
@@ -181,8 +316,8 @@ def _warnings(sections: dict[str, list[str]]) -> str:
     for heading in ("巻き戻りガード", "official_overrides監査", "取得元スロット監査"):
         for line in sections.get(heading, []):
             match = re.fullmatch(r"- ([a-z_]+): (\d+)", line.strip())
-            if match and match[1] in WARNING_LABELS and int(match[2]) > 0:
-                items.append(f"<li>{WARNING_LABELS[match[1]]}: {match[2]}件</li>")
+            if match and match[1] in WARNING_KEYS and int(match[2]) > 0:
+                items.append(f"<li>{escape(_mail_field(match[1], match[2]))}</li>")
     if not items:
         return ""
     return '<div class="warning"><h2>要確認</h2><ul>' + "".join(items) + "</ul></div>"
@@ -245,7 +380,7 @@ def render_update_mail(body: str) -> str:
             footer.append(f'<h2 class="footer-heading">{_text(heading)}</h2>')
             footer.append(_blocks(section_lines))
     metadata = [
-        f'<p class="note">{escape(key)}: {escape(value)}</p>'
+        f'<p class="note">{escape(_mail_field(key, value))}</p>'
         for key, value in facts.items()
         if key not in {"実行日", "結果", "msData.json変更", "raw snapshot release"}
     ]

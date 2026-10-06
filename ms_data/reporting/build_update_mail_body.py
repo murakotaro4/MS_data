@@ -5,7 +5,11 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from ms_data.reporting.update_mail_html import DETAIL_LABELS, render_update_mail
+from ms_data.reporting.update_mail_html import (
+    DETAIL_LABELS,
+    localize_mail_body,
+    render_update_mail,
+)
 
 SUMMARY_KEYS = (
     "レコード数",
@@ -220,7 +224,7 @@ def main(argv: list[str] | None = None) -> int:
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     body = build_body(args)
-    args.out.write_text(body, encoding="utf-8")
+    args.out.write_text(localize_mail_body(body), encoding="utf-8")
     if args.html_out is not None:
         args.html_out.parent.mkdir(parents=True, exist_ok=True)
         args.html_out.write_text(render_update_mail(body), encoding="utf-8")
