@@ -877,11 +877,9 @@ def test_partial_error_report_mail_and_html_keep_evidence_and_warning(tmp_path):
             assert evidence in text
     for path in (plain, html):
         text = path.read_text(encoding="utf-8")
-        assert "LV単位の部分保留（held_record_count）: 1レコード" in text
-        assert "未承認異常で採用を保留した機体＋LVの数" in text
-        assert (
-            "未確認の前値を保持した数（previous_unverified_count）: 0レコード" in text
-        )
+        assert "LV単位の部分保留: 1レコード" in text
+        assert "機体＋LV全体の更新候補を保留しました。" in text
+        assert "previous_unverified_count" not in text
 
 
 def test_generated_report_validation_rejects_incomplete_source_report(tmp_path):

@@ -252,38 +252,31 @@ def test_warnings_precede_cards_and_audit_metadata_is_kept() -> None:
     html = render_update_mail(body)
     soup = BeautifulSoup(html, "html.parser")
     assert html.index('class="warning"') < html.index('class="machine"')
-    assert len(soup.select(".warning li")) == 6
+    assert len(soup.select(".warning .audit-card")) == 6
     warning = soup.select_one(".warning").get_text()
-    assert "数値低下の確認候補（numeric_decrease）: 1項目" in warning
-    assert "誤り確定ではありません。" in warning
-    assert "LV間で増減が混在する候補（mixed_level_change）: 2組" in warning
+    assert "数値低下の確認候補: 1項目" in warning
+    assert "数値低下だけでは誤りと確定できません。" in warning
+    assert "LV間で増減が混在する候補: 2組" in warning
     assert "機体＋項目の組数" in warning
-    assert "自動更新の停止対象" in warning
+    assert "更新停止対象" in warning
     assert "確認完了数ではありません。" in warning
     assert "撤去完了数ではありません。" in warning
-    assert (
-        "再確認期限到達（review_due）: 4項目" in soup.select_one(".footer").get_text()
-    )
-    assert (
-        "保護された項目（protected_by_override）: 0項目"
-        in soup.select_one(".footer").get_text()
-    )
+    assert "再確認期限到達: 4項目" in soup.select_one(".warning").get_text()
+    assert "protected_by_override" not in soup.get_text()
 
 
 def test_no_change_mail_is_compact_but_keeps_run_and_audit_context() -> None:
     body = _body("", changed=False) + (
         "- candidate_count: 0\n- run_id: 123\n"
-        "\n## 巻き戻りガード\n- protected_rollback: 0\n- numeric_decrease: 0\n"
-        "\n## official_overrides監査\n- protected_by_override: 1\n- review_due: 0\n"
+        "\n## 巻き戻りガード\n- protected_rollback: 0\n- numeric_decrease: 0\n- mixed_level_change: 0\n"
+        "\n## official_overrides監査\n- protected_by_override: 1\n- review_due: 0\n- remove_due: 0\n"
     )
     soup = BeautifulSoup(render_update_mail(body), "html.parser")
-    assert (
-        soup.select_one(".no-change").get_text() == "データの変更はありませんでした。"
-    )
+    assert soup.h1.get_text() == "公開データの変更なし"
     assert soup.select(".machine, .stats, .warning") == []
     assert "今回の実行ID（run_id）: 123" in soup.get_text()
-    assert "再取得候補ページ数（candidate_count）: 0ページ" in soup.get_text()
-    assert "保護された項目（protected_by_override）: 1項目" in soup.get_text()
+    assert "再取得候補: 0ページ" in soup.get_text()
+    assert "補正値を維持した項目: 1項目" in soup.get_text()
 
 
 def test_cli_explains_72_candidate_pages_without_claiming_changes_or_successes(
@@ -328,26 +321,23 @@ def test_cli_explains_72_candidate_pages_without_claiming_changes_or_successes(
     soup = BeautifulSoup(html.read_text(encoding="utf-8"), "html.parser")
     visible = soup.get_text()
     assert soup.select(".machine, .stats, .warning") == []
-    assert "データの変更はありませんでした。" in visible
+    assert "公開データの変更なし" in visible
     for expected in (
-        "再取得候補ページ数（candidate_count）: 72ページ",
+        "再取得候補: 72ページ",
         "URL重複排除後の選定数。変更件数・取得成功数ではありません。",
-        "高速選定（fast_path）: 有効（true）",
-        "一覧の更新経過時間読み取り率（age_coverage）: 1.0",
-        "1.0は100%",
+        "高速選定: 有効",
+        "一覧の更新経過時間読み取り率: 100%（1.0）",
         "詳細取得の成功率ではありません。",
-        "登録補正で保護された項目（protected_by_override）: 1項目",
-        "今回の取得元が既知の旧値で、採用値が登録補正値を維持した",
-        "確認完了数ではありません。",
-        "撤去完了数ではありません。",
+        "補正値を維持した項目: 1項目",
+        "取得元が既知の旧値だったため、登録済みの補正値を維持しました。",
+        "再確認・撤去判断の期限到達なし。",
         "今回の実行ID（run_id）: 37489377273",
     ):
         assert expected in text
         assert expected in visible
     # 同じ値・単位・説明が両形式へ渡り、日本語がUTF-8で読み戻せる。
-    bullets = [line[2:] for line in text.splitlines() if line.startswith("- ")]
     for node in soup.select(".footer .note"):
-        assert node.get_text().removeprefix("- ") in bullets
+        assert node.get_text() in text
     assert "\ufffd" not in text + visible
     assert soup.html["lang"] == "ja"
     assert soup.select_one("meta[charset]")["charset"] == "utf-8"
@@ -356,7 +346,7 @@ def test_cli_explains_72_candidate_pages_without_claiming_changes_or_successes(
 @pytest.mark.parametrize(
     ("reason", "meaning"),
     [
-        ("none", "切替なし（none） — 全件取得への切替はありません。"),
+        ("none", ""),
         ("force_full", "指定により全ページを再取得候補にしました。"),
         (
             "missing_previous_provenance",
@@ -398,20 +388,21 @@ def test_cli_explains_selection_reason_and_retains_false_and_zero(
     )
     soup = BeautifulSoup(html.read_text(encoding="utf-8"), "html.parser")
     for text in (plain.read_text(encoding="utf-8"), soup.get_text()):
-        assert "再取得候補ページ数（candidate_count）: 0ページ" in text
-        assert "高速選定（fast_path）: 無効（false）" in text
-        assert "一覧の更新経過時間読み取り率（age_coverage）: 0.0" in text
-        assert reason in text
-        assert meaning in text
+        assert "再取得候補: 0ページ" in text
+        assert "高速選定: 無効" in text
+        assert "一覧の更新経過時間読み取り率: 0%（0.0）" in text
+        if reason != "none":
+            assert reason in text
+            assert meaning in text
+        else:
+            assert "全件取得" not in text
     assert soup.find("note") is None
 
 
 def test_expired_override_warning_is_shown_even_without_data_changes() -> None:
     body = _body("## official_overrides監査\n- review_due: 2\n", changed=False)
     soup = BeautifulSoup(render_update_mail(body), "html.parser")
-    assert (
-        "再確認期限到達（review_due）: 2項目" in soup.select_one(".warning").get_text()
-    )
+    assert "再確認期限到達: 2項目" in soup.select_one(".warning").get_text()
 
 
 def test_missing_summary_is_not_reported_as_zero_and_malformed_rows_are_kept() -> None:

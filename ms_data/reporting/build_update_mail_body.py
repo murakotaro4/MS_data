@@ -5,11 +5,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from ms_data.reporting.update_mail_html import (
-    DETAIL_LABELS,
-    localize_mail_body,
-    render_update_mail,
-)
+from ms_data.reporting.update_mail_html import render_update_mail
+from ms_data.reporting.update_mail_model import DETAIL_LABELS, localize_mail_body
 
 SUMMARY_KEYS = (
     "レコード数",
@@ -23,6 +20,11 @@ SUMMARY_KEYS = (
     "remove_due",
 )
 
+AUDIT_DETAILS = {
+    "ガード": ("ブロック対象", "数値低下の注意候補", "LV間で増減が混在した候補"),
+    "登録補正": ("適用中", "期限確認", "撤去候補", "要確認", "取得証拠"),
+}
+
 DETAIL_SECTION_HEADINGS = tuple(DETAIL_LABELS)
 
 
@@ -30,6 +32,33 @@ def _read(path: Path | None) -> str:
     if path is None or not path.exists():
         return ""
     return path.read_text(encoding="utf-8")
+
+
+def _audit_lines(path: Path | None, title: str, kind: str) -> list[str]:
+    """任意の未指定と、指定済み監査の欠損を区別し、証拠の表を引き継ぐ。"""
+    if path is None:
+        return []
+    try:
+        text = _read(path)
+    except (OSError, UnicodeError):
+        text = ""
+    lines = ["", f"## {title}", ""]
+    summary = _section_lines(text, "サマリ")[1:]
+    if not any(line.strip() for line in summary):
+        return [
+            *lines,
+            "- 監査情報: 未取得（指定された監査レポートのサマリを読めません）",
+        ]
+    # 監査の未知状態や取得証拠不足も落とさない。件数上限を設けない。
+    lines.extend(summary)
+    for heading in AUDIT_DETAILS[kind]:
+        detail = _section_lines(text, heading)[1:]
+        # 既存レポートの説明文は日次メール用の行動案内へ置き換える。
+        # 表・機体見出し・省略件数は原文のまま証拠として引き継ぐ。
+        detail = [line for line in detail if line.startswith(("|", "### ", "- "))]
+        if detail:
+            lines.extend(["", f"## {kind} / {heading}", "", *detail])
+    return lines
 
 
 def _extract_summary_lines(path: Path | None, *, limit: int = 8) -> list[str]:
@@ -154,17 +183,18 @@ def build_body(args: argparse.Namespace) -> str:
         lines.extend(["", "## 変更内容", ""])
         lines.extend(detail_lines)
 
-    rollback_lines = _extract_summary_lines(args.rollback_guard_path)
-    if rollback_lines:
-        lines.extend(["", "## 巻き戻りガード", ""])
-        lines.extend(rollback_lines)
+    lines.extend(_audit_lines(args.rollback_guard_path, "巻き戻りガード", "ガード"))
+    lines.extend(
+        _audit_lines(
+            args.official_overrides_audit_path, "official_overrides監査", "登録補正"
+        )
+    )
 
-    override_lines = _extract_summary_lines(args.official_overrides_audit_path)
-    if override_lines:
-        lines.extend(["", "## official_overrides監査", ""])
-        lines.extend(override_lines)
-
-    source_audit = _read(getattr(args, "source_slot_audit_path", None))
+    source_path = getattr(args, "source_slot_audit_path", None)
+    try:
+        source_audit = _read(source_path)
+    except (OSError, UnicodeError):
+        source_audit = ""
     if source_audit:
         # 部分保留専用の本人通知へ原値・比較値・処置を欠落なく渡す。
         lines.extend(
@@ -175,6 +205,14 @@ def build_body(args: argparse.Namespace) -> str:
                     for line in source_audit.splitlines()
                     if not line.startswith("# ")
                 ],
+            ]
+        )
+    elif source_path is not None:
+        lines.extend(
+            [
+                "",
+                "## 取得元スロット監査",
+                "- 監査情報: 未取得（指定された監査レポートを読めません）",
             ]
         )
 
