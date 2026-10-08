@@ -1,5 +1,155 @@
 [
   {
+    "name": "actual-20261009.html",
+    "mode": "normal",
+    "bytes": 27356,
+    "viewport": 390,
+    "documentWidth": 390,
+    "height": 4229,
+    "textSize": "14px",
+    "title": "公開データの変更あり",
+    "action": "今回のチェックで要確認の項目なし（添付された監査の範囲）。",
+    "externalResources": 0,
+    "enhancementRows": [
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      }
+    ]
+  },
+  {
+    "name": "actual-20261009.html",
+    "mode": "normal",
+    "bytes": 27356,
+    "viewport": 900,
+    "documentWidth": 900,
+    "height": 4060,
+    "textSize": "14px",
+    "title": "公開データの変更あり",
+    "action": "今回のチェックで要確認の項目なし（添付された監査の範囲）。",
+    "externalResources": 0,
+    "enhancementRows": [
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      }
+    ]
+  },
+  {
+    "name": "actual-20261009.html",
+    "mode": "inline-only",
+    "bytes": 27106,
+    "viewport": 390,
+    "documentWidth": 390,
+    "height": 4398,
+    "textSize": "14px",
+    "title": "公開データの変更あり",
+    "action": "今回のチェックで要確認の項目なし（添付された監査の範囲）。",
+    "externalResources": 0,
+    "enhancementRows": [
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      },
+      {
+        "aligned": true
+      }
+    ]
+  },
+  {
     "name": "audit-due.html",
     "mode": "normal",
     "bytes": 8256,
@@ -9,7 +159,8 @@
     "textSize": "14px",
     "title": "公開データの変更なし",
     "action": "対応が必要です。下の対象と次の対応を確認してください。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   },
   {
     "name": "audit-due.html",
@@ -21,7 +172,8 @@
     "textSize": "14px",
     "title": "公開データの変更なし",
     "action": "対応が必要です。下の対象と次の対応を確認してください。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   },
   {
     "name": "audit-due.html",
@@ -33,7 +185,8 @@
     "textSize": "14px",
     "title": "公開データの変更なし",
     "action": "対応が必要です。下の対象と次の対応を確認してください。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   },
   {
     "name": "audit-missing.html",
@@ -45,7 +198,8 @@
     "textSize": "14px",
     "title": "公開データの変更なし",
     "action": "対応が必要です。下の対象と次の対応を確認してください。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   },
   {
     "name": "audit-missing.html",
@@ -57,7 +211,8 @@
     "textSize": "14px",
     "title": "公開データの変更なし",
     "action": "対応が必要です。下の対象と次の対応を確認してください。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   },
   {
     "name": "audit-missing.html",
@@ -69,7 +224,8 @@
     "textSize": "14px",
     "title": "公開データの変更なし",
     "action": "対応が必要です。下の対象と次の対応を確認してください。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   },
   {
     "name": "changed.html",
@@ -81,7 +237,8 @@
     "textSize": "14px",
     "title": "公開データの変更あり",
     "action": "今回のチェックで要確認の項目なし（添付された監査の範囲）。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   },
   {
     "name": "changed.html",
@@ -93,7 +250,8 @@
     "textSize": "14px",
     "title": "公開データの変更あり",
     "action": "今回のチェックで要確認の項目なし（添付された監査の範囲）。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   },
   {
     "name": "changed.html",
@@ -105,7 +263,8 @@
     "textSize": "14px",
     "title": "公開データの変更あり",
     "action": "今回のチェックで要確認の項目なし（添付された監査の範囲）。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   },
   {
     "name": "large-audit-20260601.html",
@@ -117,7 +276,8 @@
     "textSize": "14px",
     "title": "公開データの変更なし",
     "action": "対応が必要です。下の対象と次の対応を確認してください。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   },
   {
     "name": "large-audit-20260601.html",
@@ -129,7 +289,8 @@
     "textSize": "14px",
     "title": "公開データの変更なし",
     "action": "対応が必要です。下の対象と次の対応を確認してください。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   },
   {
     "name": "large-audit-20260601.html",
@@ -141,7 +302,8 @@
     "textSize": "14px",
     "title": "公開データの変更なし",
     "action": "対応が必要です。下の対象と次の対応を確認してください。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   },
   {
     "name": "large-audit-20260918.html",
@@ -153,7 +315,8 @@
     "textSize": "14px",
     "title": "公開データの変更なし",
     "action": "対応が必要です。下の対象と次の対応を確認してください。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   },
   {
     "name": "large-audit-20260918.html",
@@ -165,7 +328,8 @@
     "textSize": "14px",
     "title": "公開データの変更なし",
     "action": "対応が必要です。下の対象と次の対応を確認してください。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   },
   {
     "name": "large-audit-20260918.html",
@@ -177,7 +341,8 @@
     "textSize": "14px",
     "title": "公開データの変更なし",
     "action": "対応が必要です。下の対象と次の対応を確認してください。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   },
   {
     "name": "no-change.html",
@@ -189,7 +354,8 @@
     "textSize": "14px",
     "title": "公開データの変更なし",
     "action": "今回のチェックで要確認の項目なし（添付された監査の範囲）。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   },
   {
     "name": "no-change.html",
@@ -201,7 +367,8 @@
     "textSize": "14px",
     "title": "公開データの変更なし",
     "action": "今回のチェックで要確認の項目なし（添付された監査の範囲）。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   },
   {
     "name": "no-change.html",
@@ -213,7 +380,8 @@
     "textSize": "14px",
     "title": "公開データの変更なし",
     "action": "今回のチェックで要確認の項目なし（添付された監査の範囲）。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   },
   {
     "name": "partial-hold.html",
@@ -225,7 +393,8 @@
     "textSize": "14px",
     "title": "公開データの変更なし",
     "action": "対応が必要です。下の対象と次の対応を確認してください。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   },
   {
     "name": "partial-hold.html",
@@ -237,7 +406,8 @@
     "textSize": "14px",
     "title": "公開データの変更なし",
     "action": "対応が必要です。下の対象と次の対応を確認してください。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   },
   {
     "name": "partial-hold.html",
@@ -249,6 +419,7 @@
     "textSize": "14px",
     "title": "公開データの変更なし",
     "action": "対応が必要です。下の対象と次の対応を確認してください。",
-    "externalResources": 0
+    "externalResources": 0,
+    "enhancementRows": []
   }
 ]

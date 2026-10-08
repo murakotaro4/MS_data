@@ -22,12 +22,17 @@ async function main() {
           title: document.querySelector('h1').textContent,
           action: document.querySelector('.action').textContent,
           externalResources: document.querySelectorAll('script,img,link').length,
+          enhancementRows: [...document.querySelectorAll('.enhancements tbody tr')].map(row => {
+            const cells = [...row.querySelectorAll('th,td')].map(cell => cell.getBoundingClientRect());
+            return { aligned: cells.length === 3 && cells.every(cell => cell.width > 0 && Math.abs(cell.top - cells[0].top) < 1)
+              && cells[0].right <= cells[1].left + 1 && cells[1].right <= cells[2].left + 1 };
+          }),
         }));
         const stem = name.slice(0, -5);
         const filename = `${stem}${mode === 'normal' ? '' : '-inline-only'}-${width}.png`;
         await page.screenshot({ path: path.join(directory, filename), fullPage: true });
         results.push({ name, mode, bytes: Buffer.byteLength(html), ...metrics });
-        if (Buffer.byteLength(html) > 80 * 1024 || metrics.documentWidth > width || metrics.externalResources || parseFloat(metrics.textSize) < 14) {
+        if (Buffer.byteLength(html) > 80 * 1024 || metrics.documentWidth > width || metrics.externalResources || parseFloat(metrics.textSize) < 14 || metrics.enhancementRows.some(row => !row.aligned)) {
           throw new Error(`表示検証に失敗: ${name} / ${width} / ${mode}: ${JSON.stringify(metrics)}`);
         }
         await page.close();

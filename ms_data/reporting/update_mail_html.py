@@ -11,6 +11,7 @@ from urllib.parse import urlsplit
 
 from ms_data.reporting.update_mail_model import (
     DETAIL_LABELS,
+    ENHANCEMENT_HEADERS,
     MailCard,
     MailView,
     _cells,
@@ -60,7 +61,24 @@ def _pair(label: str, value: str) -> str:
 
 def _table(headers: list[str], rows: list[list[str]]) -> str:
     parts: list[str] = []
-    if headers == ["LV", "項目", "変更前", "変更後"]:
+    if headers == ENHANCEMENT_HEADERS:
+        parts.append(
+            '<table class="enhancements" aria-label="強化項目の必要強化値の変更前後"><thead><tr>'
+        )
+        parts.extend(f'<th scope="col">{escape(header)}</th>' for header in headers)
+        parts.append('</tr></thead><tbody>')
+        for name, before, after in rows:
+            skill, separator, level = name.rpartition("（強化Lv")
+            label = (
+                f'{escape(skill)}<br><span class="skill-level">強化Lv{escape(level[:-1])}</span>'
+                if separator and level.endswith("）")
+                else escape(name)
+            )
+            parts.append(
+                f'<tr><th scope="row">{label}</th><td class="before">{_value(before)}</td><td class="after">{_value(after)}</td></tr>'
+            )
+        parts.append('</tbody></table>')
+    elif headers == ["LV", "項目", "変更前", "変更後"]:
         levels: dict[str, list[list[str]]] = {}
         for row in rows:
             levels.setdefault(row[0], []).append(row)
@@ -329,6 +347,11 @@ def _inline_styles(html: str) -> str:
         ".values": "width:100%;border-collapse:collapse;table-layout:fixed;margin:12px 0;font-size:14px",
         ".values th,.values td": "padding:7px 0;border-bottom:1px solid #e2e8f0;vertical-align:top;overflow-wrap:anywhere;word-wrap:break-word",
         ".values th": "width:42%;padding-right:10px;color:#46556b;text-align:left;font-weight:400",
+        ".enhancements": "width:100%;border-collapse:collapse;table-layout:fixed;margin:12px 0;font-size:14px",
+        ".enhancements th,.enhancements td": "padding:9px 5px;border-bottom:1px solid #e2e8f0;vertical-align:top;overflow-wrap:anywhere;word-wrap:break-word;text-align:left",
+        ".enhancements th:first-child": "width:48%;font-weight:400",
+        ".enhancements thead th": "background:#edf4ff;color:#46556b;font-weight:600",
+        ".skill-level": "color:#46556b;font-size:14px",
         ".warning": "border:1px solid #c6a168;border-left:4px solid #925313;background:#fff4df;color:#513414;padding:18px;margin:0 0 24px;border-radius:8px;overflow-wrap:anywhere;word-wrap:break-word",
         ".audit-card": "padding:16px;border:1px solid #d9e1ec;border-radius:8px;margin:0 0 12px;background:#fff;overflow-wrap:anywhere;word-wrap:break-word",
         ".warning .audit-card": "border-color:#d9bf97;color:#513414",
