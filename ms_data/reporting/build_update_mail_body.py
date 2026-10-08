@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import os
+import re
 from pathlib import Path
 
-from ms_data.reporting.update_mail_html import render_update_mail
+from ms_data.reporting.update_mail_html import prepare_update_mail
 from ms_data.reporting.update_mail_model import DETAIL_LABELS, localize_mail_body
 
 SUMMARY_KEYS = (
@@ -216,8 +218,17 @@ def build_body(args: argparse.Namespace) -> str:
             ]
         )
 
-    if args.detail_url:
-        lines.extend(["", f"詳細: {args.detail_url}"])
+    detail_url = args.detail_url
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    run_id = args.source_run_id or args.run_id or ""
+    if (
+        not detail_url
+        and re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo)
+        and re.fullmatch(r"\d+", run_id)
+    ):
+        detail_url = f"https://github.com/{repo}/actions/runs/{run_id}"
+    if detail_url:
+        lines.extend(["", f"詳細: {detail_url}"])
 
     return "\n".join(lines).rstrip() + "\n"
 
@@ -262,10 +273,11 @@ def main(argv: list[str] | None = None) -> int:
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     body = build_body(args)
-    args.out.write_text(localize_mail_body(body), encoding="utf-8")
+    view, html = prepare_update_mail(body)
+    args.out.write_text(localize_mail_body(body, view=view), encoding="utf-8")
     if args.html_out is not None:
         args.html_out.parent.mkdir(parents=True, exist_ok=True)
-        args.html_out.write_text(render_update_mail(body), encoding="utf-8")
+        args.html_out.write_text(html, encoding="utf-8")
     return 0
 
 

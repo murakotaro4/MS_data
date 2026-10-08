@@ -93,6 +93,7 @@ class MailCard:
     lines: list[str] = field(default_factory=list)
     values: list[tuple[str, str]] = field(default_factory=list)
     compact: bool = False
+    target: tuple[str, str] | None = None
 
 
 @dataclass
@@ -104,6 +105,9 @@ class MailView:
     maintenance: list[MailCard]
     technical: list[str]
     evidence: list[MailCard]
+    links: list[tuple[str, str]] = field(default_factory=list)
+    notices: list[str] = field(default_factory=list)
+    condensed: bool = False
 
 
 _STATUS_ACTIONS = {
@@ -656,7 +660,8 @@ def build_mail_view(body: str) -> MailView:
             continue
         for row in rows:
             name = row.get("MS名", "対象不明")
-            card = MailCard(f"{name} / {row.get('項目', '項目不明')}")
+            target = (name, row.get("項目", "項目不明"))
+            card = MailCard(f"{target[0]} / {target[1]}", target=target)
             info = lookup.get((name, row.get("項目")), {})
             state = info.get("取得状態", "")
             extra_evidence: list[tuple[str, str]] = []
@@ -746,7 +751,7 @@ def build_mail_view(body: str) -> MailView:
             ]
             details.extend(extra_evidence)
             if details:
-                evidence.append(MailCard(card.title, values=details))
+                evidence.append(MailCard(card.title, values=details, target=target))
 
     for row in source_rows:
         state = row.get("取得状態", "")
@@ -764,6 +769,7 @@ def build_mail_view(body: str) -> MailView:
                 MailCard(
                     f"{row.get('MS名', '対象不明')} / {row.get('項目', '項目不明')}",
                     values=details,
+                    target=(row.get("MS名", "対象不明"), row.get("項目", "項目不明")),
                 )
             )
         if (
@@ -777,6 +783,7 @@ def build_mail_view(body: str) -> MailView:
                         "取得証拠: " + _EVIDENCE_STATES.get(state, state),
                         "次の対応: 再取得・解析結果を確認してください。",
                     ],
+                    target=(row.get("MS名", "対象不明"), row.get("項目", "項目不明")),
                 )
             )
     if facts.get("msData.json変更") not in {"true", "false"}:
@@ -807,8 +814,27 @@ def build_mail_view(body: str) -> MailView:
             )
         )
         action = "対応が必要です。実行結果と監査レポートを確認してください。"
+    links = (
+        [("取得元・差分レポート", facts["raw snapshot release"])]
+        if "raw snapshot release" in facts
+        else []
+    )
+    links.extend(
+        [
+            ("詳細レポート", line[4:])
+            for line in body.splitlines()
+            if line.startswith("詳細: ")
+        ]
+    )
     return MailView(
-        facts, sections, action, attention, maintenance, _technical(facts), evidence
+        facts,
+        sections,
+        action,
+        attention,
+        maintenance,
+        _technical(facts),
+        evidence,
+        links=list(dict.fromkeys(links)),
     )
 
 
@@ -825,9 +851,13 @@ def change_statement(facts: dict[str, str]) -> str:
     return "データ差分の有無を確認できません"
 
 
-def localize_mail_body(body: str) -> str:
+def localize_mail_body(body: str, *, view: MailView | None = None) -> str:
     """同じ表示モデルから、結果・対応・根拠・技術情報の順のテキストを生成する。"""
-    view = build_mail_view(body)
+    if view is None:
+        # 最終HTMLのUTF-8サイズで選んだ表示を、テキストにも共有する。
+        from ms_data.reporting.update_mail_html import prepare_update_mail
+
+        view, _ = prepare_update_mail(body)
     lines = [
         "msData 定期更新の確認結果",
         "",
@@ -836,8 +866,14 @@ def localize_mail_body(body: str) -> str:
         change_statement(view.facts),
         view.action,
     ]
+    lines.extend(view.notices)
+    lines.extend(f"{label}: {url}" for label, url in view.links)
 
     def append_cards(title: str, cards: list[MailCard]) -> None:
+        if view.condensed:
+            from ms_data.reporting.update_mail_display import group_card_actions
+
+            cards = group_card_actions(cards)
         if cards:
             lines.extend(["", f"## {title}"])
         for card in cards:
@@ -869,9 +905,4 @@ def localize_mail_body(body: str) -> str:
     for heading, section in view.sections.items():
         if heading not in used:
             lines.extend(["", f"## {heading}", *section])
-    if "raw snapshot release" in view.facts:
-        lines.extend(
-            ["", "取得元・差分レポート: " + view.facts["raw snapshot release"]]
-        )
-    lines.extend(line for line in body.splitlines() if line.startswith("詳細: "))
     return "\n".join(lines).rstrip() + "\n"
