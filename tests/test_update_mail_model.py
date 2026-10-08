@@ -5,6 +5,7 @@ import pytest
 from bs4 import BeautifulSoup
 
 from ms_data.audit.audit_official_overrides import render_markdown
+from ms_data.audit.detect_msdata_rollbacks import render_report
 from ms_data.audit.source_slots import empty_audit
 from ms_data.audit.source_slots import render_markdown as render_source
 from ms_data.reporting.build_update_mail_body import main
@@ -43,13 +44,21 @@ def _override_row(**values: str | int) -> dict:
 
 
 def _build(
-    tmp_path: Path, *, row: dict | None = None, extra: list[str] | None = None
+    tmp_path: Path,
+    *,
+    row: dict | None = None,
+    extra: list[str] | None = None,
+    report: str | None = None,
 ) -> tuple[str, BeautifulSoup]:
     row = row or _override_row()
     audit = tmp_path / "override.md"
     audit.write_text(
-        render_markdown(
-            [row], Counter({row["status"]: 1}), Counter({row["lifecycle"]: 1})
+        (
+            report
+            if report is not None
+            else render_markdown(
+                [row], Counter({row["status"]: 1}), Counter({row["lifecycle"]: 1})
+            )
         ),
         encoding="utf-8",
     )
@@ -236,6 +245,10 @@ def test_partial_hold_actions_preserve_reason_and_never_invent_a_missing_value(
 ) -> None:
     audit = empty_audit()
     audit.update(status="partial_hold", held_record_count=1)
+    audit["fallback_corrected_record_count"] = int(
+        action == "retained_previous_with_approved_correction"
+    )
+    audit["previous_unverified_count"] = int(action == "previous_unverified_retained")
     audit["findings"] = [
         {
             "MS名": "表示確認機_LV2",
@@ -336,3 +349,192 @@ def test_pending_partial_update_has_same_title_in_both_formats() -> None:
         BeautifulSoup(render_update_mail(body), "html.parser").h1.get_text()
         == "更新候補に差分あり"
     )
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "partial_hold_without_count",
+        "approved_without_count",
+        "missing_status",
+        "missing_count",
+        "missing_targets",
+    ],
+)
+def test_source_summary_missing_or_inconsistent_is_not_clean(case: str) -> None:
+    audit = empty_audit()
+    if case == "partial_hold_without_count":
+        audit["status"] = "partial_hold"
+    elif case == "approved_without_count":
+        audit["status"] = "approved_correction"
+    elif case == "missing_targets":
+        audit.update(status="partial_hold", held_record_count=1)
+    report = render_source(audit)
+    if case == "missing_status":
+        report = report.replace("- status: ok\n", "")
+    elif case == "missing_count":
+        report = report.replace("- fallback_corrected_record_count: 0\n", "")
+    body = _body(report)
+    plain = localize_mail_body(body)
+    warning = BeautifulSoup(render_update_mail(body), "html.parser").select_one(
+        ".warning"
+    )
+    assert warning is not None
+    assert "監査レポートを確認してください。" in warning.get_text()
+    assert "要確認の項目なし" not in plain
+
+
+@pytest.mark.parametrize("action", [None, "approved_override", "retained_previous"])
+def test_source_summary_matches_unique_machine_levels(action: str | None) -> None:
+    audit = empty_audit()
+    if action:
+        approved = action == "approved_override"
+        audit.update(
+            status="approved_correction" if approved else "partial_hold",
+            held_record_count=int(not approved),
+            approved_record_count=int(approved),
+        )
+        audit["findings"] = [
+            {
+                "MS名": "表示確認機_LV2",
+                "level": 2,
+                "field": field,
+                "observed": 12,
+                "comparison": 20,
+                "previous": 22,
+                "adopted": 22,
+                "action": action,
+                "wiki_url": "https://example.test/wiki",
+                "reason": "表示確認用の異常候補",
+            }
+            for field in ("中スロット", "遠スロット")
+        ]
+    body = _body(render_source(audit))
+    plain = localize_mail_body(body)
+    assert "整合していません" not in plain
+    assert "件数を確認できません" not in plain
+    if action != "retained_previous":
+        assert not build_mail_view(body).attention
+    if action:
+        # 同じ機体＋LVの複数項目をレコード2件として数えない。
+        audit["approved_record_count" if approved else "held_record_count"] = 2
+        assert "整合していません" in localize_mail_body(_body(render_source(audit)))
+
+
+def test_global_safety_stop_is_not_described_as_partial_hold() -> None:
+    audit = empty_audit()
+    audit.update(status="global_validation_error", global_errors=["スキーマ不正"])
+    audit["findings"] = [
+        {
+            "MS名": "表示確認機_LV2",
+            "level": 2,
+            "field": "中スロット",
+            "observed": 12,
+            "comparison": 20,
+            "action": "global_safety_stop_not_quarantined",
+            "wiki_url": "https://example.test/wiki",
+            "reason": "全体停止の確認用",
+        }
+    ]
+    body = _body(render_source(audit))
+    plain = localize_mail_body(body)
+    assert "既存の全体安全停止（部分保留処理なし）" in plain
+    assert "他の正常候補は通常レビューを継続" not in plain
+    assert "要確認の項目なし" not in plain
+
+
+@pytest.mark.parametrize(
+    "status,lifecycle,heading,mutation",
+    [
+        ("protected_by_override", "active", "適用中", "missing"),
+        ("protected_by_override", "active", "適用中", "duplicate"),
+        ("protected_by_override", "active", "適用中", "wrong_status"),
+        ("upstream_current", "active", "撤去候補", "missing"),
+        ("source_changed", "active", "要確認", "missing"),
+        ("protected_by_override", "review_due", "期限確認", "missing"),
+        ("protected_by_override", "remove_due", "期限確認", "missing"),
+    ],
+)
+def test_state_specific_missing_duplicate_or_mislabeled_details_warn(
+    tmp_path: Path, status: str, lifecycle: str, heading: str, mutation: str
+) -> None:
+    rows = [
+        _override_row(status=status, lifecycle=lifecycle),
+        _override_row(MS名="表示確認機_LV3", status=status, lifecycle=lifecycle),
+    ]
+    report = render_markdown(rows, Counter({status: 2}), Counter({lifecycle: 2}))
+    section = report.split(f"## {heading}\n", 1)[1].split("\n## ", 1)[0]
+    if mutation == "missing":
+        altered = "\n".join(
+            line for line in section.splitlines() if "表示確認機_LV3" not in line
+        )
+    elif mutation == "duplicate":
+        altered = section.replace("表示確認機_LV3", "表示確認機_LV2")
+    else:
+        altered = section.replace("protected_by_override", "unknown_status", 1)
+    plain, soup = _build(tmp_path, report=report.replace(section, altered, 1))
+    warning = soup.select_one(".warning").get_text()
+    assert f"登録補正 / {heading}: 明細を確認" in warning
+    assert "状態別の件数・対象明細が整合していません。" in plain
+    assert "要確認の項目なし" not in plain
+
+
+@pytest.mark.parametrize("kind", ["mixed", "truncated", "missing"])
+def test_guard_detail_counts_use_groups_and_preserve_documented_truncation(
+    tmp_path: Path, kind: str
+) -> None:
+    rows = [
+        {
+            "MS名": f"表示確認機_LV{level}",
+            "field": "HP",
+            "type": "numeric_decrease",
+            "old": 20000,
+            "new": 18000,
+        }
+        for level in range(1, 102 if kind == "truncated" else 3)
+    ]
+    report = render_report(
+        protected_rollbacks=[],
+        numeric_decreases=[] if kind == "mixed" else rows,
+        mixed_level_changes=(
+            [{"base": "表示確認機", "field": "HP", "rows": rows}]
+            if kind == "mixed"
+            else []
+        ),
+    )
+    if kind == "missing":
+        report = "\n".join(
+            line for line in report.splitlines() if "表示確認機_LV2" not in line
+        )
+    path = tmp_path / "guard.md"
+    path.write_text(report, encoding="utf-8")
+    plain, _ = _build(tmp_path, extra=["--rollback-guard-path", str(path)])
+    if kind == "missing":
+        assert "状態別の件数・対象明細が整合していません。" in plain
+    else:
+        assert "状態別の件数・対象明細が整合していません。" not in plain
+    if kind == "mixed":
+        assert "LV間で増減が混在する候補: 1組" in plain
+    elif kind == "truncated":
+        assert "- 省略: 1 件" in plain
+
+
+def test_unknown_source_action_is_not_inferred_as_partial_hold() -> None:
+    audit = empty_audit()
+    audit["findings"] = [
+        {
+            "MS名": "表示確認機_LV2",
+            "level": 2,
+            "field": "中スロット",
+            "observed": 12,
+            "comparison": 20,
+            "action": "unknown_action",
+            "wiki_url": "https://example.test/wiki",
+            "reason": "未知処置の確認用",
+        }
+    ]
+    plain = localize_mail_body(_body(render_source(audit)))
+    assert "対象名または処置が読み取れない明細があります。" in plain
+    assert "unknown_action" in plain
+    assert "他の正常候補は通常レビューを継続" not in plain
+    assert "要確認の項目なし" not in plain

@@ -13,11 +13,6 @@
 
 ## 差分サマリ
 - レコード数: 1 → 1 | +0 -0 ~1
-- protected_rollback: 0
-- numeric_decrease: 0
-- mixed_level_change: 0
-- review_due: 0
-- remove_due: 0
 
 ## 変更内容
 ## 変更レコード一覧

@@ -168,8 +168,20 @@ _SOURCE_ACTIONS = {
     "previous_unverified_retained": "正常な前値なし・未確認の公開済み値を保持（要対応）",
     "skipped_new_record": "新規レコードの追加を保留",
     "approved_override": "承認済み補正を採用",
+    "global_safety_stop_not_quarantined": "既存の全体安全停止（部分保留処理なし）",
 }
 _SOURCE_OK = {"ok", "approved_correction"}
+_SOURCE_COUNT_ACTIONS = {
+    "held_record_count": {
+        "retained_previous",
+        "retained_previous_with_approved_correction",
+        "previous_unverified_retained",
+        "skipped_new_record",
+    },
+    "approved_record_count": {"approved_override"},
+    "fallback_corrected_record_count": {"retained_previous_with_approved_correction"},
+    "previous_unverified_count": {"previous_unverified_retained"},
+}
 _DETAIL_FOR_STATUS = {
     "protected_rollback": ("ガード / ブロック対象", "登録補正 / 要確認"),
     "numeric_decrease": ("ガード / 数値低下の注意候補",),
@@ -184,6 +196,23 @@ _DETAIL_FOR_STATUS = {
     "previous_unverified_count": ("部分保留エラー・補正証拠",),
     "期限到達値の取得証拠不足": ("登録補正 / 期限確認",),
 }
+_DETAIL_COUNTS = {
+    "巻き戻りガード": {
+        "protected_rollback": ("ガード / ブロック対象", "種別"),
+        "numeric_decrease": ("ガード / 数値低下の注意候補", "種別"),
+        "mixed_level_change": ("ガード / LV間で増減が混在した候補", ""),
+    },
+    "official_overrides監査": {
+        "protected_by_override": ("登録補正 / 適用中", "状態"),
+        "upstream_current": ("登録補正 / 撤去候補", "状態"),
+        "protected_rollback": ("登録補正 / 要確認", "状態"),
+        "source_changed": ("登録補正 / 要確認", "状態"),
+        "missing_current": ("登録補正 / 要確認", "状態"),
+        "source_hold_unverified_previous": ("登録補正 / 要確認", "状態"),
+        "review_due": ("登録補正 / 期限確認", "期限状態"),
+        "remove_due": ("登録補正 / 期限確認", "期限状態"),
+    },
+}
 
 
 def _facts(lines: list[str]) -> dict[str, str]:
@@ -196,6 +225,107 @@ def _facts(lines: list[str]) -> dict[str, str]:
 
 def _count(value: str | None) -> int | None:
     return int(value) if value is not None and re.fullmatch(r"\d+", value) else None
+
+
+def _source_summary_issue(
+    summary: dict[str, str], rows: list[dict[str, str]]
+) -> MailCard | None:
+    """機体＋LV単位の件数・状態・明細を照合し、欠損を正常と見なさない。"""
+    counts = {key: _count(summary.get(key)) for key in _SOURCE_COUNT_ACTIONS}
+    status = summary.get("status")
+    if status not in _SOURCE_OK | {"partial_hold"} or any(
+        count is None for count in counts.values()
+    ):
+        # 未知状態・欠損・不正な数値はサマリ項目の表示時に別途警告する。
+        return None
+    expected_status = (
+        "partial_hold"
+        if counts["held_record_count"]
+        else "approved_correction" if counts["approved_record_count"] else "ok"
+    )
+    issues = []
+    if status != expected_status:
+        issues.append(f"状態: {status} / 件数から期待される状態: {expected_status}")
+    actions_by_record: dict[str, set[str]] = {}
+    for row in rows:
+        name, action = row.get("MS名", ""), row.get("処置", "")
+        if not name or action not in (
+            _SOURCE_COUNT_ACTIONS["held_record_count"] | {"approved_override"}
+        ):
+            issues.append("対象名または処置が読み取れない明細があります。")
+            break
+        actions_by_record.setdefault(name, set()).add(action)
+    if any(len(actions) != 1 for actions in actions_by_record.values()):
+        issues.append("同じ機体＋LVに複数の処置が記録されています。")
+    for key, actions in _SOURCE_COUNT_ACTIONS.items():
+        actual = sum(
+            bool(record_actions & actions)
+            for record_actions in actions_by_record.values()
+        )
+        if counts[key] != actual:
+            issues.append(
+                f"{_STATUS_LABELS[key][0]}: サマリ {counts[key]} / 明細 {actual}"
+            )
+    if issues:
+        return MailCard(
+            "取得元スロット監査の整合性を確認",
+            [
+                "監査の状態・件数・対象明細が整合していません。監査レポートを確認してください。",
+                *issues,
+            ],
+        )
+    return None
+
+
+def _detail_count_issues(
+    summaries: dict[str, dict[str, str]],
+    parsed: dict[str, list[dict[str, str]]],
+    sections: dict[str, list[str]],
+) -> list[MailCard]:
+    issues = []
+    for summary_heading, specs in _DETAIL_COUNTS.items():
+        summary = summaries.get(summary_heading, {})
+        # 旧通知のサマリだけの場合、明細未添付を維持欄で明示する。
+        # 明細または対象総数のある監査では、各状態の対象をすべて照合する。
+        if "対象値" not in summary and not any(
+            heading in sections for heading, _ in specs.values()
+        ):
+            continue
+        for status, (heading, column) in specs.items():
+            count = _count(summary.get(status))
+            if count is None:
+                continue
+            rows = [
+                row
+                for row in parsed.get(heading, [])
+                if not column or row.get(column) == status
+            ]
+            targets = {(row.get("MS名"), row.get("項目")) for row in rows}
+            valid = all(name and field for name, field in targets)
+            actual = len(targets)
+            if status == "mixed_level_change":
+                groups = {row.get("機体・項目の組", "") for row in rows}
+                valid = valid and all(groups)
+                actual = len(groups)
+            omitted = 0
+            if status == "numeric_decrease":
+                omitted = sum(
+                    int(match[1])
+                    for line in sections.get(heading, [])
+                    if (match := re.fullmatch(r"- 省略: (\d+) 件", line))
+                )
+            if not valid or len(targets) != len(rows) or actual + omitted != count:
+                label, unit = _STATUS_LABELS[status]
+                issues.append(
+                    MailCard(
+                        f"{heading}: 明細を確認",
+                        [
+                            f"{label}: サマリ {count}{unit} / 一意な明細 {actual}{unit}。",
+                            "状態別の件数・対象明細が整合していません。重複・不足・対象名を監査レポートで確認してください。",
+                        ],
+                    )
+                )
+    return issues
 
 
 def _audit_tables(lines: list[str]) -> tuple[list[dict[str, str]], list[str]]:
@@ -321,6 +451,12 @@ def build_mail_view(body: str) -> MailView:
                     ["重複または読み取れない項目があります。", *bullets],
                 )
             )
+    source_issue = _source_summary_issue(
+        summaries.get("取得元スロット監査", {}),
+        parsed.get("部分保留エラー・補正証拠", []),
+    )
+    if source_issue:
+        attention.append(source_issue)
     override = summaries.get("official_overrides監査", {})
     status_counts = {
         key: _count(value)
@@ -350,6 +486,7 @@ def build_mail_view(body: str) -> MailView:
         or sum(value for value in status_counts.values() if value is not None) != total
         or len(unique_rows) != len(source_rows)
         or len(source_rows) != total
+        or not all(name and key for name, key in unique_rows)
     ):
         attention.append(
             MailCard(
@@ -360,6 +497,7 @@ def build_mail_view(body: str) -> MailView:
             )
         )
 
+    attention.extend(_detail_count_issues(summaries, parsed, sections))
     for heading, values in summaries.items():
         for key, value in values.items():
             if key == "監査情報":
@@ -422,7 +560,7 @@ def build_mail_view(body: str) -> MailView:
             else (
                 ("review_due", "remove_due")
                 if heading == "official_overrides監査"
-                else ("held_record_count", "previous_unverified_count")
+                else ("status", *_SOURCE_COUNT_ACTIONS)
             )
         )
         missing = [key for key in keys if key not in values]
@@ -500,10 +638,15 @@ def build_mail_view(body: str) -> MailView:
             if heading == "ガード / LV間で増減が混在した候補":
                 status = "mixed_level_change"
             if heading == "部分保留エラー・補正証拠":
+                action = row.get("処置", "")
                 status = (
                     "approved_record_count"
-                    if row.get("処置") == "approved_override"
-                    else "held_record_count"
+                    if action == "approved_override"
+                    else (
+                        "held_record_count"
+                        if action in _SOURCE_COUNT_ACTIONS["held_record_count"]
+                        else action
+                    )
                 )
             if status in _STATUS_ACTIONS:
                 card.lines.append("次の対応: " + _STATUS_ACTIONS[status])
@@ -518,7 +661,7 @@ def build_mail_view(body: str) -> MailView:
             elif status == "approved_record_count":
                 card.lines.append("本人確認済みの有効な補正を採用しました。")
                 maintenance.append(card)
-            elif heading == "登録補正 / 適用中":
+            elif heading == "登録補正 / 適用中" and status == "protected_by_override":
                 card.lines.append(
                     "取得元の既知の旧値に対し、登録補正値を維持しました。"
                 )
