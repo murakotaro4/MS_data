@@ -27,7 +27,7 @@ async function main() {
         const filename = `${stem}${mode === 'normal' ? '' : '-inline-only'}-${width}.png`;
         await page.screenshot({ path: path.join(directory, filename), fullPage: true });
         results.push({ name, mode, bytes: Buffer.byteLength(html), ...metrics });
-        if (metrics.documentWidth > width || metrics.externalResources || parseFloat(metrics.textSize) < 14) {
+        if (Buffer.byteLength(html) > 80 * 1024 || metrics.documentWidth > width || metrics.externalResources || parseFloat(metrics.textSize) < 14) {
           throw new Error(`表示検証に失敗: ${name} / ${width} / ${mode}: ${JSON.stringify(metrics)}`);
         }
         await page.close();
@@ -37,7 +37,7 @@ async function main() {
     await browser.close();
     fs.writeFileSync(path.join(directory, 'render-checks.json'), JSON.stringify(results, null, 2) + '\n');
   }
-  console.log(`レンダー検証成功: ${results.length}件（横スクロールなし、補助文字14px以上、外部資源なし）`);
+  console.log(`レンダー検証成功: ${results.length}件（HTML 80KiB以内、横スクロールなし、補助文字14px以上、外部資源なし）`);
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });

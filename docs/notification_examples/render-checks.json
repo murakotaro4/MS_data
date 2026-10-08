@@ -108,6 +108,78 @@
     "externalResources": 0
   },
   {
+    "name": "large-audit-20260601.html",
+    "mode": "normal",
+    "bytes": 47729,
+    "viewport": 390,
+    "documentWidth": 390,
+    "height": 21582,
+    "textSize": "14px",
+    "title": "公開データの変更なし",
+    "action": "対応が必要です。下の対象と次の対応を確認してください。",
+    "externalResources": 0
+  },
+  {
+    "name": "large-audit-20260601.html",
+    "mode": "normal",
+    "bytes": 47729,
+    "viewport": 900,
+    "documentWidth": 900,
+    "height": 20792,
+    "textSize": "14px",
+    "title": "公開データの変更なし",
+    "action": "対応が必要です。下の対象と次の対応を確認してください。",
+    "externalResources": 0
+  },
+  {
+    "name": "large-audit-20260601.html",
+    "mode": "inline-only",
+    "bytes": 47479,
+    "viewport": 390,
+    "documentWidth": 390,
+    "height": 23219,
+    "textSize": "14px",
+    "title": "公開データの変更なし",
+    "action": "対応が必要です。下の対象と次の対応を確認してください。",
+    "externalResources": 0
+  },
+  {
+    "name": "large-audit-20260918.html",
+    "mode": "normal",
+    "bytes": 35809,
+    "viewport": 390,
+    "documentWidth": 390,
+    "height": 16021,
+    "textSize": "14px",
+    "title": "公開データの変更なし",
+    "action": "対応が必要です。下の対象と次の対応を確認してください。",
+    "externalResources": 0
+  },
+  {
+    "name": "large-audit-20260918.html",
+    "mode": "normal",
+    "bytes": 35809,
+    "viewport": 900,
+    "documentWidth": 900,
+    "height": 14912,
+    "textSize": "14px",
+    "title": "公開データの変更なし",
+    "action": "対応が必要です。下の対象と次の対応を確認してください。",
+    "externalResources": 0
+  },
+  {
+    "name": "large-audit-20260918.html",
+    "mode": "inline-only",
+    "bytes": 35559,
+    "viewport": 390,
+    "documentWidth": 390,
+    "height": 16653,
+    "textSize": "14px",
+    "title": "公開データの変更なし",
+    "action": "対応が必要です。下の対象と次の対応を確認してください。",
+    "externalResources": 0
+  },
+  {
     "name": "no-change.html",
     "mode": "normal",
     "bytes": 3525,

@@ -12,6 +12,7 @@ from urllib.parse import urlsplit
 from ms_data.reporting.update_mail_model import (
     DETAIL_LABELS,
     MailCard,
+    MailView,
     _cells,
     _mail_line,
     _plain,
@@ -144,9 +145,26 @@ def _cards(sections: dict[str, list[str]]) -> str:
     return "".join(parts)
 
 
-def _audit_cards(cards: list[MailCard], *, warning: bool = False) -> str:
+def _audit_cards(
+    cards: list[MailCard], *, warning: bool = False, dense: bool = False
+) -> str:
+    if dense:
+        from ms_data.reporting.update_mail_display import group_card_actions
+
+        cards = group_card_actions(cards)
     parts: list[str] = []
     for card in cards:
+        if dense:
+            parts.append(
+                f'<div class="compact-card"><strong>{escape(card.title)}</strong>'
+            )
+            parts.extend(f'<div>{escape(line)}</div>' for line in card.lines)
+            parts.extend(
+                f'<div>{escape(label)}: {escape(value) if value else "監査記録なし"}</div>'
+                for label, value in card.values
+            )
+            parts.append('</div>')
+            continue
         if card.compact:
             parts.append(f'<p class="note"><strong>{escape(card.title)}</strong></p>')
             continue
@@ -157,6 +175,8 @@ def _audit_cards(cards: list[MailCard], *, warning: bool = False) -> str:
             parts.extend(_pair(label, value) for label, value in card.values)
             parts.append('</table>')
         parts.append('</div>')
+    if dense and parts:
+        parts = ['<div class="compact">', *parts, '</div>']
     if warning and parts:
         return (
             '<div class="warning"><h2>要確認の対象と次の対応</h2>'
@@ -178,8 +198,17 @@ def _link(label: str, url: str) -> str:
 
 def render_update_mail(body: str) -> str:
     """テキスト通知と同じ内容から HTML 版を生成する。外部資源は使用しない。"""
-    source_lines = body.splitlines()
-    view = build_mail_view(body)
+    return prepare_update_mail(body)[1]
+
+
+def prepare_update_mail(body: str) -> tuple[MailView, str]:
+    """完全な監査を判定してから、両形式に使うサイズ内の表示を選ぶ。"""
+    from ms_data.reporting.update_mail_display import fit_mail_view
+
+    return fit_mail_view(build_mail_view(body), _render_view)
+
+
+def _render_view(view: MailView, dense: bool = False) -> str:
     sections, facts = view.sections, view.facts
     changed = facts.get("msData.json変更") == "true"
     date = facts.get("実行日", "")
@@ -206,12 +235,14 @@ def render_update_mail(body: str) -> str:
             + '</tr></table><p class="counts-note">件数は機体のLV別レコード数</p>'
         )
     content = _cards(sections) if changed else ''
+    if dense and content:
+        content = '<div class="compact">' + content + '</div>'
 
     maintenance = ''
     if view.maintenance:
         maintenance = (
             '<div class="maintenance"><h2>補正値の維持と期限</h2>'
-            + _audit_cards(view.maintenance)
+            + _audit_cards(view.maintenance, dense=dense)
             + '</div>'
         )
 
@@ -241,18 +272,12 @@ def render_update_mail(body: str) -> str:
     if view.evidence:
         footer.append(
             '<h2 class="footer-heading">取得証拠の詳細</h2>'
-            + _audit_cards(view.evidence)
+            + _audit_cards(view.evidence, dense=dense)
         )
-    if "raw snapshot release" in facts:
-        footer.append(
-            '<p class="note">'
-            + _link("取得元・差分レポート", facts["raw snapshot release"])
-            + "</p>"
-        )
-    # 詳細 URL は最後の監査セクション末尾に入ることもあるため、本文全体から拾う。
-    for line in source_lines:
-        if line.startswith("詳細: "):
-            footer.append(f'<p class="note">{_link("詳細レポート", line[4:])}</p>')
+    navigation = [f'<p class="note">{escape(line)}</p>' for line in view.notices]
+    navigation.extend(
+        f'<p class="note">{_link(label, url)}</p>' for label, url in view.links
+    )
 
     template = Template(
         Path(__file__)
@@ -265,7 +290,8 @@ def render_update_mail(body: str) -> str:
         result=escape(facts.get("結果", "")),
         title=change_statement(facts),
         action=escape(view.action),
-        warnings=_audit_cards(view.attention, warning=True),
+        navigation=''.join(navigation),
+        warnings=_audit_cards(view.attention, warning=True, dense=dense),
         stats=stats,
         content=content,
         maintenance=maintenance,
@@ -310,9 +336,16 @@ def _inline_styles(html: str) -> str:
         ".footer": "border-top:1px solid #d9e1ec;margin-top:24px;padding-top:20px",
         ".footer-heading": "font-size:16px;margin:16px 0 10px;color:#46556b;font-weight:600",
         ".note": "font-size:14px;line-height:1.75;color:#46556b;margin:8px 0;overflow-wrap:anywhere;word-wrap:break-word",
+        ".compact": "font-size:14px;line-height:1.75;overflow-wrap:anywhere;word-wrap:break-word",
+        ".compact-card": "padding:10px 0;border-bottom:1px solid #d9e1ec",
         "a": "color:#215fbc;text-decoration:underline;overflow-wrap:anywhere;word-wrap:break-word",
     }
     for selector, style in styles.items():
         for node in soup.select(selector):
+            if node.find_parent(class_="compact") and selector not in {
+                ".compact-card",
+                "a",
+            }:
+                continue
             node['style'] = ';'.join(filter(None, (node.get('style', ''), style)))
     return str(soup)
