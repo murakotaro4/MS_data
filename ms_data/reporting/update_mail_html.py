@@ -9,162 +9,18 @@ from pathlib import Path
 from string import Template
 from urllib.parse import urlsplit
 
-DETAIL_LABELS = {
-    "追加レコード一覧": "レコード追加",
-    "削除レコード一覧": "レコード削除",
-    "変更レコード一覧": "変更",
-}
-MAIL_FIELDS = {
-    "candidate_count": (
-        "再取得候補ページ数",
-        "ページ",
-        "URL重複排除後の選定数。変更件数・取得成功数ではありません。",
-    ),
-    "fast_path": (
-        "高速選定",
-        "",
-        "更新経過時間などから再取得対象を絞る方式です。",
-    ),
-    "age_coverage": (
-        "一覧の更新経過時間読み取り率",
-        "",
-        "一覧で更新経過時間を読めた割合（0〜1、1.0は100%）。詳細取得の成功率ではありません。",
-    ),
-    "fallback_reason": ("選定方式の切替理由", "", "再取得対象の選定理由です。"),
-    "protected_rollback": (
-        "保護対象の巻き戻り",
-        "項目",
-        "補正の保護対象が既知の旧値になった検出数（機体＋LV＋項目）。自動更新の停止対象です。",
-    ),
-    "numeric_decrease": (
-        "数値低下の確認候補",
-        "項目",
-        "前回より下がった監視対象の整数項目数（機体＋LV＋項目）。誤り確定ではありません。",
-    ),
-    "mixed_level_change": (
-        "LV間で増減が混在する候補",
-        "組",
-        "同じ機体の同じ項目で前回比の増加と減少がLV間に混在する、機体＋項目の組数です。",
-    ),
-    "protected_by_override": (
-        "登録補正で保護された項目",
-        "項目",
-        "今回の取得元が既知の旧値で、採用値が登録補正値を維持した機体＋LV＋項目の数です。",
-    ),
-    "upstream_current": (
-        "取得元が補正値と一致する項目",
-        "項目",
-        "今回の取得値が補正値と一致した機体＋LV＋項目の数です。登録補正の撤去対象です。",
-    ),
-    "source_changed": (
-        "補正の想定と異なる項目",
-        "項目",
-        "採用値が補正値と異なる、または取得値が補正値・既知の旧値のどちらでもない、機体＋LV＋項目の数です。",
-    ),
-    "review_due": (
-        "登録補正の再確認期限到達",
-        "項目",
-        "review_afterに到達した機体＋LV＋項目の数（remove_dueを除く）。確認完了数ではありません。",
-    ),
-    "remove_due": (
-        "登録補正の撤去判断期限到達",
-        "項目",
-        "remove_afterに到達した機体＋LV＋項目の数。撤去完了数ではありません。",
-    ),
-    "held_record_count": (
-        "LV単位の部分保留",
-        "レコード",
-        "要対応。未承認異常で採用を保留した機体＋LVの数。他の正常候補は更新を継続します。",
-    ),
-    "approved_record_count": (
-        "承認済み補正を採用したレコード数",
-        "レコード",
-        "取得元異常に本人確認済みの有効な補正を適用した、機体＋LVの数です。",
-    ),
-    "fallback_corrected_record_count": (
-        "前値を承認済み補正で修復して保持した数",
-        "レコード",
-        "候補を保留し、前値に有効な補正を適用して保持した機体＋LVの数です。",
-    ),
-    "previous_unverified_count": (
-        "未確認の前値を保持した数",
-        "レコード",
-        "正常な前値がなく、公開済みの未確認値を保持した機体＋LVの数。要対応です。",
-    ),
-    "status": ("取得元スロット監査の状態", "", "部分保留や補正の処置を示します。"),
-    "run_id": ("今回の実行ID", "", "今回のGitHub Actions実行を識別します。"),
-    "source_run_id": (
-        "データ更新元の実行ID",
-        "",
-        "取得・更新を行ったGitHub Actions実行を識別します。",
-    ),
-    "msData.json変更": ("データ変更", "", "公開データの差分の有無です。"),
-    "レコード数": (
-        "レコード数",
-        "",
-        "1レコードは機体の1LV分。+は追加、-は削除、~は変更のレコード数です。",
-    ),
-}
-WARNING_KEYS = {
-    "protected_rollback",
-    "numeric_decrease",
-    "mixed_level_change",
-    "source_changed",
-    "review_due",
-    "remove_due",
-    "held_record_count",
-}
-FALLBACK_REASONS = {
-    "none": ("切替なし", "全件取得への切替はありません。"),
-    "force_full": ("全件取得指定", "指定により全ページを再取得候補にしました。"),
-    "missing_previous_provenance": (
-        "前回実行情報なし",
-        "前回の実行時刻が不明なため、全ページを再取得候補にしました。",
-    ),
-    "low_age_coverage": (
-        "更新経過時間の読み取り不足",
-        "一覧の更新経過時間を十分に読めず、全ページを再取得候補にしました。",
-    ),
-    "revalidate": (
-        "週次再検証",
-        "ページ更新時刻と前回取得時刻を比較して選定します。全件取得とは限りません。",
-    ),
-}
-_MD_UNESCAPE = re.compile(r"\\([\\`*_\[\]()#+\-.!|<>])")
+from ms_data.reporting.update_mail_model import (
+    DETAIL_LABELS,
+    MailCard,
+    _cells,
+    _mail_line,
+    _plain,
+    build_mail_view,
+    change_statement,
+)
+
 _NUMBER = re.compile(r"[+-]?(?:0|[1-9]\d*)(?:\.\d+)?\Z")
 _COUNTS = re.compile(r"レコード数: (\d+) → (\d+) \| \+(\d+) -(\d+) ~(\d+)")
-
-
-def _mail_field(key: str, value: str) -> str:
-    """生の値を再計算せず、HTML・テキスト共通の説明を付ける。"""
-    if key not in MAIL_FIELDS:
-        return f"{key}: {value}"
-    label, unit, description = MAIL_FIELDS[key]
-    if key == "fallback_reason" and value in FALLBACK_REASONS:
-        reason, description = FALLBACK_REASONS[value]
-        value = f"{reason}（{value}）"
-    elif key in {"fast_path", "msData.json変更"} and value in {"true", "false"}:
-        states = ("有効", "無効") if key == "fast_path" else ("あり", "なし")
-        value = f"{states[value == 'false']}（{value}）"
-    if label != key:
-        label = f"{label}（{key}）"
-    return f"{label}: {value}{unit} — {description}"
-
-
-def _mail_line(line: str) -> str:
-    if line.startswith("- ") and ": " in line:
-        key, value = line[2:].split(": ", 1)
-        return f"- {_mail_field(key, value)}"
-    return line
-
-
-def localize_mail_body(body: str) -> str:
-    """内部の英語キーを保った本文から、送信用の日本語テキストを作る。"""
-    return "\n".join(_mail_line(line) for line in body.splitlines()) + "\n"
-
-
-def _plain(text: str) -> str:
-    return _MD_UNESCAPE.sub(r"\1", text)
 
 
 def _text(text: str) -> str:
@@ -192,29 +48,6 @@ def _delta(before: str, after: str) -> str:
     if "." in formatted:
         formatted = formatted.rstrip("0").rstrip(".")
     return f'<span class="delta">{formatted}</span>'
-
-
-def _sections(lines: list[str]) -> dict[str, list[str]]:
-    sections: dict[str, list[str]] = {"": []}
-    heading = ""
-    for line in lines:
-        if line.startswith("## "):
-            heading = line[3:]
-            sections.setdefault(heading, [])
-        else:
-            sections[heading].append(line)
-    return sections
-
-
-def _cells(line: str) -> list[str]:
-    # 生成元は '\\|' と '\\\\' をエスケープする。後者の直後の区切りも扱う。
-    cells = re.split(r"(?<!\\)((?:\\\\)*)\|", line.strip()[1:-1])
-    # re.split のキャプチャ（区切り直前のバックスラッシュ対）を元セルへ戻す。
-    values = [cells[0]]
-    for index in range(1, len(cells), 2):
-        values[-1] += cells[index]
-        values.append(cells[index + 1])
-    return [_plain(value.strip()) for value in values]
 
 
 def _pair(label: str, value: str) -> str:
@@ -311,16 +144,26 @@ def _cards(sections: dict[str, list[str]]) -> str:
     return "".join(parts)
 
 
-def _warnings(sections: dict[str, list[str]]) -> str:
-    items: list[str] = []
-    for heading in ("巻き戻りガード", "official_overrides監査", "取得元スロット監査"):
-        for line in sections.get(heading, []):
-            match = re.fullmatch(r"- ([a-z_]+): (\d+)", line.strip())
-            if match and match[1] in WARNING_KEYS and int(match[2]) > 0:
-                items.append(f"<li>{escape(_mail_field(match[1], match[2]))}</li>")
-    if not items:
-        return ""
-    return '<div class="warning"><h2>要確認</h2><ul>' + "".join(items) + "</ul></div>"
+def _audit_cards(cards: list[MailCard], *, warning: bool = False) -> str:
+    parts: list[str] = []
+    for card in cards:
+        if card.compact:
+            parts.append(f'<p class="note"><strong>{escape(card.title)}</strong></p>')
+            continue
+        parts.append(f'<div class="audit-card"><h3>{escape(card.title)}</h3>')
+        parts.extend(f'<p class="note">{escape(line)}</p>' for line in card.lines)
+        if card.values:
+            parts.append('<table class="values" aria-label="監査対象と根拠">')
+            parts.extend(_pair(label, value) for label, value in card.values)
+            parts.append('</table>')
+        parts.append('</div>')
+    if warning and parts:
+        return (
+            '<div class="warning"><h2>要確認の対象と次の対応</h2>'
+            + ''.join(parts)
+            + '</div>'
+        )
+    return ''.join(parts)
 
 
 def _link(label: str, url: str) -> str:
@@ -336,14 +179,8 @@ def _link(label: str, url: str) -> str:
 def render_update_mail(body: str) -> str:
     """テキスト通知と同じ内容から HTML 版を生成する。外部資源は使用しない。"""
     source_lines = body.splitlines()
-    sections = _sections(
-        [line for line in source_lines if not line.startswith("詳細: ")]
-    )
-    facts: dict[str, str] = {}
-    for line in sections[""]:
-        if line.startswith("- ") and ": " in line:
-            key, value = line[2:].split(": ", 1)
-            facts[key] = value
+    view = build_mail_view(body)
+    sections, facts = view.sections, view.facts
     changed = facts.get("msData.json変更") == "true"
     date = facts.get("実行日", "")
     if re.fullmatch(r"\d{8}", date):
@@ -368,24 +205,44 @@ def render_update_mail(body: str) -> str:
             + "".join(cells)
             + '</tr></table><p class="counts-note">件数は機体のLV別レコード数</p>'
         )
-    content = (
-        _cards(sections)
-        if changed
-        else '<p class="no-change">データの変更はありませんでした。</p>'
-    )
+    content = _cards(sections) if changed else ''
+
+    maintenance = ''
+    if view.maintenance:
+        maintenance = (
+            '<div class="maintenance"><h2>補正値の維持と期限</h2>'
+            + _audit_cards(view.maintenance)
+            + '</div>'
+        )
 
     footer: list[str] = []
+    used = {
+        *DETAIL_LABELS,
+        "変更内容",
+        "差分サマリ",
+        "巻き戻りガード",
+        "official_overrides監査",
+        "取得元スロット監査",
+        "部分保留エラー・補正証拠",
+    }
     for heading, section_lines in sections.items():
-        if heading and heading not in {*DETAIL_LABELS, "変更内容"}:
+        if (
+            heading
+            and heading not in used
+            and not heading.startswith(("ガード / ", "登録補正 / "))
+        ):
             footer.append(f'<h2 class="footer-heading">{_text(heading)}</h2>')
             footer.append(_blocks(section_lines))
-    metadata = [
-        f'<p class="note">{escape(_mail_field(key, value))}</p>'
-        for key, value in facts.items()
-        if key not in {"実行日", "結果", "msData.json変更", "raw snapshot release"}
-    ]
+    metadata = [f'<p class="note">{escape(line)}</p>' for line in view.technical]
+    if sections.get("差分サマリ"):
+        metadata.insert(0, _blocks(sections["差分サマリ"]))
     if metadata:
-        footer.extend(['<h2 class="footer-heading">実行情報</h2>', *metadata])
+        footer.extend(['<h2 class="footer-heading">技術情報</h2>', *metadata])
+    if view.evidence:
+        footer.append(
+            '<h2 class="footer-heading">取得証拠の詳細</h2>'
+            + _audit_cards(view.evidence)
+        )
     if "raw snapshot release" in facts:
         footer.append(
             '<p class="note">'
@@ -403,12 +260,59 @@ def render_update_mail(body: str) -> str:
         .joinpath("update_mail.html")
         .read_text(encoding="utf-8")
     )
-    return template.substitute(
+    html = template.substitute(
         date=escape(date),
         result=escape(facts.get("結果", "")),
-        title="機体データの更新内容" if changed else "msData 定期更新の確認結果",
-        warnings=_warnings(sections),
+        title=change_statement(facts),
+        action=escape(view.action),
+        warnings=_audit_cards(view.attention, warning=True),
         stats=stats,
         content=content,
+        maintenance=maintenance,
         footer="".join(footer),
     )
+    return _inline_styles(html)
+
+
+def _inline_styles(html: str) -> str:
+    """HTMLメールの基本表示をstyle属性に持たせ、headのCSSなしでも読み取れる。"""
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html, "html.parser")
+    styles = {
+        "h1": "font-size:24px;line-height:1.4;font-weight:600;margin:20px 0 8px",
+        "h2": "font-size:18px;line-height:1.5;margin:0 0 12px;font-weight:600",
+        "h3": "font-size:16px;line-height:1.5;margin:0 0 8px;font-weight:600",
+        ".kicker,.date": "color:#46556b;font-size:14px",
+        ".date": "text-align:right",
+        ".result": "color:#215fbc;font-size:16px;margin:0 0 12px",
+        ".action": "font-size:16px;margin:0 0 24px",
+        ".stats": "width:100%;table-layout:fixed;border-spacing:6px 0;margin:20px 0 0",
+        ".stats td": "width:33.33%;padding:12px 4px;background:#edf4ff;text-align:center;border-radius:8px",
+        ".stat-label": "color:#46556b;font-size:14px",
+        ".stat-value": "font-size:28px;font-weight:600",
+        ".counts-note": "margin:8px 0 22px;color:#46556b;font-size:14px",
+        ".machine": "border:1px solid #d9e1ec;border-radius:10px;padding:18px;margin:0 0 16px;background:#fff;overflow-wrap:anywhere;word-wrap:break-word",
+        ".machine-name": "font-size:19px;line-height:1.5;margin:0 0 8px;font-weight:600",
+        ".kind,.field": "color:#46556b;font-size:14px;margin:8px 0 6px",
+        ".level": "font-size:16px;margin:16px 0 8px;color:#18222f;font-weight:600",
+        ".change": "margin:0 0 12px",
+        ".before,.arrow": "color:#46556b",
+        ".after": "color:#215fbc;font-weight:600",
+        ".delta": "display:inline-block;background:#edf4ff;color:#215fbc;border-radius:4px;padding:1px 7px;font-size:14px;white-space:nowrap",
+        ".values": "width:100%;border-collapse:collapse;table-layout:fixed;margin:12px 0;font-size:14px",
+        ".values th,.values td": "padding:7px 0;border-bottom:1px solid #e2e8f0;vertical-align:top;overflow-wrap:anywhere;word-wrap:break-word",
+        ".values th": "width:42%;padding-right:10px;color:#46556b;text-align:left;font-weight:400",
+        ".warning": "border:1px solid #c6a168;border-left:4px solid #925313;background:#fff4df;color:#513414;padding:18px;margin:0 0 24px;border-radius:8px;overflow-wrap:anywhere;word-wrap:break-word",
+        ".audit-card": "padding:16px;border:1px solid #d9e1ec;border-radius:8px;margin:0 0 12px;background:#fff;overflow-wrap:anywhere;word-wrap:break-word",
+        ".warning .audit-card": "border-color:#d9bf97;color:#513414",
+        ".maintenance": "margin:24px 0 0",
+        ".footer": "border-top:1px solid #d9e1ec;margin-top:24px;padding-top:20px",
+        ".footer-heading": "font-size:16px;margin:16px 0 10px;color:#46556b;font-weight:600",
+        ".note": "font-size:14px;line-height:1.75;color:#46556b;margin:8px 0;overflow-wrap:anywhere;word-wrap:break-word",
+        "a": "color:#215fbc;text-decoration:underline;overflow-wrap:anywhere;word-wrap:break-word",
+    }
+    for selector, style in styles.items():
+        for node in soup.select(selector):
+            node['style'] = ';'.join(filter(None, (node.get('style', ''), style)))
+    return str(soup)

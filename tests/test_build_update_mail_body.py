@@ -49,21 +49,21 @@ def test_build_update_mail_body_includes_report_summaries(tmp_path):
 
     assert rc == 0
     text = out.read_text(encoding="utf-8")
-    assert "- 結果: マージ済み" in text
-    assert "- データ変更（msData.json変更）: あり（true）" in text
-    assert "- データ更新元の実行ID（source_run_id）: 26709410162" in text
+    assert "結果: マージ済み" in text
+    assert "公開データの変更あり" in text
+    assert "データ更新元の実行ID（source_run_id）: 26709410162" in text
     assert "- レコード数: 1516 → 1517 | +1 -0 ~2" in text
-    assert "- 保護対象の巻き戻り（protected_rollback）: 0項目" in text
-    assert "- 数値低下の確認候補（numeric_decrease）: 1項目" in text
-    assert "監視対象の整数項目数（機体＋LV＋項目）" in text
-    assert "- LV間で増減が混在する候補（mixed_level_change）: 2組" in text
+    assert "protected_rollback" not in text
+    assert "数値低下の確認候補: 1項目" in text
+    assert "数値低下だけでは誤りと確定できません。" in text
+    assert "LV間で増減が混在する候補: 2組" in text
     assert "機体＋項目の組数" in text
-    assert "- 登録補正で保護された項目（protected_by_override）: 3項目" in text
-    assert "- 取得元が補正値と一致する項目（upstream_current）: 4項目" in text
-    assert "- 補正の想定と異なる項目（source_changed）: 2項目" in text
-    assert "- 登録補正の再確認期限到達（review_due）: 1項目" in text
-    assert "（remove_dueを除く）。確認完了数ではありません。" in text
-    assert "- 登録補正の撤去判断期限到達（remove_due）: 5項目" in text
+    assert "補正値を維持した項目: 3項目" in text
+    assert "取得元が補正値と一致した項目: 4項目" in text
+    assert "補正の想定と異なる項目: 2項目" in text
+    assert "登録補正の再確認期限到達: 1項目" in text
+    assert "撤去判断期限の対象を除く" in text
+    assert "登録補正の撤去判断期限到達: 5項目" in text
     assert "撤去完了数ではありません。" in text
 
 
@@ -216,8 +216,7 @@ def test_build_update_mail_body_matches_20260601_changed_report_contract(tmp_pat
     assert "## 変更レコード一覧" in text
     assert "### ガズアル" in text
     assert "| LV2 | HP | 18000 | 20000 |" in text
-    assert "## 巻き戻りガード" in text
-    assert "## official_overrides監査" in text
+    assert "## 補正値の維持と期限" in text
 
 
 def test_build_update_mail_body_keeps_no_change_mail_operational_context(tmp_path):
@@ -225,11 +224,11 @@ def test_build_update_mail_body_keeps_no_change_mail_operational_context(tmp_pat
     overrides = tmp_path / "overrides.md"
     out = tmp_path / "mail.txt"
     rollback.write_text(
-        "## サマリ\n- protected_rollback: 0\n- numeric_decrease: 0\n",
+        "## サマリ\n- protected_rollback: 0\n- numeric_decrease: 0\n- mixed_level_change: 0\n",
         encoding="utf-8",
     )
     overrides.write_text(
-        "## サマリ\n- protected_by_override: 0\n- review_due: 0\n",
+        "## サマリ\n- 対象値: 0\n- review_due: 0\n- remove_due: 0\n",
         encoding="utf-8",
     )
 
@@ -262,13 +261,12 @@ def test_build_update_mail_body_keeps_no_change_mail_operational_context(tmp_pat
 
     assert rc == 0
     text = out.read_text(encoding="utf-8")
-    assert "- 結果: 成功（差分なし）" in text
-    assert "- データ変更（msData.json変更）: なし（false）" in text
-    assert "- 再取得候補ページ数（candidate_count）: 0ページ" in text
-    assert "- 高速選定（fast_path）: 有効（true）" in text
-    assert "- 一覧の更新経過時間読み取り率（age_coverage）: 1.0" in text
-    assert "- 選定方式の切替理由（fallback_reason）: 切替なし（none）" in text
-    assert "- 今回の実行ID（run_id）: 26700000000" in text
+    assert "結果: 成功（差分なし）" in text
+    assert "公開データの変更なし" in text
+    assert "再取得候補: 0ページ" in text
+    assert "高速選定: 有効" in text
+    assert "一覧の更新経過時間読み取り率: 100%（1.0）" in text
+    assert "全件取得" not in text
+    assert "今回の実行ID（run_id）: 26700000000" in text
     assert "## 変更内容" not in text
-    assert "## 巻き戻りガード" in text
-    assert "## official_overrides監査" in text
+    assert "## 補正値の維持と期限" in text
