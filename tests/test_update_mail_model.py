@@ -285,11 +285,16 @@ def test_explicit_missing_audit_is_unknown_but_optional_omission_is_not_failure(
         str(html),
     ]
     main(args)
-    assert BeautifulSoup(html.read_text(), "html.parser").select(".warning") == []
+    assert (
+        BeautifulSoup(html.read_text(encoding="utf-8"), "html.parser").select(
+            ".warning"
+        )
+        == []
+    )
     main([*args, "--rollback-guard-path", str(tmp_path / "missing.md")])
     for text in (
-        plain.read_text(),
-        BeautifulSoup(html.read_text(), "html.parser").get_text(),
+        plain.read_text(encoding="utf-8"),
+        BeautifulSoup(html.read_text(encoding="utf-8"), "html.parser").get_text(),
     ):
         assert "未取得" in text
         assert "要確認の項目なし" not in text
