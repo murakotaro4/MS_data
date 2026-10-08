@@ -342,7 +342,57 @@ def _detail_count_issues(
                         ],
                     )
                 )
+        if summary_heading == "official_overrides監査":
+            issues.extend(_override_target_issues(summary, parsed, has_evidence))
     return issues
+
+
+def _override_target_issues(
+    summary: dict[str, str],
+    parsed: dict[str, list[dict[str, str]]],
+    has_evidence: bool,
+) -> list[MailCard]:
+    """状態表は相互排他。通常未取得の2状態には専用明細がない。"""
+    counts_by_target: dict[tuple[str, str], int] = {}
+    for heading in ("登録補正 / 適用中", "登録補正 / 撤去候補", "登録補正 / 要確認"):
+        for row in parsed.get(heading, []):
+            target = (row.get("MS名", ""), row.get("項目", ""))
+            counts_by_target[target] = counts_by_target.get(target, 0) + 1
+    conflicts = sorted(
+        f"{name or '対象不明'} / {field or '項目不明'}"
+        for (name, field), count in counts_by_target.items()
+        if count > 1
+    )
+    lines = []
+    if conflicts:
+        lines.extend(["状態別明細の対象が重複しています。", *conflicts])
+    if has_evidence:
+        evidence_targets = {
+            (row.get("MS名", ""), row.get("項目", ""))
+            for row in parsed.get("登録補正 / 取得証拠", [])
+        }
+        # already_protected/current_matches_overrideは専用状態表を出さない。
+        unlisted = [
+            _count(summary.get(status))
+            for status in ("already_protected", "current_matches_override")
+        ]
+        targets = set(counts_by_target)
+        if not targets <= evidence_targets or (
+            all(count is not None for count in unlisted)
+            and len(evidence_targets - targets)
+            != sum(count for count in unlisted if count is not None)
+        ):
+            lines.append(
+                "状態別明細の対象全体と取得証拠が整合していません。専用明細のない通常未取得対象を含め、欠落・状態の重複を確認してください。"
+            )
+    if lines:
+        return [
+            MailCard(
+                "登録補正の状態別対象を確認",
+                [*lines, "監査レポートで対象と状態を照合してください。"],
+            )
+        ]
+    return []
 
 
 def _audit_tables(lines: list[str]) -> tuple[list[dict[str, str]], list[str]]:

@@ -573,3 +573,47 @@ def test_empty_real_audit_tables_are_not_reported_as_unnamed_targets(
     assert "今回のチェックで要確認の項目なし" in plain
     assert "###  / " not in plain
     assert "次の対応" not in plain
+
+
+@pytest.mark.parametrize("with_unfetched", [False, True])
+@pytest.mark.parametrize("overlapping", [False, True])
+def test_override_primary_states_are_disjoint_and_cover_evidence_targets(
+    tmp_path: Path, with_unfetched: bool, overlapping: bool
+) -> None:
+    rows = [
+        _override_row(MS名="維持対象_LV2"),
+        _override_row(
+            MS名="撤去候補_LV2",
+            status="upstream_current",
+            evidence_status="match",
+            raw=22,
+        ),
+    ]
+    if with_unfetched:
+        rows.append(
+            _override_row(
+                MS名="未選定対象_LV2",
+                status="already_protected",
+                evidence_status="not_fetched",
+                raw="",
+            )
+        )
+    report = render_markdown(
+        rows,
+        Counter(row["status"] for row in rows),
+        Counter(row["lifecycle"] for row in rows),
+    )
+    if overlapping:
+        section = report.split("## 適用中\n", 1)[1].split("\n## ", 1)[0]
+        report = report.replace(
+            section, section.replace("維持対象_LV2", "撤去候補_LV2"), 1
+        )
+    plain, soup = _build(tmp_path, report=report)
+    if overlapping:
+        warning = soup.select_one(".warning").get_text()
+        assert "状態別明細の対象が重複しています。" in warning
+        assert "状態別明細の対象全体と取得証拠が整合していません。" in plain
+        assert "撤去候補_LV2 / 中スロット" in warning
+    else:
+        assert "登録補正の状態別対象を確認" not in plain
+        assert "状態別の件数・対象明細が整合していません。" not in plain
