@@ -203,7 +203,9 @@ def fit_mail_view(
         view = replace(
             view,
             sections={},
-            maintenance=[],
+            maintenance=[
+                short_card(card) for card in view.maintenance if card.target is None
+            ],
             evidence=[],
             technical=view.technical[:3],
             attention=(

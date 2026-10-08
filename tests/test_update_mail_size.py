@@ -213,8 +213,11 @@ def test_real_repository_and_run_metadata_provide_front_confirmation_link(
     assert "詳細レポート:" in plain.read_text(encoding="utf-8")
 
 
-def test_oversized_unknown_sections_keep_needed_action_and_real_link() -> None:
-    body = _override_body(_override_rows(1, lifecycle="remove_due"))
+@pytest.mark.parametrize("lifecycle", ["active", "remove_due"])
+def test_oversized_unknown_sections_keep_needed_action_and_real_link(
+    lifecycle: str,
+) -> None:
+    body = _override_body(_override_rows(1, lifecycle=lifecycle))
     body += "\n" + "\n".join(
         f"## 未知の補足{i}\n" + "長い補足" * 300 for i in range(150)
     )
@@ -222,11 +225,20 @@ def test_oversized_unknown_sections_keep_needed_action_and_real_link() -> None:
     selected, html = prepare_update_mail(body)
     text = localize_mail_body(body, view=selected)
     assert len(html.encode("utf-8")) <= MAX_HTML_BYTES
-    assert "対応が必要です" in text
-    assert "存続・撤去を判断してください" in text
+    if lifecycle == "remove_due":
+        assert "対応が必要です" in text
+        assert "存続・撤去を判断してください" in text
+    else:
+        assert "要確認の項目なし" in text
+        assert "再確認・撤去判断の期限到達なし" in text
+    assert "補正値を維持した項目: 1項目" in text
+    assert "新たな更新停止の件数ではありません" in text
     assert "本文は結果の要約です" in text
     assert BeautifulSoup(html, "html.parser").find("a")["href"] == (
         "https://example.test/full"
+    )
+    assert (
+        "補正値を維持した項目: 1項目" in BeautifulSoup(html, "html.parser").get_text()
     )
 
 
