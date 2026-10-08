@@ -159,6 +159,23 @@ def test_cached_value_is_not_described_as_current_fetch(tmp_path: Path) -> None:
     assert "取得証拠不足" in plain
 
 
+@pytest.mark.parametrize("state", ["not_fetched", "cached_only"])
+def test_source_changed_without_live_evidence_does_not_assert_upstream_changed(
+    tmp_path: Path, state: str
+) -> None:
+    plain, soup = _build(
+        tmp_path,
+        row=_override_row(
+            status="source_changed", evidence_status=state, current=23, raw=""
+        ),
+    )
+    warning = soup.select_one(".warning").get_text()
+    assert "採用値または取得値が登録補正の想定と異なります。" in warning
+    assert "取得元が補正の想定と異なります。" not in plain
+    assert "採用値: 23" in plain
+    assert "次の対応" in warning
+
+
 @pytest.mark.parametrize(
     "state",
     ["fetch_failed", "parse_failed", "value_missing", "not_parsed", "future_state"],
