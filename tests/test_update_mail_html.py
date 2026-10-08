@@ -188,18 +188,22 @@ def test_fullst_details_preserve_order_points_zero_null_and_missing() -> None:
         }
     ]
     soup = BeautifulSoup(render_update_mail(_body(_report(old, new))), "html.parser")
-    details = soup.select(".machine .values")
+    details = soup.select(".enhancements tbody tr")
     assert len(details) == 3
     assert "A|装甲" in details[0].get_text()
     assert "C" in details[1].get_text()
     assert "B" in details[2].get_text()
-    assert "null" in details[1].get_text()
+    assert "値なし" in details[1].get_text()
     assert "未設定" in details[2].get_text()
-    point_rows = {
-        row.th.get_text(): row.td.get_text() for row in details[0].select("tr")
-    }
-    assert point_rows["変更前 points"] == "0"
-    assert point_rows["変更後 points"] == "10"
+    assert [cell.get_text() for cell in details[0].select("td")] == ["0", "10"]
+    assert [cell.get_text() for cell in details[1].select("td")] == [
+        "項目なし",
+        "値なし（順序2）",
+    ]
+    assert [cell.get_text() for cell in details[2].select("td")] == [
+        "未設定（順序2）",
+        "項目なし",
+    ]
 
 
 @pytest.mark.parametrize(
