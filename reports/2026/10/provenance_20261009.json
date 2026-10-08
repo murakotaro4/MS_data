@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-10-08T16:06:24Z",
+  "report_date": "20261009",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "12df7564e2e286953d1dd6cfdf21c36d3a998b3f"
+  },
+  "github": {
+    "run_id": "37806098586",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "bc64a0a3facfcc6fbdcac734f346d30352846fe2a221003c84c7a090ce375047",
+      "size_bytes": 146797,
+      "record_count": 597
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "39413d7c85f42abe781dfca2d82bc7dc35bd2ac4ff7c424ad1a37a2bc0dfa999",
+      "size_bytes": 28930,
+      "record_count": 24
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "a58e3625b43da2c29fdcd787358950eb960eb50327f69b8e1dd16fb475a2e2c6",
+      "size_bytes": 37700,
+      "record_count": 24
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "8d1cfbdb8cb3e6e994b1a383d1a3bbc121e885a82c47ec940baa039eac5eb892",
+      "file_count": 22,
+      "size_bytes": 3894573
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "d4852db8ac7582464eaa9f181e16bf4f13c7c2de475d3aa26517391eefc9eead",
+      "size_bytes": 2663704,
+      "record_count": 1723
+    },
+    "diff_report": {
+      "path": "reports/2026/10/diff_msdata_20261009.md",
+      "sha256": "9123bf5e6661d3f0c96f2ef983c436d1c23bb0e31c03a39742405377dd83ec24",
+      "size_bytes": 3173
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20261009-run-37806098586",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20261009-run-37806098586",
+    "asset_name": "raw_snapshot_20261009_run37806098586.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261009-run-37806098586"
+  }
+}
