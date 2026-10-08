@@ -2,9 +2,6 @@
 - 結果: 成功（差分なし）
 - msData.json変更: false
 - candidate_count: 73
-- fast_path: true
-- age_coverage: 1.0
-- fallback_reason: none
 
 ## 巻き戻りガード
 - protected_rollback: 0

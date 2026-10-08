@@ -449,6 +449,7 @@ def test_global_safety_stop_is_not_described_as_partial_hold() -> None:
         ("protected_by_override", "active", "適用中", "missing"),
         ("protected_by_override", "active", "適用中", "duplicate"),
         ("protected_by_override", "active", "適用中", "wrong_status"),
+        ("protected_by_override", "active", "適用中", "wrong_target"),
         ("upstream_current", "active", "撤去候補", "missing"),
         ("source_changed", "active", "要確認", "missing"),
         ("protected_by_override", "review_due", "期限確認", "missing"),
@@ -470,12 +471,19 @@ def test_state_specific_missing_duplicate_or_mislabeled_details_warn(
         )
     elif mutation == "duplicate":
         altered = section.replace("表示確認機_LV3", "表示確認機_LV2")
+    elif mutation == "wrong_target":
+        altered = section.replace("表示確認機_LV3", "証拠なし機_LV3")
     else:
         altered = section.replace("protected_by_override", "unknown_status", 1)
     plain, soup = _build(tmp_path, report=report.replace(section, altered, 1))
     warning = soup.select_one(".warning").get_text()
-    assert f"登録補正 / {heading}: 明細を確認" in warning
-    assert "状態別の件数・対象明細が整合していません。" in plain
+    if mutation == "wrong_target":
+        assert "対象明細と取得証拠の対象が一致しません。" in warning
+        assert "証拠なし機_LV3" in warning
+        assert "監査記録の値（今回の取得値として未確認）" in warning
+    else:
+        assert f"登録補正 / {heading}: 明細を確認" in warning
+        assert "状態別の件数・対象明細が整合していません。" in plain
     assert "要確認の項目なし" not in plain
 
 
@@ -538,3 +546,30 @@ def test_unknown_source_action_is_not_inferred_as_partial_hold() -> None:
     assert "unknown_action" in plain
     assert "他の正常候補は通常レビューを継続" not in plain
     assert "要確認の項目なし" not in plain
+
+
+def test_empty_real_audit_tables_are_not_reported_as_unnamed_targets(
+    tmp_path: Path,
+) -> None:
+    guard, source = tmp_path / "guard.md", tmp_path / "source.md"
+    guard.write_text(
+        render_report(
+            protected_rollbacks=[], numeric_decreases=[], mixed_level_changes=[]
+        ),
+        encoding="utf-8",
+    )
+    source.write_text(render_source(empty_audit()), encoding="utf-8")
+    plain, soup = _build(
+        tmp_path,
+        report=render_markdown([], Counter(), Counter()),
+        extra=[
+            "--rollback-guard-path",
+            str(guard),
+            "--source-slot-audit-path",
+            str(source),
+        ],
+    )
+    assert soup.select(".warning") == []
+    assert "今回のチェックで要確認の項目なし" in plain
+    assert "###  / " not in plain
+    assert "次の対応" not in plain

@@ -285,6 +285,13 @@ def _detail_count_issues(
     issues = []
     for summary_heading, specs in _DETAIL_COUNTS.items():
         summary = summaries.get(summary_heading, {})
+        has_evidence = summary_heading == "official_overrides監査" and (
+            "対象値" in summary or "登録補正 / 取得証拠" in sections
+        )
+        evidence_targets = {
+            (row.get("MS名"), row.get("項目"))
+            for row in parsed.get("登録補正 / 取得証拠", [])
+        }
         # 旧通知のサマリだけの場合、明細未添付を維持欄で明示する。
         # 明細または対象総数のある監査では、各状態の対象をすべて照合する。
         if "対象値" not in summary and not any(
@@ -325,6 +332,16 @@ def _detail_count_issues(
                         ],
                     )
                 )
+            if has_evidence and not targets <= evidence_targets:
+                issues.append(
+                    MailCard(
+                        f"{heading}: 取得証拠の対象を確認",
+                        [
+                            "対象明細と取得証拠の対象が一致しません。この通知では対象の今回取得値を確認できません。",
+                            "監査レポートの機体・LV・項目と取得証拠を照合してください。",
+                        ],
+                    )
+                )
     return issues
 
 
@@ -353,8 +370,9 @@ def _audit_tables(lines: list[str]) -> tuple[list[dict[str, str]], list[str]]:
             or "MS名" not in headers
         ):
             remainder.append(line)
-        elif values[headers.index("MS名")] == "なし" and not any(
-            v for i, v in enumerate(values) if headers[i] != "MS名"
+        elif (values[0] == "なし" and not any(values[1:])) or (
+            values[headers.index("MS名")] == "なし"
+            and not any(v for i, v in enumerate(values) if headers[i] != "MS名")
         ):
             continue
         else:
@@ -622,7 +640,7 @@ def build_mail_view(body: str) -> MailView:
                     "remove_after": "撤去判断期限",
                     "変更後": "更新候補値",
                 }.get(key, key)
-                if key == "取得値" and state and state not in {"match", "mismatch"}:
+                if key == "取得値" and state not in {"match", "mismatch"}:
                     label = "監査記録の値（今回の取得値として未確認）"
                 if key == "状態":
                     value = _STATUS_LABELS.get(value, (value, ""))[0]
@@ -634,6 +652,8 @@ def build_mail_view(body: str) -> MailView:
                 card.values.append((label, value if value else "監査記録なし"))
             if state:
                 card.lines.append("取得証拠: " + _EVIDENCE_STATES.get(state, state))
+            elif heading.startswith("登録補正 / "):
+                card.lines.append("取得証拠: この通知に対象の取得証拠なし")
             status = row.get("期限状態") or row.get("状態") or row.get("種別")
             if heading == "ガード / LV間で増減が混在した候補":
                 status = "mixed_level_change"
@@ -651,9 +671,7 @@ def build_mail_view(body: str) -> MailView:
             if status in _STATUS_ACTIONS:
                 card.lines.append("次の対応: " + _STATUS_ACTIONS[status])
                 attention.append(card)
-            elif heading == "登録補正 / 適用中" and (
-                state and state not in {"match", "mismatch"}
-            ):
+            elif heading == "登録補正 / 適用中" and state not in {"match", "mismatch"}:
                 card.lines.append(
                     "次の対応: 取得証拠と補正維持の監査状態が整合しているか確認してください。"
                 )
