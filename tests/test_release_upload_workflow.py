@@ -97,8 +97,13 @@ def test_release_upload(
     calls_path = tmp_path / "calls.jsonl"
     output_path = tmp_path / "output"
     output_path.touch()
+    # ghスタブは本体コードではないため、pytest-covの子プロセス計測から除外する。
     env = {
-        **os.environ,
+        **{
+            key: value
+            for key, value in os.environ.items()
+            if not key.startswith("COV_CORE_")
+        },
         "PATH": str(tmp_path) + os.pathsep + os.environ.get("PATH", ""),
         "CALLS": str(calls_path),
         "EXISTING": str(int(existing_release)),
