@@ -145,45 +145,22 @@ jobs:
             created="true"
           fi
 
+          assets=("$SNAPSHOT_ASSET_PATH")
+          for path in \
+            "${{ steps.report.outputs.provenance_asset_path }}" \
+            "${{ steps.report.outputs.report_asset_path }}" \
+            "${{ steps.report.outputs.rollback_guard_asset_path }}" \
+            "${{ steps.report.outputs.official_overrides_audit_asset_path }}" \
+            "${{ steps.report.outputs.atwiki_quality_asset_path }}"; do
+            if [[ -f "$path" ]]; then
+              assets+=("$path")
+            fi
+          done
+
           gh release upload "${tag}" \
-            "$SNAPSHOT_ASSET_PATH" \
+            "${assets[@]}" \
             --repo "${GITHUB_REPOSITORY}" \
             --clobber
-
-          if [[ -f "${{ steps.report.outputs.provenance_asset_path }}" ]]; then
-            gh release upload "${tag}" \
-              "${{ steps.report.outputs.provenance_asset_path }}" \
-              --repo "${GITHUB_REPOSITORY}" \
-              --clobber
-          fi
-
-          if [[ -f "${{ steps.report.outputs.report_asset_path }}" ]]; then
-            gh release upload "${tag}" \
-              "${{ steps.report.outputs.report_asset_path }}" \
-              --repo "${GITHUB_REPOSITORY}" \
-              --clobber
-          fi
-
-          if [[ -f "${{ steps.report.outputs.rollback_guard_asset_path }}" ]]; then
-            gh release upload "${tag}" \
-              "${{ steps.report.outputs.rollback_guard_asset_path }}" \
-              --repo "${GITHUB_REPOSITORY}" \
-              --clobber
-          fi
-
-          if [[ -f "${{ steps.report.outputs.official_overrides_audit_asset_path }}" ]]; then
-            gh release upload "${tag}" \
-              "${{ steps.report.outputs.official_overrides_audit_asset_path }}" \
-              --repo "${GITHUB_REPOSITORY}" \
-              --clobber
-          fi
-
-          if [[ -f "${{ steps.report.outputs.atwiki_quality_asset_path }}" ]]; then
-            gh release upload "${tag}" \
-              "${{ steps.report.outputs.atwiki_quality_asset_path }}" \
-              --repo "${GITHUB_REPOSITORY}" \
-              --clobber
-          fi
 
           release_url="$(gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" --json url --jq '.url')"
           echo "release_url=${release_url}" >> "$GITHUB_OUTPUT"

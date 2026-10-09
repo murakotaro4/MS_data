@@ -9,6 +9,7 @@ import textwrap
 from pathlib import Path
 
 import pytest
+
 from workflow_contract import step_block, workflow_text
 
 pytestmark = pytest.mark.skipif(
