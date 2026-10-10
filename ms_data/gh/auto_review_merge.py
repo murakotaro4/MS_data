@@ -8,11 +8,14 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlencode
 
 from ms_data.core.dates import JST
 from ms_data.gh import gh_json
@@ -194,6 +197,12 @@ def merge_pull_request(
     if current_sha != head_sha:
         return MergeResult(False, "", head_ref, "head_sha_mismatch", state)
 
+    ci_reason = _latest_head_ci_skip_reason(
+        repo=repo, head_ref=head_ref, head_sha=head_sha, deps=deps
+    )
+    if ci_reason:
+        return MergeResult(False, "", head_ref, ci_reason, state)
+
     deps.run_gh(
         [
             "gh",
@@ -221,6 +230,60 @@ def merge_pull_request(
     if not merge_commit_sha:
         return MergeResult(False, "", head_ref, "empty_merge_commit", state)
     return MergeResult(True, merge_commit_sha, head_ref, "", state)
+
+
+def _latest_head_ci_skip_reason(
+    *, repo: str, head_ref: str, head_sha: str, deps: ReviewDeps
+) -> str:
+    """対象 HEAD の最新 CI が成功した場合だけ空文字を返す。"""
+    query = urlencode({"head_sha": head_sha, "event": "pull_request", "per_page": 100})
+    try:
+        output = gh_json._run_gh_get_with_runner(
+            [
+                "gh",
+                "api",
+                f"repos/{repo}/actions/workflows/ci.yml/runs?{query}",
+                "--paginate",
+                "--jq",
+                ".workflow_runs",
+            ],
+            runner=deps.run_gh,
+            sleeper=deps.clock.sleep,
+        )
+        runs = gh_json.parse_json_stream(output)
+        if not isinstance(runs, list):
+            return "ci_unavailable"
+        if not runs:
+            return "ci_not_found"
+        if any(
+            not isinstance(run, dict)
+            or type(run.get("id")) is not int
+            or run["id"] <= 0
+            or not isinstance(run.get("created_at"), str)
+            or not run["created_at"].endswith("Z")
+            for run in runs
+        ):
+            return "ci_unavailable"
+        latest = max(
+            runs,
+            key=lambda run: (datetime.fromisoformat(run["created_at"]), run["id"]),
+        )
+        workflow_path = latest.get("path")
+        if (
+            latest.get("head_sha") != head_sha
+            or latest.get("head_branch") != head_ref
+            or latest.get("event") != "pull_request"
+            or not isinstance(workflow_path, str)
+            or workflow_path.split("@", 1)[0] != ".github/workflows/ci.yml"
+        ):
+            return "ci_target_mismatch"
+        if latest.get("status") != "completed":
+            return "ci_incomplete"
+        if latest.get("conclusion") != "success":
+            return "ci_not_success"
+    except (subprocess.CalledProcessError, ValueError, TypeError):
+        return "ci_unavailable"
+    return ""
 
 
 def dispatch_post_merge_notify(

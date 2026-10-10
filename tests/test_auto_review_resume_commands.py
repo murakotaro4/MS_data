@@ -17,6 +17,7 @@ from auto_review_helpers import (
     metrics,
     run_main,
     script_metrics,
+    successful_ci_runs,
 )
 
 
@@ -66,6 +67,8 @@ def test_cmd_resume_honors_injected_deps_through_merge_and_notify(
 
     def fake_run_gh(command):
         gh_calls.append(command)
+        if command[1:2] == ["api"] and "/actions/workflows/ci.yml/runs?" in command[2]:
+            return successful_ci_runs(HEAD_SHA)
         if command[1:3] == ["pr", "view"]:
             return json.dumps(next(views))
         return ""
@@ -100,6 +103,10 @@ def test_cmd_resume_honors_injected_deps_through_merge_and_notify(
     assert rc == 0
     assert [call[1:3] for call in gh_calls] == [
         ["pr", "view"],
+        [
+            "api",
+            "repos/owner/repo/actions/workflows/ci.yml/runs?head_sha=abc123&event=pull_request&per_page=100",
+        ],
         ["pr", "merge"],
         ["pr", "view"],
         ["workflow", "run"],
