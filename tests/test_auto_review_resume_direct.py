@@ -322,6 +322,7 @@ def test_handle_resume_findings_posts_marker_and_notifies(fake_gh, fake_time):
         ({"conclusion": "failure"}, "ci_not_success"),
         ({"status": "in_progress"}, "ci_incomplete"),
         ({"head_sha": "old-head"}, "ci_target_mismatch"),
+        ({"id": None}, "ci_unavailable"),
         (None, "ci_not_found"),
     ],
 )
@@ -350,6 +351,10 @@ def test_resume_with_successful_review_still_requires_latest_head_ci(
     )
     with pytest.raises(RuntimeError, match=reason):
         auto_review_resume.cmd_resume(_args(tmp_path, pat_available="false"), deps)
+    summary = (tmp_path / "summary.md").read_text()
+    assert "### Auto Review Resume" in summary
+    assert "- failed: #97" in summary
+    assert f"reason={reason}" in summary
     assert len(calls) == 2
     assert not any(
         call[1:3] in (["pr", "merge"], ["workflow", "run"]) for call in calls

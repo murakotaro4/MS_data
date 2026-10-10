@@ -414,9 +414,14 @@ def cmd_resume(args: argparse.Namespace, deps: ReviewDeps) -> int:
     merged_count = 0
     pending_count = 0
     for candidate in candidates:
-        outcome = _process_resume_candidate(
-            client=client, candidate=candidate, params=params, deps=deps
-        )
+        try:
+            outcome = _process_resume_candidate(
+                client=client, candidate=candidate, params=params, deps=deps
+            )
+        except Exception as error:
+            summary_lines.append(f"- failed: #{candidate['pr_number']} ({error})")
+            append_step_summary(summary_lines, args.step_summary)
+            raise
         summary_lines.append(outcome.summary_line)
         if outcome.kind == "merged":
             merged_count += 1
