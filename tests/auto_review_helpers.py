@@ -4,6 +4,7 @@
 sys.path に載せる前提。conftest の fake_gh / fake_time fixture と併用）。
 """
 
+import json
 from dataclasses import replace
 
 from ms_data.gh.auto_review_merge import ReviewDeps, main
@@ -67,3 +68,21 @@ def script_metrics(script: list[dict]):
         return script[index]
 
     return calls, fake
+
+
+def successful_ci_runs(head_sha: str) -> str:
+    """最新HEADの成功CIを縮約したRESTレスポンス。"""
+    return json.dumps(
+        [
+            {
+                "id": 38022150738,
+                "created_at": "2026-10-10T03:53:35Z",
+                "head_sha": head_sha,
+                "head_branch": "data/auto-update-20260531",
+                "event": "pull_request",
+                "path": ".github/workflows/ci.yml",
+                "status": "completed",
+                "conclusion": "success",
+            }
+        ]
+    )

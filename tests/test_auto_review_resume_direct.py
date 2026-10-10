@@ -314,3 +314,43 @@ def test_handle_resume_findings_posts_marker_and_notifies(fake_gh, fake_time):
     assert notify_calls[0]["payload"] == [
         {"path": "msData.json", "line": 12, "body": "finding"}
     ]
+
+
+@pytest.mark.parametrize(
+    ("ci_changes", "reason"),
+    [
+        ({"conclusion": "failure"}, "ci_not_success"),
+        ({"status": "in_progress"}, "ci_incomplete"),
+        ({"head_sha": "old-head"}, "ci_target_mismatch"),
+        (None, "ci_not_found"),
+    ],
+)
+def test_resume_with_successful_review_still_requires_latest_head_ci(
+    fake_gh, fake_time, tmp_path, ci_changes, reason
+):
+    from auto_review_helpers import successful_ci_runs
+
+    _prepare_client(fake_gh)
+    calls = []
+    runs = json.loads(successful_ci_runs(HEAD_SHA)) if ci_changes is not None else []
+    if runs:
+        runs[0].update(ci_changes)
+
+    def run_gh(command):
+        calls.append(command)
+        if command[1:3] == ["pr", "view"]:
+            return json.dumps(
+                {"state": "OPEN", "headRefOid": HEAD_SHA, "mergeCommit": None}
+            )
+        assert command[1] == "api" and "/actions/workflows/ci.yml/runs?" in command[2]
+        return json.dumps(runs)
+
+    deps = _deps(
+        fake_gh, fake_time, collect_metrics=lambda **_: MERGE_OK, run_gh=run_gh
+    )
+    with pytest.raises(RuntimeError, match=reason):
+        auto_review_resume.cmd_resume(_args(tmp_path, pat_available="false"), deps)
+    assert len(calls) == 2
+    assert not any(
+        call[1:3] in (["pr", "merge"], ["workflow", "run"]) for call in calls
+    )

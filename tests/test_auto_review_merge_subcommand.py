@@ -7,6 +7,7 @@ import pytest
 from ms_data.gh.argtypes import ReviewDeps
 from ms_data.gh.auto_review_merge import build_parser, cmd_merge, main
 
+from auto_review_helpers import successful_ci_runs
 from workflow_contract import ROOT, assert_contains, step_block, workflow_text
 
 
@@ -48,6 +49,8 @@ def _deps(fake_time, responses, calls, *, fail_on=None):
         calls.append(command)
         if fail_on is not None and fail_on(command):
             raise RuntimeError("injected notification failure")
+        if command[1:2] == ["api"] and "/actions/workflows/ci.yml/runs?" in command[2]:
+            return successful_ci_runs("head-sha")
         if command[1:3] == ["pr", "view"]:
             return next(scripted)
         return ""
@@ -141,6 +144,10 @@ def test_merge_success_writes_outputs_then_dispatches(
     }
     assert [call[1:3] for call in calls] == [
         ["pr", "view"],
+        [
+            "api",
+            "repos/owner/repo/actions/workflows/ci.yml/runs?head_sha=head-sha&event=pull_request&per_page=100",
+        ],
         ["pr", "merge"],
         ["pr", "view"],
         ["workflow", "run"],
@@ -242,7 +249,7 @@ def test_dispatch_failure_preserves_merged_outputs_and_skips_comment(
     )
 
     assert read_github_output(tmp_path / "output.txt")["merged"] == "true"
-    assert not any(call[1:2] == ["api"] for call in calls)
+    assert not any(call[1:2] == ["api"] and "/comments" in call[2] for call in calls)
     assert (
         "Merge succeeded, notification failed" in (tmp_path / "summary.md").read_text()
     )
@@ -256,7 +263,7 @@ def test_comment_failure_occurs_after_dispatch_and_preserves_outputs(
         fake_time,
         [_view("OPEN"), _view("MERGED", merge_sha="merge")],
         calls,
-        fail_on=lambda command: command[1:2] == ["api"],
+        fail_on=lambda command: command[1:2] == ["api"] and "/comments" in command[2],
     )
 
     assert (
