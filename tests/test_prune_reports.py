@@ -147,6 +147,8 @@ def test_cli_ignores_dated_directories(
     )
     command = [
         sys.executable,
+        "-X",
+        "utf8",  # Windows のパイプ出力でも日本語サマリーをUTF-8で扱う
         "-m",
         "ms_data.reporting.prune_reports",
         "--manifest",
@@ -162,7 +164,7 @@ def test_cli_ignores_dated_directories(
         command,
         cwd=Path(__file__).resolve().parents[1],
         capture_output=True,
-        text=True,
+        encoding="utf-8",
         timeout=30,
         check=False,
     )
