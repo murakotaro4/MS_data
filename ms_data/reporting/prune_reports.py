@@ -60,6 +60,8 @@ def plan_prune_entry(
     dated: list[tuple[str, Path]] = []
     for pattern in entry.get("path_patterns", []):
         for path in sorted(root.glob(str(pattern))):
+            if not path.is_file():
+                continue
             if path in seen:
                 continue
             seen.add(path)

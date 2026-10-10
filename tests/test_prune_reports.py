@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
+
+import pytest
 
 from ms_data.reporting.prune_reports import (
     extract_report_date,
     plan_prune,
     plan_prune_entry,
 )
+
+from helpers import write_json
 
 
 def _entry(**overrides):
@@ -119,3 +125,77 @@ def test_nested_year_month_patterns_are_pruned(tmp_path: Path):
         "20250102": "delete",
         "20250101": "delete",
     }
+
+
+@pytest.mark.parametrize("keep_min", [0, 1])
+@pytest.mark.parametrize("apply", [False, True], ids=["dry-run", "apply"])
+def test_cli_ignores_dated_directories(
+    tmp_path: Path, keep_min: int, apply: bool
+) -> None:
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    report = reports / "diff_msdata_20250101.md"
+    report.write_text("report content\n", encoding="utf-8")
+    directory = reports / "diff_msdata_20250102.md"
+    directory.mkdir()
+    marker = directory / "marker.txt"
+    marker.write_text("directory content\n", encoding="utf-8")
+    manifest = tmp_path / "manifest.json"
+    write_json(
+        manifest,
+        {"entries": [_entry(prune={"max_age_days": 90, "keep_min": keep_min})]},
+    )
+    command = [
+        sys.executable,
+        "-X",
+        "utf8",  # Windows のパイプ出力でも日本語サマリーをUTF-8で扱う
+        "-m",
+        "ms_data.reporting.prune_reports",
+        "--manifest",
+        str(manifest),
+        "--root",
+        str(tmp_path),
+        "--today",
+        "20260610",
+    ]
+    if apply:
+        command.append("--apply")
+    result = subprocess.run(
+        command,
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        encoding="utf-8",
+        timeout=30,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert f"- applied: {str(apply).lower()}" in result.stdout
+    assert "- scanned: 1" in result.stdout
+    assert f"- delete: {int(keep_min == 0)}" in result.stdout
+    if apply and keep_min == 0:
+        assert not report.exists()
+    else:
+        assert report.read_text(encoding="utf-8") == "report content\n"
+    assert directory.is_dir()
+    assert marker.read_text(encoding="utf-8") == "directory content\n"
+
+
+def test_symlink_to_regular_report_is_still_planned(tmp_path: Path) -> None:
+    target = tmp_path / "source.md"
+    target.write_text("report content\n", encoding="utf-8")
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    link = reports / "diff_msdata_20250101.md"
+    try:
+        link.symlink_to(target)
+    except OSError as error:
+        pytest.skip(f"symlinks unavailable: {error}")
+    actions = plan_prune_entry(
+        _entry(prune={"max_age_days": 90, "keep_min": 0}),
+        root=tmp_path,
+        today="20260610",
+    )
+    assert len(actions) == 1
+    assert actions[0].path == link
+    assert actions[0].action == "delete"
