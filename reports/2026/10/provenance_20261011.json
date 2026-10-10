@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-10-10T15:00:54Z",
+  "report_date": "20261011",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "681aac44083aa68b2bbb76a72f4c74d5f11725bd"
+  },
+  "github": {
+    "run_id": "38061873531",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "832600ffdd6c8835b40f537bb2916a829ef5c5ae50d28b4cd45672ee0b60ec62",
+      "size_bytes": 146831,
+      "record_count": 597
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "caf19b56a8279a830195ac9a905ca5b365f094ab459f3849832beb7b2bdeadac",
+      "size_bytes": 5654,
+      "record_count": 5
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "5a9a19cf8fa3b35a800dbe9b931020a7e97ac94d045afc6b7b0b6128039eb035",
+      "size_bytes": 7449,
+      "record_count": 5
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "a2797cb9bdbd67cc9dc854c2d7116e200a9f6451bc6c56e1d4acb4fbfc8b01fe",
+      "file_count": 6,
+      "size_bytes": 1442792
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "46260d1a7d081bcb8468f6529efab6459da21894004b7778b794b3c56f971a2a",
+      "size_bytes": 2668122,
+      "record_count": 1726
+    },
+    "diff_report": {
+      "path": "reports/2026/10/diff_msdata_20261011.md",
+      "sha256": "a66715c9674afe028b10d68a1dac1a73396f97261ae7460fdf9f9776c1139874",
+      "size_bytes": 1486
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20261011-run-38061873531",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20261011-run-38061873531",
+    "asset_name": "raw_snapshot_20261011_run38061873531.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261011-run-38061873531"
+  }
+}
