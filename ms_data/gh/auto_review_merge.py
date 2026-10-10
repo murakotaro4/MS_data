@@ -268,11 +268,13 @@ def _latest_head_ci_skip_reason(
             runs,
             key=lambda run: (datetime.fromisoformat(run["created_at"]), run["id"]),
         )
+        workflow_path = latest.get("path")
         if (
             latest.get("head_sha") != head_sha
             or latest.get("head_branch") != head_ref
             or latest.get("event") != "pull_request"
-            or latest.get("path") != ".github/workflows/ci.yml"
+            or not isinstance(workflow_path, str)
+            or workflow_path.split("@", 1)[0] != ".github/workflows/ci.yml"
         ):
             return "ci_target_mismatch"
         if latest.get("status") != "completed":

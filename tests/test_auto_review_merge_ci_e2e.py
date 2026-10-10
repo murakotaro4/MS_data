@@ -146,6 +146,8 @@ def test_latest_incomplete_ci_is_not_success(tmp_path, status):
         {"head_branch": "other-branch"},
         {"event": "push"},
         {"path": ".github/workflows/other.yml"},
+        {"path": ".github/workflows/other.yml@main"},
+        {"path": ".github/workflows/ci.yml.bak@main"},
     ],
 )
 def test_wrong_ci_target_is_not_success(tmp_path, change):
@@ -177,14 +179,24 @@ def test_ci_api_failure_stops_without_merge_or_notify(tmp_path):
     assert "HTTP 403" in result.stderr
 
 
-def test_successful_latest_ci_merges_with_head_match_and_notifies(tmp_path):
+@pytest.mark.parametrize(
+    "workflow_path",
+    [
+        ".github/workflows/ci.yml",
+        ".github/workflows/ci.yml@main",
+        ".github/workflows/ci.yml@refs/pull/97/merge",
+    ],
+)
+def test_successful_latest_ci_merges_with_head_match_and_notifies(
+    tmp_path, workflow_path
+):
     # gh --paginate のページ間JSON連結も実CLIで検証する。
     payload = (
         json.dumps(
             [_latest(conclusion="failure", id=1, created_at="2026-10-09T00:00:00Z")]
         )
         + "\n"
-        + successful_ci_runs(HEAD)
+        + json.dumps([_latest(path=workflow_path)])
     )
     result, calls = _run(tmp_path, payload=payload)
     assert result.returncode == 0, result.stderr
