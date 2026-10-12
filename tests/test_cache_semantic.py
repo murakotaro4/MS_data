@@ -3,7 +3,78 @@ from pathlib import Path
 import httpx
 import pytest
 
-from ms_data.net.cache_http import CacheConfig, CacheHTTP, _extract_semantic_text
+from ms_data.net.cache_http import (
+    CacheConfig,
+    CacheHTTP,
+    _extract_semantic_text,
+    _semantic_sha256,
+)
+
+_STATUS_HTML = """<html><head><title>テストMS</title></head><body>
+<div id="table_hanyou"><table><tr><th>機体HP</th><td>10000</td></tr></table></div>
+{noise}</body></html>"""
+_NESTED_NOISE = """<div class="plugin-comment"><div id="recent">
+<table><tr><th>LV1</th><td>ノイズ</td></tr></table>
+<span>コメント</span></div></div>"""
+
+
+@pytest.mark.parametrize(
+    "noise",
+    [
+        _NESTED_NOISE,
+        '<div id="bbs"><div><span>掲示板</span></div></div>',
+        '<footer class="footer"><ul><li><a>リンク</a></li></ul></footer>',
+    ],
+)
+def test_nested_noise_keeps_semantic_text_and_hash_without_warnings(
+    noise: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    clean_html = _STATUS_HTML.format(noise="")
+    noisy_html = _STATUS_HTML.format(noise=noise)
+
+    assert _extract_semantic_text(noisy_html) == _extract_semantic_text(clean_html)
+    assert _extract_semantic_text(noisy_html) == "テストMS 機体HP 10000"
+    assert _semantic_sha256(noisy_html) == _semantic_sha256(clean_html)
+    # 修正前の抽出結果から記録したハッシュも維持する。
+    assert _semantic_sha256(noisy_html) == (
+        "4c0afe71b307a50f3f6b4114efa701012872c6cb0e3b6a3723cb58283fd39f64"
+    )
+    assert capsys.readouterr().err == ""
+
+
+def test_nested_noise_change_is_ignored_but_content_change_is_detected(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    html_base = _STATUS_HTML.format(noise=_NESTED_NOISE)
+    html_noise_changed = html_base.replace("ノイズ", "新しいノイズ")
+    html_content_changed = html_noise_changed.replace("10000", "11000")
+    responses = iter([html_base, html_noise_changed, html_content_changed])
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _resp(next(responses))
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        cache = CacheHTTP(client, CacheConfig(root=tmp_path, ttl_seconds=0))
+        url = "https://example.test/nested-noise"
+        text1, meta1 = cache.get(url)
+        text2, meta2 = cache.get(url)
+        text3, meta3 = cache.get(url)
+
+    assert (text1, text2, text3) == (
+        html_base,
+        html_noise_changed,
+        html_content_changed,
+    )
+    assert meta1["semantic_changed"] is True
+    assert meta2["semantic_changed"] is False
+    assert meta3["semantic_changed"] is True
+    assert meta1["content_sha256"] != meta2["content_sha256"]
+    assert meta1["semantic_sha256"] == meta2["semantic_sha256"]
+    assert meta2["semantic_sha256"] != meta3["semantic_sha256"]
+    assert meta1["last_semantic_change_at"] == meta2["last_semantic_change_at"]
+    assert meta2["last_semantic_change_at"] != meta3["last_semantic_change_at"]
+    assert cache.stats["network_requests"] == 3
+    assert capsys.readouterr().err == ""
 
 
 def _resp(
