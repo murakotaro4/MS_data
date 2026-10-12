@@ -331,6 +331,9 @@ def _extract_semantic_text(html: str) -> str:
     def decompose_if_noise(tag, *, text_markers: bool = False) -> None:
         if tag is None or not hasattr(tag, "get_text") or not hasattr(tag, "get"):
             return
+        # 親ノイズの分解で破棄された子Tagが走査リストに残ることがある。
+        if tag.decomposed:
+            return
         txt = ""
         try:
             txt = tag.get_text(" ")
