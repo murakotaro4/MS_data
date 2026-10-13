@@ -8,6 +8,8 @@ JST = timezone(timedelta(hours=9))
 
 
 def parse_yyyymmdd_jst(yyyymmdd: str) -> datetime:
+    if len(yyyymmdd) != 8 or not yyyymmdd.isascii() or not yyyymmdd.isdigit():
+        raise ValueError("date must be 8 ASCII digits in YYYYMMDD format")
     return datetime.strptime(yyyymmdd, "%Y%m%d").replace(tzinfo=JST)
 
 
