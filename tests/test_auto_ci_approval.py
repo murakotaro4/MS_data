@@ -78,6 +78,9 @@ def test_cli_ignores_already_successful_ci(fake_time):
         (".github/workflows/data_update.yml@main", True),
         (".github/workflows/data_update.yml@refs/heads/main", True),
         (".github/workflows/data_update.yml.bak@main", False),
+        (".github/workflows/data_update.yml@refs/tags/main", False),
+        (".github/workflows/data_update.yml@refs/heads/feature", False),
+        (".github/workflows/data_update.yml@main@refs/tags/main", False),
         (".github/workflows/other.yml@main", False),
         (None, False),
     ],
@@ -90,6 +93,24 @@ def test_source_workflow_ref_suffix_preserves_exact_workflow_check(
     reason = approve(data, deps)
     assert reason == ("" if eligible else "ci_approval_untrusted")
     assert any(call[2].endswith("/approve") for call in calls) is eligible
+
+
+@pytest.mark.parametrize(
+    "statuses,reason",
+    [
+        (["queued", "in_progress", "completed"], ""),
+        (["in_progress"], "ci_source_incomplete"),
+    ],
+)
+def test_source_completion_race_is_waited_for_before_approval(
+    fake_time, statuses, reason
+):
+    data, deps, calls = scenario(fake_time)
+    data["source_polls"] = statuses
+    assert approve(data, deps) == reason
+    assert any(call[2].endswith("/approve") for call in calls) is (not reason)
+    source_reads = sum(call[2].endswith("/123") for call in calls)
+    assert source_reads == (3 if not reason else 9)
 
 
 def scenario(fake_time, *, result="success", approval_denied=False):
@@ -135,9 +156,10 @@ def scenario(fake_time, *, result="success", approval_denied=False):
     approved = False
     merged = False
     pull_reads = 0
+    source_reads = 0
 
     def runner(args):
-        nonlocal approved, merged, pull_reads
+        nonlocal approved, merged, pull_reads, source_reads
         calls.append(args)
         if args[1:3] == ["pr", "view"]:
             return json.dumps(
@@ -175,6 +197,17 @@ def scenario(fake_time, *, result="success", approval_denied=False):
         if endpoint.endswith("/files"):
             return json.dumps(data["files"])
         if endpoint.endswith("/123"):
+            if "source_polls" in data:
+                statuses = data["source_polls"]
+                status = statuses[min(source_reads, len(statuses) - 1)]
+                source_reads += 1
+                return json.dumps(
+                    {
+                        **data["source"],
+                        "status": status,
+                        "conclusion": "success" if status == "completed" else None,
+                    }
+                )
             return json.dumps(data["source"])
         if endpoint.endswith("/jobs"):
             return json.dumps(data["jobs"])

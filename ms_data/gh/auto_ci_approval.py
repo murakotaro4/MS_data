@@ -95,19 +95,31 @@ def approve_and_wait_ci(
         source_id = source_run_id_from_body(pull.get("body"))
         if not source_id:
             return "ci_approval_untrusted"
-        source = _get(f"repos/{repo}/actions/runs/{source_id}", deps)
-        if (
-            not isinstance(source, dict)
-            or str(source.get("id")) != source_id
-            or not isinstance(source.get("path"), str)
-            or source["path"].split("@", 1)[0] != ".github/workflows/data_update.yml"
-            or (source.get("event") not in {"schedule", "workflow_dispatch"})
-            or (source.get("head_branch") != "main")
-            or (source.get("status") != "completed")
-            or (source.get("conclusion") != "success")
-            or ((source.get("repository") or {}).get("full_name") != repo)
-        ):
-            return "ci_approval_untrusted"
+        source_paths = {
+            ".github/workflows/data_update.yml",
+            ".github/workflows/data_update.yml@main",
+            ".github/workflows/data_update.yml@refs/heads/main",
+        }
+        for attempt in range(9):
+            source = _get(f"repos/{repo}/actions/runs/{source_id}", deps)
+            if (
+                not isinstance(source, dict)
+                or str(source.get("id")) != source_id
+                or source.get("path") not in source_paths
+                or source.get("event") not in {"schedule", "workflow_dispatch"}
+                or source.get("head_branch") != "main"
+                or (source.get("repository") or {}).get("full_name") != repo
+            ):
+                return "ci_approval_untrusted"
+            if source.get("status") == "completed":
+                if source.get("conclusion") != "success":
+                    return "ci_approval_untrusted"
+                break
+            if source.get("status") not in {"queued", "in_progress", "waiting"}:
+                return "ci_approval_untrusted"
+            if attempt == 8:
+                return "ci_source_incomplete"
+            deps.clock.sleep(15)
         run_id = run["id"]
         endpoint = f"repos/{repo}/actions/runs/{run_id}"
         current = _get(endpoint, deps)
