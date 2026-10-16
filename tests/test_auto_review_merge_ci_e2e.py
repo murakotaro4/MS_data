@@ -105,6 +105,7 @@ def _assert_stopped(tmp_path, result, calls, reason):
     assert not (tmp_path / "merged").exists()
     assert f"skip_reason={reason}" in (tmp_path / "output").read_text()
     assert f"- reason: {reason}" in (tmp_path / "summary").read_text()
+    assert f"Merge stopped: reason={reason} pr_state=OPEN" in result.stdout
 
 
 @pytest.mark.parametrize(
@@ -125,6 +126,7 @@ def test_latest_unsuccessful_ci_does_not_fall_back_to_old_success(tmp_path, conc
     payload = json.dumps([old_success, _latest(conclusion=conclusion)])
     result, calls = _run(tmp_path, payload=payload)
     _assert_stopped(tmp_path, result, calls, "ci_not_success")
+    assert f"conclusion={conclusion}" in result.stdout
 
 
 @pytest.mark.parametrize(
@@ -222,3 +224,4 @@ def test_head_change_after_ci_check_never_notifies(tmp_path):
     assert calls[-1][:2] == ["pr", "merge"]
     assert not any(call[:2] == ["workflow", "run"] for call in calls)
     assert not (tmp_path / "merged").exists()
+

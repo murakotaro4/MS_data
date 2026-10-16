@@ -268,6 +268,12 @@ def _latest_head_ci_skip_reason(
             runs,
             key=lambda run: (datetime.fromisoformat(run["created_at"]), run["id"]),
         )
+        print(
+            f"Latest HEAD CI: run_id={latest['id']} "
+            f"attempt={latest.get('run_attempt')} "
+            f"status={latest.get('status')} "
+            f"conclusion={latest.get('conclusion')}"
+        )
         workflow_path = latest.get("path")
         if (
             latest.get("head_sha") != head_sha
@@ -356,6 +362,10 @@ def cmd_merge(args: argparse.Namespace, deps: ReviewDeps) -> int:
         deps=deps,
     )
     if not result.merged:
+        print(
+            f"Merge stopped: reason={result.skip_reason} "
+            f"pr_state={result.pr_state}"
+        )
         write_github_output(
             args.github_output,
             {
@@ -693,3 +703,4 @@ def main(
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
