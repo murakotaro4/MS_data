@@ -5,11 +5,13 @@ from __future__ import annotations
 import argparse
 import subprocess
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
 
 from ms_data.gh.argtypes import GITHUB_ACTIONS_BOT, ReviewDeps
 from ms_data.gh.gh_json import gh_api_json
+from ms_data.gh.outputs import write_github_output
 from ms_data.gh.pr_payload import (
     HEAD_REF_DATE_RE,
     base_ref,
@@ -75,6 +77,7 @@ def approve_and_wait_ci(
     sha: str,
     run: dict[str, Any],
     deps: ReviewDeps,
+    check_only: bool = False,
 ) -> str:
     """厳格な対象検証後に一度だけ承認し、最大5分CI成功を待つ。"""
     match = HEAD_REF_DATE_RE.fullmatch(ref)
@@ -120,6 +123,8 @@ def approve_and_wait_ci(
         fresh_pull = _get(f"repos/{repo}/pulls/{pr_number}", deps)
         if not _trusted_pull(fresh_pull, repo, ref, sha):
             return "head_sha_mismatch"
+        if check_only:
+            return ""
         print(f"Approving data PR CI: pr={pr_number} run_id={run_id}")
         try:
             deps.run_gh(["gh", "api", f"{endpoint}/approve", "-X", "POST"])
@@ -168,7 +173,11 @@ def main(argv: list[str] | None = None, *, deps: ReviewDeps | None = None) -> in
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", required=True)
     parser.add_argument("--run-id", required=True, type=int)
+    parser.add_argument("--check-only", action="store_true")
+    parser.add_argument("--github-output", type=Path, default=None)
     args = parser.parse_args(argv)
+    if args.github_output is not None:
+        write_github_output(args.github_output, {"eligible": "false"})
     deps = deps or ReviewDeps.default()
     try:
         run = _get(f"repos/{args.repo}/actions/runs/{args.run_id}", deps)
@@ -201,7 +210,12 @@ def main(argv: list[str] | None = None, *, deps: ReviewDeps | None = None) -> in
             sha=sha,
             run=run,
             deps=deps,
+            check_only=args.check_only,
         )
+        if args.check_only and args.github_output is not None:
+            write_github_output(
+                args.github_output, {"eligible": "true" if not reason else "false"}
+            )
         print(
             f"CI approval result: run_id={args.run_id} reason={reason or 'ci_success'}"
         )

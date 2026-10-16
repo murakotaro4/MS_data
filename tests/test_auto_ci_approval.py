@@ -23,10 +23,38 @@ def test_approval_workflow_uses_trusted_main_and_serializes_only_eligible_job():
     assert "ref: main" in text
     assert "persist-credentials: false" in text
     assert "  pull-requests: read" in text
-    assert "  actions: write" in text
+    assert "  actions: read" in text
+    assert "      actions: write" in text
+    assert "needs: evaluate" in text
+    assert "if: needs.evaluate.outputs.eligible == 'true'" in text
+    assert "--check-only --github-output" in text
     assert "    concurrency:" in text
     assert "\nconcurrency:" not in text
     assert "ms_data.gh.auto_ci_approval" in text
+
+
+@pytest.mark.parametrize("eligible", [True, False])
+def test_preflight_has_no_mutations_and_reports_eligibility(
+    fake_time, tmp_path, eligible
+):
+    data, deps, calls = scenario(fake_time)
+    if not eligible:
+        data["files"][0]["filename"] = "ms_data/tasks.py"
+    output = tmp_path / "output"
+    main(
+        [
+            "--repo",
+            REPO,
+            "--run-id",
+            "456",
+            "--check-only",
+            "--github-output",
+            str(output),
+        ],
+        deps=deps,
+    )
+    assert output.read_text().splitlines()[-1] == f"eligible={str(eligible).lower()}"
+    assert not any("POST" in call or call[1:3] == ["pr", "merge"] for call in calls)
 
 
 def test_cli_approves_only_eligible_run(fake_time):
@@ -139,7 +167,12 @@ def scenario(fake_time, *, result="success", approval_denied=False):
 
 def approve(data, deps, **overrides):
     kwargs = {
-        "repo": REPO, "pr_number": "97", "ref": REF, "sha": SHA, "run": data["run"], "deps": deps
+        "repo": REPO,
+        "pr_number": "97",
+        "ref": REF,
+        "sha": SHA,
+        "run": data["run"],
+        "deps": deps,
     }
     kwargs.update(overrides)
     return approve_and_wait_ci(**kwargs)
