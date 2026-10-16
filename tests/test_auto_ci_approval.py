@@ -71,6 +71,27 @@ def test_cli_ignores_already_successful_ci(fake_time):
     assert len(calls) == 1
 
 
+@pytest.mark.parametrize(
+    "path,eligible",
+    [
+        (".github/workflows/data_update.yml", True),
+        (".github/workflows/data_update.yml@main", True),
+        (".github/workflows/data_update.yml@refs/heads/main", True),
+        (".github/workflows/data_update.yml.bak@main", False),
+        (".github/workflows/other.yml@main", False),
+        (None, False),
+    ],
+)
+def test_source_workflow_ref_suffix_preserves_exact_workflow_check(
+    fake_time, path, eligible
+):
+    data, deps, calls = scenario(fake_time)
+    data["source"]["path"] = path
+    reason = approve(data, deps)
+    assert reason == ("" if eligible else "ci_approval_untrusted")
+    assert any(call[2].endswith("/approve") for call in calls) is eligible
+
+
 def scenario(fake_time, *, result="success", approval_denied=False):
     pull = {
         "state": "open",

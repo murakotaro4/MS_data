@@ -99,7 +99,8 @@ def approve_and_wait_ci(
         if (
             not isinstance(source, dict)
             or str(source.get("id")) != source_id
-            or source.get("path") != ".github/workflows/data_update.yml"
+            or not isinstance(source.get("path"), str)
+            or source["path"].split("@", 1)[0] != ".github/workflows/data_update.yml"
             or (source.get("event") not in {"schedule", "workflow_dispatch"})
             or (source.get("head_branch") != "main")
             or (source.get("status") != "completed")
