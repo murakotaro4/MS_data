@@ -1,0 +1,44 @@
+name: approve data CI
+
+on:
+  workflow_run:
+    workflows:
+      - ci
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: CI run ID awaiting approval
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: write
+
+concurrency:
+  group: msdata-auto-review-merge
+  cancel-in-progress: false
+
+jobs:
+  approve:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'action_required'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # 特権実行ではPRブランチをcheckoutしない。
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: ./.github/actions/setup-uv-env
+      - name: Validate data PR and approve its CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_RUN_ID: ${{ inputs.run_id || github.event.workflow_run.id }}
+        run: |
+          uv run python -m ms_data.gh.auto_ci_approval \
+            --repo "$GITHUB_REPOSITORY" \
+            --run-id "$TARGET_RUN_ID"
