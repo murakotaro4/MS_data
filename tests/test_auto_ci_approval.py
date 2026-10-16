@@ -11,9 +11,22 @@ from ms_data.gh.argtypes import ReviewDeps
 from ms_data.gh.auto_ci_approval import approve_and_wait_ci, main
 from ms_data.gh.auto_review_merge import merge_pull_request
 
+from workflow_contract import workflow_text
+
 REF = "data/auto-update-20261016"
 SHA = "a" * 40
 REPO = "owner/repo"
+
+
+def test_approval_workflow_uses_trusted_main_and_serializes_only_eligible_job():
+    text = workflow_text("approve_data_ci.yml")
+    assert "ref: main" in text
+    assert "persist-credentials: false" in text
+    assert "  pull-requests: read" in text
+    assert "  actions: write" in text
+    assert "    concurrency:" in text
+    assert "\nconcurrency:" not in text
+    assert "ms_data.gh.auto_ci_approval" in text
 
 
 def test_cli_approves_only_eligible_run(fake_time):

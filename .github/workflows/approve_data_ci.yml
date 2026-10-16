@@ -18,13 +18,12 @@ permissions:
   pull-requests: read
   actions: write
 
-concurrency:
-  group: msdata-auto-review-merge
-  cancel-in-progress: false
-
 jobs:
   approve:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'action_required'
+    concurrency:
+      group: msdata-auto-review-merge
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
