@@ -27,6 +27,7 @@ from ms_data.gh.argtypes import (
     _int_or_none,
     _positive_int,
 )
+from ms_data.gh.auto_ci_approval import approve_and_wait_ci
 from ms_data.gh.auto_review_gate import evaluate
 from ms_data.gh.auto_review_markers import (
     find_latest_bot_comment,
@@ -198,7 +199,7 @@ def merge_pull_request(
         return MergeResult(False, "", head_ref, "head_sha_mismatch", state)
 
     ci_reason = _latest_head_ci_skip_reason(
-        repo=repo, head_ref=head_ref, head_sha=head_sha, deps=deps
+        repo=repo, head_ref=head_ref, head_sha=head_sha, deps=deps, pr_number=pr_number
     )
     if ci_reason:
         return MergeResult(False, "", head_ref, ci_reason, state)
@@ -233,7 +234,7 @@ def merge_pull_request(
 
 
 def _latest_head_ci_skip_reason(
-    *, repo: str, head_ref: str, head_sha: str, deps: ReviewDeps
+    *, repo: str, head_ref: str, head_sha: str, deps: ReviewDeps, pr_number: str = ""
 ) -> str:
     """対象 HEAD の最新 CI が成功した場合だけ空文字を返す。"""
     query = urlencode({"head_sha": head_sha, "event": "pull_request", "per_page": 100})
@@ -285,6 +286,22 @@ def _latest_head_ci_skip_reason(
             return "ci_target_mismatch"
         if latest.get("status") != "completed":
             return "ci_incomplete"
+        if latest.get("conclusion") == "action_required" and pr_number:
+            reason = approve_and_wait_ci(
+                repo=repo,
+                pr_number=pr_number,
+                ref=head_ref,
+                sha=head_sha,
+                run=latest,
+                deps=deps,
+            )
+            if reason:
+                return reason
+            # 承認したrunだけで判断せず、最新HEAD CIを再取得する。
+            # pr_numberを渡さないことで別runの再承認ループを防ぐ。
+            return _latest_head_ci_skip_reason(
+                repo=repo, head_ref=head_ref, head_sha=head_sha, deps=deps
+            )
         if latest.get("conclusion") != "success":
             return "ci_not_success"
     except (subprocess.CalledProcessError, ValueError, TypeError):
@@ -362,10 +379,7 @@ def cmd_merge(args: argparse.Namespace, deps: ReviewDeps) -> int:
         deps=deps,
     )
     if not result.merged:
-        print(
-            f"Merge stopped: reason={result.skip_reason} "
-            f"pr_state={result.pr_state}"
-        )
+        print(f"Merge stopped: reason={result.skip_reason} pr_state={result.pr_state}")
         write_github_output(
             args.github_output,
             {
@@ -703,4 +717,3 @@ def main(
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
