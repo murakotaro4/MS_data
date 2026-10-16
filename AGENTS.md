@@ -80,6 +80,15 @@
 - CI runner: Windows は `windows-2025-vs2026` を明示使用。`windows-latest` へ戻す場合は GitHub の runner image 移行状況を確認。
 - 互換期間: レポート再編時の旧パス互換は原則検討するが、v3 の年月階層化（`reports/YYYY/MM/`）は破壊的移行として実施済み（`legacy_path_support: false`、旧パスへの転送なし）。日付付きレポートの旧フラット `path_patterns` は撤去済み（直下に残す undated / テンプレートのみ許容）。
 
+### 自動マージ停止時の切り分け・復旧（Issue #328 / PR #329）
+- 最初に対象 PR の現在の HEAD SHA・ブランチと、失敗した auto review run の時刻を固定する。通常ログの `Latest HEAD CI`（run_id / attempt / status / conclusion）、`Merge stopped`（reason / pr_state）、Step Summary、auto review report を照合する。レビューゲートの `merge_ok=true` だけでは CI 成功やマージ完了を意味しない。
+- CI を再実行すると同じ run ID の最新表示が更新される。障害時の原因は `GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}` と同 attempt の `/jobs` まで調べ、当時の状態と復旧後の状態を分けて記録する。最新の success だけで障害時も成功していたと判断しない。
+- `GITHUB_TOKEN` で作成・更新した PR の `pull_request` CI は実行承認待ちになり得る。`action_required`・ジョブ0件なら、PR の「Approve workflows to run」と初回 attempt を優先確認する。これは直ちにマージ権限不足やコード不具合を意味しない。承認が必要なら対象 PR / CI run のリンクと、write 権限者による CI 実行承認が必要なことを具体的に伝える。承認を迂回する変更や、無断の自動承認・PAT への置換は行わない。
+- CI 成功後は、現在の HEAD がレビュー済み SHA と一致し、同一 HEAD・ブランチの最新 `ci.yml` が completed/success であることを確認し、既存の auto review merge の失敗ジョブを再実行する。古い成功 run へのフォールバックや手動の直接マージでゲートを飛ばさない。レビュー対象 HEAD が変わっていたら新 HEAD の CI とレビューを必要とする。
+- 完了判定は PR の merged / merge commit SHA、auto review run、post merge notify の Release 公開・メール送信処理まで確認する。メール送信成功と端末への配達確認は区別する。修正は Issue → PR → CI → レビューで進め、別件のデータ補正 PR と混在させない。
+- 2026-10-15 の実例: PR #327 の CI run 38746722160 は attempt 1 が action_required、attempt 2 が success。既存ゲート維持のまま auto review run 38746738277 の attempt 2 で復旧した。PR #329 は診断ログのみ追加したもので、承認待ち自体を自動解消する変更ではない。
+- 仕様確認先: [GITHUB_TOKEN](https://docs.github.com/en/actions/concepts/security/github_token)、[Bot-created pull requests can run workflows if approved](https://github.blog/changelog/2026-06-11-bot-created-pull-requests-can-run-workflows-if-approved/)。実際の状態は毎回 GitHub の最新情報を確認する。
+
 ## コーディング規約・テスト
 - JSON: 2スペース、UTF-8、LF、キーは `snake_case`。
 - Python: インデント4スペース、型ヒント必須（`str | None` 形式を推奨）。命名はファイル/関数 lower_snake_case、クラス CapWords。
