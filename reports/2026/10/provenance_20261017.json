@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-10-17T12:40:11Z",
+  "report_date": "20261017",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "5428ab47df7a88f0682a62a12ff0805a395d119e"
+  },
+  "github": {
+    "run_id": "39033397122",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "45db27686f25ee3d94fae372668f03cd0dd1cae36b44111fd291316a258eedeb",
+      "size_bytes": 147298,
+      "record_count": 599
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "a1b0b4238adfac55dcc6a7ce4bdfd79617c47101f6e257c1aeb2d94b68c6d6cb",
+      "size_bytes": 47052,
+      "record_count": 38
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "51e61d1f72472384463a26fbd5fb535c5d99da533c3c7cb4d752c6e459b4d5f6",
+      "size_bytes": 61112,
+      "record_count": 38
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "61ebe4c3e45c36a8ed01ee98cf183389b9eb0c8ebf1489605ff5863942b77d60",
+      "file_count": 30,
+      "size_bytes": 5253652
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "f112cae1c97e82e127569f4ca14b9617fefe1a97d655e9732f98f867d4a2113d",
+      "size_bytes": 2670632,
+      "record_count": 1728
+    },
+    "diff_report": {
+      "path": "reports/2026/10/diff_msdata_20261017.md",
+      "sha256": "480a16066ed68635785c0f7b77e32891f49d97d08e1bc9fb2c2b981f58e63895",
+      "size_bytes": 2384
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20261017-run-39033397122",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20261017-run-39033397122",
+    "asset_name": "raw_snapshot_20261017_run39033397122.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261017-run-39033397122"
+  }
+}
