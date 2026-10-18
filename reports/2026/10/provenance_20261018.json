@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-10-18T12:56:43Z",
+  "report_date": "20261018",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "2bd6cc8f7eba8bc6c8f5071a2765d9c4de9a1729"
+  },
+  "github": {
+    "run_id": "39129358912",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "f6f1933a0d0e8255801223e0eae132801d7b14446c37e5c594e3ea5861ac5e51",
+      "size_bytes": 147324,
+      "record_count": 599
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "ae8b0caba3e0638597aca45476fc7a33bfe5263de2dbe1fc405014e3f0a6d2fb",
+      "size_bytes": 50454,
+      "record_count": 41
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "15748c8dd648c7e42265b4a94184c466e2b214595e5dad374f37787b2a7e371d",
+      "size_bytes": 65585,
+      "record_count": 41
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "ebf925187c7da502a583c16001e568c073ba2fb3079c9a551feb8b3b2607acd9",
+      "file_count": 36,
+      "size_bytes": 6175106
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "a39f3423572e0d7897a487713fe6371b5be8c907229fe640b57493e3d046825d",
+      "size_bytes": 2671137,
+      "record_count": 1728
+    },
+    "diff_report": {
+      "path": "reports/2026/10/diff_msdata_20261018.md",
+      "sha256": "8dbdf0ae4f4a1f1e6d7d43d4e7d69afc51e8e7195cab51cb478d30f31beb7954",
+      "size_bytes": 3057
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20261018-run-39129358912",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20261018-run-39129358912",
+    "asset_name": "raw_snapshot_20261018_run39129358912.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261018-run-39129358912"
+  }
+}
