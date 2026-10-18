@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-10-16T13:53:59Z",
+  "report_date": "20261016",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "7f89c17990b3ada7de01e4ad19919b322f7d3a49"
+  },
+  "github": {
+    "run_id": "38910010261",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "3a9e6d450f9889fe5226c6b377667119c638d16984d5a77cff7947dc4d2cf061",
+      "size_bytes": 147344,
+      "record_count": 599
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "f469ad4ad6a52ab0c403b989e495322edb88ef6fc04a54e5d04a6609a4f9dd30",
+      "size_bytes": 1665534,
+      "record_count": 1411
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "3f54df58a02957741ee2e65cb676208f785f244feaf6241f8f2cb78f57afcc9e",
+      "size_bytes": 2177581,
+      "record_count": 1411
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "e01ce40638cd217c425e9953abe2904a3674849cb828a730bad881cbc165337a",
+      "file_count": 952,
+      "size_bytes": 145591537
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "3daf5f28b8f3104021a0a31bf9bfbb7fb79ee1126707947bca47aaefa329b369",
+      "size_bytes": 2670875,
+      "record_count": 1728
+    },
+    "diff_report": {
+      "path": "reports/2026/10/diff_msdata_20261016.md",
+      "sha256": "8bf53cbd152bf0d9c9e2ba82d6756c772abf14b05e0fd7278a4ba24bdd71f107",
+      "size_bytes": 1631
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20261016-run-38910010261",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20261016-run-38910010261",
+    "asset_name": "raw_snapshot_20261016_run38910010261.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261016-run-38910010261"
+  }
+}

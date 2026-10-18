@@ -101138,9 +101138,34 @@
     "必要階級": "",
     "fullst": [
       {
-        "name": "強行出撃",
+        "name": "耐実弾装甲補強",
         "level": 1,
-        "points": null
+        "points": 690
+      },
+      {
+        "name": "耐ビーム装甲補強",
+        "level": 1,
+        "points": 1380
+      },
+      {
+        "name": "AD-PA",
+        "level": 1,
+        "points": 2070
+      },
+      {
+        "name": "複合拡張パーツスロット",
+        "level": 1,
+        "points": 2770
+      },
+      {
+        "name": "耐実弾装甲補強",
+        "level": 4,
+        "points": 5540
+      },
+      {
+        "name": "AD-PA",
+        "level": 4,
+        "points": 8310
       }
     ]
   },
