@@ -201,3 +201,19 @@ def test_clean_text_characterizes_empty_and_unicode_whitespace(text, expected):
 def test_clean_text_rejects_none():
     with pytest.raises(TypeError):
         clean_text(None)
+
+
+def test_to_int_extracts_head_integer():
+    assert to_int("81（盾装備時：78.6）") == 81
+    assert to_int("  15秒 ") == 15
+    assert to_int("235 [度/秒]") == 235
+    assert to_int("") is None
+
+
+def test_symbol_to_bool():
+    assert symbol_to_bool("◯") is True
+    assert symbol_to_bool("×") is False
+    assert symbol_to_bool("可") is True
+    assert symbol_to_bool("不可") is False
+    # 不明記号
+    assert symbol_to_bool("？") is None

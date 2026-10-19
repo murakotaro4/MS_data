@@ -70,7 +70,7 @@ def _override_body(rows: list[dict]) -> str:
     "path",
     [
         "tests/fixtures/reports/official_overrides_audit_20260601.md",
-        "reports/2026/09/official_overrides_audit_20260918.md",
+        "tests/fixtures/reports/official_overrides_audit_20260918.md",
     ],
 )
 def test_historical_large_audits_fit_and_keep_every_target(

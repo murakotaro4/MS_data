@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-import argparse
-import json
 import re
-from pathlib import Path
 from typing import Any
 
-from ms_data.gh.gh_json import load_json_stream as _load_json
 from ms_data.gh.gh_json import login_of as _login
 
 CODEX_LOGINS = {"chatgpt-codex-connector[bot]", "chatgpt-codex-connector"}
@@ -122,33 +118,3 @@ def evaluate(
         "merge_ok": merge_ok,
         "stop_reason": stop_reason,
     }
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--reviews", type=Path, required=True)
-    parser.add_argument("--file-comments", type=Path, required=True)
-    parser.add_argument("--issue-comments", type=Path, required=True)
-    parser.add_argument("--reactions", type=Path, required=True)
-    parser.add_argument("--head-sha", required=True)
-    parser.add_argument("--since", required=True)
-    parser.add_argument("--out", type=Path, required=True)
-    args = parser.parse_args()
-
-    result = evaluate(
-        reviews=_load_json(args.reviews),
-        file_comments=_load_json(args.file_comments),
-        issue_comments=_load_json(args.issue_comments),
-        reactions=_load_json(args.reactions),
-        head_sha=args.head_sha,
-        since=args.since,
-    )
-    args.out.write_text(
-        json.dumps(result, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

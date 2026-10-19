@@ -67,13 +67,10 @@ from ms_data.scraping.change_detection import (
 )
 from ms_data.scraping.defaults import DEFAULT_CLI_RATE, DEFAULT_TTL, INDEX_URL
 from ms_data.scraping.detail_page import (
-    build_base_records,
     extract_row_labels,
     filter_complete_records,
     find_detail_table,
-    parse_deployment,
     parse_details,
-    parse_env_suitability,
 )
 from ms_data.scraping.fetch_state import (
     load_detail_fetch_state,
@@ -87,12 +84,8 @@ from ms_data.scraping.index_page import parse_index
 # この facade がサポートする公開面（テスト・CLI が参照する名前）
 # 動的参照やリポジトリ外の互換は保証しない。
 from ms_data.scraping.text_values import (
-    is_counter_placeholder,
-    looks_like_ticket_count,
     parse_iso_datetime,
     parse_ttl,
-    symbol_to_bool,
-    to_int,
 )
 
 

@@ -1,28 +1,29 @@
 from bs4 import BeautifulSoup
 
-import ms_data.scraping.scrape_msdata as sm
 from ms_data.scraping.detail_page import (
     apply_deployment_fallbacks,
     normalize_turn_values,
+    parse_deployment,
+    parse_env_suitability,
 )
 
 
 def test_parse_deployment_with_ids():
     html = '<div id="label_sortie_G_S"></div>'
     soup = BeautifulSoup(html, "lxml")
-    dep = sm.parse_deployment(soup)
+    dep = parse_deployment(soup)
     assert dep["出撃_地上可"] is True
     assert dep["出撃_宇宙可"] is True
 
     html = '<div id="label_sortie_G_n"></div>'
     soup = BeautifulSoup(html, "lxml")
-    dep = sm.parse_deployment(soup)
+    dep = parse_deployment(soup)
     assert dep["出撃_地上可"] is True
     assert dep["出撃_宇宙可"] is False
 
     html = '<div id="label_sortie_n_S"></div>'
     soup = BeautifulSoup(html, "lxml")
-    dep = sm.parse_deployment(soup)
+    dep = parse_deployment(soup)
     assert dep["出撃_地上可"] is False
     assert dep["出撃_宇宙可"] is True
 
@@ -30,14 +31,14 @@ def test_parse_deployment_with_ids():
 def test_parse_env_suitability_with_ids():
     html = '<div id="label_env_G_S_W"></div>'
     soup = BeautifulSoup(html, "lxml")
-    env = sm.parse_env_suitability(soup)
+    env = parse_env_suitability(soup)
     assert env["環境適正_地上"] is True
     assert env["環境適正_宇宙"] is True
     assert env["環境適正_水中"] is True
 
     html = '<div id="label_env_n_n"></div>'
     soup = BeautifulSoup(html, "lxml")
-    env = sm.parse_env_suitability(soup)
+    env = parse_env_suitability(soup)
     assert env["環境適正_地上"] is False
     assert env["環境適正_宇宙"] is False
     assert env["環境適正_水中"] is False
@@ -46,7 +47,7 @@ def test_parse_env_suitability_with_ids():
 def test_parse_deployment_ground_only_text():
     html = "<h3>出撃</h3><p>地上のみ</p>"
     soup = BeautifulSoup(html, "lxml")
-    dep = sm.parse_deployment(soup)
+    dep = parse_deployment(soup)
     assert dep["出撃_地上可"] is True
     assert dep["出撃_宇宙可"] is False
 
@@ -54,7 +55,7 @@ def test_parse_deployment_ground_only_text():
 def test_parse_deployment_space_only_text():
     html = "<h3>出撃</h3><p>宇宙のみ</p>"
     soup = BeautifulSoup(html, "lxml")
-    dep = sm.parse_deployment(soup)
+    dep = parse_deployment(soup)
     assert dep["出撃_地上可"] is False
     assert dep["出撃_宇宙可"] is True
 
@@ -62,7 +63,7 @@ def test_parse_deployment_space_only_text():
 def test_parse_deployment_symbol_text():
     html = "<h3>出撃</h3><p>地上:◯ 宇宙:×</p>"
     soup = BeautifulSoup(html, "lxml")
-    dep = sm.parse_deployment(soup)
+    dep = parse_deployment(soup)
     assert dep["出撃_地上可"] is True
     assert dep["出撃_宇宙可"] is False
 
@@ -74,7 +75,7 @@ def test_parse_deployment_from_table():
         "<tr><td>宇宙</td><td>×</td></tr></table>"
     )
     soup = BeautifulSoup(html, "lxml")
-    dep = sm.parse_deployment(soup)
+    dep = parse_deployment(soup)
     assert dep["出撃_地上可"] is True
     assert dep["出撃_宇宙可"] is False
 
@@ -82,18 +83,16 @@ def test_parse_deployment_from_table():
 def test_parse_env_suitability_from_text():
     html = "<h3>環境適正</h3><p>地上:◯ 宇宙:× 水中:×</p>"
     soup = BeautifulSoup(html, "lxml")
-    env = sm.parse_env_suitability(soup)
+    env = parse_env_suitability(soup)
     assert env["環境適正_地上"] is True
     assert env["環境適正_宇宙"] is False
     assert env["環境適正_水中"] is False
 
 
 def test_parse_env_suitability_multiple_headers_preserves_output(load_fixture):
-    soup = BeautifulSoup(
-        load_fixture("env_suitability_multiple_headers.html"), "lxml"
-    )
+    soup = BeautifulSoup(load_fixture("env_suitability_multiple_headers.html"), "lxml")
 
-    assert sm.parse_env_suitability(soup) == {
+    assert parse_env_suitability(soup) == {
         "環境適正_地上": True,
         "環境適正_宇宙": False,
         "環境適正_水中": True,

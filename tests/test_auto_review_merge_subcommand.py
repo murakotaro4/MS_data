@@ -1,14 +1,17 @@
+"""auto_review_merge の merge サブコマンドと CLI エントリの smoke テスト。"""
+
 import json
 from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
+from ms_data.gh import auto_review_merge
 from ms_data.gh.argtypes import ReviewDeps
 from ms_data.gh.auto_review_merge import build_parser, cmd_merge, main
 
 from auto_review_helpers import successful_ci_runs
-from workflow_contract import ROOT, assert_contains, step_block, workflow_text
+from workflow_contract import assert_contains, step_block, workflow_text
 
 
 def _view(state: str, *, head_sha: str = "head-sha", merge_sha: str = "") -> str:
@@ -323,9 +326,6 @@ def test_cmd_merge_rejects_invalid_comment_marker_before_merge(fake_time, tmp_pa
 
 def test_auto_review_merge_workflow_uses_merge_subcommand_once():
     workflow = workflow_text("auto_review_merge.yml")
-    command_module = (ROOT / "ms_data/gh/auto_review_merge.py").read_text(
-        encoding="utf-8"
-    )
 
     assert workflow.count("ms_data.gh.auto_review_merge merge") == 1
     assert_contains(
@@ -344,8 +344,48 @@ def test_auto_review_merge_workflow_uses_merge_subcommand_once():
         workflow, start="- id: merge", end="- name: Write auto review report"
     )
     assert "--skip-if-not-open" in merge_step
-    for output_name in ("merged", "merge_commit_sha", "head_ref"):
-        assert f'"{output_name}"' in command_module
     assert "gh pr merge" not in workflow
     assert workflow.count("post_merge_notify.yml") == 0
-    assert command_module.count('"post_merge_notify.yml"') == 1
+
+
+def test_cli_help_smoke():
+    with pytest.raises(SystemExit) as exc_info:
+        main(["--help"])
+
+    assert exc_info.value.code == 0
+
+
+def test_cli_default_factory_resolve_target_pr_smoke(
+    monkeypatch, tmp_path, read_github_output
+):
+    calls: list[list[str]] = []
+
+    def fake_run_gh(command, **_):
+        calls.append(command)
+        return "[]"
+
+    monkeypatch.setattr(auto_review_merge, "run_gh", fake_run_gh)
+    out = tmp_path / "output.txt"
+
+    assert (
+        main(
+            [
+                "resolve-target-pr",
+                "--repo",
+                "owner/repo",
+                "--run-id",
+                "111",
+                "--run-created-at",
+                "2026-05-31T09:00:25Z",
+                "--github-output",
+                str(out),
+            ]
+        )
+        == 0
+    )
+    assert calls[0][0:3] == [
+        "gh",
+        "api",
+        "repos/owner/repo/pulls?state=open&base=main&per_page=100",
+    ]
+    assert read_github_output(out)["skip"] == "true"

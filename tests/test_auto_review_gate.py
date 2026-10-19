@@ -1,4 +1,4 @@
-from ms_data.gh.auto_review_gate import _load_json, evaluate
+from ms_data.gh.auto_review_gate import evaluate
 
 HEAD_SHA = "abc123"
 SINCE = "2026-05-31T08:45:23Z"
@@ -120,26 +120,6 @@ def test_codex_reaction_is_activity_but_not_review_complete():
     assert result["review_complete"] is False
     assert result["merge_ok"] is False
     assert result["stop_reason"] == "no_response"
-
-
-def test_load_json_accepts_paginated_arrays(tmp_path):
-    path = tmp_path / "pages.json"
-    path.write_text(
-        '[{"id": 1}]\n[{"id": 2}]\n',
-        encoding="utf-8",
-    )
-
-    assert _load_json(path) == [{"id": 1}, {"id": 2}]
-
-
-def test_load_json_accepts_slurped_pages(tmp_path):
-    path = tmp_path / "pages.json"
-    path.write_text(
-        '[[{"id": 1}], [{"id": 2}]]\n',
-        encoding="utf-8",
-    )
-
-    assert _load_json(path) == [{"id": 1}, {"id": 2}]
 
 
 def test_file_comment_blocks_merge_even_without_review_body():
@@ -302,40 +282,3 @@ def test_findings_win_over_disconnect():
 
     assert result["disconnect_count"] == 1
     assert result["stop_reason"] == "findings"
-
-
-def test_main_writes_result_json(tmp_path, monkeypatch):
-    import json
-
-    from ms_data.gh import auto_review_gate
-
-    def dump(name, data):
-        path = tmp_path / name
-        path.write_text(json.dumps(data), encoding="utf-8")
-        return str(path)
-
-    out = tmp_path / "result.json"
-    argv = [
-        "auto_review_gate",
-        "--reviews",
-        dump("reviews.json", [{"user": CODEX_USER, "commit_id": HEAD_SHA}]),
-        "--file-comments",
-        dump("file_comments.json", []),
-        "--issue-comments",
-        dump("issue_comments.json", []),
-        "--reactions",
-        dump("reactions.json", []),
-        "--head-sha",
-        HEAD_SHA,
-        "--since",
-        SINCE,
-        "--out",
-        str(out),
-    ]
-    monkeypatch.setattr("sys.argv", argv)
-
-    assert auto_review_gate.main() == 0
-
-    result = json.loads(out.read_text(encoding="utf-8"))
-    assert result["merge_ok"] is True
-    assert result["stop_reason"] == "none"

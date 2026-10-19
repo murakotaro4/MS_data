@@ -87,6 +87,5 @@ def test_extract_row_labels_dedupes_and_normalizes():
     raw, normalized = extract_row_labels(table)
 
     assert raw == ["HP", "射撃補則"]
-    assert normalized[0] == "HP"
-    assert "射撃補正" in normalized or "射撃補則" in normalized
+    assert normalized == ["HP", "射撃補則"]
     assert extract_row_labels(None) == ([], [])

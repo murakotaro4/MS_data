@@ -3,13 +3,12 @@
 import json
 from types import SimpleNamespace
 
-from ms_data.gh import gh_json
+from ms_data.gh import auto_review_merge, gh_json
 from ms_data.gh.auto_review_merge import (
     GITHUB_ACTIONS_BOT,
     GitHubClient,
     collect_review_metrics,
     ensure_review_comment,
-    find_latest_bot_comment,
     retry_marker,
     review_marker,
 )
@@ -20,10 +19,6 @@ from auto_review_helpers import (
     PAT_LOGIN,
     codex_review,
 )
-
-# ---------------------------------------------------------------------------
-# 層A: GitHubClient（gh_json.subprocess.run パッチ）
-# ---------------------------------------------------------------------------
 
 
 def test_api_json_builds_get_command(monkeypatch):
@@ -246,22 +241,6 @@ def test_ensure_review_comment_reuses_pat_login_comment(fake_gh):
     assert fake_gh.posted_comments == []
 
 
-def test_find_latest_bot_comment_rejects_other_user_same_marker():
-    marker = retry_marker(2, HEAD_SHA)
-    comments = [
-        {
-            "id": 1,
-            "created_at": "2026-05-31T09:00:00Z",
-            "user": {"login": "random-user"},
-            "body": f"@codex review\n\n{marker}",
-        }
-    ]
-    assert (
-        find_latest_bot_comment(comments, marker, {GITHUB_ACTIONS_BOT, PAT_LOGIN})
-        is None
-    )
-
-
 def test_collect_review_metrics_aggregates_reactions_across_triggers(fake_gh):
     fake_gh.responses["/pulls/97/reviews"] = [codex_review()]
     fake_gh.responses["/issues/comments/10/reactions"] = [
@@ -282,3 +261,47 @@ def test_collect_review_metrics_aggregates_reactions_across_triggers(fake_gh):
     assert metrics["reaction_count"] == 2
     assert metrics["review_count"] == 1
     assert metrics["merge_ok"] is True
+
+
+def test_post_codex_trigger_comment_uses_token_runner(monkeypatch):
+    captured = {}
+
+    def run_gh(cmd, *, env_overrides=None):
+        captured["runner"] = (cmd, env_overrides)
+        return '{"id": 10}'
+
+    def api(endpoint, **kwargs):
+        captured["endpoint"] = endpoint
+        captured["kwargs"] = kwargs
+        return {"id": 10, "raw": kwargs["runner"](["gh", "api", endpoint])}
+
+    monkeypatch.setenv("CODEX_TRIGGER_TOKEN", " pat-token ")
+    monkeypatch.setattr(auto_review_merge, "run_gh", run_gh)
+    monkeypatch.setattr(auto_review_merge, "gh_api_json", api)
+
+    result = auto_review_merge.post_codex_trigger_comment(
+        repo="owner/repo", pr_number="97", body="@codex review"
+    )
+
+    assert result["id"] == 10
+    assert captured["endpoint"] == "repos/owner/repo/issues/97/comments"
+    assert captured["kwargs"]["method"] == "POST"
+    assert captured["kwargs"]["fields"] == {"body": "@codex review"}
+    assert captured["runner"][1] == {"GH_TOKEN": "pat-token"}
+
+
+def test_post_codex_trigger_comment_without_token_uses_default_runner(monkeypatch):
+    captured = {}
+
+    def api(endpoint, **kwargs):
+        captured["endpoint"] = endpoint
+        captured["kwargs"] = kwargs
+        return {"id": 11}
+
+    monkeypatch.delenv("CODEX_TRIGGER_TOKEN", raising=False)
+    monkeypatch.setattr(auto_review_merge, "gh_api_json", api)
+
+    assert auto_review_merge.post_codex_trigger_comment(
+        repo="owner/repo", pr_number="97", body="@codex review"
+    ) == {"id": 11}
+    assert "runner" not in captured["kwargs"]

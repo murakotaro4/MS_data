@@ -285,3 +285,19 @@ def test_validation_cli_contract_matrix(case_name: str, tmp_path: Path, capsys) 
         assert "stale_values missing keys: ['スピード']" in captured.err
     if case_name == "stale_values_extra":
         assert "stale_values extra keys: ['スピード']" in captured.err
+
+
+def _schema_path():
+    return Path("schema/official_overrides.schema.json")
+
+
+def test_validate_official_overrides_schema_accepts_empty_directory(tmp_path):
+    overrides_dir = tmp_path / "official_overrides"
+    overrides_dir.mkdir()
+
+    messages = validate_official_overrides_schema.validate(
+        overrides_dir=overrides_dir,
+        schema_path=_schema_path(),
+    )
+
+    assert messages == []

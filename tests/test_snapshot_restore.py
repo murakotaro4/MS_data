@@ -1,9 +1,11 @@
 import io
 import tarfile
+from pathlib import Path
 
 import pytest
 
 from ms_data.pipeline.restore_snapshot import restore_snapshot
+from ms_data.validation import verify_snapshot_restore
 
 
 def _add_text(archive, name, text):
@@ -35,3 +37,7 @@ def test_restore_snapshot_rejects_path_traversal(tmp_path):
 
     with pytest.raises(ValueError):
         restore_snapshot(snapshot, tmp_path / "out")
+
+
+def test_verify_snapshot_restore_round_trip_with_current_contract():
+    verify_snapshot_restore.verify(Path("."))
