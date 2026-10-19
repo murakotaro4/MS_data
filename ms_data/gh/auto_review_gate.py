@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +14,8 @@ from ms_data.gh.gh_json import login_of as _login
 CODEX_LOGINS = {"chatgpt-codex-connector[bot]", "chatgpt-codex-connector"}
 NO_ISSUES_PREFIX = "Codex Review: Didn't find any major issues."
 DISCONNECT_PREFIX = "To use Codex here"
+# Codex は本文先頭に `<!-- codex-review-receipt:v1 -->` 等のマーカーを付けることがある。
+_LEADING_HTML_COMMENTS = re.compile(r"\A(?:\s*<!--.*?-->)*\s*", re.DOTALL)
 
 
 def _is_codex(item: dict[str, Any]) -> bool:
@@ -27,6 +30,14 @@ def _created_at(item: dict[str, Any]) -> str:
 def _comment_id(item: dict[str, Any]) -> str:
     value = item.get("id")
     return str(value) if value is not None else ""
+
+
+def _body_text(item: dict[str, Any]) -> str:
+    """先頭の HTML コメントと空白を除いた本文を返す。"""
+    body = item.get("body")
+    if not isinstance(body, str):
+        return ""
+    return _LEADING_HTML_COMMENTS.sub("", body, count=1)
 
 
 def is_active_finding(
@@ -79,14 +90,12 @@ def evaluate(
     no_issue_comment_count = sum(
         1
         for item in codex_issue_comments
-        if isinstance(item.get("body"), str)
-        and item["body"].startswith(NO_ISSUES_PREFIX)
+        if _body_text(item).startswith(NO_ISSUES_PREFIX)
     )
     disconnect_count = sum(
         1
         for item in codex_issue_comments
-        if isinstance(item.get("body"), str)
-        and item["body"].startswith(DISCONNECT_PREFIX)
+        if _body_text(item).startswith(DISCONNECT_PREFIX)
     )
 
     terminal_count = review_count + no_issue_comment_count
