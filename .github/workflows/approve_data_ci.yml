@@ -1,11 +1,8 @@
 name: approve data CI
 
+# データ更新PRのCIはGITHUB_TOKEN由来のため、その完了でworkflow_runは発火しない（Issue #341）。
+# 自動承認の本線はauto review / resumeの共通merge経路で、ここは手動のrun_id指定専用。
 on:
-  workflow_run:
-    workflows:
-      - ci
-    types:
-      - completed
   workflow_dispatch:
     inputs:
       run_id:
@@ -20,7 +17,6 @@ permissions:
 
 jobs:
   evaluate:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'action_required'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -35,7 +31,7 @@ jobs:
         name: Check eligibility without mutations
         env:
           GH_TOKEN: ${{ github.token }}
-          TARGET_RUN_ID: ${{ inputs.run_id || github.event.workflow_run.id }}
+          TARGET_RUN_ID: ${{ inputs.run_id }}
         run: |
           uv run python -m ms_data.gh.auto_ci_approval \
             --repo "$GITHUB_REPOSITORY" \
@@ -63,7 +59,7 @@ jobs:
       - name: Validate data PR and approve its CI
         env:
           GH_TOKEN: ${{ github.token }}
-          TARGET_RUN_ID: ${{ inputs.run_id || github.event.workflow_run.id }}
+          TARGET_RUN_ID: ${{ inputs.run_id }}
         run: |
           uv run python -m ms_data.gh.auto_ci_approval \
             --repo "$GITHUB_REPOSITORY" \
