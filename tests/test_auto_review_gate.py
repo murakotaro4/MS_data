@@ -26,6 +26,58 @@ def test_no_issue_comment_is_terminal_and_mergeable():
     assert result["stop_reason"] == "none"
 
 
+def test_no_issue_comment_with_leading_receipt_marker_is_mergeable():
+    # 2026-10-17 以降の Codex 受領コメント形式（PR #336 / #337 で誤停止した実例）
+    result = evaluate(
+        reviews=[],
+        file_comments=[],
+        issue_comments=[
+            {
+                "user": CODEX_USER,
+                "created_at": "2026-05-31T08:47:49Z",
+                "body": (
+                    "<!-- codex-review-receipt:v1 -->\n\n"
+                    "Codex Review: Didn't find any major issues. Hooray!\n\n"
+                    "**Reviewed commit:** `abc123`"
+                ),
+            }
+        ],
+        reactions=[],
+        head_sha=HEAD_SHA,
+        since=SINCE,
+    )
+
+    assert result["no_issue_comment_count"] == 1
+    assert result["merge_ok"] is True
+    assert result["stop_reason"] == "none"
+
+
+def test_review_summary_comment_is_not_terminal():
+    result = evaluate(
+        reviews=[],
+        file_comments=[],
+        issue_comments=[
+            {
+                "user": CODEX_USER,
+                "created_at": "2026-05-31T08:47:49Z",
+                "body": (
+                    "<!-- codex-pull-request-review-summary -->\n"
+                    "<!-- codex-review-state:v1 {} -->\n\n"
+                    "## Codex Review Summary\n"
+                    "Codex Review: Didn't find any major issues."
+                ),
+            }
+        ],
+        reactions=[],
+        head_sha=HEAD_SHA,
+        since=SINCE,
+    )
+
+    assert result["no_issue_comment_count"] == 0
+    assert result["merge_ok"] is False
+    assert result["stop_reason"] == "no_response"
+
+
 def test_generic_codex_comment_does_not_make_review_complete():
     result = evaluate(
         reviews=[],
