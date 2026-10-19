@@ -52,7 +52,6 @@ from ms_data.gh.auto_review_pr import (
     resolve_review_since,
     resolve_source_run_id,
     resolve_target_pr,
-    resolved_comment_ids_from_graphql,
     select_resume_candidates,
 )
 from ms_data.gh.auto_review_resume import (
@@ -127,7 +126,6 @@ __all__ = [
     "resolve_review_since",
     "resolve_source_run_id",
     "resolve_target_pr",
-    "resolved_comment_ids_from_graphql",
     "resume_marker",
     "retry_marker",
     "review_marker",

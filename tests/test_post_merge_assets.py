@@ -1,6 +1,9 @@
+import json
+
 import pytest
 
-from ms_data.gh.post_merge_assets import resolve_assets, resolve_source_run_id
+from ms_data.gh import post_merge_assets
+from ms_data.gh.post_merge_assets import resolve_assets
 
 
 def test_resolve_assets_uses_checkout_reports_and_downloaded_snapshot(tmp_path):
@@ -30,12 +33,6 @@ def test_resolve_assets_uses_checkout_reports_and_downloaded_snapshot(tmp_path):
     )
 
 
-def test_resolve_source_run_id_from_pr_body():
-    assert (
-        resolve_source_run_id("", "<!-- source_run_id:26709410162 -->") == "26709410162"
-    )
-
-
 def test_resolve_assets_rejects_missing_checkout_report(tmp_path):
     with pytest.raises(FileNotFoundError):
         resolve_assets(
@@ -45,3 +42,24 @@ def test_resolve_assets_rejects_missing_checkout_report(tmp_path):
             root=tmp_path,
             require_files=True,
         )
+
+
+def test_main_reads_pr_body_from_environment(monkeypatch, capsys):
+    monkeypatch.setenv("TEST_PR_BODY", "<!-- source_run_id:26709410162 -->")
+
+    assert (
+        post_merge_assets.main(
+            [
+                "--head-ref",
+                "data/auto-update-20260531",
+                "--pr-body-env",
+                "TEST_PR_BODY",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["report_date"] == "20260531"
+    assert payload["source_run_id"] == "26709410162"
+    assert payload["snapshot_file"] == ("raw_snapshot_20260531_run26709410162.tar.xz")

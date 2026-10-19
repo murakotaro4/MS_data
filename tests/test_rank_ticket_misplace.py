@@ -7,7 +7,7 @@ atwiki のステータステーブルでは「必要リサイクルチケット�
 
 from bs4 import BeautifulSoup
 
-import ms_data.scraping.scrape_msdata as sm
+from ms_data.scraping.detail_page import build_base_records
 
 
 def _build_records(rows: str, levels: list[int] | None = None) -> dict:
@@ -18,7 +18,7 @@ def _build_records(rows: str, levels: list[int] | None = None) -> dict:
     </table>
     """
     table = BeautifulSoup(html, "html.parser").find("table")
-    return sm.build_base_records(table, "テスト機", levels or [1, 2])
+    return build_base_records(table, "テスト機", levels or [1, 2])
 
 
 def test_numeric_rank_is_moved_to_recycle_tickets():

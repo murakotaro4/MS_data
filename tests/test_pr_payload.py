@@ -55,17 +55,6 @@ def test_rest_keys_take_precedence_over_graphql_keys():
     assert pr_payload.head_sha(pull) == "abc"
 
 
-def test_legacy_private_aliases_point_to_shared_accessors():
-    assert auto_review_pr._head_ref is pr_payload.head_ref
-    assert auto_review_pr._head_sha is pr_payload.head_sha
-    assert auto_review_pr._base_ref is pr_payload.base_ref
-    assert cleanup_auto_update_prs._head_ref is pr_payload.head_ref
-    assert cleanup_auto_update_prs._head_oid is pr_payload.head_sha
-    assert cleanup_auto_update_prs._base_ref is pr_payload.base_ref
-    assert auto_review_pr.HEAD_REF_DATE_RE is pr_payload.HEAD_REF_DATE_RE
-    assert post_merge_assets.HEAD_REF_RE is pr_payload.HEAD_REF_DATE_RE
-
-
 def test_cleanup_head_belongs_to_repo_uses_shared_accessor():
     assert cleanup_auto_update_prs._head_belongs_to_repo(REST_PULL, "o/r") is True
     assert cleanup_auto_update_prs._head_belongs_to_repo(REST_PULL, "x/y") is False
