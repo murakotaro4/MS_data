@@ -302,3 +302,40 @@ def test_findings_win_over_disconnect():
 
     assert result["disconnect_count"] == 1
     assert result["stop_reason"] == "findings"
+
+
+def test_main_writes_result_json(tmp_path, monkeypatch):
+    import json
+
+    from ms_data.gh import auto_review_gate
+
+    def dump(name, data):
+        path = tmp_path / name
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return str(path)
+
+    out = tmp_path / "result.json"
+    argv = [
+        "auto_review_gate",
+        "--reviews",
+        dump("reviews.json", [{"user": CODEX_USER, "commit_id": HEAD_SHA}]),
+        "--file-comments",
+        dump("file_comments.json", []),
+        "--issue-comments",
+        dump("issue_comments.json", []),
+        "--reactions",
+        dump("reactions.json", []),
+        "--head-sha",
+        HEAD_SHA,
+        "--since",
+        SINCE,
+        "--out",
+        str(out),
+    ]
+    monkeypatch.setattr("sys.argv", argv)
+
+    assert auto_review_gate.main() == 0
+
+    result = json.loads(out.read_text(encoding="utf-8"))
+    assert result["merge_ok"] is True
+    assert result["stop_reason"] == "none"
