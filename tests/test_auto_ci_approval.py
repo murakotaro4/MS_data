@@ -33,6 +33,14 @@ def test_approval_workflow_uses_trusted_main_and_serializes_only_eligible_job():
     assert "ms_data.gh.auto_ci_approval" in text
 
 
+def test_approval_workflow_is_manual_dispatch_only():
+    # GITHUB_TOKEN 由来の CI 完了では workflow_run が発火しない（Issue #341）。
+    text = workflow_text("approve_data_ci.yml")
+    assert "  workflow_dispatch:" in text
+    assert "  workflow_run:" not in text
+    assert "github.event.workflow_run" not in text
+
+
 @pytest.mark.parametrize("eligible", [True, False])
 def test_preflight_has_no_mutations_and_reports_eligibility(
     fake_time, tmp_path, eligible
