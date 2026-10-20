@@ -52,6 +52,7 @@ def _data_files_only(files: Any, date: str) -> bool:
         "official_overrides_audit": "md",
         "atwiki_quality": "json",
         "source_slot_audit": "md",
+        "source_excerpt": "md",
     }
     allowed = {"msData.json"} | {
         f"{prefix}{stem}_{date}.{extension}" for stem, extension in extensions.items()

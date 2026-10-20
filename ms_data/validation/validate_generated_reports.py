@@ -103,6 +103,20 @@ def validate_reports(reports_dir: Path, schema_dir: Path) -> list[str]:
             )
         )
 
+    for path in sorted(reports_dir.rglob("source_excerpt_*.md")):
+        messages.extend(
+            _require_text(
+                path,
+                [
+                    "# 取得元抜粋",
+                    "- excerpt_rows:",
+                    "- mismatch:",
+                    "## 取得元ページ",
+                    "## 変更項目の抜粋",
+                ],
+            )
+        )
+
     for path in sorted(reports_dir.rglob("source_slot_audit_*.md")):
         messages.extend(
             _require_text(

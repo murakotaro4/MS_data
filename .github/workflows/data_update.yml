@@ -250,6 +250,28 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - id: source_excerpt
+        name: Build source excerpt report
+        if: steps.changes.outputs.changed == 'true' || steps.official_overrides_audit.outputs.due_count > 0 || steps.source_slots.outputs.finding_count > 0
+        run: |
+          pr_section="$RUNNER_TEMP/source_excerpt_pr.md"
+          uv run python -m ms_data.reporting.build_source_excerpt \
+            --old msData.before.json \
+            --new msData.json \
+            --html-dir cache/html \
+            --report-date "${REPORT_DATE}" \
+            --out "${SOURCE_EXCERPT_FILE}" \
+            --pr-section-out "$pr_section" \
+            --github-output "$GITHUB_OUTPUT" \
+            --step-summary "$GITHUB_STEP_SUMMARY"
+          # 抜粋は atwiki 由来の文字列を含むため、衝突しない区切りで複数行出力する
+          delimiter="SOURCE_EXCERPT_$(openssl rand -hex 16)"
+          {
+            echo "pr_section<<${delimiter}"
+            cat "$pr_section"
+            echo "${delimiter}"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Generate reports and snapshot
         if: steps.changes.outputs.changed == 'true' || steps.official_overrides_audit.outputs.due_count > 0 || steps.source_slots.outputs.finding_count > 0
         run: |
@@ -261,6 +283,7 @@ jobs:
             --note "official_overrides監査: ${OVERRIDES_AUDIT_FILE}" \
             --note "atwiki品質: ${QUALITY_FILE}" \
             --note "取得元スロット監査: ${SOURCE_SLOT_REPORT_OUT}" \
+            --note "取得元抜粋: ${SOURCE_EXCERPT_FILE}" \
             --print-summary | tee reports/diff_summary.txt
           REPORT_DATE="${REPORT_DATE}" \
           PROVENANCE_OUT="${PROVENANCE_FILE}" \
@@ -324,6 +347,7 @@ jobs:
             ${{ env.FIELD_COMPLETENESS_FILE }}
             ${{ env.OVERRIDES_AUDIT_FILE }}
             ${{ env.SOURCE_SLOT_REPORT_OUT }}
+            ${{ env.SOURCE_EXCERPT_FILE }}
             ${{ env.SOURCE_SLOT_AUDIT_OUT }}
             ${{ env.OFFICIAL_OVERRIDE_RAW_OUT }}
 
@@ -343,6 +367,7 @@ jobs:
             ${{ env.OVERRIDES_AUDIT_FILE }}
             ${{ env.QUALITY_FILE }}
             ${{ env.SOURCE_SLOT_REPORT_OUT }}
+            ${{ env.SOURCE_EXCERPT_FILE }}
             ${{ env.SOURCE_SLOT_AUDIT_OUT }}
 
       - name: Upload dry-run reports
@@ -361,6 +386,7 @@ jobs:
             ${{ env.QUALITY_FILE }}
             ${{ env.RAW_SNAPSHOT_FILE }}
             ${{ env.SOURCE_SLOT_REPORT_OUT }}
+            ${{ env.SOURCE_EXCERPT_FILE }}
             ${{ env.SOURCE_SLOT_AUDIT_OUT }}
 
       - name: Dry-run summary
@@ -436,11 +462,14 @@ jobs:
             - atwiki品質: ${{ env.QUALITY_FILE }}
             - atwiki品質警告: ${{ steps.quality.outputs.warning_summary }}
             - 取得元スロット監査: ${{ env.SOURCE_SLOT_REPORT_OUT }}
+            - 取得元抜粋: ${{ env.SOURCE_EXCERPT_FILE }}（照合: 不一致 ${{ steps.source_excerpt.outputs.mismatch_count }} 件 / HTMLなし ${{ steps.source_excerpt.outputs.html_missing_count }} 件）
             - LV単位の部分保留件数: ${{ steps.source_slots.outputs.held_record_count }}（対象LV候補のみ不採用・他レコードは通常継続）
             - provenance: ${{ env.PROVENANCE_FILE }}
             - source_run_id: ${{ github.run_id }}
             - source_artifact: ${{ env.RAW_ARTIFACT_NAME }}
             <!-- source_run_id:${{ github.run_id }} -->
+
+            ${{ steps.source_excerpt.outputs.pr_section }}
           branch: "data/auto-update-${{ env.REPORT_DATE }}"
           labels: |
             data-update
@@ -456,6 +485,7 @@ jobs:
             ${{ env.OVERRIDES_AUDIT_FILE }}
             ${{ env.QUALITY_FILE }}
             ${{ env.SOURCE_SLOT_REPORT_OUT }}
+            ${{ env.SOURCE_EXCERPT_FILE }}
 
       - id: partial_hold_body
         name: Build partial hold owner mail

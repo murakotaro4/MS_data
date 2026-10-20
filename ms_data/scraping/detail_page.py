@@ -341,29 +341,35 @@ def build_base_records(
     return per_level
 
 
+# パーツスロット表の行見出し → 正規キー
+PARTS_SLOT_ROWS = {
+    "近距離": "近スロット",
+    "中距離": "中スロット",
+    "遠距離": "遠スロット",
+}
+
+
+def find_parts_slot_table(soup: BeautifulSoup) -> Tag | None:
+    """「パーツスロット」見出し直後の表を返す。"""
+    for h3 in soup.find_all("h3"):
+        if "パーツスロット" in h3.get_text():
+            return h3.find_next_sibling("table")
+    return None
+
+
 def apply_parts_slots(
     soup: BeautifulSoup, per_level: dict[int, dict[str, Any]], levels: list[int]
 ) -> None:
     """「パーツスロット」見出し直後の表から近/中/遠スロット値を併合する。"""
-    parts_table: Tag | None = None
-    for h3 in soup.find_all("h3"):
-        if "パーツスロット" in h3.get_text():
-            parts_table = h3.find_next_sibling("table")
-            break
-
+    parts_table = find_parts_slot_table(soup)
     if not parts_table:
         return
 
-    row_name_map = {
-        "近距離": "近スロット",
-        "中距離": "中スロット",
-        "遠距離": "遠スロット",
-    }
     for tr in parts_table.find_all("tr"):
         th = tr.find("th")
         if not th:
             continue
-        dst_key = row_name_map.get(clean_text(th.get_text(" ")))
+        dst_key = PARTS_SLOT_ROWS.get(clean_text(th.get_text(" ")))
         if not dst_key:
             continue
         values = expand_cells(tr.find_all("td"), len(levels))
@@ -514,6 +520,47 @@ def filter_complete_records(
         for lv, rec in per_level.items()
         if BASE_REQUIRED.issubset(rec.keys()) and has_turn_value(rec)
     }
+
+
+def extract_source_rows(
+    html: str,
+) -> tuple[list[int], dict[str, tuple[str, list[str | None]]]]:
+    """取得元抜粋用に、正規キーごとの表の行（行見出し原文, LV 別セル原文）を返す。
+
+    ステータス表とパーツスロット表のみが対象。行と正規キーの対応は
+    build_base_records / apply_parts_slots と同じ規則に従い、同じキーの行が
+    複数ある場合は解析時と同様に後の行（パーツスロット表を含む）で上書きする。
+    """
+    soup = BeautifulSoup(html, "lxml")
+    _, table = find_detail_table(soup)
+    if not table:
+        return [], {}
+    levels = levels_from_table(table)
+    rows: dict[str, tuple[str, list[str | None]]] = {}
+    if not levels:
+        return levels, rows
+    for tr in table.find_all("tr"):
+        th = tr.find("th")
+        if not th:
+            continue
+        row_name = clean_text(th.get_text(" "))
+        key_name = FIELD_MAP.get(row_name) or FIELD_MAP.get(
+            normalize_row_label(row_name)
+        )
+        if key_name:
+            rows[key_name] = (row_name, expand_cells(tr.find_all("td"), len(levels)))
+    parts_table = find_parts_slot_table(soup)
+    if parts_table:
+        for tr in parts_table.find_all("tr"):
+            th = tr.find("th")
+            if not th:
+                continue
+            row_name = clean_text(th.get_text(" "))
+            key_name = PARTS_SLOT_ROWS.get(row_name)
+            if key_name:
+                cells = expand_cells(tr.find_all("td"), len(levels))
+                rows[key_name] = (row_name, cells)
+    return levels, rows
 
 
 def parse_details(
