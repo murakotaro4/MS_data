@@ -608,6 +608,7 @@ def task_snapshot() -> int:
     for source_path in (
         _env_str("SOURCE_SLOT_AUDIT_OUT"),
         _env_str("SOURCE_SLOT_REPORT_OUT"),
+        _env_str("SOURCE_EXCERPT_FILE"),
         _env_str("OFFICIAL_OVERRIDE_RAW_OUT"),
     ):
         if source_path:

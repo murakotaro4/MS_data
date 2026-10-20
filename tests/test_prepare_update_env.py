@@ -106,11 +106,12 @@ def test_build_env_has_exact_compatible_keys_and_values():
         ),
         "QUALITY_FILE": "reports/2026/08/atwiki_quality_20260829.json",
         "FIELD_COMPLETENESS_FILE": ("reports/2026/08/field_completeness_20260829.md"),
+        "SOURCE_EXCERPT_FILE": "reports/2026/08/source_excerpt_20260829.md",
         "RAW_ARTIFACT_NAME": "raw-snapshot-20260829-run-12345",
         "RAW_SNAPSHOT_FILE": "raw_snapshot_20260829_run12345.tar.xz",
         "RELEASE_TAG": "raw-snapshot-20260829-run-12345",
     }
-    assert len(values) == 15
+    assert len(values) == 16
 
 
 def test_main_writes_github_env_with_injected_today(tmp_path: Path):
@@ -142,7 +143,7 @@ def test_main_writes_github_env_with_injected_today(tmp_path: Path):
     assert lines[0] == "UPDATE_MODE=full"
     assert "REPORT_DATE=20260906" in lines
     assert "RAW_SNAPSHOT_FILE=raw_snapshot_20260906_run987.tar.xz" in lines
-    assert len(lines) == 15
+    assert len(lines) == 16
 
 
 def test_dry_run_is_only_enabled_for_workflow_dispatch():

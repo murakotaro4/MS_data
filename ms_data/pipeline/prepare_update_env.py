@@ -77,6 +77,7 @@ def build_env(
         ),
         "QUALITY_FILE": f"{month_dir}/atwiki_quality_{report_date}.json",
         "FIELD_COMPLETENESS_FILE": (f"{month_dir}/field_completeness_{report_date}.md"),
+        "SOURCE_EXCERPT_FILE": f"{month_dir}/source_excerpt_{report_date}.md",
         "RAW_ARTIFACT_NAME": f"raw-snapshot-{report_date}-run-{run_id}",
         "RAW_SNAPSHOT_FILE": f"raw_snapshot_{report_date}_run{run_id}.tar.xz",
         "RELEASE_TAG": f"raw-snapshot-{report_date}-run-{run_id}",

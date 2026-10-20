@@ -71,6 +71,15 @@
       "prune": {"max_age_days": 90, "keep_min": 10}
     },
     {
+      "id": "source_excerpt",
+      "type": "generated",
+      "path_patterns": ["reports/*/*/source_excerpt_*.md"],
+      "producer": ["ms_data.reporting.build_source_excerpt", ".github/workflows/data_update.yml"],
+      "consumers": [".github/workflows/data_update.yml", "human"],
+      "retention": "git+artifact",
+      "prune": {"max_age_days": 90, "keep_min": 10}
+    },
+    {
       "id": "rollback_guard",
       "type": "generated",
       "path_patterns": [
