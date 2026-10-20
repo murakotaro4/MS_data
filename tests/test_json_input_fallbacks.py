@@ -36,9 +36,7 @@ def test_find_latest_provenance_skips_invalid_shapes(tmp_path, payload):
 def test_find_latest_provenance_skips_invalid_shape_and_uses_valid_file(tmp_path):
     (tmp_path / "provenance_20260718.json").write_text("{}", encoding="utf-8")
     valid = tmp_path / "provenance_20260719.json"
-    valid.write_text(
-        '{"generated_at": "2026-07-19T00:00:00Z"}', encoding="utf-8"
-    )
+    valid.write_text('{"generated_at": "2026-07-19T00:00:00Z"}', encoding="utf-8")
 
     path, data = change_detection.find_latest_provenance(tmp_path)
 
@@ -85,7 +83,11 @@ def test_load_detail_fetch_state_falls_back_for_broken_json(tmp_path):
 def test_json_loaders_do_not_swallow_programming_errors(tmp_path, monkeypatch, loader):
     path = tmp_path / "input.json"
     path.write_text("{}", encoding="utf-8")
-    module = change_detection if loader is change_detection.load_msdata_base_index else fetch_state
+    module = (
+        change_detection
+        if loader is change_detection.load_msdata_base_index
+        else fetch_state
+    )
     monkeypatch.setattr(
         module.json,
         "loads",

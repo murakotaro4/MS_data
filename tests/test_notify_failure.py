@@ -1,7 +1,10 @@
 import json
+import sys
+from pathlib import Path
 
 import pytest
 
+from ms_data.gh import notify_failure as nf
 from ms_data.gh.notify_failure import (
     build_failure_mail_body,
     ensure_failure_issue,
@@ -56,9 +59,7 @@ def test_find_open_issue_returns_none_without_open_match():
         }
     ]
 
-    assert (
-        find_open_issue(issues, title="[pipeline-failure] data update") is None
-    )
+    assert find_open_issue(issues, title="[pipeline-failure] data update") is None
 
 
 def test_resolve_issue_creation_race_selects_lowest_number():
@@ -196,9 +197,7 @@ def test_existing_open_duplicates_are_aggregated_and_closed():
         endpoint = cmd[2] if len(cmd) > 2 else ""
         if cmd[:3] == ["gh", "label", "create"]:
             return ""
-        if endpoint.endswith(
-            "issues?state=open&labels=pipeline-failure&per_page=100"
-        ):
+        if endpoint.endswith("issues?state=open&labels=pipeline-failure&per_page=100"):
             return json.dumps(
                 [
                     {
@@ -229,15 +228,12 @@ def test_existing_open_duplicates_are_aggregated_and_closed():
         raise AssertionError(f"unexpected command: {cmd}")
 
     assert _ensure_issue(runner) == ("deduplicated", 7)
-    assert not any(
-        cmd[:3] == ["gh", "api", "repos/owner/repo/issues"] for cmd in calls
-    )
+    assert not any(cmd[:3] == ["gh", "api", "repos/owner/repo/issues"] for cmd in calls)
 
     canonical_comments = [
         cmd[-1]
         for cmd in calls
-        if cmd[:4]
-        == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
+        if cmd[:4] == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
     ]
     assert len(canonical_comments) == 3
     assert any(
@@ -292,9 +288,7 @@ def test_created_issue_loses_race_then_comments_canonical_and_closes_duplicate()
         endpoint = cmd[2] if len(cmd) > 2 else ""
         if cmd[:3] == ["gh", "label", "create"]:
             return ""
-        if endpoint.endswith(
-            "issues?state=open&labels=pipeline-failure&per_page=100"
-        ):
+        if endpoint.endswith("issues?state=open&labels=pipeline-failure&per_page=100"):
             issue_list_count += 1
             if issue_list_count == 1:
                 return "[]"
@@ -325,15 +319,13 @@ def test_created_issue_loses_race_then_comments_canonical_and_closes_duplicate()
     assert _ensure_issue(runner) == ("deduplicated", 7)
 
     assert any(
-        cmd[:4]
-        == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
+        cmd[:4] == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
         and "Issue #8 から失敗情報を集約" in cmd[-1]
         and "run 8 failure" in cmd[-1]
         for cmd in calls
     )
     assert any(
-        cmd[:4]
-        == ["gh", "api", "repos/owner/repo/issues/8/comments", "-X"]
+        cmd[:4] == ["gh", "api", "repos/owner/repo/issues/8/comments", "-X"]
         and "Issue #7 を正本として失敗情報を集約" in cmd[-1]
         for cmd in calls
     )
@@ -360,9 +352,7 @@ def test_created_canonical_issue_closes_all_higher_number_duplicates():
         endpoint = cmd[2] if len(cmd) > 2 else ""
         if cmd[:3] == ["gh", "label", "create"]:
             return ""
-        if endpoint.endswith(
-            "issues?state=open&labels=pipeline-failure&per_page=100"
-        ):
+        if endpoint.endswith("issues?state=open&labels=pipeline-failure&per_page=100"):
             issue_list_count += 1
             if issue_list_count == 1:
                 return "[]"
@@ -402,8 +392,7 @@ def test_created_canonical_issue_closes_all_higher_number_duplicates():
     canonical_comments = [
         cmd[-1]
         for cmd in calls
-        if cmd[:4]
-        == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
+        if cmd[:4] == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
     ]
     assert len(canonical_comments) == 2
     assert any("Issue #8 から失敗情報を集約" in body for body in canonical_comments)
@@ -470,3 +459,88 @@ def test_only_both_notification_failures_return_nonzero():
     assert notify_failure(**common, runner=failed, mail_sender=lambda *_: None) == 0
     assert notify_failure(**common, runner=issue_runner, mail_sender=failed) == 0
     assert notify_failure(**common, runner=failed, mail_sender=failed) == 1
+
+
+def test_send_failure_mail_passes_subject_and_body_file_to_send_gmail(monkeypatch):
+    captured = {}
+
+    def fake_main():
+        captured["argv"] = list(sys.argv)
+        captured["body"] = Path(sys.argv[4]).read_text(encoding="utf-8")
+        return 0
+
+    monkeypatch.setattr(nf.send_gmail, "main", fake_main)
+    original_argv = list(sys.argv)
+
+    nf.send_failure_mail("件名", "本文")
+
+    assert captured["argv"][1:4] == ["--subject", "件名", "--body"]
+    assert captured["body"] == "本文"
+    assert sys.argv == original_argv
+
+
+def test_send_failure_mail_raises_on_nonzero_result(monkeypatch):
+    monkeypatch.setattr(nf.send_gmail, "main", lambda: 2)
+
+    with pytest.raises(RuntimeError, match="send_gmail failed: 2"):
+        nf.send_failure_mail("s", "b")
+
+
+def test_send_failure_mail_converts_system_exit_and_restores_argv(monkeypatch):
+    def exiting():
+        raise SystemExit("GMAIL_ADDRESS 未設定")
+
+    monkeypatch.setattr(nf.send_gmail, "main", exiting)
+    original_argv = list(sys.argv)
+
+    with pytest.raises(RuntimeError, match="GMAIL_ADDRESS 未設定"):
+        nf.send_failure_mail("s", "b")
+
+    assert sys.argv == original_argv
+
+
+_CLI_ARGS = [
+    "--workflow-name",
+    "data update",
+    "--conclusion",
+    "failure",
+    "--run-url",
+    "https://example.invalid/run",
+    "--run-id",
+    "123",
+    "--created-at",
+    "2026-07-18T09:00:00Z",
+]
+
+
+def test_parse_args_requires_repo(monkeypatch):
+    monkeypatch.delenv("GITHUB_REPOSITORY", raising=False)
+
+    with pytest.raises(SystemExit):
+        nf.parse_args(_CLI_ARGS)
+
+
+def test_parse_args_falls_back_to_repository_env(monkeypatch):
+    monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
+
+    assert nf.parse_args(_CLI_ARGS).repo == "owner/repo"
+
+
+def test_main_forwards_arguments_to_notify_failure(monkeypatch):
+    captured = {}
+
+    def fake_notify(**kwargs):
+        captured.update(kwargs)
+        return 0
+
+    monkeypatch.setattr(nf, "notify_failure", fake_notify)
+
+    assert nf.main([*_CLI_ARGS, "--repo", "owner/repo"]) == 0
+    assert captured == {
+        "repo": "owner/repo",
+        "workflow_name": "data update",
+        "conclusion": "failure",
+        "run_url": "https://example.invalid/run",
+        "run_id": "123",
+        "created_at": "2026-07-18T09:00:00Z",
+    }
