@@ -417,7 +417,9 @@ def test_update_main_warns_and_uses_default_for_broken_base_json(tmp_path, capsy
     assert "warning: failed to load base data" in capsys.readouterr().err
 
 
-def test_update_main_warns_and_uses_default_for_invalid_utf8_base(tmp_path, capsys):
+def test_update_main_warns_and_uses_default_for_invalid_utf8_base(
+    tmp_path, capsys
+):
     msdata = tmp_path / "msData.json"
     incoming = tmp_path / "details.json"
     msdata.write_bytes(b"\xff")
@@ -443,7 +445,9 @@ def test_update_main_warns_and_uses_default_for_invalid_utf8_base(tmp_path, caps
     assert "warning: failed to load base data" in capsys.readouterr().err
 
 
-def test_update_main_does_not_swallow_base_programming_error(tmp_path, monkeypatch):
+def test_update_main_does_not_swallow_base_programming_error(
+    tmp_path, monkeypatch
+):
     msdata = tmp_path / "msData.json"
     msdata.write_text("[]", encoding="utf-8")
     monkeypatch.setattr(

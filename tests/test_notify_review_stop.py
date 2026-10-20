@@ -54,7 +54,8 @@ def test_sanitize_finding_body_truncates_and_strips_control_chars():
 
 def test_format_findings_section_limits_to_20_and_reports_remainder():
     findings = [
-        {"path": f"file_{i}.py", "line": i, "body": f"finding {i}"} for i in range(25)
+        {"path": f"file_{i}.py", "line": i, "body": f"finding {i}"}
+        for i in range(25)
     ]
     lines = format_findings_section(findings)
 

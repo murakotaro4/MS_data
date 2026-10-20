@@ -315,7 +315,8 @@ def test_fetch_branch_sha_404_is_already_deleted_and_continues(monkeypatch):
     )
     assert results[1].action == "deleted"
     assert any(
-        call[:2] == ["git", "push"] and remaining_branch in call[-1] for call in calls
+        call[:2] == ["git", "push"] and remaining_branch in call[-1]
+        for call in calls
     )
 
 

@@ -59,7 +59,9 @@ def test_find_open_issue_returns_none_without_open_match():
         }
     ]
 
-    assert find_open_issue(issues, title="[pipeline-failure] data update") is None
+    assert (
+        find_open_issue(issues, title="[pipeline-failure] data update") is None
+    )
 
 
 def test_resolve_issue_creation_race_selects_lowest_number():
@@ -197,7 +199,9 @@ def test_existing_open_duplicates_are_aggregated_and_closed():
         endpoint = cmd[2] if len(cmd) > 2 else ""
         if cmd[:3] == ["gh", "label", "create"]:
             return ""
-        if endpoint.endswith("issues?state=open&labels=pipeline-failure&per_page=100"):
+        if endpoint.endswith(
+            "issues?state=open&labels=pipeline-failure&per_page=100"
+        ):
             return json.dumps(
                 [
                     {
@@ -228,12 +232,15 @@ def test_existing_open_duplicates_are_aggregated_and_closed():
         raise AssertionError(f"unexpected command: {cmd}")
 
     assert _ensure_issue(runner) == ("deduplicated", 7)
-    assert not any(cmd[:3] == ["gh", "api", "repos/owner/repo/issues"] for cmd in calls)
+    assert not any(
+        cmd[:3] == ["gh", "api", "repos/owner/repo/issues"] for cmd in calls
+    )
 
     canonical_comments = [
         cmd[-1]
         for cmd in calls
-        if cmd[:4] == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
+        if cmd[:4]
+        == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
     ]
     assert len(canonical_comments) == 3
     assert any(
@@ -288,7 +295,9 @@ def test_created_issue_loses_race_then_comments_canonical_and_closes_duplicate()
         endpoint = cmd[2] if len(cmd) > 2 else ""
         if cmd[:3] == ["gh", "label", "create"]:
             return ""
-        if endpoint.endswith("issues?state=open&labels=pipeline-failure&per_page=100"):
+        if endpoint.endswith(
+            "issues?state=open&labels=pipeline-failure&per_page=100"
+        ):
             issue_list_count += 1
             if issue_list_count == 1:
                 return "[]"
@@ -319,13 +328,15 @@ def test_created_issue_loses_race_then_comments_canonical_and_closes_duplicate()
     assert _ensure_issue(runner) == ("deduplicated", 7)
 
     assert any(
-        cmd[:4] == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
+        cmd[:4]
+        == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
         and "Issue #8 から失敗情報を集約" in cmd[-1]
         and "run 8 failure" in cmd[-1]
         for cmd in calls
     )
     assert any(
-        cmd[:4] == ["gh", "api", "repos/owner/repo/issues/8/comments", "-X"]
+        cmd[:4]
+        == ["gh", "api", "repos/owner/repo/issues/8/comments", "-X"]
         and "Issue #7 を正本として失敗情報を集約" in cmd[-1]
         for cmd in calls
     )
@@ -352,7 +363,9 @@ def test_created_canonical_issue_closes_all_higher_number_duplicates():
         endpoint = cmd[2] if len(cmd) > 2 else ""
         if cmd[:3] == ["gh", "label", "create"]:
             return ""
-        if endpoint.endswith("issues?state=open&labels=pipeline-failure&per_page=100"):
+        if endpoint.endswith(
+            "issues?state=open&labels=pipeline-failure&per_page=100"
+        ):
             issue_list_count += 1
             if issue_list_count == 1:
                 return "[]"
@@ -392,7 +405,8 @@ def test_created_canonical_issue_closes_all_higher_number_duplicates():
     canonical_comments = [
         cmd[-1]
         for cmd in calls
-        if cmd[:4] == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
+        if cmd[:4]
+        == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
     ]
     assert len(canonical_comments) == 2
     assert any("Issue #8 から失敗情報を集約" in body for body in canonical_comments)
