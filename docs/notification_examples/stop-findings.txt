@@ -1,0 +1,13 @@
+自動マージを停止しました
+Codex レビューでファイル指摘が 1 件あったため停止しました。
+次の対応: PR の指摘を確認し、修正するか返信してください。
+
+- PR #339: https://github.com/murakotaro4/MS_data/pull/339
+- 実行ログ: https://github.com/murakotaro4/MS_data/actions/runs/39436005101
+
+Codex の指摘（1件）
+- [P1] 中スロット値を取得元の29に戻す
+  msData.json:55564
+  指摘コメント: https://github.com/murakotaro4/MS_data/pull/339#discussion_r0000000000
+
+対象日（report_date）: 20261020

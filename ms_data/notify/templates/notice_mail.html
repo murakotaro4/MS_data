@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${kicker}</title>
+  <style>
+    @media screen and (max-width:480px) {
+      .padding { padding:20px 14px !important; }
+      h1 { font-size:21px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background:#f3f6fa;color:#18222f;font-family:Arial,'Yu Gothic',sans-serif;font-size:16px;line-height:1.65">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#f3f6fa">
+    <tr><td align="center" style="padding:18px 8px">
+      <table class="mail" role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;max-width:660px;background:#ffffff">
+        <tr><td class="padding" style="padding:28px">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td class="kicker">${kicker}</td><td class="date">${date}</td>
+          </tr></table>
+          <h1>${title}</h1>
+          <p class="result">${result}</p>
+          <p class="action">${action}</p>
+          ${navigation}
+          ${cards}
+          <div class="footer">${footer}</div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>

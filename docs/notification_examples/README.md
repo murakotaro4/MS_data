@@ -12,6 +12,10 @@
 | 監査欠損 | [audit-missing.html](audit-missing.html) | [audit-missing.txt](audit-missing.txt) | 未取得を明示し、0件・確認不要と表示しない |
 | 大規模監査（20260601） | [large-audit-20260601.html](large-audit-20260601.html) | [large-audit-20260601.txt](large-audit-20260601.txt) | 過去の監査fixture。共通対応を集約して全対象を保持 |
 | 大規模監査（20260918） | [large-audit-20260918.html](large-audit-20260918.html) | [large-audit-20260918.txt](large-audit-20260918.txt) | 過去の監査レポート。期限・状態を保った本文サイズ |
+| 自動マージ停止（Codex指摘） | [stop-findings.html](stop-findings.html) | [stop-findings.txt](stop-findings.txt) | PR #339 の指摘を「優先度・要点・ファイル:行・コメントへのリンク」だけで表示し、バッジ画像等のGitHub記法を出さない |
+| 自動マージ停止（応答なし） | [stop-no-response.html](stop-no-response.html) | [stop-no-response.txt](stop-no-response.txt) | `@codex review` による回収手順を「次の対応」として先頭に表示 |
+| 自動マージ停止（連携切れ） | [stop-disconnected.html](stop-disconnected.html) | [stop-disconnected.txt](stop-disconnected.txt) | コネクタ設定の確認と回収手順を先頭に表示 |
+| パイプライン失敗 | [pipeline-failure.html](pipeline-failure.html) | [pipeline-failure.txt](pipeline-failure.txt) | workflow名・結論・実行ログへのリンクを先頭のカードに集約（テキスト版はIssueと共通の本文） |
 
 大規模監査の2例はリポジトリにある過去の監査を入力にした表示検証です。ヘッダの実行結果は表示例で、当時や本日の実行結果を示しません。最終HTML（UTF-8、エスケープとinline CSS適用後）は80KiB以内に検証します。この予算を超える場合は取得証拠の補足、補正維持・要確認の明細、機体別差分の順で段階的に省き、省略した対象数と単位を明記します。対応要否は省略前の全文で判定し、対象を省いた際も必要な対応を残します。確認先のない入力は「完全版の確認リンクなし」と明記します。
 
@@ -21,7 +25,7 @@
 uv run --locked python -m scripts.preview_update_mail --out-dir docs/notification_examples
 ```
 
-`*-390.png`はスマホ幅390px、`*-900.png`はデスクトップ幅900pxのChromiumレンダーです。`*-inline-only-390.png`はheadのCSSを除去した状態です。8例×3条件の本文サイズ・横幅・文字サイズ・外部資源・強化比較表の左右配置検証は`render-checks.json`に記録します。大規模監査のPNGはGit LFSで保管します。実際のGmailへの試験送信は行っていません。
+自動マージ停止・パイプライン失敗の例は`ms_data/notify/notice_html.py`で生成し、`stop-findings-390.png`・`pipeline-failure-390.png`のみ添付しています（`render-checks.json`の検証対象外）。`*-390.png`はスマホ幅390px、`*-900.png`はデスクトップ幅900pxのChromiumレンダーです。`*-inline-only-390.png`はheadのCSSを除去した状態です。8例×3条件の本文サイズ・横幅・文字サイズ・外部資源・強化比較表の左右配置検証は`render-checks.json`に記録します。大規模監査のPNGはGit LFSで保管します。実際のGmailへの試験送信は行っていません。
 
 20261009の例は[データ更新実行37806098586](https://github.com/murakotaro4/MS_data/actions/runs/37806098586)と[Release](https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261009-run-37806098586)に対応する、main `82a6444` の差分・巻き戻りガード・登録補正・スロット監査を通知ビルダーへ渡した入力です（`tests/fixtures/mail/actual-20261009.md`）。メール配信結果や全ヘッダの複製ではありません。ディマーテル機体LV2の必要強化値は値なし→1030/2060/3090/4120/8240/12360、プロトタイプΖΖガンダム機体LV2は値なし→660/1320/1980/2650/5300/7950です。
 

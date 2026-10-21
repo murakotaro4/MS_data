@@ -15,6 +15,7 @@ from ms_data.gh.gh_json import GhRunner, run_gh
 from ms_data.gh.issue_upsert import DuplicateIssue, IssueRaceResolution
 from ms_data.gh.repo_labels import LABEL_SPECS
 from ms_data.notify import send_gmail
+from ms_data.notify.notice_html import Notice, NoticeCard, render_notice_html
 from ms_data.notify.subjects import STATUS_FAILED, format_subject
 
 NOTIFY_CONCLUSIONS = frozenset(
@@ -24,7 +25,7 @@ ISSUE_LABEL = "pipeline-failure"
 ISSUE_LABEL_SPEC = LABEL_SPECS[ISSUE_LABEL]
 ISSUE_LABEL_COLOR = ISSUE_LABEL_SPEC.color
 AGGREGATION_SUBJECT = "失敗情報"
-MailSender = Callable[[str, str], None]
+MailSender = Callable[[str, str, str], None]
 
 __all__ = [
     "AGGREGATION_SUBJECT",
@@ -37,6 +38,7 @@ __all__ = [
     "MailSender",
     "build_failure_details",
     "build_failure_mail_body",
+    "build_failure_notice",
     "build_issue_aggregation_comment",
     "converge_duplicate_issues",
     "ensure_failure_issue",
@@ -181,21 +183,20 @@ def ensure_failure_issue(
     )
 
 
-def send_failure_mail(subject: str, body: str) -> None:
-    """既存 send_gmail CLI を使って失敗通知メールを送る。"""
+def send_failure_mail(subject: str, body: str, html: str | None = None) -> None:
+    """既存 send_gmail CLI を使って通知メールを送る（HTML 版は任意）。"""
 
     with tempfile.TemporaryDirectory(prefix="msdata-failure-mail-") as tmp_dir:
         body_path = Path(tmp_dir) / "body.txt"
         body_path.write_text(body, encoding="utf-8")
+        argv = ["--subject", subject, "--body", str(body_path)]
+        if html is not None:
+            html_path = Path(tmp_dir) / "body.html"
+            html_path.write_text(html, encoding="utf-8")
+            argv.extend(["--html-body", str(html_path)])
         original_argv = sys.argv
         try:
-            sys.argv = [
-                "ms_data.notify.send_gmail",
-                "--subject",
-                subject,
-                "--body",
-                str(body_path),
-            ]
+            sys.argv = ["ms_data.notify.send_gmail", *argv]
             result = send_gmail.main()
         except SystemExit as exc:
             raise RuntimeError(f"send_gmail failed: {exc.code}") from exc
@@ -203,6 +204,36 @@ def send_failure_mail(subject: str, body: str) -> None:
             sys.argv = original_argv
         if result != 0:
             raise RuntimeError(f"send_gmail failed: {result}")
+
+
+def build_failure_notice(
+    *,
+    workflow_name: str,
+    conclusion: str,
+    run_url: str,
+    run_id: str,
+    created_at: str,
+) -> Notice:
+    """失敗通知の HTML 版の表示モデル。workflow・結論・実行へのリンクを先頭に置く。"""
+
+    return Notice(
+        kicker="MS DATA · パイプライン失敗",
+        title="自動更新パイプラインで失敗を検知しました",
+        result=f"{workflow_name}: {conclusion}",
+        action="実行ログを確認し、必要な対応を行ってください。",
+        date=created_at,
+        links=[("実行ログ", run_url)],
+        cards=[
+            NoticeCard(
+                workflow_name,
+                [
+                    f"結論（conclusion）: {conclusion}",
+                    f"実行ID（run_id）: {run_id}",
+                    f"開始時刻（created_at）: {created_at}",
+                ],
+            )
+        ],
+    )
 
 
 def notify_failure(
@@ -232,7 +263,14 @@ def notify_failure(
     failures = 0
 
     try:
-        mail_sender(subject, body)
+        notice = build_failure_notice(
+            workflow_name=workflow_name,
+            conclusion=conclusion,
+            run_url=run_url,
+            run_id=run_id,
+            created_at=created_at,
+        )
+        mail_sender(subject, body, render_notice_html(notice))
     except Exception as exc:
         failures += 1
         print(f"メール送信に失敗しました: {exc}", file=sys.stderr)
