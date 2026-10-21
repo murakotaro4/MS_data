@@ -417,6 +417,7 @@ jobs:
             --fast-path "${{ steps.detection.outputs.fast_path }}" \
             --age-coverage "${{ steps.detection.outputs.age_coverage }}" \
             --fallback-reason "$FALLBACK_REASON" \
+            --min-age-coverage "${{ steps.detection.outputs.min_age_coverage }}" \
             --run-id "${GITHUB_RUN_ID}" \
             --rollback-guard-path "${ROLLBACK_FILE}" \
             --official-overrides-audit-path "${OVERRIDES_AUDIT_FILE}" \
@@ -499,6 +500,11 @@ jobs:
             --report-date "${REPORT_DATE}" \
             --result "部分保留エラー（対応要・正常な更新候補は通常レビュー継続）" \
             --changed "${{ steps.changes.outputs.changed }}" \
+            --candidate-count "${{ steps.detection.outputs.candidate_count }}" \
+            --fast-path "${{ steps.detection.outputs.fast_path }}" \
+            --age-coverage "${{ steps.detection.outputs.age_coverage }}" \
+            --fallback-reason "${{ steps.detection.outputs.fallback_reason }}" \
+            --min-age-coverage "${{ steps.detection.outputs.min_age_coverage }}" \
             --run-id "${GITHUB_RUN_ID}" \
             --diff-path "${DIFF_FILE}" \
             --source-slot-audit-path "${SOURCE_SLOT_REPORT_OUT}" \

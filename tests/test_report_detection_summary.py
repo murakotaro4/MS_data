@@ -24,7 +24,8 @@ def test_writes_compatible_outputs_and_summary(tmp_path: Path):
     meta = tmp_path / "index_changed_meta.json"
     meta.write_text(
         '{"candidate_count": 12, "fast_path": true, "age_coverage": 0.75, '
-        '"fallback_reason": "stale_details", "mode": "revalidate"}',
+        '"fallback_reason": "stale_details", "mode": "revalidate", '
+        '"min_age_coverage": 0.9}',
         encoding="utf-8",
     )
     github_output = tmp_path / "github-output.txt"
@@ -40,6 +41,7 @@ def test_writes_compatible_outputs_and_summary(tmp_path: Path):
         "fast_path=true\n"
         "age_coverage=0.75\n"
         "fallback_reason=stale_details\n"
+        "min_age_coverage=0.9\n"
     )
     assert step_summary.read_text(encoding="utf-8") == (
         "### Change Detection\n"
@@ -49,6 +51,7 @@ def test_writes_compatible_outputs_and_summary(tmp_path: Path):
         "- fast_path: true\n"
         "- age_coverage: 0.75\n"
         "- fallback_reason: stale_details\n"
+        "- min_age_coverage: 0.9\n"
     )
 
 

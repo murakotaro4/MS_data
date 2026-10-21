@@ -230,7 +230,7 @@ def test_oversized_unknown_sections_keep_needed_action_and_real_link(
         assert "存続・撤去を判断してください" in text
     else:
         assert "要確認の項目なし" in text
-        assert "再確認・撤去判断の期限到達なし" in text
+        assert "期限到達なし" not in text
     assert "補正値を維持した項目: 1項目" in text
     assert "新たな更新停止の件数ではありません" in text
     assert "本文は結果の要約です" in text

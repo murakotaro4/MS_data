@@ -100,11 +100,9 @@ def test_audit_producer_details_reach_both_formats_and_inline_styles(
     for key, value in pairs.items():
         assert f"- {key}: {value}" in plain
     assert "新たな更新停止の件数ではありません。" in plain
-    assert (
-        plain.index("公開データの変更なし")
-        < plain.index("補正値を維持した項目")
-        < plain.index("## 技術情報")
-    )
+    assert plain.index("公開データの変更なし") < plain.index("補正値を維持した項目")
+    if "## 技術情報" in plain:
+        assert plain.index("補正値を維持した項目") < plain.index("## 技術情報")
     assert soup.select_one(".maintenance h3")["style"]
     assert "font-size:14px" in soup.select_one(".note")["style"]
     assert soup.select("script, img, link") == []
@@ -617,3 +615,42 @@ def test_override_primary_states_are_disjoint_and_cover_evidence_targets(
     else:
         assert "登録補正の状態別対象を確認" not in plain
         assert "状態別の件数・対象明細が整合していません。" not in plain
+
+
+@pytest.mark.parametrize(
+    ("coverage", "threshold", "warned", "shown"),
+    [
+        ("0.96", "", False, ""),
+        ("0.94", "", True, "95%"),
+        # detect-changed の MIN_AGE_COVERAGE を変えた場合は、その値で判定する。
+        ("0.94", "0.9", False, ""),
+        ("0.96", "0.98", True, "98%"),
+        ("0.94", "broken", True, "95%"),
+    ],
+)
+def test_low_age_coverage_is_raised_to_top_warning_and_subject(
+    coverage: str, threshold: str, warned: bool, shown: str
+) -> None:
+    from ms_data.reporting.update_mail_model import build_mail_view, mail_subject
+
+    threshold_line = f"- min_age_coverage: {threshold}\n" if threshold else ""
+    view = build_mail_view(
+        "- 実行日: 20261021\n- 結果: 成功（差分なし）\n- msData.json変更: false\n"
+        f"- candidate_count: 17\n- age_coverage: {coverage}\n{threshold_line}"
+        "\n## 巻き戻りガード\n- protected_rollback: 0\n- numeric_decrease: 0\n"
+        "- mixed_level_change: 0\n"
+        "\n## official_overrides監査\n- review_due: 0\n- remove_due: 0\n"
+        "\n詳細: https://github.com/murakotaro4/MS_data/actions/runs/1\n"
+    )
+    warnings = [
+        card
+        for card in view.attention
+        if card.title.startswith("一覧の更新経過時間の読み取り率低下")
+    ]
+    assert bool(warnings) is warned
+    if warned:
+        assert f"しきい値 {shown} を下回りました。" in warnings[0].lines[0]
+    assert mail_subject(view).startswith("【要対応】") is warned
+    assert view.technical[0].startswith("取得の概要: 再取得候補 17ページ")
+    assert len(view.technical) == 1
+    assert view.maintenance == []

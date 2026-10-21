@@ -4,7 +4,7 @@
 
 | ケース | HTML | テキスト | 確認する点 |
 | --- | --- | --- | --- |
-| 差分なし | [no-change.html](no-change.html) | [no-change.txt](no-change.txt) | 結果・対応要否が先頭。補正維持1と選定73ページを区別 |
+| 差分なし | [no-change.html](no-change.html) | [no-change.txt](no-change.txt) | 結果・対応要否が先頭。補正維持1と選定73ページを区別。期限到達なしの定型文は出さず、技術情報は取得の概要1行（読み取り率が95%未満の日だけ上部に警告） |
 | 変更あり | [changed.html](changed.html) | [changed.txt](changed.txt) | 機体/LV別の変更前後・増減量 |
 | 実通知相当（20261009） | [actual-20261009.html](actual-20261009.html) | [actual-20261009.txt](actual-20261009.txt) | 強化項目・強化Lv／必要強化値の変更前・変更後を左右比較 |
 | 部分保留 | [partial-hold.html](partial-hold.html) | [partial-hold.txt](partial-hold.txt) | 対象・原値・比較値・前値保持・理由・次の対応 |
@@ -25,7 +25,7 @@
 uv run --locked python -m scripts.preview_update_mail --out-dir docs/notification_examples
 ```
 
-自動マージ停止・パイプライン失敗の例は`ms_data/notify/notice_html.py`で生成し、`stop-findings-390.png`・`pipeline-failure-390.png`のみ添付しています（`render-checks.json`の検証対象外）。`*-390.png`はスマホ幅390px、`*-900.png`はデスクトップ幅900pxのChromiumレンダーです。`*-inline-only-390.png`はheadのCSSを除去した状態です。8例×3条件の本文サイズ・横幅・文字サイズ・外部資源・強化比較表の左右配置検証は`render-checks.json`に記録します。大規模監査のPNGはGit LFSで保管します。実際のGmailへの試験送信は行っていません。
+自動マージ停止・パイプライン失敗の例は`ms_data/notify/notice_html.py`で生成します。`*-390.png`はスマホ幅390px、`*-900.png`はデスクトップ幅900pxのChromiumレンダーです。`*-inline-only-390.png`はheadのCSSを除去した状態です。12例×3条件の本文サイズ・横幅・文字サイズ・外部資源・強化比較表の左右配置検証は`render-checks.json`に記録します。大規模監査のPNGはGit LFSで保管します。実際のGmailへの試験送信は行っていません。
 
 20261009の例は[データ更新実行37806098586](https://github.com/murakotaro4/MS_data/actions/runs/37806098586)と[Release](https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261009-run-37806098586)に対応する、main `82a6444` の差分・巻き戻りガード・登録補正・スロット監査を通知ビルダーへ渡した入力です（`tests/fixtures/mail/actual-20261009.md`）。メール配信結果や全ヘッダの複製ではありません。ディマーテル機体LV2の必要強化値は値なし→1030/2060/3090/4120/8240/12360、プロトタイプΖΖガンダム機体LV2は値なし→660/1320/1980/2650/5300/7950です。
 

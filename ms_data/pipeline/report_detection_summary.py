@@ -32,6 +32,8 @@ def _outputs(meta: dict[str, Any]) -> dict[str, Any]:
         "fast_path": str(bool(meta.get("fast_path", False))).lower(),
         "age_coverage": meta.get("age_coverage", 0.0),
         "fallback_reason": meta.get("fallback_reason") or "none",
+        # 旧形式の meta にはしきい値がないため空にし、メール側の既定値に任せる。
+        "min_age_coverage": meta.get("min_age_coverage", ""),
     }
 
 
@@ -45,6 +47,7 @@ def _summary_lines(meta: dict[str, Any], update_mode: str) -> list[str]:
         f"- fast_path: {outputs['fast_path']}",
         f"- age_coverage: {outputs['age_coverage']}",
         f"- fallback_reason: {outputs['fallback_reason']}",
+        f"- min_age_coverage: {outputs['min_age_coverage']}",
     ]
 
 

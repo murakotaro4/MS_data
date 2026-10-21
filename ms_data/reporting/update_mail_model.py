@@ -31,6 +31,8 @@ MAIL_FIELDS = {
         "1レコードは機体の1LV分。+は追加、-は削除、~は変更のレコード数です。",
     ),
 }
+# detect-changed の --min-age-coverage 既定値。検出時の実際の値が届かない場合だけ使う。
+MIN_AGE_COVERAGE = Decimal("0.95")
 NO_AUDIT_ACTION = "監査情報の添付なし。対応要否はこの通知だけでは判定できません。"
 FALLBACK_REASONS = {
     "none": ("切替なし", "全件取得への切替はありません。"),
@@ -548,28 +550,45 @@ def _audit_tables(lines: list[str]) -> tuple[list[dict[str, str]], list[str]]:
     return rows, remainder
 
 
-def _technical(facts: dict[str, str]) -> list[str]:
-    items: list[str] = []
+def _rate(value: str) -> tuple[str, Decimal | None]:
+    """0〜1 の比率を百分率の表示と比較用の値にする。読めなければ値は None。"""
+    try:
+        rate = Decimal(value)
+    except InvalidOperation:
+        return value, None
+    if rate.is_finite() and 0 <= rate <= 1:
+        return f"{(rate * 100).normalize():f}%", rate
+    return value, None
+
+
+def _coverage(facts: dict[str, str]) -> tuple[str, Decimal | None]:
+    """読み取り率の表示と、しきい値判定に使える値を返す。"""
+    return _rate(facts.get("age_coverage", ""))
+
+
+def _min_coverage(facts: dict[str, str]) -> tuple[str, Decimal]:
+    """detect-changed が実際に使ったしきい値を返す。未指定・不正なら既定値。"""
+    text, rate = _rate(facts.get("min_age_coverage", ""))
+    if rate is None:
+        return _rate(str(MIN_AGE_COVERAGE))[0], MIN_AGE_COVERAGE
+    return text, rate
+
+
+def _technical(facts: dict[str, str], *, has_detail_link: bool) -> list[str]:
+    """平常時は取得の概要を1行にまとめ、選定方式の切替時だけ理由を添える。"""
+    parts: list[str] = []
     if "candidate_count" in facts:
-        items.append(
-            f"再取得候補: {facts['candidate_count']}ページ（URL重複排除後の選定数。変更件数・取得成功数ではありません。）"
+        parts.append(
+            f"再取得候補 {facts['candidate_count']}ページ（URL重複排除後の選定数）"
         )
+    if "age_coverage" in facts:
+        parts.append(f"一覧の更新経過時間読み取り率 {_coverage(facts)[0]}")
     if "fast_path" in facts:
         value = {"true": "有効", "false": "無効"}.get(
             facts["fast_path"], facts["fast_path"]
         )
-        items.append(f"高速選定: {value}")
-    if "age_coverage" in facts:
-        value = facts["age_coverage"]
-        try:
-            rate = Decimal(value)
-            if rate.is_finite() and 0 <= rate <= 1:
-                value = f"{(rate * 100).normalize():f}%（{value}）"
-        except InvalidOperation:
-            pass
-        items.append(
-            f"一覧の更新経過時間読み取り率: {value}。詳細取得の成功率ではありません。"
-        )
+        parts.append(f"高速選定 {value}")
+    items = ["取得の概要: " + "・".join(parts)] if parts else []
     if "fallback_reason" in facts:
         reason = facts["fallback_reason"]
         if reason != "none":
@@ -587,7 +606,11 @@ def _technical(facts: dict[str, str]) -> list[str]:
             "fast_path",
             "age_coverage",
             "fallback_reason",
+            "min_age_coverage",
         }:
+            continue
+        # 実行IDは詳細レポートのリンク先で分かるため、リンクがある場合は省く。
+        if has_detail_link and key in {"run_id", "source_run_id"}:
             continue
         items.append(_mail_field(key, value))
     return items
@@ -761,13 +784,6 @@ def build_mail_view(body: str) -> MailView:
                 )
             )
 
-    if override and all(
-        _count(override.get(key)) == 0 for key in ("review_due", "remove_due")
-    ):
-        maintenance.append(
-            MailCard("登録補正の期限", ["再確認・撤去判断の期限到達なし。"])
-        )
-
     lookup = {(row.get("MS名"), row.get("項目")): row for row in source_rows}
     for heading, rows in parsed.items():
         if heading == "登録補正 / 取得証拠":
@@ -909,6 +925,19 @@ def build_mail_view(body: str) -> MailView:
         )
     if sections.get("既存の全体安全停止"):
         attention.append(MailCard("既存の全体安全停止", sections["既存の全体安全停止"]))
+    coverage, rate = _coverage(facts)
+    threshold_text, threshold = _min_coverage(facts)
+    if rate is not None and rate < threshold:
+        attention.append(
+            MailCard(
+                f"一覧の更新経過時間の読み取り率低下: {coverage}",
+                [
+                    f"しきい値 {threshold_text} を下回りました。"
+                    "一覧ページの形式変更などで更新を見落としている可能性があります。",
+                    "次の対応: 詳細レポートで一覧の取得結果と選定方式を確認してください。",
+                ],
+            )
+        )
     # optional監査の未指定は失敗扱いにしない。安心文には監査の添付範囲を明示する。
     if attention:
         action = "対応が必要です。下の対象と次の対応を確認してください。"
@@ -933,20 +962,19 @@ def build_mail_view(body: str) -> MailView:
         if "raw snapshot release" in facts
         else []
     )
-    links.extend(
-        [
-            ("詳細レポート", line[4:])
-            for line in body.splitlines()
-            if line.startswith("詳細: ")
-        ]
-    )
+    details = [
+        ("詳細レポート", line[4:])
+        for line in body.splitlines()
+        if line.startswith("詳細: ")
+    ]
+    links.extend(details)
     return MailView(
         facts,
         sections,
         action,
         attention,
         maintenance,
-        _technical(facts),
+        _technical(facts, has_detail_link=bool(details)),
         evidence,
         links=list(dict.fromkeys(links)),
     )
@@ -1051,7 +1079,8 @@ def localize_mail_body(body: str, *, view: MailView | None = None) -> str:
         if heading in view.sections:
             lines.extend(["", f"## {heading}", *view.sections[heading]])
     append_cards("補正値の維持と期限", view.maintenance)
-    lines.extend(["", "## 技術情報", *view.technical])
+    if view.technical:
+        lines.extend(["", "## 技術情報", *view.technical])
     append_cards("取得証拠の詳細", view.evidence)
     used = {
         "",
