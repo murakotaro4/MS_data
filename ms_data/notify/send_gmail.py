@@ -4,6 +4,7 @@ Gmail SMTP でレポート本文を送信する。
 
 - 本文はテキストとして送信、`--html-body` 指定時は HTML 版を併記
 - `--attach` で添付ファイルを追加可能
+- `--subject-file` で本文生成時に作った件名ファイルを使用可能
 - 宛先は `GMAIL_TO` のカンマ区切り複数指定に対応
 
 環境変数:
@@ -29,7 +30,11 @@ def parse_recipients(raw: str | None) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--subject", required=True)
+    subject = ap.add_mutually_exclusive_group(required=True)
+    subject.add_argument("--subject")
+    subject.add_argument(
+        "--subject-file", type=Path, help="件名を1行で書いたファイルのパス"
+    )
     ap.add_argument("--body", type=Path, required=True)
     ap.add_argument("--html-body", type=Path, help="HTML 本文のパス（任意）")
     ap.add_argument("--to", default=os.getenv("GMAIL_TO"))
@@ -50,6 +55,12 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("GMAIL_ADDRESS / GMAIL_APP_PASSWORD / GMAIL_TO が未設定です。")
 
     body_text = args.body.read_text(encoding="utf-8")
+    if args.subject_file is not None:
+        args.subject = args.subject_file.read_text(encoding="utf-8").strip()
+        if not args.subject or "\n" in args.subject:
+            raise SystemExit(
+                f"件名ファイルは空でない1行にしてください: {args.subject_file}"
+            )
 
     msg = EmailMessage()
     msg["Subject"] = args.subject

@@ -15,6 +15,7 @@ from ms_data.gh.gh_json import GhRunner, run_gh
 from ms_data.gh.issue_upsert import DuplicateIssue, IssueRaceResolution
 from ms_data.gh.repo_labels import LABEL_SPECS
 from ms_data.notify import send_gmail
+from ms_data.notify.subjects import STATUS_FAILED, format_subject
 
 NOTIFY_CONCLUSIONS = frozenset(
     {"failure", "timed_out", "startup_failure", "action_required"}
@@ -227,7 +228,7 @@ def notify_failure(
         run_id=run_id,
         created_at=created_at,
     )
-    subject = f"msData パイプライン失敗通知 ({workflow_name})"
+    subject = format_subject(STATUS_FAILED, "パイプライン", detail=workflow_name)
     failures = 0
 
     try:

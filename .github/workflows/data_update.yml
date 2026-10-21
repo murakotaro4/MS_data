@@ -408,6 +408,7 @@ jobs:
         run: |
           body_path="$RUNNER_TEMP/msdata_no_change_mail.txt"
           html_path="$RUNNER_TEMP/msdata_no_change_mail.html"
+          subject_path="$RUNNER_TEMP/msdata_no_change_mail_subject.txt"
           uv run python -m ms_data.reporting.build_update_mail_body \
             --report-date "${REPORT_DATE}" \
             --result "成功（差分なし）" \
@@ -420,9 +421,11 @@ jobs:
             --rollback-guard-path "${ROLLBACK_FILE}" \
             --official-overrides-audit-path "${OVERRIDES_AUDIT_FILE}" \
             --out "$body_path" \
-            --html-out "$html_path"
+            --html-out "$html_path" \
+            --subject-out "$subject_path"
           echo "path=$body_path" >> "$GITHUB_OUTPUT"
           echo "html_path=$html_path" >> "$GITHUB_OUTPUT"
+          echo "subject_path=$subject_path" >> "$GITHUB_OUTPUT"
 
       - name: Send no-change mail
         if: github.event_name == 'schedule' && steps.changes.outputs.changed == 'false' && steps.source_slots.outputs.held_record_count == '0' && env.DRY_RUN != 'true'
@@ -432,7 +435,7 @@ jobs:
           GMAIL_TO: ${{ secrets.GMAIL_TO }}
         run: |
           uv run python -m ms_data.notify.send_gmail \
-            --subject "msData 定期更新実行報告（差分なし, ${{ env.REPORT_DATE }}）" \
+            --subject-file "${{ steps.no_change_mail.outputs.subject_path }}" \
             --body "${{ steps.no_change_mail.outputs.path }}" \
             --html-body "${{ steps.no_change_mail.outputs.html_path }}"
 
@@ -500,7 +503,8 @@ jobs:
             --diff-path "${DIFF_FILE}" \
             --source-slot-audit-path "${SOURCE_SLOT_REPORT_OUT}" \
             --out "$RUNNER_TEMP/msdata_partial_hold.txt" \
-            --html-out "$RUNNER_TEMP/msdata_partial_hold.html"
+            --html-out "$RUNNER_TEMP/msdata_partial_hold.html" \
+            --subject-out "$RUNNER_TEMP/msdata_partial_hold_subject.txt"
 
       - id: partial_hold_mail
         name: Send partial hold owner mail
@@ -512,7 +516,7 @@ jobs:
         run: |
           uv run python -m ms_data.notify.send_gmail \
             --to "$GMAIL_ADDRESS" \
-            --subject "msData 部分保留エラー（対応要, ${REPORT_DATE}）" \
+            --subject-file "$RUNNER_TEMP/msdata_partial_hold_subject.txt" \
             --body "$RUNNER_TEMP/msdata_partial_hold.txt" \
             --html-body "$RUNNER_TEMP/msdata_partial_hold.html"
 
