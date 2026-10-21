@@ -31,7 +31,7 @@ MAIL_FIELDS = {
         "1レコードは機体の1LV分。+は追加、-は削除、~は変更のレコード数です。",
     ),
 }
-# detect-changed の --min-age-coverage 既定値（全件取得へ切り替えるしきい値）と同じ。
+# detect-changed の --min-age-coverage 既定値。検出時の実際の値が届かない場合だけ使う。
 MIN_AGE_COVERAGE = Decimal("0.95")
 NO_AUDIT_ACTION = "監査情報の添付なし。対応要否はこの通知だけでは判定できません。"
 FALLBACK_REASONS = {
@@ -550,9 +550,8 @@ def _audit_tables(lines: list[str]) -> tuple[list[dict[str, str]], list[str]]:
     return rows, remainder
 
 
-def _coverage(facts: dict[str, str]) -> tuple[str, Decimal | None]:
-    """読み取り率の表示と、しきい値判定に使える値を返す。"""
-    value = facts.get("age_coverage", "")
+def _rate(value: str) -> tuple[str, Decimal | None]:
+    """0〜1 の比率を百分率の表示と比較用の値にする。読めなければ値は None。"""
     try:
         rate = Decimal(value)
     except InvalidOperation:
@@ -560,6 +559,19 @@ def _coverage(facts: dict[str, str]) -> tuple[str, Decimal | None]:
     if rate.is_finite() and 0 <= rate <= 1:
         return f"{(rate * 100).normalize():f}%", rate
     return value, None
+
+
+def _coverage(facts: dict[str, str]) -> tuple[str, Decimal | None]:
+    """読み取り率の表示と、しきい値判定に使える値を返す。"""
+    return _rate(facts.get("age_coverage", ""))
+
+
+def _min_coverage(facts: dict[str, str]) -> tuple[str, Decimal]:
+    """detect-changed が実際に使ったしきい値を返す。未指定・不正なら既定値。"""
+    text, rate = _rate(facts.get("min_age_coverage", ""))
+    if rate is None:
+        return _rate(str(MIN_AGE_COVERAGE))[0], MIN_AGE_COVERAGE
+    return text, rate
 
 
 def _technical(facts: dict[str, str], *, has_detail_link: bool) -> list[str]:
@@ -594,6 +606,7 @@ def _technical(facts: dict[str, str], *, has_detail_link: bool) -> list[str]:
             "fast_path",
             "age_coverage",
             "fallback_reason",
+            "min_age_coverage",
         }:
             continue
         # 実行IDは詳細レポートのリンク先で分かるため、リンクがある場合は省く。
@@ -913,12 +926,13 @@ def build_mail_view(body: str) -> MailView:
     if sections.get("既存の全体安全停止"):
         attention.append(MailCard("既存の全体安全停止", sections["既存の全体安全停止"]))
     coverage, rate = _coverage(facts)
-    if rate is not None and rate < MIN_AGE_COVERAGE:
+    threshold_text, threshold = _min_coverage(facts)
+    if rate is not None and rate < threshold:
         attention.append(
             MailCard(
                 f"一覧の更新経過時間の読み取り率低下: {coverage}",
                 [
-                    f"しきい値 {(MIN_AGE_COVERAGE * 100).normalize():f}% を下回りました。"
+                    f"しきい値 {threshold_text} を下回りました。"
                     "一覧ページの形式変更などで更新を見落としている可能性があります。",
                     "次の対応: 詳細レポートで一覧の取得結果と選定方式を確認してください。",
                 ],

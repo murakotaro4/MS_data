@@ -160,6 +160,8 @@ def _optional_bullets(args: argparse.Namespace) -> list[str]:
         lines.append(f"- age_coverage: {args.age_coverage}")
     if args.fallback_reason:
         lines.append(f"- fallback_reason: {args.fallback_reason}")
+    if args.min_age_coverage:
+        lines.append(f"- min_age_coverage: {args.min_age_coverage}")
     if args.run_id:
         lines.append(f"- run_id: {args.run_id}")
     if args.source_run_id:
@@ -259,6 +261,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--fast-path", default="")
     parser.add_argument("--age-coverage", default="")
     parser.add_argument("--fallback-reason", default="")
+    parser.add_argument("--min-age-coverage", default="")
     parser.add_argument("--run-id", default="")
     parser.add_argument("--source-run-id", default="")
     parser.add_argument("--release-url", default="")

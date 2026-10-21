@@ -284,8 +284,10 @@ def test_no_change_mail_is_compact_but_keeps_run_and_audit_context() -> None:
 
 
 def test_cli_explains_72_candidate_pages_without_claiming_changes_or_successes(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # 詳細リンクがない場合の実行ID表示を確認するため、Actions の環境変数を外す。
+    monkeypatch.delenv("GITHUB_REPOSITORY", raising=False)
     plain, html = tmp_path / "mail.txt", tmp_path / "mail.html"
     overrides = tmp_path / "overrides.md"
     overrides.write_text(

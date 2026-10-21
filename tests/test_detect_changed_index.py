@@ -598,7 +598,7 @@ def test_select_changed_index_items_revalidate_falls_back_on_low_age_coverage():
         previous_msdata_index={},
         now=sm.parse_iso_datetime("2026-06-11T09:00:00Z"),
         revalidate=True,
-        min_age_coverage=0.95,
+        min_age_coverage=0.9,
         detail_fetch_state={},
     )
 
@@ -606,6 +606,8 @@ def test_select_changed_index_items_revalidate_falls_back_on_low_age_coverage():
     assert meta["fast_path"] is False
     assert meta["fallback_reason"] == "low_age_coverage"
     assert meta["candidate_count"] == 2
+    # 通知メールが同じしきい値で警告できるよう、判定に使った値を残す。
+    assert meta["min_age_coverage"] == 0.9
 
 
 def test_select_changed_index_items_revalidate_keeps_identity_checks():

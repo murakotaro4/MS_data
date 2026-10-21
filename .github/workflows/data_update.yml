@@ -417,6 +417,7 @@ jobs:
             --fast-path "${{ steps.detection.outputs.fast_path }}" \
             --age-coverage "${{ steps.detection.outputs.age_coverage }}" \
             --fallback-reason "$FALLBACK_REASON" \
+            --min-age-coverage "${{ steps.detection.outputs.min_age_coverage }}" \
             --run-id "${GITHUB_RUN_ID}" \
             --rollback-guard-path "${ROLLBACK_FILE}" \
             --official-overrides-audit-path "${OVERRIDES_AUDIT_FILE}" \

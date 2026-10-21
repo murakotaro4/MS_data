@@ -229,6 +229,7 @@ def select_changed_index_items(
         "candidate_count": 0,
         "total_count": total_count,
         "age_coverage": age_coverage,
+        "min_age_coverage": min_age_coverage,
         "freshness_window_seconds": freshness_window_seconds,
         "previous_generated_at": (
             previous_generated_at.astimezone(timezone.utc)

@@ -1,11 +1,15 @@
 from pathlib import Path
 
+import pytest
+
 from ms_data.reporting import build_update_mail_body
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_build_update_mail_body_includes_report_summaries(tmp_path):
+def test_build_update_mail_body_includes_report_summaries(tmp_path, monkeypatch):
+    # Actions 上では GITHUB_REPOSITORY から詳細リンクが付き実行IDを省くため、外す。
+    monkeypatch.delenv("GITHUB_REPOSITORY", raising=False)
     diff = tmp_path / "diff.md"
     rollback = tmp_path / "rollback.md"
     overrides = tmp_path / "overrides.md"
@@ -155,7 +159,14 @@ def test_build_update_mail_body_matches_20260601_changed_report_contract(tmp_pat
     assert "期限到達なし" not in text
 
 
-def test_build_update_mail_body_keeps_no_change_mail_operational_context(tmp_path):
+@pytest.mark.parametrize("repository", ["", "murakotaro4/MS_data"])
+def test_build_update_mail_body_keeps_no_change_mail_operational_context(
+    tmp_path, monkeypatch, repository
+):
+    if repository:
+        monkeypatch.setenv("GITHUB_REPOSITORY", repository)
+    else:
+        monkeypatch.delenv("GITHUB_REPOSITORY", raising=False)
     rollback = tmp_path / "rollback.md"
     overrides = tmp_path / "overrides.md"
     out = tmp_path / "mail.txt"
@@ -184,6 +195,8 @@ def test_build_update_mail_body_keeps_no_change_mail_operational_context(tmp_pat
             "1.0",
             "--fallback-reason",
             "none",
+            "--min-age-coverage",
+            "0.95",
             "--run-id",
             "26700000000",
             "--rollback-guard-path",
@@ -204,7 +217,11 @@ def test_build_update_mail_body_keeps_no_change_mail_operational_context(tmp_pat
         "・一覧の更新経過時間読み取り率 100%・高速選定 有効"
     ) in text
     assert "全件取得" not in text
-    assert "今回の実行ID（run_id）: 26700000000" in text
+    assert "min_age_coverage" not in text.split("## 技術情報", 1)[-1]
+    # 実行IDは詳細レポートのリンク先で分かるため、リンクがある場合だけ省く。
+    link = f"詳細レポート: https://github.com/{repository}/actions/runs/26700000000"
+    assert (link in text) is bool(repository)
+    assert ("今回の実行ID（run_id）: 26700000000" in text) is not bool(repository)
     assert "## 変更内容" not in text
     # 期限到達・補正維持がない日は「補正値の維持と期限」を出さない（#352）。
     assert "## 補正値の維持と期限" not in text

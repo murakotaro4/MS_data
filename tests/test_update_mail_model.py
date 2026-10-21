@@ -617,25 +617,39 @@ def test_override_primary_states_are_disjoint_and_cover_evidence_targets(
         assert "状態別の件数・対象明細が整合していません。" not in plain
 
 
-@pytest.mark.parametrize(("coverage", "warned"), [("0.96", False), ("0.94", True)])
+@pytest.mark.parametrize(
+    ("coverage", "threshold", "warned", "shown"),
+    [
+        ("0.96", "", False, ""),
+        ("0.94", "", True, "95%"),
+        # detect-changed の MIN_AGE_COVERAGE を変えた場合は、その値で判定する。
+        ("0.94", "0.9", False, ""),
+        ("0.96", "0.98", True, "98%"),
+        ("0.94", "broken", True, "95%"),
+    ],
+)
 def test_low_age_coverage_is_raised_to_top_warning_and_subject(
-    coverage: str, warned: bool
+    coverage: str, threshold: str, warned: bool, shown: str
 ) -> None:
     from ms_data.reporting.update_mail_model import build_mail_view, mail_subject
 
+    threshold_line = f"- min_age_coverage: {threshold}\n" if threshold else ""
     view = build_mail_view(
         "- 実行日: 20261021\n- 結果: 成功（差分なし）\n- msData.json変更: false\n"
-        f"- candidate_count: 17\n- age_coverage: {coverage}\n"
+        f"- candidate_count: 17\n- age_coverage: {coverage}\n{threshold_line}"
         "\n## 巻き戻りガード\n- protected_rollback: 0\n- numeric_decrease: 0\n"
         "- mixed_level_change: 0\n"
         "\n## official_overrides監査\n- review_due: 0\n- remove_due: 0\n"
         "\n詳細: https://github.com/murakotaro4/MS_data/actions/runs/1\n"
     )
-    titles = [card.title for card in view.attention]
-    assert (
-        any(title.startswith("一覧の更新経過時間の読み取り率低下") for title in titles)
-        is warned
-    )
+    warnings = [
+        card
+        for card in view.attention
+        if card.title.startswith("一覧の更新経過時間の読み取り率低下")
+    ]
+    assert bool(warnings) is warned
+    if warned:
+        assert f"しきい値 {shown} を下回りました。" in warnings[0].lines[0]
     assert mail_subject(view).startswith("【要対応】") is warned
     assert view.technical[0].startswith("取得の概要: 再取得候補 17ページ")
     assert len(view.technical) == 1

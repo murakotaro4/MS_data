@@ -36,6 +36,11 @@ def test_data_update_no_change_mail_keeps_detection_and_guard_context_only():
     assert "--fast-path" in block
     assert "--age-coverage" in block
     assert "--fallback-reason" in block
+    # 読み取り率の警告は detect-changed が実際に使ったしきい値で判定する。
+    assert (
+        '--min-age-coverage "${{ steps.detection.outputs.min_age_coverage }}"'
+        in block
+    )
     assert "--run-id" in block
     assert "--rollback-guard-path" in block
     assert "--official-overrides-audit-path" in block
