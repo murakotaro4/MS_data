@@ -121,7 +121,18 @@
 - `gh pr create` で本文にバッククォートを含める場合は `--body-file` を推奨。
 - Issue / PR テンプレート: `.github/ISSUE_TEMPLATE/` と `.github/PULL_REQUEST_TEMPLATE.md` を使用（すべて日本語）。
 
-### Codexレビュー実行手順
+### Codexレビュー依頼手順（Issue #314）
+- コード・文書変更 PR のレビューは GitHub 上の Codex（Automatic reviews または PR コメント `@codex review`）を標準経路とする。下記の CLI（`codex exec`）は任意のローカル事前確認で、必須にせず、GitHub レビューと重ねて起動しない。CLI が起動できないことをブロッカーにしない。
+- 依頼の流れ: 対象 PR か確認 → 最新 HEAD に Codex レビューが実行中（👀）または完了済みでないか確認 → どちらもない場合だけ `@codex review` を1回投稿 → 指摘に対応 → 新 HEAD のレビュー結果と必要 CI を確認 → 承認された範囲でマージ。
+- レビュー対象の HEAD は、Review Summary の Commit 列か受領コメントの `Reviewed commit` が現 HEAD と一致するかで判断する。インライン指摘の `commit_id` は push 後に新 HEAD へ付け替えられるため（上記「持ち越し指摘」）、`original_commit_id` が旧 HEAD の未解決指摘があっても、現 HEAD のレビュー完了とはみなさない。
+- 同じ HEAD への手動依頼は1回まで（例外は下記の「Codex に依頼が届いていない場合」と、データ自動更新 PR の既存の試行上限だけ）。Automatic review が開始済み・完了済みなら手動依頼を重ねない。Draft→Ready の往復、空コミット、短時間の再投稿、workflow 再実行をレビュー再起動の目的で使わない。
+- 修正を push して HEAD が変わった場合は、新 HEAD へのレビュー依頼を1回行ってよい。
+- Codex に依頼が届いていない場合（依頼から30分たっても 👀・Review Summary・受領コメントのいずれもない場合）に限り、同じ HEAD へ1回だけ再依頼してよい。その際は PR に理由を残す。実行中・完了・失敗のどれかが表示されていれば再依頼しない。再依頼にも反応がない、または失敗・利用量不足で進められない場合は停止して本人に伝え、レビューや CI を省略してマージしない。
+- 対象は本リポジトリで本人が依頼・承認した PR に限る。Codex 側の対象リポジトリ・Review trigger・利用量の設定は Codex の設定画面で管理し、本ファイルの文言をアクセス制御とみなさない。
+- データ自動更新 PR（`data/auto-update-*`）は上記「GitHub Actions 運用」の auto review / resume の仕組み（対象選定・マーカーによる投稿抑止・既定 3 試行）をそのまま使う。コード変更が混ざった PR はデータ更新扱いにしない。
+- 変更予定（未実装）: auto review / resume でも同じ HEAD に Automatic review が開始済み・完了済みなら `@codex review` を投稿しない重複抑止（PR #339 では同一 HEAD に 3 回投稿された）。実装時は Issue #314 の検証方針に沿って回帰テストを追加する。
+
+#### CLI での任意の事前確認
 - 非対話レビューは `codex exec` を使い、`-m`（モデル）と `-c model_reasoning_effort="..."` を同時指定。基本は `medium`。
 - reasoning effort はモデル仕様に合わせる（`gpt-5.3-codex` 系は `low`/`medium`/`high`/`xhigh`、`gpt-5.4` は `none` も可）。
 - 正式モデル名は `gpt-5.3-codex-spark` / `gpt-5.4` / `gpt-5.4-mini`（`SPARC` ではなく `spark`）。
