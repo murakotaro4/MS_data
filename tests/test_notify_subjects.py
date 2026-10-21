@@ -156,3 +156,51 @@ def test_workflows_send_subject_built_with_body(
     assert "--subject-out" in build
     assert "--subject-file" in send
     assert "--subject " not in send
+
+
+@pytest.mark.parametrize(
+    ("other_option", "message"),
+    [
+        ("--out", "--out と --subject-out"),
+        ("--html-out", "--html-out と --subject-out"),
+    ],
+)
+@pytest.mark.parametrize("hard_link", [False, True])
+def test_subject_output_must_not_overwrite_body_outputs(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    other_option: str,
+    message: str,
+    hard_link: bool,
+):
+    out = tmp_path / "mail.txt"
+    html_out = tmp_path / "mail.html"
+    target = out if other_option == "--out" else html_out
+    target.write_text("既存内容\n", encoding="utf-8")
+    subject_out = tmp_path / "subject.txt"
+    if hard_link:
+        subject_out.hardlink_to(target)
+    else:
+        subject_out = target
+
+    with pytest.raises(SystemExit) as exc_info:
+        build_update_mail_body.main(
+            [
+                "--report-date",
+                "20261021",
+                "--result",
+                "成功（差分なし）",
+                "--changed",
+                "false",
+                "--out",
+                str(out),
+                "--html-out",
+                str(html_out),
+                "--subject-out",
+                str(subject_out),
+            ]
+        )
+
+    assert exc_info.value.code == 2
+    assert f"{message} には異なるパスを指定してください。" in capsys.readouterr().err
+    assert target.read_text(encoding="utf-8") == "既存内容\n"
