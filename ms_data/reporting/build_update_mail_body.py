@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 from pathlib import Path
@@ -150,6 +151,39 @@ def _bool_text(value: str) -> str:
     return "true" if value.lower() == "true" else "false"
 
 
+# atwiki品質レポートの index 項目と、同じ値を受け取る CLI 引数の対応。
+QUALITY_INDEX_ARGS = (
+    ("candidate_count", "candidate_count"),
+    ("fast_path", "fast_path"),
+    ("age_coverage", "age_coverage"),
+    ("fallback_reason", "fallback_reason"),
+    ("min_age_coverage", "min_age_coverage"),
+)
+
+
+def _fill_detection_from_quality(args: argparse.Namespace) -> None:
+    """検出結果の引数が空なら、atwiki品質レポートの index から補う。
+
+    マージ後の通知は検出したジョブと別の実行のため、データ更新時に保存した
+    品質レポートから読み取り率としきい値を引き継ぐ。読めなければ何もしない。
+    """
+
+    try:
+        data = json.loads(_read(args.atwiki_quality_path) or "{}")
+    except json.JSONDecodeError:
+        return
+    index = data.get("index") if isinstance(data, dict) else None
+    if not isinstance(index, dict):
+        return
+    for key, attr in QUALITY_INDEX_ARGS:
+        value = index.get(key)
+        if getattr(args, attr) or value is None or isinstance(value, (dict, list)):
+            continue
+        setattr(
+            args, attr, str(value).lower() if isinstance(value, bool) else str(value)
+        )
+
+
 def _optional_bullets(args: argparse.Namespace) -> list[str]:
     lines: list[str] = []
     if args.candidate_count:
@@ -270,6 +304,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--rollback-guard-path", type=_path_arg, default=None)
     parser.add_argument("--official-overrides-audit-path", type=_path_arg, default=None)
     parser.add_argument("--source-slot-audit-path", type=_path_arg, default=None)
+    parser.add_argument(
+        "--atwiki-quality-path",
+        type=_path_arg,
+        default=None,
+        help="検出結果の引数が空のときに読み取り率などを補う品質レポート（任意）",
+    )
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--html-out", type=Path, help="HTML 版の出力先（任意）")
     parser.add_argument(
@@ -293,6 +333,7 @@ def main(argv: list[str] | None = None) -> int:
                     f"{option} と {other_option} には異なるパスを指定してください。"
                 )
 
+    _fill_detection_from_quality(args)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     body = build_body(args)
     view, html = prepare_update_mail(body)

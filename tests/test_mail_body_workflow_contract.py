@@ -16,6 +16,11 @@ def test_post_merge_notify_builds_mail_body_from_diff_and_guard_reports():
     assert "--diff-path" in block
     assert "--rollback-guard-path" in block
     assert "--official-overrides-audit-path" in block
+    # 別実行の検出結果は、データ更新時に保存した品質レポートから引き継ぐ。
+    assert (
+        '--atwiki-quality-path "${{ steps.report.outputs.atwiki_quality_path }}"'
+        in block
+    )
     assert '--html-out "$html_path"' in block
     send = text[text.index("- name: Send merged msData mail") :]
     assert '--html-body "${{ steps.mail_body.outputs.html_path }}"' in send
@@ -38,8 +43,7 @@ def test_data_update_no_change_mail_keeps_detection_and_guard_context_only():
     assert "--fallback-reason" in block
     # 読み取り率の警告は detect-changed が実際に使ったしきい値で判定する。
     assert (
-        '--min-age-coverage "${{ steps.detection.outputs.min_age_coverage }}"'
-        in block
+        '--min-age-coverage "${{ steps.detection.outputs.min_age_coverage }}"' in block
     )
     assert "--run-id" in block
     assert "--rollback-guard-path" in block
@@ -70,3 +74,21 @@ def test_no_change_success_mail_runs_after_snapshot_and_uploads():
     assert "always()" not in block
     assert "failure()" not in block
     assert "env.DRY_RUN != 'true'" in block
+
+
+def test_partial_hold_mail_receives_detection_context():
+    # 部分保留時は no-change メールが出ないため、読み取り率の警告をこちらで出す。
+    block = step_block(
+        workflow_text("data_update.yml"),
+        start="- id: partial_hold_body",
+        end="- id: partial_hold_mail",
+    )
+    for output in (
+        "candidate_count",
+        "fast_path",
+        "age_coverage",
+        "fallback_reason",
+        "min_age_coverage",
+    ):
+        option = "--" + output.replace("_", "-")
+        assert f'{option} "${{{{ steps.detection.outputs.{output} }}}}"' in block

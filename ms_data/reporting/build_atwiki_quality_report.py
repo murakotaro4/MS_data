@@ -295,6 +295,8 @@ def build_report(
             "fallback_reason": changed_meta.get("fallback_reason") or "none",
             "age_coverage": changed_meta.get("age_coverage", 0.0),
             "reason_counts": changed_meta.get("reason_counts", {}),
+            # 通知メールが検出時と同じしきい値で読み取り率を判定するために残す。
+            "min_age_coverage": changed_meta.get("min_age_coverage"),
         },
         "fetch": {
             "totals": fetch_stats.get("totals", {}),

@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -226,3 +227,76 @@ def test_build_update_mail_body_keeps_no_change_mail_operational_context(
     # 期限到達・補正維持がない日は「補正値の維持と期限」を出さない（#352）。
     assert "## 補正値の維持と期限" not in text
     assert "期限到達なし" not in text
+
+
+@pytest.mark.parametrize(
+    ("quality", "warned"),
+    [
+        ({"index": {"age_coverage": 0.93, "min_age_coverage": 0.95}}, True),
+        ({"index": {"age_coverage": 0.93, "min_age_coverage": 0.9}}, False),
+        ({"index": {"age_coverage": 0.93}}, True),
+        ("{broken", False),
+        ([], False),
+    ],
+)
+def test_merged_mail_reads_detection_context_from_quality_report(
+    tmp_path, quality, warned
+):
+    quality_path = tmp_path / "atwiki_quality.json"
+    quality_path.write_text(
+        quality if isinstance(quality, str) else json.dumps(quality),
+        encoding="utf-8",
+    )
+    out, subject = tmp_path / "mail.txt", tmp_path / "subject.txt"
+    assert (
+        build_update_mail_body.main(
+            [
+                "--report-date",
+                "20261021",
+                "--result",
+                "マージ済み",
+                "--changed",
+                "true",
+                "--atwiki-quality-path",
+                str(quality_path),
+                "--out",
+                str(out),
+                "--subject-out",
+                str(subject),
+            ]
+        )
+        == 0
+    )
+    text = out.read_text(encoding="utf-8")
+    assert ("一覧の更新経過時間の読み取り率低下: 93%" in text) is warned
+    if warned:
+        assert subject.read_text(encoding="utf-8").startswith("【要対応】")
+
+
+def test_explicit_detection_args_take_precedence_over_quality_report(tmp_path):
+    quality_path = tmp_path / "atwiki_quality.json"
+    quality_path.write_text(
+        json.dumps({"index": {"age_coverage": 0.5, "fast_path": False}}),
+        encoding="utf-8",
+    )
+    out = tmp_path / "mail.txt"
+    build_update_mail_body.main(
+        [
+            "--report-date",
+            "20261021",
+            "--result",
+            "成功（差分なし）",
+            "--changed",
+            "false",
+            "--age-coverage",
+            "1.0",
+            "--atwiki-quality-path",
+            str(quality_path),
+            "--out",
+            str(out),
+        ]
+    )
+    text = out.read_text(encoding="utf-8")
+    assert "読み取り率 100%" in text
+    assert "高速選定 無効" in text
+    assert "読み取り率低下" not in text

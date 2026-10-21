@@ -184,6 +184,7 @@ jobs:
             --diff-path "${{ steps.report.outputs.report_path }}" \
             --rollback-guard-path "${{ steps.report.outputs.rollback_guard_path }}" \
             --official-overrides-audit-path "${{ steps.report.outputs.official_overrides_audit_path }}" \
+            --atwiki-quality-path "${{ steps.report.outputs.atwiki_quality_path }}" \
             --out "$body_path" \
             --html-out "$html_path" \
             --subject-out "$subject_path"

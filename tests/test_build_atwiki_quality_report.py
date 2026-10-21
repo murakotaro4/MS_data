@@ -34,6 +34,7 @@ def test_build_atwiki_quality_report_counts_fetch_quality_and_diff(tmp_path):
             "fast_path": True,
             "fallback_reason": "",
             "age_coverage": 1.0,
+            "min_age_coverage": 0.9,
             "reason_counts": {"recent_update": 2},
         },
     )
@@ -65,6 +66,7 @@ def test_build_atwiki_quality_report_counts_fetch_quality_and_diff(tmp_path):
 
     assert report["index"]["total_count"] == 2
     assert report["index"]["candidate_count"] == 2
+    assert report["index"]["min_age_coverage"] == 0.9
     assert report["detail_fetch"]["attempted_url_count"] == 2
     assert report["detail_fetch"]["successful_url_count"] == 1
     assert report["detail_fetch"]["failed_url_count"] == 1
