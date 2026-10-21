@@ -1,0 +1,9 @@
+自動マージを停止しました
+Codex のコネクタ連携が切れているため停止しました。
+次の対応: Codex のコネクタ設定を確認してください。PR に手動で `@codex review` をコメントすれば、翌朝 09:00 JST の自動レスキューがマージまで回収します。
+
+- PR #339: https://github.com/murakotaro4/MS_data/pull/339
+- 実行ログ: https://github.com/murakotaro4/MS_data/actions/runs/39436005101
+- Codex のコネクタ設定: https://chatgpt.com/codex/cloud/settings/connectors
+
+対象日（report_date）: 20261020

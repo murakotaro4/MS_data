@@ -118,7 +118,7 @@ def test_failure_mail_subject_uses_failed_tag():
         run_id="123",
         created_at="2026-10-15T13:54:38Z",
         runner=MagicMock(side_effect=RuntimeError("skip issue")),
-        mail_sender=lambda subject, body: captured.append(subject),
+        mail_sender=lambda subject, body, html: captured.append(subject),
     )
     assert captured == ["【失敗】msData パイプライン（auto review merge）"]
 

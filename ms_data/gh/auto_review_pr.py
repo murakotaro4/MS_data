@@ -165,13 +165,15 @@ def extract_codex_findings(
         ):
             continue
         line = item.get("line")
-        findings.append(
-            {
-                "path": str(item.get("path") or ""),
-                "line": line if isinstance(line, int) else None,
-                "body": str(item.get("body") or ""),
-            }
-        )
+        finding = {
+            "path": str(item.get("path") or ""),
+            "line": line if isinstance(line, int) else None,
+            "body": str(item.get("body") or ""),
+        }
+        # 停止メールから指摘コメントへ直接移動できるよう、REST の html_url を残す。
+        if isinstance(item.get("html_url"), str):
+            finding["url"] = item["html_url"]
+        findings.append(finding)
     return findings
 
 

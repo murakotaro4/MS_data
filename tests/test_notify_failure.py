@@ -1,5 +1,7 @@
 import json
+import subprocess
 import sys
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -59,9 +61,7 @@ def test_find_open_issue_returns_none_without_open_match():
         }
     ]
 
-    assert (
-        find_open_issue(issues, title="[pipeline-failure] data update") is None
-    )
+    assert find_open_issue(issues, title="[pipeline-failure] data update") is None
 
 
 def test_resolve_issue_creation_race_selects_lowest_number():
@@ -199,9 +199,7 @@ def test_existing_open_duplicates_are_aggregated_and_closed():
         endpoint = cmd[2] if len(cmd) > 2 else ""
         if cmd[:3] == ["gh", "label", "create"]:
             return ""
-        if endpoint.endswith(
-            "issues?state=open&labels=pipeline-failure&per_page=100"
-        ):
+        if endpoint.endswith("issues?state=open&labels=pipeline-failure&per_page=100"):
             return json.dumps(
                 [
                     {
@@ -232,15 +230,12 @@ def test_existing_open_duplicates_are_aggregated_and_closed():
         raise AssertionError(f"unexpected command: {cmd}")
 
     assert _ensure_issue(runner) == ("deduplicated", 7)
-    assert not any(
-        cmd[:3] == ["gh", "api", "repos/owner/repo/issues"] for cmd in calls
-    )
+    assert not any(cmd[:3] == ["gh", "api", "repos/owner/repo/issues"] for cmd in calls)
 
     canonical_comments = [
         cmd[-1]
         for cmd in calls
-        if cmd[:4]
-        == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
+        if cmd[:4] == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
     ]
     assert len(canonical_comments) == 3
     assert any(
@@ -295,9 +290,7 @@ def test_created_issue_loses_race_then_comments_canonical_and_closes_duplicate()
         endpoint = cmd[2] if len(cmd) > 2 else ""
         if cmd[:3] == ["gh", "label", "create"]:
             return ""
-        if endpoint.endswith(
-            "issues?state=open&labels=pipeline-failure&per_page=100"
-        ):
+        if endpoint.endswith("issues?state=open&labels=pipeline-failure&per_page=100"):
             issue_list_count += 1
             if issue_list_count == 1:
                 return "[]"
@@ -328,15 +321,13 @@ def test_created_issue_loses_race_then_comments_canonical_and_closes_duplicate()
     assert _ensure_issue(runner) == ("deduplicated", 7)
 
     assert any(
-        cmd[:4]
-        == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
+        cmd[:4] == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
         and "Issue #8 から失敗情報を集約" in cmd[-1]
         and "run 8 failure" in cmd[-1]
         for cmd in calls
     )
     assert any(
-        cmd[:4]
-        == ["gh", "api", "repos/owner/repo/issues/8/comments", "-X"]
+        cmd[:4] == ["gh", "api", "repos/owner/repo/issues/8/comments", "-X"]
         and "Issue #7 を正本として失敗情報を集約" in cmd[-1]
         for cmd in calls
     )
@@ -363,9 +354,7 @@ def test_created_canonical_issue_closes_all_higher_number_duplicates():
         endpoint = cmd[2] if len(cmd) > 2 else ""
         if cmd[:3] == ["gh", "label", "create"]:
             return ""
-        if endpoint.endswith(
-            "issues?state=open&labels=pipeline-failure&per_page=100"
-        ):
+        if endpoint.endswith("issues?state=open&labels=pipeline-failure&per_page=100"):
             issue_list_count += 1
             if issue_list_count == 1:
                 return "[]"
@@ -405,8 +394,7 @@ def test_created_canonical_issue_closes_all_higher_number_duplicates():
     canonical_comments = [
         cmd[-1]
         for cmd in calls
-        if cmd[:4]
-        == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
+        if cmd[:4] == ["gh", "api", "repos/owner/repo/issues/7/comments", "-X"]
     ]
     assert len(canonical_comments) == 2
     assert any("Issue #8 から失敗情報を集約" in body for body in canonical_comments)
@@ -558,3 +546,101 @@ def test_main_forwards_arguments_to_notify_failure(monkeypatch):
         "run_id": "123",
         "created_at": "2026-07-18T09:00:00Z",
     }
+
+
+def test_send_failure_mail_passes_optional_html_body(monkeypatch):
+    captured = {}
+
+    def fake_main():
+        captured["argv"] = list(sys.argv)
+        captured["html"] = Path(sys.argv[6]).read_text(encoding="utf-8")
+        return 0
+
+    monkeypatch.setattr(nf.send_gmail, "main", fake_main)
+
+    nf.send_failure_mail("件名", "本文", "<p>本文</p>")
+
+    assert captured["argv"][5] == "--html-body"
+    assert captured["html"] == "<p>本文</p>"
+
+
+def test_failure_mail_html_puts_workflow_and_run_link_first():
+    captured = []
+    notify_failure(
+        repo="owner/repo",
+        workflow_name="auto review merge",
+        conclusion="failure",
+        run_url="https://github.com/owner/repo/actions/runs/123",
+        run_id="123",
+        created_at="2026-10-15T13:54:38Z",
+        runner=lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("skip")),
+        mail_sender=lambda subject, body, html: captured.append((body, html)),
+    )
+
+    body, html = captured[0]
+    assert "- workflow: auto review merge" in body
+    page = html.split("<body", 1)[1]
+    assert page.index("auto review merge: failure") < page.index(
+        "実行ID（run_id）: 123"
+    )
+    assert 'href="https://github.com/owner/repo/actions/runs/123"' in page
+    assert 'class="audit-card"' in page
+
+
+def test_operation_notices_render_with_standard_library_only():
+    # notify failure は依存を導入せず python3 で動くため、通知 HTML は標準ライブラリだけで作る。
+    code = textwrap.dedent(
+        """
+        import sys
+
+        class BlockThirdParty:
+            def find_spec(self, name, path=None, target=None):
+                top = name.split(".")[0]
+                if top not in sys.stdlib_module_names and top != "ms_data":
+                    raise ImportError(f"third-party module blocked: {name}")
+
+        sys.meta_path.insert(0, BlockThirdParty())
+        from ms_data.gh.notify_failure import build_failure_notice
+        from ms_data.gh.notify_review_stop import build_notice
+        from ms_data.notify.notice_html import render_notice_html
+
+        failure = render_notice_html(build_failure_notice(
+            workflow_name="data update", conclusion="failure",
+            run_url="https://github.com/o/r/actions/runs/1", run_id="1",
+            created_at="2026-10-21T00:00:00Z",
+        ))
+        stop = render_notice_html(build_notice(
+            stop_reason="findings", pr_number=1, pr_url="https://github.com/o/r/pull/1",
+            report_date="20261021", run_url="https://github.com/o/r/actions/runs/1",
+            findings=[{"path": "a.py", "line": 1, "body": "**要点**"}],
+        ))
+        assert 'style="' in failure and "要点" in stop
+        """
+    )
+    subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=Path(__file__).resolve().parents[1],
+        check=True,
+    )
+
+
+def test_failure_mail_is_sent_as_text_when_html_rendering_fails(monkeypatch):
+    captured = []
+
+    def broken(_notice):
+        raise RuntimeError("render failed")
+
+    monkeypatch.setattr(nf, "render_notice_html", broken)
+    notify_failure(
+        repo="owner/repo",
+        workflow_name="data update",
+        conclusion="failure",
+        run_url="https://example.invalid/run",
+        run_id="1",
+        created_at="2026-10-21T00:00:00Z",
+        runner=lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("skip")),
+        mail_sender=lambda subject, body, html: captured.append((body, html)),
+    )
+
+    assert captured and captured[0][1] is None
+    assert "- workflow: data update" in captured[0][0]
