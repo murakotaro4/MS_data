@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from ms_data.gh.notify_failure import send_failure_mail
+from ms_data.notify.subjects import STATUS_ACTION, format_subject
 
 MailSender = Callable[[str, str], None]
 
@@ -19,6 +20,11 @@ REASON_LABELS = {
     "findings": "codex_findings",
     "no_response": "codex_no_response",
     "disconnected": "codex_disconnected",
+}
+SUBJECT_DETAILS = {
+    "findings": "Codex指摘",
+    "no_response": "Codex応答なし",
+    "disconnected": "Codex連携切れ",
 }
 MAX_FINDING_BODY_CHARS = 500
 MAX_FINDINGS_IN_MAIL = 20
@@ -32,7 +38,7 @@ _CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
 
 
 def reason_label(stop_reason: str) -> str:
-    """CLI の stop_reason を件名用ラベルへ変換する。"""
+    """CLI の stop_reason を停止理由ラベル（codex_*）へ変換する。"""
 
     try:
         return REASON_LABELS[stop_reason]
@@ -43,7 +49,14 @@ def reason_label(stop_reason: str) -> str:
 def build_subject(*, stop_reason: str, pr_number: int) -> str:
     """停止通知メールの件名を組み立てる。"""
 
-    return f"msData 自動マージ停止 ({reason_label(stop_reason)}) PR #{pr_number}"
+    if stop_reason not in SUBJECT_DETAILS:
+        raise ValueError(f"unsupported stop_reason: {stop_reason}")
+    return format_subject(
+        STATUS_ACTION,
+        "自動マージ停止",
+        label=f"PR #{pr_number}",
+        detail=SUBJECT_DETAILS[stop_reason],
+    )
 
 
 def sanitize_finding_body(text: str) -> str:

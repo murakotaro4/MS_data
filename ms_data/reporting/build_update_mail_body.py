@@ -8,7 +8,12 @@ import re
 from pathlib import Path
 
 from ms_data.reporting.update_mail_html import prepare_update_mail
-from ms_data.reporting.update_mail_model import DETAIL_LABELS, localize_mail_body
+from ms_data.reporting.update_mail_model import (
+    DETAIL_LABELS,
+    build_mail_view,
+    localize_mail_body,
+    mail_subject,
+)
 
 SUMMARY_KEYS = (
     "レコード数",
@@ -258,6 +263,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--source-slot-audit-path", type=_path_arg, default=None)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--html-out", type=Path, help="HTML 版の出力先（任意）")
+    parser.add_argument(
+        "--subject-out", type=Path, help="本文と同じ判定で作る件名の出力先（任意）"
+    )
     args = parser.parse_args(argv)
 
     same_output = args.html_out is not None and (
@@ -278,6 +286,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.html_out is not None:
         args.html_out.parent.mkdir(parents=True, exist_ok=True)
         args.html_out.write_text(html, encoding="utf-8")
+    if args.subject_out is not None:
+        # 表示用に省略する前の全監査から対応要否を判定する。
+        args.subject_out.parent.mkdir(parents=True, exist_ok=True)
+        args.subject_out.write_text(
+            mail_subject(build_mail_view(body)) + "\n", encoding="utf-8"
+        )
     return 0
 
 

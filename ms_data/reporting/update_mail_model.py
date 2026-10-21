@@ -6,6 +6,13 @@ import re
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 
+from ms_data.notify.subjects import (
+    STATUS_ACTION,
+    STATUS_CHANGED,
+    STATUS_UNCHANGED,
+    format_subject,
+)
+
 DETAIL_LABELS = {
     "追加レコード一覧": "レコード追加",
     "削除レコード一覧": "レコード削除",
@@ -24,6 +31,7 @@ MAIL_FIELDS = {
         "1レコードは機体の1LV分。+は追加、-は削除、~は変更のレコード数です。",
     ),
 }
+NO_AUDIT_ACTION = "監査情報の添付なし。対応要否はこの通知だけでは判定できません。"
 FALLBACK_REASONS = {
     "none": ("切替なし", "全件取得への切替はありません。"),
     "force_full": ("全件取得指定", "指定により全ページを再取得候補にしました。"),
@@ -907,7 +915,7 @@ def build_mail_view(body: str) -> MailView:
     elif summaries:
         action = "今回のチェックで要確認の項目なし（添付された監査の範囲）。"
     else:
-        action = "監査情報の添付なし。対応要否はこの通知だけでは判定できません。"
+        action = NO_AUDIT_ACTION
     result = facts.get("結果", "")
     if (
         any(word in result for word in ("失敗", "エラー", "対応要", "停止"))
@@ -942,6 +950,58 @@ def build_mail_view(body: str) -> MailView:
         evidence,
         links=list(dict.fromkeys(links)),
     )
+
+
+_RECORD_COUNTS = re.compile(r"レコード数: \d+ → \d+ \| \+(\d+) -(\d+) ~(\d+)")
+
+
+def _attention_summary(cards: list[MailCard]) -> str:
+    """件名用に、最初の対応種別と残りの種別数を短く表す。"""
+    groups = [card for card in cards if card.target is None] or cards
+    head = groups[0].title.replace(": ", " ")
+    rest = len(groups) - 1
+    return f"{head} ほか{rest}種" if rest else head
+
+
+def mail_subject(view: MailView) -> str:
+    """本文と同じ判定から `【状態】msData 種類 日付（要点）` の件名を作る。"""
+    facts = view.facts
+    result = facts.get("結果", "")
+    changed = facts.get("msData.json変更")
+    if "部分保留" in result:
+        kind = "部分保留"
+    elif result == "マージ済み":
+        kind = "更新反映"
+    elif changed == "false":
+        kind = "定期チェック"
+    else:
+        kind = "定期更新"
+    date = facts.get("実行日", "")
+    if view.attention:
+        return format_subject(
+            STATUS_ACTION, kind, label=date, detail=_attention_summary(view.attention)
+        )
+    if view.action == NO_AUDIT_ACTION:
+        # 対応要否を判定できない通知は、問題なしと読まれないよう要対応にする。
+        return format_subject(
+            STATUS_ACTION, kind, label=date, detail="監査情報の添付なし"
+        )
+    if changed == "true":
+        counts = _RECORD_COUNTS.search("\n".join(view.sections.get("差分サマリ", [])))
+        detail = ""
+        if counts:
+            added, removed, updated = counts.groups()
+            detail = "・".join(
+                f"{name}{value}"
+                for name, value in (
+                    ("追加", added),
+                    ("変更", updated),
+                    ("削除", removed),
+                )
+                if value != "0"
+            )
+        return format_subject(STATUS_CHANGED, kind, label=date, detail=detail)
+    return format_subject(STATUS_UNCHANGED, kind, label=date)
 
 
 def change_statement(facts: dict[str, str]) -> str:

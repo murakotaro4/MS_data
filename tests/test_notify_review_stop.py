@@ -24,15 +24,15 @@ def test_reason_label_mapping():
 def test_build_subject_format():
     assert (
         build_subject(stop_reason="findings", pr_number=42)
-        == "msData 自動マージ停止 (codex_findings) PR #42"
+        == "【要対応】msData 自動マージ停止 PR #42（Codex指摘）"
     )
     assert (
         build_subject(stop_reason="no_response", pr_number=7)
-        == "msData 自動マージ停止 (codex_no_response) PR #7"
+        == "【要対応】msData 自動マージ停止 PR #7（Codex応答なし）"
     )
     assert (
         build_subject(stop_reason="disconnected", pr_number=9)
-        == "msData 自動マージ停止 (codex_disconnected) PR #9"
+        == "【要対応】msData 自動マージ停止 PR #9（Codex連携切れ）"
     )
 
 
@@ -54,8 +54,7 @@ def test_sanitize_finding_body_truncates_and_strips_control_chars():
 
 def test_format_findings_section_limits_to_20_and_reports_remainder():
     findings = [
-        {"path": f"file_{i}.py", "line": i, "body": f"finding {i}"}
-        for i in range(25)
+        {"path": f"file_{i}.py", "line": i, "body": f"finding {i}"} for i in range(25)
     ]
     lines = format_findings_section(findings)
 
@@ -149,7 +148,7 @@ def test_notify_review_stop_calls_mail_sender_with_subject_and_body(tmp_path: Pa
     assert rc == 0
     assert len(captured) == 1
     subject, body = captured[0]
-    assert subject == "msData 自動マージ停止 (codex_findings) PR #15"
+    assert subject == "【要対応】msData 自動マージ停止 PR #15（Codex指摘）"
     assert "- x.py:1" in body
     assert "bad" in body
 
@@ -170,7 +169,7 @@ def test_notify_review_stop_works_without_findings_json(stop_reason: str):
     assert rc == 0
     assert len(captured) == 1
     subject, body = captured[0]
-    assert f"({reason_label(stop_reason)})" in subject
+    assert subject.startswith("【要対応】msData 自動マージ停止 PR #3（Codex")
     assert "https://example.invalid/pr/3" in body
     assert MANUAL_RECOVERY_HINT in body
 
