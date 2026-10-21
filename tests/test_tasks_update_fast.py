@@ -11,6 +11,7 @@ def test_task_update_fast_skips_followup_steps_when_no_candidates(
 ):
     calls = []
     monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("NO_NET", raising=False)
 
     def fake_run_python_module(module: str, *args: str) -> int:
         calls.append((module, args))
@@ -79,6 +80,7 @@ def test_task_update_fast_runs_import_and_validate_when_candidates_exist(
 ):
     calls = []
     monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("NO_NET", raising=False)
 
     def fake_run_python_module(module: str, *args: str) -> int:
         calls.append((module, args))

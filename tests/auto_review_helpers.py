@@ -1,6 +1,6 @@
 """auto_review_merge の cmd_* テストが共有する定数・スタブ・main ラッパー。
 
-各 test_auto_review_*_commands.py から import する（pytest が tests/ を
+各 test_auto_review_*.py から import する（pytest が tests/ を
 sys.path に載せる前提。conftest の fake_gh / fake_time fixture と併用）。
 """
 

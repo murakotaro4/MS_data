@@ -1,0 +1,66 @@
+name: approve data CI
+
+# データ更新PRのCIはGITHUB_TOKEN由来のため、その完了でworkflow_runは発火しない（Issue #341）。
+# 自動承認の本線はauto review / resumeの共通merge経路で、ここは手動のrun_id指定専用。
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: CI run ID awaiting approval
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      eligible: ${{ steps.target.outputs.eligible }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: ./.github/actions/setup-uv-env
+      - id: target
+        name: Check eligibility without mutations
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_RUN_ID: ${{ inputs.run_id }}
+        run: |
+          uv run python -m ms_data.gh.auto_ci_approval \
+            --repo "$GITHUB_REPOSITORY" \
+            --run-id "$TARGET_RUN_ID" \
+            --check-only --github-output "$GITHUB_OUTPUT"
+  approve:
+    needs: evaluate
+    if: needs.evaluate.outputs.eligible == 'true'
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: write
+    concurrency:
+      group: msdata-auto-review-merge
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # 特権実行ではPRブランチをcheckoutしない。
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: ./.github/actions/setup-uv-env
+      - name: Validate data PR and approve its CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_RUN_ID: ${{ inputs.run_id }}
+        run: |
+          uv run python -m ms_data.gh.auto_ci_approval \
+            --repo "$GITHUB_REPOSITORY" \
+            --run-id "$TARGET_RUN_ID"

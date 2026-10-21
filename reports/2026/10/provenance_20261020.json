@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-10-20T14:04:24Z",
+  "report_date": "20261020",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "b2c3bf35006f6da24e2058a21625db30ccc7eca7"
+  },
+  "github": {
+    "run_id": "39435872414",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "d2d915b46498a0c2875de3039bf0ff3e9c289a7e1e72680fe8cf5c737d53cb86",
+      "size_bytes": 147314,
+      "record_count": 599
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "54012aaf00727557af8867f820170969e0f00cd99f4bb6dfd4e8e4d271bf5c66",
+      "size_bytes": 15423,
+      "record_count": 13
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "af9a02ba14df84f66a8df985c87c5e4b1f6dd2ac537e56bfbe9f58d475e13210",
+      "size_bytes": 20134,
+      "record_count": 13
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "a1a0a579f75a695e90ce904a49883dfbef554b681291ab79d7c38ab39af966b8",
+      "file_count": 16,
+      "size_bytes": 3013557
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "49d830e039240e4b1e778a7db037ce89d6a8be37e865eb979ea7ec8da2be0998",
+      "size_bytes": 2671137,
+      "record_count": 1728
+    },
+    "diff_report": {
+      "path": "reports/2026/10/diff_msdata_20261020.md",
+      "sha256": "b3a50ad6f9bc9f9ca1db9bd331453d80f19abf5cb6bf249c5d669c48d7a53ef0",
+      "size_bytes": 1209
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20261020-run-39435872414",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20261020-run-39435872414",
+    "asset_name": "raw_snapshot_20261020_run39435872414.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261020-run-39435872414"
+  }
+}

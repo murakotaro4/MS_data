@@ -2,8 +2,8 @@ import pytest
 
 import ms_data.validation.validate_msdata as vm
 
+from helpers import make_minimal_ms_record, write_json
 from helpers import make_ms_record as make_record
-from helpers import write_json
 
 
 def test_validate_msdata_main_accepts_valid_minimal_data(tmp_path):
@@ -200,3 +200,29 @@ def test_find_semantic_errors_detects_sortie_turn_contradiction():
         "ground sortie is false but ground turn values exist" in error
         for error in errors
     )
+
+
+@pytest.mark.parametrize("points", ["-", "abc", True, False])
+def test_find_semantic_errors_detects_invalid_fullst_points(points):
+    errors = vm.find_semantic_errors(
+        [
+            {
+                "MS\u540d": "test-ms_LV1",
+                "fullst": [{"name": "AD-PA", "level": 1, "points": points}],
+            }
+        ]
+    )
+    assert any("fullst points must be an integer or null" in error for error in errors)
+
+
+def test_validate_msdata_main_fails_on_invalid_fullst_points(tmp_path):
+    path = tmp_path / "msData.json"
+    write_json(
+        path,
+        [
+            make_minimal_ms_record(
+                fullst=[{"name": "AD-PA", "level": 1, "points": "-"}],
+            )
+        ],
+    )
+    assert vm.main([str(path)]) == 1

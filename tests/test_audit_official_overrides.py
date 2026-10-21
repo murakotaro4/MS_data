@@ -4,6 +4,8 @@ from datetime import date
 import pytest
 
 from ms_data.audit import audit_official_overrides
+from ms_data.gh.notify_override_due import DueCounts, should_comment
+from ms_data.pipeline.override_review import load_lifecycle_metadata
 
 from helpers import write_json
 
@@ -312,6 +314,7 @@ def test_due_fingerprint_ignores_row_order_and_daily_fetch_metadata():
         ("lifecycle", "remove_due"),
         ("review_after", "2026-05-02"),
         ("remove_after", "2026-07-01"),
+        ("expires_after", "2026-07-02"),
         ("override", 27500),
         ("stale", 24000),
         ("override_file", "20260601.json"),
@@ -325,3 +328,57 @@ def test_due_fingerprint_changes_when_same_count_targets_or_settings_change(key,
     assert audit_official_overrides.build_due_fingerprint(
         rows
     ) != audit_official_overrides.build_due_fingerprint(changed)
+
+
+@pytest.mark.parametrize("scope", ["unset", "file", "entry"])
+def test_expiry_change_notifies_but_unchanged_next_day_is_suppressed(tmp_path, scope):
+    directory = tmp_path / "overrides"
+    entry = {
+        "MS名": "ガブスレイ_LV2",
+        "values": {"中スロット": 22},
+        "stale_values": {"中スロット": 12},
+    }
+    data = {
+        "schema_version": "1",
+        "review_after": "2026-10-12",
+        "remove_after": "2026-10-19",
+        "overrides": [entry],
+    }
+    if scope != "unset":
+        data["expires_after"] = "2026-10-18"
+    if scope == "entry":
+        entry["expires_after"] = "2026-10-19"
+
+    def audit(today):
+        write_json(directory / "test.json", data)
+        rows, _, lifecycle = audit_official_overrides.build_audit(
+            overrides=audit_official_overrides.update_msdata.load_official_overrides(
+                directory
+            ),
+            current_records={},
+            raw_records={},
+            before_records={},
+            lifecycle_metadata=load_lifecycle_metadata(directory),
+            today=today,
+        )
+        return rows, DueCounts(
+            lifecycle["review_due"],
+            lifecycle["remove_due"],
+            audit_official_overrides.build_due_fingerprint(rows),
+        )
+
+    rows, previous = audit(date(2026, 10, 12))
+    expected = {"unset": "", "file": "2026-10-18", "entry": "2026-10-19"}
+    assert rows[0]["expires_after"] == expected[scope]
+    _, next_day = audit(date(2026, 10, 13))
+    assert not should_comment(previous, next_day)
+
+    target = entry if scope == "entry" else data
+    target["expires_after"] = "2026-10-20"
+    rows, changed = audit(date(2026, 10, 13))
+    assert rows[0]["expires_after"] == "2026-10-20"
+    assert (previous.review_due, previous.remove_due) == (
+        changed.review_due,
+        changed.remove_due,
+    )
+    assert should_comment(previous, changed)

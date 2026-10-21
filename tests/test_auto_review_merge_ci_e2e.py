@@ -23,7 +23,7 @@ def _run(tmp_path, *, payload=None, api_error=False, head_race=False):
     )
     stub = tmp_path / "gh_stub.py"
     stub.write_text(
-        '''import json, os, sys
+        """import json, os, sys
 from pathlib import Path
 root = Path(os.environ["GH_STUB_ROOT"])
 scenario = json.loads((root / "scenario.json").read_text())
@@ -47,7 +47,7 @@ elif args[:2] == ["pr", "merge"]:
     (root / "merged").touch()
 elif args[:2] != ["workflow", "run"]:
     sys.exit("unexpected gh call")
-''',
+""",
         encoding="utf-8",
     )
     env = os.environ.copy()
@@ -105,6 +105,7 @@ def _assert_stopped(tmp_path, result, calls, reason):
     assert not (tmp_path / "merged").exists()
     assert f"skip_reason={reason}" in (tmp_path / "output").read_text()
     assert f"- reason: {reason}" in (tmp_path / "summary").read_text()
+    assert f"Merge stopped: reason={reason} pr_state=OPEN" in result.stdout
 
 
 @pytest.mark.parametrize(
@@ -124,7 +125,11 @@ def test_latest_unsuccessful_ci_does_not_fall_back_to_old_success(tmp_path, conc
     # 一覧順に依存せず、作成日時の新しいrunを評価する。
     payload = json.dumps([old_success, _latest(conclusion=conclusion)])
     result, calls = _run(tmp_path, payload=payload)
-    _assert_stopped(tmp_path, result, calls, "ci_not_success")
+    reason = (
+        "ci_approval_untrusted" if conclusion == "action_required" else "ci_not_success"
+    )
+    _assert_stopped(tmp_path, result, calls, reason)
+    assert f"conclusion={conclusion}" in result.stdout
 
 
 @pytest.mark.parametrize(

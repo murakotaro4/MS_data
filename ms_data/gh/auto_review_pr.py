@@ -269,21 +269,6 @@ def thread_comments_graphql_query(thread_id: str, cursor: str) -> str:
     )
 
 
-def resolved_comment_ids_from_graphql(payload: Any) -> set[str]:
-    """reviewThreads GraphQL 応答から解決済みコメント ID を集める。"""
-    threads = _review_threads_connection(payload)
-    nodes = threads.get("nodes") if threads else None
-    if not isinstance(nodes, list):
-        return set()
-    ids: set[str] = set()
-    for thread in nodes:
-        if not isinstance(thread, dict) or not thread.get("isResolved"):
-            continue
-        comments = _as_dict(thread.get("comments"))
-        ids.update(_comment_ids(comments.get("nodes") if comments else None))
-    return ids
-
-
 def _fetch_remaining_thread_comments(
     graphql: Callable[[str], Any], thread_id: str, cursor: str
 ) -> set[str]:

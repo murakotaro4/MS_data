@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-import argparse
-import json
-from pathlib import Path
+import re
 from typing import Any
 
-from ms_data.gh.gh_json import load_json_stream as _load_json
 from ms_data.gh.gh_json import login_of as _login
 
 CODEX_LOGINS = {"chatgpt-codex-connector[bot]", "chatgpt-codex-connector"}
 NO_ISSUES_PREFIX = "Codex Review: Didn't find any major issues."
 DISCONNECT_PREFIX = "To use Codex here"
+# Codex は本文先頭に `<!-- codex-review-receipt:v1 -->` 等のマーカーを付けることがある。
+_LEADING_HTML_COMMENTS = re.compile(r"\A(?:\s*<!--.*?-->)*\s*", re.DOTALL)
 
 
 def _is_codex(item: dict[str, Any]) -> bool:
@@ -29,17 +28,36 @@ def _comment_id(item: dict[str, Any]) -> str:
     return str(value) if value is not None else ""
 
 
+def _body_text(item: dict[str, Any]) -> str:
+    """先頭の HTML コメントと空白を除いた本文を返す。"""
+    body = item.get("body")
+    if not isinstance(body, str):
+        return ""
+    return _LEADING_HTML_COMMENTS.sub("", body, count=1)
+
+
 def is_active_finding(
     item: dict[str, Any],
     *,
     head_sha: str,
     resolved_comment_ids: set[str],
 ) -> bool:
-    """HEAD 上の未解決 Codex ファイル指摘なら True。"""
+    """HEAD 上の未解決 Codex ファイル指摘なら True（持ち越し指摘を含む）。"""
     if not _is_codex(item) or item.get("commit_id") != head_sha:
         return False
     comment_id = _comment_id(item)
     return not (comment_id and comment_id in resolved_comment_ids)
+
+
+def is_carried_finding(item: dict[str, Any], *, head_sha: str) -> bool:
+    """旧 HEAD で投稿され、現 HEAD へ持ち越された指摘なら True。
+
+    GitHub は指摘行が変わらない限り、コメントの ``commit_id`` を新しい HEAD へ
+    付け替える（``original_commit_id`` は投稿時のまま）。``original_commit_id``
+    が無い場合は現 HEAD の指摘として扱う。
+    """
+    original = item.get("original_commit_id")
+    return isinstance(original, str) and bool(original) and original != head_sha
 
 
 def evaluate(
@@ -55,19 +73,26 @@ def evaluate(
     """Return merge-gate metrics for Codex review signals.
 
     ``review_complete`` means Codex has emitted a terminal no-issue signal or a
-    file finding. Generic issue comments and reactions only prove activity; they
-    do not make the PR mergeable. Resolved review threads are not findings.
+    file finding on the current HEAD. Generic issue comments and reactions only
+    prove activity; they do not make the PR mergeable. Resolved review threads are
+    not findings. Findings carried over from an older HEAD do not complete the
+    review by themselves and are ignored once the current HEAD gets a terminal
+    signal.
     """
 
     resolved_ids = resolved_comment_ids or set()
     review_count = sum(
         1 for item in reviews if _is_codex(item) and item.get("commit_id") == head_sha
     )
-    finding_count = sum(
-        1
+    active_findings = [
+        item
         for item in file_comments
         if is_active_finding(item, head_sha=head_sha, resolved_comment_ids=resolved_ids)
+    ]
+    carried_finding_count = sum(
+        1 for item in active_findings if is_carried_finding(item, head_sha=head_sha)
     )
+    current_finding_count = len(active_findings) - carried_finding_count
     reaction_count = sum(
         1 for item in reactions if _is_codex(item) and item.get("content") == "+1"
     )
@@ -79,19 +104,22 @@ def evaluate(
     no_issue_comment_count = sum(
         1
         for item in codex_issue_comments
-        if isinstance(item.get("body"), str)
-        and item["body"].startswith(NO_ISSUES_PREFIX)
+        if _body_text(item).startswith(NO_ISSUES_PREFIX)
     )
     disconnect_count = sum(
         1
         for item in codex_issue_comments
-        if isinstance(item.get("body"), str)
-        and item["body"].startswith(DISCONNECT_PREFIX)
+        if _body_text(item).startswith(DISCONNECT_PREFIX)
     )
 
     terminal_count = review_count + no_issue_comment_count
-    review_complete = terminal_count > 0 or finding_count > 0
-    merge_ok = terminal_count > 0 and finding_count == 0
+    # 持ち越し指摘は現 HEAD の Codex 結果を待つ。現 HEAD で終端シグナルが
+    # 出れば無視し、出なければ従来どおり findings として停止する。
+    finding_count = current_finding_count + (
+        carried_finding_count if terminal_count == 0 else 0
+    )
+    review_complete = terminal_count > 0 or current_finding_count > 0
+    merge_ok = terminal_count > 0 and current_finding_count == 0
     if finding_count > 0:
         stop_reason = "findings"
     elif merge_ok:
@@ -104,6 +132,7 @@ def evaluate(
     return {
         "review_count": review_count,
         "finding_count": finding_count,
+        "carried_finding_count": carried_finding_count,
         "reaction_count": reaction_count,
         "issue_comment_count": len(codex_issue_comments),
         "no_issue_comment_count": no_issue_comment_count,
@@ -113,33 +142,3 @@ def evaluate(
         "merge_ok": merge_ok,
         "stop_reason": stop_reason,
     }
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--reviews", type=Path, required=True)
-    parser.add_argument("--file-comments", type=Path, required=True)
-    parser.add_argument("--issue-comments", type=Path, required=True)
-    parser.add_argument("--reactions", type=Path, required=True)
-    parser.add_argument("--head-sha", required=True)
-    parser.add_argument("--since", required=True)
-    parser.add_argument("--out", type=Path, required=True)
-    args = parser.parse_args()
-
-    result = evaluate(
-        reviews=_load_json(args.reviews),
-        file_comments=_load_json(args.file_comments),
-        issue_comments=_load_json(args.issue_comments),
-        reactions=_load_json(args.reactions),
-        head_sha=args.head_sha,
-        since=args.since,
-    )
-    args.out.write_text(
-        json.dumps(result, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

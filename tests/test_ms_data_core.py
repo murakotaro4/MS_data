@@ -9,6 +9,7 @@ import pytest
 
 from ms_data.core.env import env_flag, env_float, env_int, env_str
 from ms_data.core.json_io import load_json, load_json_or_default
+from ms_data.core.labels import apply_key_aliases, clean_text, normalize_row_label
 from ms_data.core.ms_names import (
     MS_NAME_WITH_LEVEL,
     extract_ms_base_name,
@@ -17,14 +18,11 @@ from ms_data.core.ms_names import (
 from ms_data.core.records import load_records_by_name
 from ms_data.gh.gh_json import (
     flatten_pages,
-    load_json_stream,
     login_of,
     parse_json_stream,
 )
 from ms_data.gh.outputs import append_step_summary, write_github_output
 from ms_data.reporting.rendering import value_text
-
-# --- json_io ---
 
 
 def test_load_json_reads_utf8(tmp_path: Path):
@@ -142,12 +140,6 @@ def test_parse_json_stream_concatenated():
     assert parse_json_stream("") == []
 
 
-def test_load_json_stream(tmp_path: Path):
-    path = tmp_path / "pages.json"
-    path.write_text('[{"id": 1}]\n[{"id": 2}]', encoding="utf-8")
-    assert load_json_stream(path) == [{"id": 1}, {"id": 2}]
-
-
 def test_flatten_pages():
     assert flatten_pages([[1, 2], [3]]) == [1, 2, 3]
     assert flatten_pages([1, 2]) == [1, 2]
@@ -168,3 +160,17 @@ def test_value_text():
     assert value_text({"a": "あ"}) == '{"a": "あ"}'
     assert value_text([1]) == "[1]"
     assert value_text(12) == "12"
+
+
+def test_clean_and_normalize():
+    assert clean_text("  A   B \t C  ") == "A B C"
+    # 半角()内の注記は除去、全角（）は保持
+    assert normalize_row_label("旋回（地上）( +25 )") == "旋回（地上）"
+
+
+def test_key_aliases():
+    rec = {"射撃補生": 10, "格闘補定": 15, "旋回_通常時_地上": 80}
+    out = apply_key_aliases(rec)
+    assert "射撃補正" in out and out["射撃補正"] == 10
+    assert "格闘補正" in out and out["格闘補正"] == 15
+    assert "旋回_地上_通常時" in out and out["旋回_地上_通常時"] == 80

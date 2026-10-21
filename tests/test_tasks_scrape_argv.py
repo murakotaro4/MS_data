@@ -118,17 +118,6 @@ def test_labels_argv_order(capture):
     )
 
 
-def test_details_argv_helper_is_shared_by_details_and_all():
-    details = tasks._details_argv(input_path="x.json", ttl="0s", changed_only=True)
-    everything = tasks._details_argv(input_path=None, ttl="0s", changed_only=False)
-
-    assert details[:3] == ["details", "--in", "x.json"]
-    assert everything[0] == "all"
-    # `--in` 以降は同じ形
-    assert details[3:-1] == everything[1:]
-    assert details[-1] == "--changed-only"
-
-
 def test_ci_targets_are_registered_tasks():
     assert tasks.CI_TARGETS
     for name in tasks.CI_TARGETS:

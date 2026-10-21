@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-10-15T13:54:15Z",
+  "report_date": "20261015",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "f1adaecbc4477fcb0a3e0275263bfae8c025c1a3"
+  },
+  "github": {
+    "run_id": "38746594522",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "4e46fa28d14ac5e00889444e558664c871243405e96c2dc5321d6d55703fbd51",
+      "size_bytes": 147331,
+      "record_count": 599
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "71c1d6b46462aebaaffad7d2d18f6ec4ab8ba4b2cdb0d5495265ca4e7f503f4a",
+      "size_bytes": 33055,
+      "record_count": 28
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "a84a6edc2273ff357f6ed375130e892c03a502bd9b9738ee34a3a81b1eb89cb4",
+      "size_bytes": 42925,
+      "record_count": 28
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "3443f65c51d2049799854dba3df0b68ab3fd47f4073dd4e98106b5d4d0c11fd2",
+      "file_count": 24,
+      "size_bytes": 4207074
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "61bd3aaba480de655360fa8642b45d3764e3af5c327fe7d099988678aaf9210a",
+      "size_bytes": 2670379,
+      "record_count": 1728
+    },
+    "diff_report": {
+      "path": "reports/2026/10/diff_msdata_20261015.md",
+      "sha256": "aefd450a9c0fb61e15b1629dd0cbbfe0dcf78d24d6faec4725f5eae801238985",
+      "size_bytes": 3044
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20261015-run-38746594522",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20261015-run-38746594522",
+    "asset_name": "raw_snapshot_20261015_run38746594522.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261015-run-38746594522"
+  }
+}

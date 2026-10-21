@@ -24,13 +24,16 @@ def main() -> None:
             localize_mail_body(body, view=view), encoding="utf-8"
         )
     root = Path(__file__).resolve().parents[1]
-    for name, relative in (
+    # 詳細リンクは公開時点の固定 SHA 上のパスを指し、本文は prune されない fixture から読む。
+    for name, relative, linked in (
         (
             "large-audit-20260601",
+            "tests/fixtures/reports/official_overrides_audit_20260601.md",
             "tests/fixtures/reports/official_overrides_audit_20260601.md",
         ),
         (
             "large-audit-20260918",
+            "tests/fixtures/reports/official_overrides_audit_20260918.md",
             "reports/2026/09/official_overrides_audit_20260918.md",
         ),
     ):
@@ -45,7 +48,7 @@ def main() -> None:
                 "--official-overrides-audit-path",
                 str(root / relative),
                 "--detail-url",
-                f"https://github.com/murakotaro4/MS_data/blob/de073aa50e13a08dd0a4e648eb33c25e3f80ba23/{relative}",
+                f"https://github.com/murakotaro4/MS_data/blob/de073aa50e13a08dd0a4e648eb33c25e3f80ba23/{linked}",
                 "--out",
                 str(args.out_dir / f"{name}.txt"),
                 "--html-out",

@@ -13,7 +13,7 @@
     - `pipeline/`: 取り込み・正規化（update_msdata / jsonl_to_json / generate_provenance / restore_snapshot / official_overrides）
     - `validation/`: スキーマ・契約検証（validate_* / verify_snapshot_restore）
     - `audit/`: 監査・巻き戻り検出（audit_* / detect_msdata_rollbacks）
-    - `reporting/`: レポート生成・整理（report_msdata_diff / msdata_diff_model / rendering / build_atwiki_quality_report / build_update_mail_body / prune_reports）
+    - `reporting/`: レポート生成・整理（report_msdata_diff / msdata_diff_model / rendering / build_atwiki_quality_report / build_source_excerpt / build_update_mail_body / prune_reports）
     - `gh/`: GitHub 連携（auto_review_gate / auto_review_merge / cleanup_auto_update_prs / post_merge_assets / notify_failure / notify_override_due / issue_upsert / repo_labels / gh_json / outputs）
     - `notify/`: メール送信（send_gmail）
     - `tasks.py`: 全ターゲットのディスパッチャ（ワークフロー・開発者の共通入口）
@@ -62,12 +62,14 @@
 - 手動更新レポート: 手動でデータ更新した場合は `reports/YYYY/MM/msdata_update_YYYYMMDD.md` を `reports/msdata_update_template.md` に沿って作成（新規追加機体は主要パラメータを網羅、既存更新は変更前後の値を明記）。
 - 失敗時の挙動: findings / no_response / disconnected で停止した場合は自動マージせず PR を残し、`GMAIL_ADDRESS` 宛（本人のみ）に停止メールを送信して手動対応。
 - 翌朝レスキュー: `resume auto review` が毎朝 09:00 JST（cron `0 0 * * *`）と `workflow_dispatch` で起動し、停止 PR を自動回収する（手動 `@codex review` 後のマージ回収を含む）。`auto review merge` と同一 concurrency group（`msdata-auto-review-merge`）を共有。
+- 持ち越し指摘: GitHub は行が変わらない未解決レビューコメントの `commit_id` を新しい HEAD へ付け替える（`original_commit_id` は投稿時のまま）。旧 HEAD から持ち越された未解決指摘だけでは即停止せず、現 HEAD の Codex 結果を待つ。現 HEAD で終端シグナル（no-issue 受領コメント等）が出れば持ち越し指摘は無視し、出ないまま打ち切られた場合は従来どおり findings で停止する（`ms_data/gh/auto_review_gate.py`、PR #339 の 2026-10-20 停止が実例）。
 - Codexレビュー待ち: 既定 3 回まで試行。調整は repository variables の `CODEX_REVIEW_MAX_ATTEMPTS` / `CODEX_REVIEW_ATTEMPT_TIMEOUT_SECONDS` / `CODEX_REVIEW_POLL_SECONDS` / `CODEX_REVIEW_SETTLE_SECONDS`。
 - 通知: マージ後に `post merge notify` が Release アセット作成とメール送信を行います。本文は `reports/YYYY/MM/diff_msdata_YYYYMMDD.md` から生成、添付は `msData.json`。差分ゼロの定期実行時は `data update` から「差分なし」報告メールを送信。idempotency キーは `source_run_id + head_ref`。
 - メール秘匿運用（重要）: `GMAIL_ADDRESS` / `GMAIL_APP_PASSWORD` / `GMAIL_TO` / `CODEX_TRIGGER_PAT` は必ず GitHub **Secrets** 経由で渡します（public リポジトリではログが公開されるため、`vars.` への変更や `echo` でのデバッグ出力は禁止。Secrets はログで自動マスクされます）。`GMAIL_TO` はカンマ区切りで複数宛先可。値の参照は不可のため変更時は最終文字列で上書き。自動レビュー停止メールは宛先を `GMAIL_ADDRESS`（本人のみ）に固定する。
 - 生成元追跡: 実行ごとに `reports/YYYY/MM/provenance_YYYYMMDD.json`（index/details/html のハッシュ・件数・source_run_id）を生成。
 - 巻き戻り対策: `reports/YYYY/MM/rollback_guard_YYYYMMDD.md` と `reports/YYYY/MM/official_overrides_audit_YYYYMMDD.md` を生成。protected rollback は自動更新を失敗させます。
 - 取得元スロット異常: `source_slot_audit_YYYYMMDD.md` と `SOURCE_SLOT_AUDIT_OUT` に原値・比較・処置を保存。限定LV検査の未承認異常は対象機体＋LV全体だけ更新保留し、正常候補は既存ゲートで継続。正常な前値がない既存レコードは `previous_unverified_retained` と明示し推測修正・削除しない。schema/意味エラー・従来protected rollbackは隔離で隠さない。本人通知は `GMAIL_ADDRESS` のみ、dry-runは送信しない。検査範囲・補正の適用期限は [README.md](README.md) と [data/README.md](data/README.md) を参照。
+- 取得元抜粋（レビュー照合用）: atwiki は Cloudflare のチャレンジ（403）を返すため、Codex やクラウドのエージェントからは wiki を直接閲覧できない（Actions からの取得は成功する）。そのため `data update` は `ms_data.reporting.build_source_excerpt` で、変更・追加項目ごとに Actions が取得した `cache/html` の該当行（行見出し原文・LV別セル）、取得時刻・HTTP・wiki_url を `reports/YYYY/MM/source_excerpt_YYYYMMDD.md` に保存し、PR 本文にも上限20件で載せる。照合の `不一致` は公式調整オーバーライド・LV単位保留・前LV補完などの後処理の可能性を示し、直ちに誤りではない。
 - 生データアーカイブ: 実行ごとに `raw_snapshot_*.tar.xz` を artifact（90日）へ、マージ後に Release tag `raw-snapshot-YYYYMMDD-run-<run_id>` へ恒久保存。
 - 復元手順: 対象コミットの provenance から `release.tag` を取得し、`uv run python -m ms_data.tasks restore-snapshot SNAPSHOT=... OUT_DIR=restore_tmp` で `cache/` と `reports/` を再構成（ファイルが HEAD から prune 済みでも `git log -- <path>` + `git show` で provenance 自体を辿れます）。復元CI: `verify-snapshot-restore`。
 - official_overrides 期限管理: 各 entry に `review_after` / `remove_after` を設定。期限到達時は `data update` が Step Summary に件数を出し、protected rollback 0 件なら Issue `official_overrides 期限確認` を作成/追記（`ms_data/gh/notify_override_due.py`）。直前の通知と `review_due` / `remove_due` および監査出力 `due_fingerprint`（期限対象・補正値・期限設定の SHA256）がすべて同じなら skipped にして日次の同文コメントを抑止。件数が同じでも対象や設定の変更時は通知する。本文末尾の `<!-- override-due ... fingerprint=... -->` マーカーで追跡し、識別子のない旧通知には一度追記して比較基準を確立する。識別子未指定の呼出しでは抑止しない。スキーマは `schema/official_overrides.schema.json`（`MS名` / `values` / `stale_values` 必須）。
@@ -79,6 +81,21 @@
 - `.github/actions/setup-uv-env`: Python 3.11 + uv + `uv sync --dev` の composite action。`ci` / `data update` / `auto review merge` / `resume auto review` / `post merge notify` / `reports prune` で共用（Python バージョン変更はここが主変更点）。`notify failure` と `cleanup auto update prs` は uv 不要のため未使用。
 - CI runner: Windows は `windows-2025-vs2026` を明示使用。`windows-latest` へ戻す場合は GitHub の runner image 移行状況を確認。
 - 互換期間: レポート再編時の旧パス互換は原則検討するが、v3 の年月階層化（`reports/YYYY/MM/`）は破壊的移行として実施済み（`legacy_path_support: false`、旧パスへの転送なし）。日付付きレポートの旧フラット `path_patterns` は撤去済み（直下に残す undated / テンプレートのみ許容）。
+
+### 自動マージ停止時の切り分け・復旧（Issue #328 / PR #329）
+- 最初に対象 PR の現在の HEAD SHA・ブランチと、失敗した auto review run の時刻を固定する。通常ログの `Latest HEAD CI`（run_id / attempt / status / conclusion）、`Merge stopped`（reason / pr_state）、Step Summary、auto review report を照合する。レビューゲートの `merge_ok=true` だけでは CI 成功やマージ完了を意味しない。
+- CI を再実行すると同じ run ID の最新表示が更新される。障害時の原因は `GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}` と同 attempt の `/jobs` まで調べ、当時の状態と復旧後の状態を分けて記録する。最新の success だけで障害時も成功していたと判断しない。
+- `GITHUB_TOKEN` で作成・更新した PR の `pull_request` CI は実行承認待ちになり得る。`action_required`・ジョブ0件なら、PR の「Approve workflows to run」と初回 attempt を優先確認する。これは直ちにマージ権限不足やコード不具合を意味しない。本人了承（2026-10-16）により、同一リポジトリ・Bot作成・main向けの定期更新ブランチで、msData.jsonと所定の当日レポートのみを変更するPRはCI実行承認を自動化する。元処理が未完了なら最大2分待ち、元data updateのmainブランチ実行（ref接尾辞はなし/@main/@refs/heads/mainのみ）と成功、対象CI/HEAD/作成者、ジョブ0件を検証して承認APIを1回だけ呼び、最大5分CI成功を待つ。対象外、API拒否、失敗、タイムアウトは停止する。PATへの置換や権限の拡大は行わない。API拒否時は対象リンクと必要なActions write権限・write権限者による実行承認を具体的に伝える。
+- 自動承認の本線は auto review / resume の共通merge経路で、承認待ちを検出すると`ms_data.gh.auto_ci_approval`で対象検証・実行承認し、承認後に最新HEAD CIを再取得する。Codexレビュー判定を通過するまで到達しないため、レビューで停止したPRのCIは承認待ちのまま残る。
+- `approve data CI`（`.github/workflows/approve_data_ci.yml`）は`workflow_dispatch`の`run_id`で既存の承認待ちCIを手動承認するための入口で、信頼されたmain上で同じ検証を行い、auto review / resumeと同一concurrency groupで直列化する。データ更新PRのCIは`GITHUB_TOKEN`由来のため、ciの完了を受ける`workflow_run`は発火しない（Issue #341: 10/16〜10/20の4件すべて未起動）。`workflow_run`トリガーを戻さない。承認はCI実行の許可であり、Codexレビューやマージ承認を代替しない。
+- CI 成功後は、現在の HEAD がレビュー済み SHA と一致し、同一 HEAD・ブランチの最新 `ci.yml` が completed/success であることを確認し、既存の auto review merge の失敗ジョブを再実行する。古い成功 run へのフォールバックや手動の直接マージでゲートを飛ばさない。レビュー対象 HEAD が変わっていたら新 HEAD の CI とレビューを必要とする。
+- 完了判定は PR の merged / merge commit SHA、auto review run、post merge notify の Release 公開・メール送信処理まで確認する。メール送信成功と端末への配達確認は区別する。修正は Issue → PR → CI → レビューで進め、別件のデータ補正 PR と混在させない。
+- 2026-10-15 の実例: PR #327 の CI run 38746722160 は attempt 1 が action_required、attempt 2 が success。既存ゲート維持のまま auto review run 38746738277 の attempt 2 で復旧した。PR #329 は診断ログのみ追加したもので、承認待ち自体を自動解消する変更ではない。
+- 仕様確認先: [GITHUB_TOKEN](https://docs.github.com/en/actions/concepts/security/github_token)、[Bot-created pull requests can run workflows if approved](https://github.blog/changelog/2026-06-11-bot-created-pull-requests-can-run-workflows-if-approved/)。実際の状態は毎回 GitHub の最新情報を確認する。
+
+## Review guidelines
+- 自動更新 PR（`data/auto-update-*`）の取得元照合は、PR 本文の「取得元抜粋」と `reports/YYYY/MM/source_excerpt_YYYYMMDD.md` を根拠に行う。atwiki はレビュー環境から直接閲覧できない前提とし、記憶や過去の値だけを根拠に「取得元と一致しない」と指摘しない。
+- 抜粋で `一致` の項目は、値の増減だけを理由に差し戻さない（atwiki 側の誤記修正で値が下がることがある。例: PR #339 の中スロット 29→20）。`不一致` や `HTMLなし` の項目は、後処理（公式調整オーバーライド・LV単位保留・前LV補完）で説明できるかを確認して指摘する。
 
 ## 仕様・挙動変更時のドキュメント先行
 - 仕様や挙動を変更する場合は、コード・ワークフロー等の実装を変更する前に、対象の既存の正本ドキュメントへ変更の目的・期待動作・影響範囲・検証計画を反映する。

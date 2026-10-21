@@ -652,12 +652,18 @@ def test_quarantine_cannot_mask_existing_global_safety_failures(invalid):
     assert audit["findings"][0]["action"] == "global_safety_stop_not_quarantined"
 
 
-def test_cli_keeps_raw_array_fetch_evidence_and_only_updates_healthy_records(
-    tmp_path, monkeypatch
+@pytest.mark.parametrize(
+    "middle", [22, 12], ids=["corrected_source", "regressed_source"]
+)
+def test_cli_imports_corrected_source_and_holds_regressions_without_overrides(
+    tmp_path, monkeypatch, middle
 ):
     before_path, raw_path = tmp_path / "msData.json", tmp_path / "details.json"
     audit_path, snapshot = tmp_path / "audit.json", tmp_path / "raw.json"
-    raw = levels(12)
+    raw = levels(middle)
+    overrides_dir = tmp_path / "overrides"
+    overrides_dir.mkdir()
+    assert update_msdata.load_official_overrides(overrides_dir) == {}
     raw["ガブスレイ_LV3"]["HP"] = 16000
     write_json(before_path, list(levels().values()))
     write_json(raw_path, list(raw.values()))
@@ -685,7 +691,8 @@ def test_cli_keeps_raw_array_fetch_evidence_and_only_updates_healthy_records(
                 "--in-place",
                 "--output",
                 str(before_path),
-                "--no-official-overrides",
+                "--official-overrides-dir",
+                str(overrides_dir),
                 "--source-slot-audit-out",
                 str(audit_path),
                 "--official-overrides-raw-out",
@@ -700,10 +707,20 @@ def test_cli_keeps_raw_array_fetch_evidence_and_only_updates_healthy_records(
     original = {r["MS名"]: r for r in json.loads(snapshot.read_text(encoding="utf-8"))}
     assert adopted[NAME]["中スロット"] == 22
     assert adopted["ガブスレイ_LV3"]["HP"] == 16000
-    assert original[NAME]["中スロット"] == 12
-    row = json.loads(audit_path.read_text(encoding="utf-8"))["findings"][0]
-    assert row["fetched_at"] == "2026-10-04T14:37:53Z"
-    assert row["fetch_evidence"]["http_status"] == 200
+    assert original[NAME]["中スロット"] == middle
+    audit = json.loads(audit_path.read_text(encoding="utf-8"))
+    if middle == 12:
+        assert adopted[NAME] == levels()[NAME]
+        assert audit["status"] == "partial_hold"
+        assert audit["held_record_count"] == 1
+        row = audit["findings"][0]
+        assert row["action"] == "retained_previous"
+        assert row["fetched_at"] == "2026-10-04T14:37:53Z"
+        assert row["fetch_evidence"]["http_status"] == 200
+    else:
+        assert audit["status"] == "ok"
+        assert audit["held_record_count"] == 0
+        assert audit["findings"] == []
 
 
 @pytest.mark.parametrize("zero", ["candidates", "details"])

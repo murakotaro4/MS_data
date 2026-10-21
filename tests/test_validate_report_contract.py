@@ -9,17 +9,21 @@ from helpers import write_json
 
 def _manifest() -> dict:
     return {
-        "version": 1,
+        "version": 3,
         "compatibility": {
-            "legacy_path_support": True,
+            "legacy_path_support": False,
             "min_release_cycles": 1,
             "retirement_criteria": ["legacy consumer count is 0"],
         },
         "naming": {
             "report_date_format": "YYYYMMDD",
             "head_ref_pattern": "data/auto-update-{report_date}",
-            "diff_pattern": "reports/diff_msdata_{report_date}.md",
-            "provenance_pattern": "reports/provenance_{report_date}.json",
+            "diff_pattern": (
+                "reports/{report_year}/{report_month}/diff_msdata_{report_date}.md"
+            ),
+            "provenance_pattern": (
+                "reports/{report_year}/{report_month}/provenance_{report_date}.json"
+            ),
             "artifact_pattern": "raw-snapshot-{report_date}-run-{source_run_id}",
             "snapshot_pattern": "raw_snapshot_{report_date}_run{source_run_id}.tar.xz",
             "release_tag_pattern": "raw-snapshot-{report_date}-run-{source_run_id}",
@@ -29,7 +33,7 @@ def _manifest() -> dict:
             {
                 "id": "diff",
                 "type": "generated",
-                "path_patterns": ["reports/diff_msdata_*.md"],
+                "path_patterns": ["reports/*/*/diff_msdata_*.md"],
                 "producer": ["ms_data.reporting.report_msdata_diff"],
                 "consumers": ["workflow"],
                 "retention": "git",
@@ -63,9 +67,9 @@ def test_data_update_mode_ok(tmp_path: Path) -> None:
             "--head-ref",
             "data/auto-update-20260320",
             "--diff-path",
-            "reports/diff_msdata_20260320.md",
+            "reports/2026/03/diff_msdata_20260320.md",
             "--provenance-path",
-            "reports/provenance_20260320.json",
+            "reports/2026/03/provenance_20260320.json",
             "--artifact-name",
             "raw-snapshot-20260320-run-12345",
             "--snapshot-file",
@@ -94,9 +98,9 @@ def test_data_update_mode_release_tag_mismatch(tmp_path: Path) -> None:
             "--head-ref",
             "data/auto-update-20260320",
             "--diff-path",
-            "reports/diff_msdata_20260320.md",
+            "reports/2026/03/diff_msdata_20260320.md",
             "--provenance-path",
-            "reports/provenance_20260320.json",
+            "reports/2026/03/provenance_20260320.json",
             "--artifact-name",
             "raw-snapshot-20260320-run-12345",
             "--snapshot-file",
@@ -109,34 +113,17 @@ def test_data_update_mode_release_tag_mismatch(tmp_path: Path) -> None:
 
 
 def test_manifest_rejects_unknown_entry_type(tmp_path: Path) -> None:
-    bad = {
-        "version": 1,
-        "compatibility": {
-            "legacy_path_support": True,
-            "min_release_cycles": 1,
-            "retirement_criteria": ["x"],
+    bad = _manifest()
+    bad["entries"] = [
+        {
+            "id": "arch",
+            "type": "archive",
+            "path_patterns": ["reports/archive/**"],
+            "producer": ["human"],
+            "consumers": ["human"],
+            "retention": "git",
         },
-        "naming": {
-            "report_date_format": "YYYYMMDD",
-            "head_ref_pattern": "data/auto-update-{report_date}",
-            "diff_pattern": "reports/diff_msdata_{report_date}.md",
-            "provenance_pattern": "reports/provenance_{report_date}.json",
-            "artifact_pattern": "raw-snapshot-{report_date}-run-{source_run_id}",
-            "snapshot_pattern": "raw_snapshot_{report_date}_run{source_run_id}.tar.xz",
-            "release_tag_pattern": "raw-snapshot-{report_date}-run-{source_run_id}",
-            "idempotency_key": "source_run_id+head_ref",
-        },
-        "entries": [
-            {
-                "id": "arch",
-                "type": "archive",
-                "path_patterns": ["reports/archive/**"],
-                "producer": ["human"],
-                "consumers": ["human"],
-                "retention": "git",
-            },
-        ],
-    }
+    ]
     manifest = tmp_path / "reports_manifest.json"
     write_json(manifest, bad)
 
@@ -157,8 +144,10 @@ def test_ci_mode_rejects_unknown_report_file(tmp_path: Path) -> None:
     manifest = tmp_path / "reports_manifest.json"
     write_json(manifest, _manifest())
     reports_dir = tmp_path / "reports"
-    reports_dir.mkdir(parents=True, exist_ok=True)
-    (reports_dir / "diff_msdata_20260320.md").write_text("ok", encoding="utf-8")
+    (reports_dir / "2026" / "03").mkdir(parents=True)
+    (reports_dir / "2026" / "03" / "diff_msdata_20260320.md").write_text(
+        "ok", encoding="utf-8"
+    )
     (reports_dir / "unknown_note.md").write_text("ng", encoding="utf-8")
 
     rc = validate_report_contract.main(
@@ -237,7 +226,10 @@ def test_custom_reports_dir_uses_manifest_logical_root(
 def test_ci_mode_rejects_nested_reports_suffix(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.chdir(tmp_path)
     manifest = Path("reports_manifest.json")
-    write_json(manifest, _manifest())
+    manifest_data = _manifest()
+    # 年月階層の `*` は任意の深さに一致するため、直下限定の pattern で接尾辞一致を検証する。
+    manifest_data["entries"][0]["path_patterns"] = ["reports/diff_msdata_*.md"]
+    write_json(manifest, manifest_data)
     nested_dir = Path("custom_dir/foo/reports")
     nested_dir.mkdir(parents=True)
     (nested_dir / "diff_msdata_20260320.md").write_text("ng", encoding="utf-8")
@@ -256,54 +248,9 @@ def test_ci_mode_rejects_nested_reports_suffix(monkeypatch, tmp_path: Path) -> N
     assert rc == 1
 
 
-def test_data_update_mode_year_month_patterns(tmp_path: Path) -> None:
-    manifest_data = _manifest()
-    manifest_data["naming"][
-        "diff_pattern"
-    ] = "reports/{report_year}/{report_month}/diff_msdata_{report_date}.md"
-    manifest_data["naming"][
-        "provenance_pattern"
-    ] = "reports/{report_year}/{report_month}/provenance_{report_date}.json"
-    manifest = tmp_path / "reports_manifest.json"
-    write_json(manifest, manifest_data)
-
-    rc = validate_report_contract.main(
-        [
-            "--mode",
-            "data-update",
-            "--manifest",
-            str(manifest),
-            "--report-date",
-            "20260320",
-            "--source-run-id",
-            "12345",
-            "--head-ref",
-            "data/auto-update-20260320",
-            "--diff-path",
-            "reports/2026/03/diff_msdata_20260320.md",
-            "--provenance-path",
-            "reports/2026/03/provenance_20260320.json",
-            "--artifact-name",
-            "raw-snapshot-20260320-run-12345",
-            "--snapshot-file",
-            "raw_snapshot_20260320_run12345.tar.xz",
-            "--release-tag",
-            "raw-snapshot-20260320-run-12345",
-        ]
-    )
-    assert rc == 0
-
-
 def test_data_update_mode_accepts_windows_native_report_paths(tmp_path: Path) -> None:
-    manifest_data = _manifest()
-    manifest_data["naming"][
-        "diff_pattern"
-    ] = "reports/{report_year}/{report_month}/diff_msdata_{report_date}.md"
-    manifest_data["naming"][
-        "provenance_pattern"
-    ] = "reports/{report_year}/{report_month}/provenance_{report_date}.json"
     manifest = tmp_path / "reports_manifest.json"
-    write_json(manifest, manifest_data)
+    write_json(manifest, _manifest())
 
     rc = validate_report_contract.main(
         [

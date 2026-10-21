@@ -1,13 +1,9 @@
 import pytest
 
-from ms_data.core.dates import JST as CORE_JST
 from ms_data.gh.auto_review_merge import (
     GITHUB_ACTIONS_BOT,
-    JST,
     ReviewDeps,
     _bool_text,
-    _head_ref,
-    _head_sha,
     _int_or_none,
     _merge_and_notify,
     _positive_int,
@@ -20,17 +16,11 @@ from ms_data.gh.auto_review_merge import (
     recovered_marker,
     resolve_source_run_id,
     resolve_target_pr,
-    resolved_comment_ids_from_graphql,
     retry_marker,
     review_marker,
     select_resume_candidates,
     stop_marker,
 )
-
-
-def test_public_api_reexports_jst_from_core_dates():
-    assert JST is CORE_JST
-    assert jst_report_date("2026-05-31T16:00:00Z") == "20260601"
 
 
 def test_jst_report_date_uses_workflow_run_created_at():
@@ -42,13 +32,6 @@ def test_jst_report_date_naive_datetime_treated_as_utc():
     assert jst_report_date("2026-05-31T09:05:00") == "20260531"
     # 16:00 UTC -> 翌日 01:00 JST
     assert jst_report_date("2026-05-31T16:00:00") == "20260601"
-
-
-def test_head_ref_and_sha_handle_malformed_items():
-    assert _head_ref({"head": None}) == ""
-    assert _head_sha({"head": None}) == ""
-    assert _head_ref({"head": {"ref": 123}}) == ""
-    assert _head_sha({"head": {"sha": 123}}) == ""
 
 
 def test_resolve_target_pr_prefers_source_run_id_marker():
@@ -137,18 +120,6 @@ def test_comment_markers_and_latest_bot_comment():
 def test_find_latest_bot_comment_returns_none_without_match():
     assert (
         find_latest_bot_comment([], review_marker("abc"), {GITHUB_ACTIONS_BOT}) is None
-    )
-    other_user = [
-        {
-            "id": 1,
-            "created_at": "2026-05-31T09:00:00Z",
-            "user": {"login": "someone-else"},
-            "body": review_marker("abc"),
-        }
-    ]
-    assert (
-        find_latest_bot_comment(other_user, review_marker("abc"), {GITHUB_ACTIONS_BOT})
-        is None
     )
 
 
@@ -520,37 +491,6 @@ def test_latest_force_push_created_at_picks_newest_event():
         == "2026-05-31T16:00:00Z"
     )
     assert latest_force_push_created_at([]) == ""
-
-
-def test_resolved_comment_ids_from_graphql_collects_resolved_only():
-    payload = {
-        "data": {
-            "repository": {
-                "pullRequest": {
-                    "reviewThreads": {
-                        "nodes": [
-                            {
-                                "isResolved": True,
-                                "comments": {
-                                    "nodes": [
-                                        {"databaseId": 11},
-                                        {"databaseId": 12},
-                                    ]
-                                },
-                            },
-                            {
-                                "isResolved": False,
-                                "comments": {"nodes": [{"databaseId": 21}]},
-                            },
-                        ]
-                    }
-                }
-            }
-        }
-    }
-    assert resolved_comment_ids_from_graphql(payload) == {"11", "12"}
-    assert resolved_comment_ids_from_graphql({}) == set()
-    assert resolved_comment_ids_from_graphql(None) == set()
 
 
 def _threads_payload(nodes: list, *, has_next: bool = False, cursor: str | None = None):

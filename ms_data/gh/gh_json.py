@@ -13,7 +13,6 @@ import subprocess
 import sys
 import time
 from collections.abc import Callable, Sequence
-from pathlib import Path
 from typing import Any
 
 GhRunner = Callable[[list[str]], str]
@@ -140,10 +139,6 @@ def gh_api_json(
     else:
         output = runner(cmd)
     return parse_json_stream(output)
-
-
-def load_json_stream(path: Path) -> Any:
-    return parse_json_stream(path.read_text(encoding="utf-8"))
 
 
 def login_of(item: dict[str, Any]) -> str:
