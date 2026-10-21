@@ -1,5 +1,7 @@
 import json
+import subprocess
 import sys
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -583,3 +585,62 @@ def test_failure_mail_html_puts_workflow_and_run_link_first():
     )
     assert 'href="https://github.com/owner/repo/actions/runs/123"' in page
     assert 'class="audit-card"' in page
+
+
+def test_operation_notices_render_with_standard_library_only():
+    # notify failure は依存を導入せず python3 で動くため、通知 HTML は標準ライブラリだけで作る。
+    code = textwrap.dedent(
+        """
+        import sys
+
+        class BlockThirdParty:
+            def find_spec(self, name, path=None, target=None):
+                top = name.split(".")[0]
+                if top not in sys.stdlib_module_names and top != "ms_data":
+                    raise ImportError(f"third-party module blocked: {name}")
+
+        sys.meta_path.insert(0, BlockThirdParty())
+        from ms_data.gh.notify_failure import build_failure_notice
+        from ms_data.gh.notify_review_stop import build_notice
+        from ms_data.notify.notice_html import render_notice_html
+
+        failure = render_notice_html(build_failure_notice(
+            workflow_name="data update", conclusion="failure",
+            run_url="https://github.com/o/r/actions/runs/1", run_id="1",
+            created_at="2026-10-21T00:00:00Z",
+        ))
+        stop = render_notice_html(build_notice(
+            stop_reason="findings", pr_number=1, pr_url="https://github.com/o/r/pull/1",
+            report_date="20261021", run_url="https://github.com/o/r/actions/runs/1",
+            findings=[{"path": "a.py", "line": 1, "body": "**要点**"}],
+        ))
+        assert 'style="' in failure and "要点" in stop
+        """
+    )
+    subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=Path(__file__).resolve().parents[1],
+        check=True,
+    )
+
+
+def test_failure_mail_is_sent_as_text_when_html_rendering_fails(monkeypatch):
+    captured = []
+
+    def broken(_notice):
+        raise RuntimeError("render failed")
+
+    monkeypatch.setattr(nf, "render_notice_html", broken)
+    notify_failure(
+        repo="owner/repo",
+        workflow_name="data update",
+        conclusion="failure",
+        run_url="https://example.invalid/run",
+        run_id="1",
+        created_at="2026-10-21T00:00:00Z",
+        runner=lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("skip")),
+        mail_sender=lambda subject, body, html: captured.append((body, html)),
+    )
+
+    assert captured and captured[0][1] is None
+    assert "- workflow: data update" in captured[0][0]

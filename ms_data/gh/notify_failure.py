@@ -25,7 +25,7 @@ ISSUE_LABEL = "pipeline-failure"
 ISSUE_LABEL_SPEC = LABEL_SPECS[ISSUE_LABEL]
 ISSUE_LABEL_COLOR = ISSUE_LABEL_SPEC.color
 AGGREGATION_SUBJECT = "失敗情報"
-MailSender = Callable[[str, str, str], None]
+MailSender = Callable[[str, str, str | None], None]
 
 __all__ = [
     "AGGREGATION_SUBJECT",
@@ -236,6 +236,16 @@ def build_failure_notice(
     )
 
 
+def _failure_html(**details: str) -> str | None:
+    """HTML 版の生成に失敗しても、テキスト版の失敗通知は送る。"""
+
+    try:
+        return render_notice_html(build_failure_notice(**details))
+    except Exception as exc:
+        print(f"HTML 版の失敗通知を生成できませんでした: {exc}", file=sys.stderr)
+        return None
+
+
 def notify_failure(
     *,
     repo: str,
@@ -263,14 +273,17 @@ def notify_failure(
     failures = 0
 
     try:
-        notice = build_failure_notice(
-            workflow_name=workflow_name,
-            conclusion=conclusion,
-            run_url=run_url,
-            run_id=run_id,
-            created_at=created_at,
+        mail_sender(
+            subject,
+            body,
+            _failure_html(
+                workflow_name=workflow_name,
+                conclusion=conclusion,
+                run_url=run_url,
+                run_id=run_id,
+                created_at=created_at,
+            ),
         )
-        mail_sender(subject, body, render_notice_html(notice))
     except Exception as exc:
         failures += 1
         print(f"メール送信に失敗しました: {exc}", file=sys.stderr)
