@@ -152,6 +152,7 @@ def test_build_update_mail_body_matches_20260601_changed_report_contract(tmp_pat
     assert "### ガズアル" in text
     assert "| LV2 | HP | 18000 | 20000 |" in text
     assert "## 補正値の維持と期限" in text
+    assert "期限到達なし" not in text
 
 
 def test_build_update_mail_body_keeps_no_change_mail_operational_context(tmp_path):
@@ -198,10 +199,13 @@ def test_build_update_mail_body_keeps_no_change_mail_operational_context(tmp_pat
     text = out.read_text(encoding="utf-8")
     assert "結果: 成功（差分なし）" in text
     assert "公開データの変更なし" in text
-    assert "再取得候補: 0ページ" in text
-    assert "高速選定: 有効" in text
-    assert "一覧の更新経過時間読み取り率: 100%（1.0）" in text
+    assert (
+        "取得の概要: 再取得候補 0ページ（URL重複排除後の選定数）"
+        "・一覧の更新経過時間読み取り率 100%・高速選定 有効"
+    ) in text
     assert "全件取得" not in text
     assert "今回の実行ID（run_id）: 26700000000" in text
     assert "## 変更内容" not in text
-    assert "## 補正値の維持と期限" in text
+    # 期限到達・補正維持がない日は「補正値の維持と期限」を出さない（#352）。
+    assert "## 補正値の維持と期限" not in text
+    assert "期限到達なし" not in text

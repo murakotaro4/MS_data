@@ -279,7 +279,7 @@ def test_no_change_mail_is_compact_but_keeps_run_and_audit_context() -> None:
     assert soup.h1.get_text() == "公開データの変更なし"
     assert soup.select(".machine, .stats, .warning") == []
     assert "今回の実行ID（run_id）: 123" in soup.get_text()
-    assert "再取得候補: 0ページ" in soup.get_text()
+    assert "再取得候補 0ページ" in soup.get_text()
     assert "補正値を維持した項目: 1項目" in soup.get_text()
 
 
@@ -327,18 +327,16 @@ def test_cli_explains_72_candidate_pages_without_claiming_changes_or_successes(
     assert soup.select(".machine, .stats, .warning") == []
     assert "公開データの変更なし" in visible
     for expected in (
-        "再取得候補: 72ページ",
-        "URL重複排除後の選定数。変更件数・取得成功数ではありません。",
-        "高速選定: 有効",
-        "一覧の更新経過時間読み取り率: 100%（1.0）",
-        "詳細取得の成功率ではありません。",
+        "取得の概要: 再取得候補 72ページ（URL重複排除後の選定数）"
+        "・一覧の更新経過時間読み取り率 100%・高速選定 有効",
         "補正値を維持した項目: 1項目",
         "取得元が既知の旧値だったため、登録済みの補正値を維持しました。",
-        "再確認・撤去判断の期限到達なし。",
         "今回の実行ID（run_id）: 37489377273",
     ):
         assert expected in text
         assert expected in visible
+    # 平常時の技術情報は1行にまとめ、期限到達なしの定型文は出さない（#352）。
+    assert "期限到達なし" not in text + visible
     # 同じ値・単位・説明が両形式へ渡り、日本語がUTF-8で読み戻せる。
     for node in soup.select(".footer .note"):
         assert node.get_text() in text
@@ -392,9 +390,10 @@ def test_cli_explains_selection_reason_and_retains_false_and_zero(
     )
     soup = BeautifulSoup(html.read_text(encoding="utf-8"), "html.parser")
     for text in (plain.read_text(encoding="utf-8"), soup.get_text()):
-        assert "再取得候補: 0ページ" in text
-        assert "高速選定: 無効" in text
-        assert "一覧の更新経過時間読み取り率: 0%（0.0）" in text
+        assert "再取得候補 0ページ" in text
+        assert "高速選定 無効" in text
+        assert "一覧の更新経過時間読み取り率 0%" in text
+        assert "一覧の更新経過時間の読み取り率低下: 0%" in text
         if reason != "none":
             assert reason in text
             assert meaning in text
