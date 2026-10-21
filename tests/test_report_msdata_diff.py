@@ -1,6 +1,10 @@
+from collections import Counter
 from datetime import datetime
 from textwrap import dedent
 
+import pytest
+
+from ms_data.reporting import report_msdata_diff as rmd
 from ms_data.reporting.report_msdata_diff import build_report_lines
 
 
@@ -195,3 +199,67 @@ def test_fullst_detail_table_uses_new_order_for_added_rows():
     assert added_first in lines
     assert shifted_existing in lines
     assert lines.index(added_first) < lines.index(shifted_existing)
+
+
+def test_load_json_exits_on_missing_file(tmp_path, capsys):
+    with pytest.raises(SystemExit) as exc:
+        rmd.load_json(tmp_path / "missing.json")
+    assert exc.value.code == 1
+    assert "開けません" in capsys.readouterr().err
+
+
+def test_load_json_exits_on_invalid_json(tmp_path, capsys):
+    path = tmp_path / "broken.json"
+    path.write_text("{not json", encoding="utf-8")
+    with pytest.raises(SystemExit) as exc:
+        rmd.load_json(path)
+    assert exc.value.code == 1
+    assert "パースに失敗" in capsys.readouterr().err
+
+
+def test_format_value_variants():
+    assert rmd.format_value(None) == "null"
+    assert rmd.format_value(12) == "12"
+    assert rmd.format_value("a\nb") == "a\\\\nb"
+    assert rmd.format_value([1, "x"]) == r'\[1, "x"\]'
+    long = rmd.format_value("a" * 200, max_len=10)
+    assert len(long) == 10
+    assert long.endswith("…")
+
+
+def test_format_field_value_fullst_summary():
+    items = [{"name": f"n{i}", "level": i, "points": i} for i in range(7)]
+    items[0] = {"name": "n0", "level": 0}
+    text = rmd.format_field_value("fullst", items)
+    assert text.startswith("7件")
+    assert "未設定" in text
+    assert "他1件" in text
+    assert "非dict" in rmd.format_field_value("fullst", ["非dict"])
+    assert "null" in rmd.format_field_value(
+        "fullst", [{"name": "x", "level": 1, "points": None}]
+    )
+    assert rmd.format_field_value("HP", 100) == "100"
+
+
+def test_format_fullst_summary_and_level_label():
+    assert rmd.format_fullst_summary([1, 2]) == "2件"
+    assert rmd.format_fullst_summary("x") == "x"
+    assert rmd.level_label("A_LV3") == "LV3"
+    assert rmd.level_label("A") == "LV不明"
+
+
+def test_append_counter_table_sorts_and_limits():
+    lines: list[str] = []
+    rmd.append_counter_table(lines, Counter({"b": 1, "a": 1, "c": 5}), limit=2)
+    body = [ln for ln in lines if ln.startswith("|")]
+    assert "c" in body[2] and "a" in body[3]
+    assert not any("b" in ln.split("|")[1] for ln in body[2:])
+
+
+def test_record_table_row_slots_and_fullst():
+    row = rmd.record_table_row("A_LV1", {"近スロット": 1, "中スロット": 2, "遠スロット": 3})
+    assert row[0] == "A\\_LV1"
+    assert row[-2] == "1/2/3"
+    assert row[-1] == "0"
+    assert rmd.record_table_row("A", {})[-2] == ""
+    assert rmd.record_ms_table_row("A_LV2", {})[0] == "LV2"
