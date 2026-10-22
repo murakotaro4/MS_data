@@ -52,3 +52,27 @@ def test_missing_input_returns_error(monkeypatch, tmp_path, capsys):
 
     assert rc == 1
     assert "入力ファイルが見つかりません" in capsys.readouterr().err
+
+
+def test_undecodable_input_returns_read_error(monkeypatch, tmp_path, capsys):
+    src = tmp_path / "details.jsonl"
+    src.write_bytes(b'{"ok": 1}\n\xff\xfe\n')
+    out = tmp_path / "details.json"
+
+    rc = _run(monkeypatch, src, out)
+
+    assert rc == 1
+    assert "ファイル読み込みエラー" in capsys.readouterr().err
+    assert not out.exists()
+
+
+def test_unwritable_output_returns_write_error(monkeypatch, tmp_path, capsys):
+    src = tmp_path / "details.jsonl"
+    src.write_text('{"ok": 1}\n', encoding="utf-8")
+    out = tmp_path / "out_dir"
+    out.mkdir()  # 出力先がディレクトリのため書き込みに失敗する
+
+    rc = _run(monkeypatch, src, out)
+
+    assert rc == 1
+    assert "ファイル書き込みエラー" in capsys.readouterr().err
