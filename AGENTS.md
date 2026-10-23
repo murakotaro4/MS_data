@@ -114,6 +114,7 @@
 - テスト共有ヘルパー: `tests/helpers.py`（MS レコード factory `make_ms_record` / `make_minimal_ms_record`、`write_json`）、`tests/workflow_contract.py`（ワークフローのステップ切り出しと必須/禁止部分文字列アサート）、`tests/auto_review_helpers.py`（auto_review cmd_* 用スタブ）。`from helpers import ...` のように素の名前で import する（`__init__.py` は置かない）。
 - 共通処理は `ms_data/core` 等の既存ユーティリティを再利用し、コピペ実装を作らない。
 - 既定パスは `ms_data/core/paths.py` を SSOT とし、各 CLI の argparse `default=` はそこを参照する（`tests/test_path_defaults_sync.py` が直書きの再発を検出する）。
+- 通知メールなどHTMLの表示を作成・変更するときは、Avoid unnecessary secondary labels and descriptions. Let the layout do the explaining.（不要な補助ラベルや説明文は避け、レイアウトに説明させる。）文字サイズ・太さ・余白の階層で重要度と区切りを表す。まとまりは配置と余白で示し、見出しや説明文を足して補わない。対応要否・状態・件数など、判断に必要な情報は削らない。
 
 ## コミット・プルリクエスト
 - コミットメッセージは日本語。Conventional Commits を採用: `feat:` `fix:` `docs:` `chore:` `refactor:` `test:` `data:`（データのみ変更）。
