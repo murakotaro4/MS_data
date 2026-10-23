@@ -306,12 +306,14 @@ def test_select_resume_candidates_filters_reason_and_head_sha():
         _auto_update_pr(number=11, report_date="20260531", head_sha="sha11"),
         _auto_update_pr(number=12, report_date="20260601", head_sha="sha12"),
         _auto_update_pr(number=13, report_date="20260602", head_sha="sha13"),
+        _auto_update_pr(number=14, report_date="20260529", head_sha="sha14"),
     ]
     comments_by_pr = {
         "10": [_stop_comment("codex_no_response", "sha10")],
         "11": [_stop_comment("codex_findings", "sha11")],  # findings は除外
         "12": [_stop_comment("codex_disconnected", "old-sha")],  # head_sha 不一致
         "13": [_stop_comment("codex_disconnected", "sha13")],
+        "14": [_stop_comment("ci_approval_timeout", "sha14")],
     }
 
     selected = select_resume_candidates(
@@ -321,9 +323,10 @@ def test_select_resume_candidates_filters_reason_and_head_sha():
         max_candidates=5,
     )
 
-    assert [item["pr_number"] for item in selected] == ["13", "10"]
+    assert [item["pr_number"] for item in selected] == ["13", "10", "14"]
     assert selected[0]["stop_reason"] == "codex_disconnected"
     assert selected[1]["stop_reason"] == "codex_no_response"
+    assert selected[2]["stop_reason"] == "ci_approval_timeout"
 
 
 def test_select_resume_candidates_rejects_third_party_stop_marker():

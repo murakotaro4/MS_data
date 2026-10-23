@@ -357,6 +357,38 @@ def post_recovered_comment(
     )
 
 
+# CI 承認後の完了待ちだけで止まった場合は、翌朝 resume で CI 成功を再確認して回収する。
+RESUMABLE_MERGE_STOP_REASONS = frozenset({"ci_approval_timeout"})
+
+
+def post_merge_stop_comment(
+    *,
+    repo: str,
+    pr_number: str,
+    run_id: str,
+    head_sha: str,
+    reason: str,
+    deps: ReviewDeps,
+) -> None:
+    marker = stop_marker(reason, run_id, head_sha)
+    body = (
+        "CI の実行を承認しましたが、待機時間内に CI の完了を確認できなかったため、"
+        "自動マージを停止しました。翌朝 09:00 JST の自動レスキューで"
+        f"CI 成功を再確認してマージします。 (run_id: {run_id})\n\n{marker}"
+    )
+    deps.run_gh(
+        [
+            "gh",
+            "api",
+            f"repos/{repo}/issues/{pr_number}/comments",
+            "-X",
+            "POST",
+            "-f",
+            f"body={body}",
+        ]
+    )
+
+
 def _merge_failure_summary(result: MergeResult) -> list[str]:
     lines = ["### Merge failed", f"- reason: {result.skip_reason}"]
     if result.pr_state:
@@ -388,7 +420,21 @@ def cmd_merge(args: argparse.Namespace, deps: ReviewDeps) -> int:
         )
         if result.skip_reason == "not_open" and args.skip_if_not_open:
             return 0
-        append_step_summary(_merge_failure_summary(result), args.step_summary)
+        summary = _merge_failure_summary(result)
+        if result.skip_reason in RESUMABLE_MERGE_STOP_REASONS and args.run_id:
+            try:
+                post_merge_stop_comment(
+                    repo=args.repo,
+                    pr_number=args.pr_number,
+                    run_id=args.run_id,
+                    head_sha=args.head_sha,
+                    reason=result.skip_reason,
+                    deps=deps,
+                )
+                summary.append("- resume_marker_posted: true")
+            except Exception as error:
+                summary.append(f"- resume_marker_posted: false ({error})")
+        append_step_summary(summary, args.step_summary)
         return 1
 
     # 通知が失敗しても、確定済みの merge 情報を失わないよう先に出力する。
