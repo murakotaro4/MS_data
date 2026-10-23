@@ -344,8 +344,69 @@ def test_auto_review_merge_workflow_uses_merge_subcommand_once():
         workflow, start="- id: merge", end="- name: Write auto review report"
     )
     assert "--skip-if-not-open" in merge_step
+    assert '--run-id "${{ steps.prepare.outputs.run_id }}"' in merge_step
     assert "gh pr merge" not in workflow
     assert workflow.count("post_merge_notify.yml") == 0
+
+
+@pytest.mark.parametrize(
+    ("reason", "run_id", "posted"),
+    [
+        ("ci_approval_timeout", "111", True),
+        ("ci_approval_timeout", "", False),
+        ("ci_not_success", "111", False),
+    ],
+)
+def test_cmd_merge_posts_resume_marker_only_on_ci_approval_timeout(
+    fake_time, tmp_path, monkeypatch, reason, run_id, posted
+):
+    monkeypatch.setattr(
+        auto_review_merge,
+        "merge_pull_request",
+        lambda **_: auto_review_merge.MergeResult(
+            False, "", "data/auto-update-20260531", reason, "OPEN"
+        ),
+    )
+    calls = []
+    deps = _deps(fake_time, [], calls)
+    args = build_parser().parse_args(_argv(tmp_path, "--run-id", run_id))
+
+    assert cmd_merge(args, deps) == 1
+
+    comments = [c for c in calls if c[1:3] == ["api", "repos/owner/repo/issues/97/comments"]]
+    summary = (tmp_path / "summary.md").read_text(encoding="utf-8")
+    if posted:
+        assert len(comments) == 1
+        assert (
+            "<!-- auto-review-stop reason:ci_approval_timeout "
+            "run_id:111 head_sha:head-sha -->"
+        ) in comments[0][-1]
+        assert "- resume_marker_posted: true" in summary
+    else:
+        assert comments == []
+        assert "resume_marker_posted" not in summary
+
+
+def test_cmd_merge_keeps_failure_when_resume_marker_post_fails(
+    fake_time, tmp_path, monkeypatch
+):
+    monkeypatch.setattr(
+        auto_review_merge,
+        "merge_pull_request",
+        lambda **_: auto_review_merge.MergeResult(
+            False, "", "data/auto-update-20260531", "ci_approval_timeout", "OPEN"
+        ),
+    )
+    calls = []
+    deps = _deps(
+        fake_time, [], calls, fail_on=lambda c: c[1:2] == ["api"] and "/comments" in c[2]
+    )
+    args = build_parser().parse_args(_argv(tmp_path, "--run-id", "111"))
+
+    assert cmd_merge(args, deps) == 1
+    summary = (tmp_path / "summary.md").read_text(encoding="utf-8")
+    assert "- reason: ci_approval_timeout" in summary
+    assert "- resume_marker_posted: false" in summary
 
 
 def test_cli_help_smoke():

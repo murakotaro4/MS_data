@@ -26,6 +26,12 @@ def _get(endpoint: str, deps: ReviewDeps, *, paginate: bool = False) -> Any:
     return gh_api_json(endpoint, runner=deps.run_gh, paginate=paginate)
 
 
+# 承認後の CI 完了待ち（15秒間隔）。GitHub 側で run の完了確定が10分以上
+# 遅れることがあるため、最大15分待つ。
+CI_APPROVAL_POLL_SECONDS = 15
+CI_APPROVAL_MAX_POLLS = 60
+
+
 def _trusted_pull(pull: Any, repo: str, ref: str, sha: str) -> bool:
     if not isinstance(pull, dict):
         return False
@@ -80,7 +86,7 @@ def approve_and_wait_ci(
     deps: ReviewDeps,
     check_only: bool = False,
 ) -> str:
-    """厳格な対象検証後に一度だけ承認し、最大5分CI成功を待つ。"""
+    """厳格な対象検証後に一度だけ承認し、最大15分CI成功を待つ。"""
     match = HEAD_REF_DATE_RE.fullmatch(ref)
     if not match or not pr_number.isdecimal():
         return "ci_not_success"
@@ -147,8 +153,8 @@ def approve_and_wait_ci(
                 f"CI approval denied: https://github.com/{repo}/actions/runs/{run_id}. Approval API requires Actions write and GitHub permission to approve this run; a repository writer must approve workflows if the token is rejected."
             )
             return "ci_approval_denied"
-        for _ in range(20):
-            deps.clock.sleep(15)
+        for _ in range(CI_APPROVAL_MAX_POLLS):
+            deps.clock.sleep(CI_APPROVAL_POLL_SECONDS)
             current = _get(endpoint, deps)
             if not _same_ci(current, repo, ref, sha) or current.get("id") != run_id:
                 return "ci_target_mismatch"

@@ -21,7 +21,9 @@ from ms_data.gh.pr_payload import HEAD_REF_DATE_RE
 if TYPE_CHECKING:
     from ms_data.gh.auto_review_merge import GitHubClient
 
-RESUME_STOP_REASONS = frozenset({"codex_no_response", "codex_disconnected"})
+RESUME_STOP_REASONS = frozenset(
+    {"codex_no_response", "codex_disconnected", "ci_approval_timeout"}
+)
 REVIEW_THREADS_PAGE_SIZE = 100
 REVIEW_THREAD_COMMENTS_PAGE_SIZE = 100
 MAX_REVIEW_THREAD_PAGES = 50
@@ -412,7 +414,8 @@ def select_resume_candidates(
     - open / github-actions[bot] / ``data/auto-update-*`` / base=main / 同一 repo
     - stop マーカーは github-actions[bot] 投稿のみ受理
     - 同一 head_sha の停止マーカーのうち created_at が最新の 1 件で判定
-    - 最新マーカー reason が ``codex_no_response`` / ``codex_disconnected`` のみ候補
+    - 最新マーカー reason が ``codex_no_response`` / ``codex_disconnected`` /
+      ``ci_approval_timeout`` のみ候補
     - report_date 降順で最大 ``max_candidates`` 件
     """
     eligible: list[dict[str, Any]] = []
