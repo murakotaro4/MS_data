@@ -57,6 +57,17 @@ def test_expired_files_are_deleted(tmp_path: Path):
     }
 
 
+@pytest.mark.parametrize(
+    "date", ["20260230", "20250229", "20261301", "00000101", "２０２６０１０１"]
+)
+def test_invalid_report_date_is_ignored(date: str) -> None:
+    assert extract_report_date(Path(f"diff_msdata_{date}.md")) is None
+
+
+def test_valid_leap_day_is_accepted() -> None:
+    assert extract_report_date(Path("diff_msdata_20240229.md")) == "20240229"
+
+
 def test_keep_min_protects_expired_files(tmp_path: Path):
     # 全件期限切れでも keep_min 件は保持される
     _touch_reports(tmp_path, ["20250101", "20250102", "20250103"])
@@ -179,6 +190,55 @@ def test_cli_ignores_dated_directories(
         assert report.read_text(encoding="utf-8") == "report content\n"
     assert directory.is_dir()
     assert marker.read_text(encoding="utf-8") == "directory content\n"
+
+
+@pytest.mark.parametrize("apply", [False, True], ids=["dry-run", "apply"])
+def test_cli_keeps_invalid_dates_without_consuming_keep_min(
+    tmp_path: Path, apply: bool
+) -> None:
+    dates = ["20250101", "20250102", "20261301", "２０２６０１０１"]
+    _touch_reports(tmp_path, dates)
+    manifest = tmp_path / "manifest.json"
+    write_json(
+        manifest, {"entries": [_entry(prune={"max_age_days": 90, "keep_min": 1})]}
+    )
+    command = [
+        sys.executable,
+        "-X",
+        "utf8",
+        "-m",
+        "ms_data.reporting.prune_reports",
+        "--manifest",
+        str(manifest),
+        "--root",
+        str(tmp_path),
+        "--today",
+        "20260610",
+    ]
+    if apply:
+        command.append("--apply")
+    result = subprocess.run(
+        command,
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        encoding="utf-8",
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "- scanned: 2" in result.stdout
+    assert "- delete: 1" in result.stdout
+    for date in dates:
+        report = tmp_path / "reports" / f"diff_msdata_{date}.md"
+        if apply and date == "20250101":
+            assert not report.exists()
+        else:
+            assert report.read_text(encoding="utf-8") == "x"
+
+
+def test_invalid_today_is_still_rejected(tmp_path: Path) -> None:
+    with pytest.raises(ValueError):
+        plan_prune_entry(_entry(), root=tmp_path, today="20260230")
 
 
 def test_symlink_to_regular_report_is_still_planned(tmp_path: Path) -> None:

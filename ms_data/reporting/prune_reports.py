@@ -1,7 +1,7 @@
 """reports_manifest.json の prune 設定に基づき、期限切れレポートを削除する。
 
 - 対象: manifest の entries のうち `prune` を持つエントリの path_patterns
-- ファイル名の `_YYYYMMDD` から日付を判定。日付を持たないファイルは対象外
+- ファイル名の `_YYYYMMDD` から日付を判定。日付なし・無効な日付は対象外
 - 新しい順に `keep_min` 件は期限に関係なく保持
 - 既定は dry-run（計画の表示のみ）。実際に削除するには --apply を指定
 
@@ -38,7 +38,14 @@ class PruneAction:
 
 def extract_report_date(path: Path) -> str | None:
     match = REPORT_DATE_RE.search(path.name)
-    return match.group(1) if match else None
+    if match is None:
+        return None
+    report_date = match.group(1)
+    try:
+        parse_yyyymmdd_jst(report_date)
+    except ValueError:
+        return None
+    return report_date
 
 
 def plan_prune_entry(
