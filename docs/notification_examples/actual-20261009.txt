@@ -4,6 +4,7 @@ msData 定期更新の確認結果
 結果: マージ済み
 公開データの変更あり
 今回のチェックで要確認の項目なし（添付された監査の範囲）。
+msData.json（今回のデータ）: https://github.com/murakotaro4/MS_data/releases/download/raw-snapshot-20261009-run-37806098586/msData.json
 取得元・差分レポート: https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261009-run-37806098586
 詳細レポート: https://github.com/murakotaro4/MS_data/actions/runs/37806098586
 

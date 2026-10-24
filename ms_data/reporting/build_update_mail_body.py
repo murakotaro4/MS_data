@@ -202,6 +202,8 @@ def _optional_bullets(args: argparse.Namespace) -> list[str]:
         lines.append(f"- source_run_id: {args.source_run_id}")
     if args.release_url:
         lines.append(f"- raw snapshot release: {args.release_url}")
+    if args.msdata_url:
+        lines.append(f"- msData.json download: {args.msdata_url}")
     return lines
 
 
@@ -299,6 +301,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--run-id", default="")
     parser.add_argument("--source-run-id", default="")
     parser.add_argument("--release-url", default="")
+    parser.add_argument(
+        "--msdata-url", default="", help="添付の代わりに載せる msData.json の URL"
+    )
     parser.add_argument("--detail-url", default="")
     parser.add_argument("--diff-path", type=_path_arg, default=None)
     parser.add_argument("--rollback-guard-path", type=_path_arg, default=None)
