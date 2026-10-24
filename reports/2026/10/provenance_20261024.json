@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-10-24T13:04:30Z",
+  "report_date": "20261024",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "8e8f2aade03e8b67cebc6603f70f2c59dae75de5"
+  },
+  "github": {
+    "run_id": "40096535002",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "06c953e5687fe170b9dbb78bcfbef9df5b906415f81f73601f788a18d31bbcb5",
+      "size_bytes": 147519,
+      "record_count": 600
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "b62d289df14561d32acf7549d8198d4f297243c2b7af97e559cf1b85c9934337",
+      "size_bytes": 40301,
+      "record_count": 34
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "54d2ee4092fa0108e876b5a32e4e495b8ec12230923c8a3fe8ea00bbb9629116",
+      "size_bytes": 52617,
+      "record_count": 34
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "8c12edb386cb0402c49d4a065d7ea38eb3c0553e9534d6f1f3feffd0d3638d36",
+      "file_count": 32,
+      "size_bytes": 5389324
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "da8cdf6f7dcfb6423a8c9da308c296b109919fd619a2b4f980b5de7ef00c4332",
+      "size_bytes": 2672819,
+      "record_count": 1729
+    },
+    "diff_report": {
+      "path": "reports/2026/10/diff_msdata_20261024.md",
+      "sha256": "075ad03961bcf4f040ec49563c9d3e389f7c5c83c275327efa9d407005ce6902",
+      "size_bytes": 2544
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20261024-run-40096535002",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20261024-run-40096535002",
+    "asset_name": "raw_snapshot_20261024_run40096535002.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261024-run-40096535002"
+  }
+}
