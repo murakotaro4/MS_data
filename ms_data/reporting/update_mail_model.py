@@ -602,6 +602,7 @@ def _technical(facts: dict[str, str], *, has_detail_link: bool) -> list[str]:
             "結果",
             "msData.json変更",
             "raw snapshot release",
+            "msData.json download",
             "candidate_count",
             "fast_path",
             "age_coverage",
@@ -957,11 +958,15 @@ def build_mail_view(body: str) -> MailView:
             )
         )
         action = "対応が必要です。実行結果と監査レポートを確認してください。"
-    links = (
-        [("取得元・差分レポート", facts["raw snapshot release"])]
-        if "raw snapshot release" in facts
-        else []
-    )
+    # msData.json は添付せず、Release アセットへのリンクで渡す。
+    links = [
+        (label, facts[key])
+        for label, key in (
+            ("msData.json（今回のデータ）", "msData.json download"),
+            ("取得元・差分レポート", "raw snapshot release"),
+        )
+        if key in facts
+    ]
     details = [
         ("詳細レポート", line[4:])
         for line in body.splitlines()

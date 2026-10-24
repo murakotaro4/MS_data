@@ -24,7 +24,13 @@ def test_post_merge_notify_builds_mail_body_from_diff_and_guard_reports():
     assert '--html-out "$html_path"' in block
     send = text[text.index("- name: Send merged msData mail") :]
     assert '--html-body "${{ steps.mail_body.outputs.html_path }}"' in send
-    assert '--attach "msData.json"' in send
+    # msData.json は添付せず、Release アセットのリンクを本文に載せる（約3.6MBの添付をやめる）。
+    assert "--attach" not in send
+    assert '--msdata-url "${{ steps.release.outputs.msdata_url }}"' in block
+    release = step_block(text, start="- id: release", end="- id: mail_body")
+    assert 'assets=("$SNAPSHOT_ASSET_PATH" "msData.json")' in release
+    assert 'select(.name == "msData.json")' in release
+    assert "msdata_url=${msdata_url}" in release
 
 
 def test_data_update_no_change_mail_keeps_detection_and_guard_context_only():
