@@ -57,6 +57,7 @@
 - dry-run: `data update` の `workflow_dispatch` で `dry_run=true` を指定すると、取得・監査・artifact 作成まで実行し PR 作成と通知は行いません。
 - 古いPR整理: `cleanup auto update prs` が毎日 20:30 JST に実行され、`keep_days` 超過の open PR を close（head ブランチも削除）。
 - レポート整理: `reports prune` が毎月1日 18:00 JST に実行され、`reports_manifest.json` の `prune`（max_age_days / keep_min）に基づき期限切れレポートの削除 PR を作成します。この PR は自動マージ対象外のため人間がレビューしてマージします。
+  - ファイル名の日付は実在する8桁ASCIIの `YYYYMMDD` だけを整理対象とし、無効な日付のファイルは保持して `keep_min` の対象数にも含めない。無効名による整理全体の停止を防ぐ。影響範囲はレポート名の選別のみで、`--today` の不正入力は引き続きエラーにする。無効名・有効名の混在、閏日、dry-run / --apply をfixtureで検証する（Issue #357）。
 - PRラベル: 自動更新 PR には `data-update` / `rollback-guard` / `official-overrides` / `atwiki-quality` を付与。ラベル名・説明・色の SSOT は `ms_data/gh/repo_labels.py`（`uv run python -m ms_data.gh.repo_labels <names...>` で冪等作成、Issue 通知モジュールも同定義を参照）。
 - reports 運用SSOT: 命名規約・分類・保持方針は `reports_manifest.json` が正。契約検証は `uv run python -m ms_data.validation.validate_report_contract`、生成物検証は `uv run python -m ms_data.tasks validate-generated-reports`。
 - 手動更新レポート: 手動でデータ更新した場合は `reports/YYYY/MM/msdata_update_YYYYMMDD.md` を `reports/msdata_update_template.md` に沿って作成（新規追加機体は主要パラメータを網羅、既存更新は変更前後の値を明記）。
