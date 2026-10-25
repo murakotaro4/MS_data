@@ -300,3 +300,36 @@ def test_explicit_detection_args_take_precedence_over_quality_report(tmp_path):
     assert "読み取り率 100%" in text
     assert "高速選定 無効" in text
     assert "読み取り率低下" not in text
+
+
+def test_merged_mail_links_msdata_instead_of_attaching(tmp_path):
+    url = (
+        "https://github.com/murakotaro4/MS_data/releases/download/"
+        "raw-snapshot-20261024-run-1/msData.json"
+    )
+    out, html = tmp_path / "mail.txt", tmp_path / "mail.html"
+    build_update_mail_body.main(
+        [
+            "--report-date",
+            "20261024",
+            "--result",
+            "マージ済み",
+            "--changed",
+            "true",
+            "--release-url",
+            "https://example.test/release",
+            "--msdata-url",
+            url,
+            "--out",
+            str(out),
+            "--html-out",
+            str(html),
+        ]
+    )
+    text = out.read_text(encoding="utf-8")
+    assert f"msData.json（今回のデータ）: {url}" in text
+    assert text.index("msData.json（今回のデータ）") < text.index(
+        "取得元・差分レポート"
+    )
+    assert "msData.json download" not in text
+    assert f'href="{url}"' in html.read_text(encoding="utf-8")

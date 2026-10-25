@@ -145,7 +145,8 @@ jobs:
             created="true"
           fi
 
-          assets=("$SNAPSHOT_ASSET_PATH")
+          # msData.json はメールに添付せず、この Release のアセットとしてリンクで渡す。
+          assets=("$SNAPSHOT_ASSET_PATH" "msData.json")
           for path in \
             "${{ steps.report.outputs.provenance_asset_path }}" \
             "${{ steps.report.outputs.report_asset_path }}" \
@@ -164,6 +165,12 @@ jobs:
 
           release_url="$(gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" --json url --jq '.url')"
           echo "release_url=${release_url}" >> "$GITHUB_OUTPUT"
+          msdata_url="$(gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" --json assets --jq '.assets[] | select(.name == "msData.json") | .url')"
+          if [[ -z "$msdata_url" ]]; then
+            echo "Release に msData.json がありません: ${tag}" >&2
+            exit 1
+          fi
+          echo "msdata_url=${msdata_url}" >> "$GITHUB_OUTPUT"
           echo "created=${created}" >> "$GITHUB_OUTPUT"
 
       - id: mail_body
@@ -181,6 +188,7 @@ jobs:
             --changed "true" \
             --source-run-id "$SOURCE_RUN_ID" \
             --release-url "${{ steps.release.outputs.release_url }}" \
+            --msdata-url "${{ steps.release.outputs.msdata_url }}" \
             --diff-path "${{ steps.report.outputs.report_path }}" \
             --rollback-guard-path "${{ steps.report.outputs.rollback_guard_path }}" \
             --official-overrides-audit-path "${{ steps.report.outputs.official_overrides_audit_path }}" \
@@ -202,5 +210,4 @@ jobs:
           uv run python -m ms_data.notify.send_gmail \
             --subject-file "${{ steps.mail_body.outputs.subject_path }}" \
             --body "${{ steps.mail_body.outputs.path }}" \
-            --html-body "${{ steps.mail_body.outputs.html_path }}" \
-            --attach "msData.json"
+            --html-body "${{ steps.mail_body.outputs.html_path }}"

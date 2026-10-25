@@ -27,13 +27,20 @@ OPTIONAL_OUTPUTS = (
 
 
 @pytest.mark.parametrize(
-    ("optional_indexes", "existing_release", "upload_failure", "snapshot_exists"),
+    (
+        "optional_indexes",
+        "existing_release",
+        "upload_failure",
+        "snapshot_exists",
+        "msdata_listed",
+    ),
     [
-        ((0, 1, 2, 3, 4), False, False, True),
-        ((0, 2), False, False, True),
-        ((), True, False, True),
-        ((0, 1, 2, 3, 4), False, True, True),
-        ((), True, False, False),
+        ((0, 1, 2, 3, 4), False, False, True, True),
+        ((0, 2), False, False, True, True),
+        ((), True, False, True, True),
+        ((0, 1, 2, 3, 4), False, True, True, True),
+        ((), True, False, False, True),
+        ((), False, False, True, False),
     ],
     ids=[
         "all-assets",
@@ -41,6 +48,7 @@ OPTIONAL_OUTPUTS = (
         "existing-release",
         "upload-failure",
         "missing-snapshot",
+        "missing-msdata-asset",
     ],
 )
 def test_release_upload(
@@ -49,7 +57,10 @@ def test_release_upload(
     existing_release: bool,
     upload_failure: bool,
     snapshot_exists: bool,
+    msdata_listed: bool,
 ) -> None:
+    # msData.json はメールに添付せず、Release アセットとして載せてリンクする。
+    (tmp_path / "msData.json").write_text("[]", encoding="utf-8")
     snapshot = tmp_path / "snapshot with spaces.tar.xz"
     if snapshot_exists:
         snapshot.touch()
@@ -79,7 +90,10 @@ def test_release_upload(
             with open(os.environ['CALLS'], 'a') as stream:
                 stream.write(json.dumps(args) + '\\n')
             if args[:2] == ['release', 'view']:
-                if '--json' in args:
+                if '--json' in args and 'assets' in args:
+                    if os.environ['MSDATA_LISTED'] == '1':
+                        print('https://example.test/download/msData.json')
+                elif '--json' in args:
                     print('https://example.test/release')
                 else:
                     sys.exit(0 if os.environ['EXISTING'] == '1' else 1)
@@ -108,6 +122,7 @@ def test_release_upload(
         "CALLS": str(calls_path),
         "EXISTING": str(int(existing_release)),
         "FAIL_UPLOAD": str(int(upload_failure)),
+        "MSDATA_LISTED": str(int(msdata_listed)),
         "RELEASE_TAG": "test-release",
         "SOURCE_RUN_ID": "123",
         "ARTIFACT_NAME": "raw-snapshot",
@@ -127,7 +142,7 @@ def test_release_upload(
     calls = [json.loads(line) for line in calls_path.read_text().splitlines()]
     uploads = [args for args in calls if args[:2] == ["release", "upload"]]
     assert uploads == [
-        ["release", "upload", "test-release", str(snapshot)]
+        ["release", "upload", "test-release", str(snapshot), "msData.json"]
         + [str(optional[i]) for i in optional_indexes]
         + ["--repo", "example/repo", "--clobber"]
     ]
@@ -138,10 +153,16 @@ def test_release_upload(
         assert result.returncode == 7
         assert output == ""
         assert not any("--json" in args for args in calls)
+    elif not msdata_listed:
+        # リンク先がなければ、添付もリンクもないメールを送らず失敗させる。
+        assert result.returncode == 1
+        assert "Release に msData.json がありません" in result.stderr
+        assert "msdata_url=" not in output
     else:
         assert result.returncode == 0, result.stderr
         assert output == (
             "release_url=https://example.test/release\n"
+            "msdata_url=https://example.test/download/msData.json\n"
             f"created={str(not existing_release).lower()}\n"
         )
 

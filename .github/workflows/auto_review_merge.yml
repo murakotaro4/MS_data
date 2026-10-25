@@ -215,7 +215,8 @@ jobs:
             --github-output "$GITHUB_OUTPUT" \
             --step-summary "$GITHUB_STEP_SUMMARY" \
             --skip-if-not-open \
-            --dispatch-notify true
+            --dispatch-notify true \
+            --run-id "${{ steps.prepare.outputs.run_id }}"
 
       - name: Write auto review report
         if: always() && steps.resolve.outputs.skip == 'false'
