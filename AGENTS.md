@@ -103,7 +103,7 @@
   - PR が open・非 Draft、base が `main`、head が同一リポジトリの `claude/` 始まりのブランチ（`data/auto-update-*` は対象外）、作成者がリポジトリ所有者。
   - 現在の HEAD に対して Codex の終端シグナル（指摘なし受領コメントまたは HEAD 宛てレビュー）があり、未解決の有効な指摘が 0 件（`auto_review_gate.evaluate` と同じ基準。since は `resolve_review_since`）。
   - 同一 HEAD・ブランチの最新 pull_request `ci.yml` が completed/success（`merge_pull_request` の共通 merge 経路。`--match-head-commit` で HEAD を固定し、マージ後に head ブランチを削除）。
-- 停止時: 停止理由を PR にコメントし、ラベルを外してジョブを失敗にする。ゲートを満たしたあとにラベルを付け直せば再判定する。
+- 停止時: API・マージ処理の例外（`error_<例外名>`）を含め、停止理由を PR にコメントし、ラベルを外してジョブを失敗にする。ゲートを満たしたあとにラベルを付け直せば再判定する。
 - 影響範囲: `data/auto-update-*` の自動レビュー・マージ（`auto review merge` / `resume auto review`）には影響しない。`github.token` によるマージのため、main への push で `ci` は起動しない（PR 上の CI 成功をゲートにしている）。
 
 ## Review guidelines

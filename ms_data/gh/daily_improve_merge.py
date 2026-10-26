@@ -108,16 +108,14 @@ def _stop(
     return 1
 
 
-def cmd_merge(args: argparse.Namespace, deps: ReviewDeps) -> int:
-    client = deps.client(args.repo)
-    pull = client.api_json(f"repos/{args.repo}/pulls/{args.pr_number}")
-    if not isinstance(pull, dict):
-        return _stop(args, deps, client, reason="pr_unavailable", head_sha="")
-
+def _gate_and_merge(
+    args: argparse.Namespace, deps: ReviewDeps, client: Any, pull: dict[str, Any]
+) -> tuple[str, str]:
+    """ゲートを判定してマージし、(停止理由, merge commit SHA) を返す。"""
     head_sha = pr_payload.head_sha(pull)
     reason = eligibility_skip_reason(pull, repo=args.repo)
     if reason:
-        return _stop(args, deps, client, reason=reason, head_sha=head_sha)
+        return reason, ""
 
     since = resolve_review_since(
         client=client,
@@ -139,7 +137,7 @@ def cmd_merge(args: argparse.Namespace, deps: ReviewDeps) -> int:
     )
     reason = codex_skip_reason(metrics)
     if reason:
-        return _stop(args, deps, client, reason=reason, head_sha=head_sha)
+        return reason, ""
 
     result = merge_pull_request(
         repo=args.repo,
@@ -149,20 +147,39 @@ def cmd_merge(args: argparse.Namespace, deps: ReviewDeps) -> int:
         deps=deps,
     )
     if not result.merged:
-        return _stop(args, deps, client, reason=result.skip_reason, head_sha=head_sha)
+        return result.skip_reason, ""
+    return "", result.merge_commit_sha
+
+
+def cmd_merge(args: argparse.Namespace, deps: ReviewDeps) -> int:
+    client = deps.client(args.repo)
+    head_sha = ""
+    try:
+        pull = client.api_json(f"repos/{args.repo}/pulls/{args.pr_number}")
+        if not isinstance(pull, dict):
+            reason, merge_commit_sha = "pr_unavailable", ""
+        else:
+            head_sha = pr_payload.head_sha(pull)
+            reason, merge_commit_sha = _gate_and_merge(args, deps, client, pull)
+    except Exception as error:
+        # API・マージの例外でも停止コメントとラベル削除へ進め、付け直しで再判定できるようにする。
+        print(f"Gate or merge error: {error!r}")
+        reason, merge_commit_sha = f"error_{type(error).__name__}", ""
+    if reason:
+        return _stop(args, deps, client, reason=reason, head_sha=head_sha)
 
     write_github_output(
         args.github_output,
         {
             "merged": "true",
-            "merge_commit_sha": result.merge_commit_sha,
+            "merge_commit_sha": merge_commit_sha,
             "skip_reason": "",
         },
     )
     append_step_summary(
         [
             "### Daily improve merge",
-            f"- merged: `{head_sha}` -> `{result.merge_commit_sha}`",
+            f"- merged: `{head_sha}` -> `{merge_commit_sha}`",
         ],
         args.step_summary,
     )

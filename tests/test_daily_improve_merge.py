@@ -1,5 +1,6 @@
 """daily_improve_merge のゲート判定・停止・マージ経路のテスト。"""
 
+import subprocess
 from dataclasses import replace
 
 import pytest
@@ -204,3 +205,43 @@ def test_workflow_runs_only_on_label_from_base_branch():
         ],
     )
     assert "ref:" not in text
+
+
+def test_merge_error_still_stops_with_comment_and_label_removal(tmp_path, fake_gh):
+    fake_gh.repo = REPO
+    fake_gh.responses[f"repos/{REPO}/pulls/368"] = make_pull()
+    deleted: list[str] = []
+    original_api_json = fake_gh.api_json
+
+    def api_json(endpoint, *, method="GET", **kwargs):
+        if method == "DELETE":
+            deleted.append(endpoint)
+            return []
+        return original_api_json(endpoint, method=method, **kwargs)
+
+    fake_gh.api_json = api_json
+
+    def failing_gh(args, **_kwargs):
+        if args[1:3] == ["pr", "merge"]:
+            raise subprocess.CalledProcessError(1, args)
+        return FakeGh(ci_payload=successful_ci_runs(HEAD))(args)
+
+    deps = replace(
+        ReviewDeps.default(),
+        client=lambda _repo: fake_gh,
+        run_gh=failing_gh,
+        collect_metrics=lambda **_kwargs: CLEAN,
+        run_url=lambda: "",
+    )
+    output = tmp_path / "output"
+    code = daily_improve_merge.main(
+        ["--repo", REPO, "--pr-number", "368", "--github-output", str(output)],
+        deps_factory=lambda: deps,
+    )
+
+    assert code == 1
+    assert "skip_reason=error_CalledProcessError" in output.read_text(encoding="utf-8")
+    assert "error_CalledProcessError" in fake_gh.posted_comments[0][1]
+    assert deleted == [
+        f"repos/{REPO}/issues/368/labels/{daily_improve_merge.MERGE_LABEL}"
+    ]
