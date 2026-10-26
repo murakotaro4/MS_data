@@ -1,3 +1,4 @@
+import datetime as dt
 from pathlib import Path
 
 import httpx
@@ -218,3 +219,106 @@ def test_extract_semantic_text_keeps_status_table_when_outer_has_comment_text():
     assert "機体HP" in text
     assert "10000" in text
     assert "コメントだけが変わる領域" not in text
+
+
+# --- get() の各経路（キャッシュ供給・失敗系）---
+
+_URL = "https://example.test/page"
+_BODY = "<html><title>T</title><div id='table_hanyou'><table><tr><th>機体HP</th><td>1</td></tr></table></div></html>"
+
+
+def _cache(tmp_path: Path, handler, **cfg) -> CacheHTTP:
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    return CacheHTTP(client, CacheConfig(root=tmp_path, **cfg))
+
+
+def test_ttl_hit_serves_cache_without_network(tmp_path: Path):
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return _resp(_BODY)
+
+    cache = _cache(tmp_path, handler, ttl_seconds=3600)
+    cache.get(_URL)
+    text, meta = cache.get(_URL)
+
+    assert calls["n"] == 1
+    assert text == _BODY
+    assert meta["semantic_changed"] is False
+    assert cache.stats["cache_hits"] == 1
+
+
+def test_force_ignores_ttl_and_conditional_headers(tmp_path: Path):
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(dict(request.headers))
+        return _resp(_BODY, etag="A")
+
+    _cache(tmp_path, handler, ttl_seconds=3600).get(_URL)
+    forced = _cache(tmp_path, handler, ttl_seconds=3600, force=True)
+    forced.get(_URL)
+
+    assert len(seen) == 2
+    assert "if-none-match" not in seen[1]
+    assert forced.stats["status_200"] == 1
+
+
+def test_no_network_without_cache_raises(tmp_path: Path):
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise AssertionError("ネットワークに出てはならない")
+
+    cache = _cache(tmp_path, handler, no_network=True)
+
+    with pytest.raises(RuntimeError, match="no-network"):
+        cache.get(_URL)
+
+
+def test_serve_from_cache_detects_edited_html(tmp_path: Path):
+    cache = _cache(tmp_path, lambda r: _resp(_BODY), ttl_seconds=3600)
+    cache.get(_URL)
+    html_path, _ = cache._paths(_URL)
+    html_path.write_text(_BODY.replace(">1<", ">2<"), encoding="utf-8")
+
+    _, meta = cache.get(_URL)
+
+    assert meta["semantic_changed"] is True
+
+
+def test_304_without_cached_html_fails(tmp_path: Path):
+    cache = _cache(tmp_path, lambda r: _resp("", status=304))
+
+    with pytest.raises(RuntimeError, match="304"):
+        cache.get(_URL)
+    assert cache.stats["failures"] == 1
+
+
+def test_http_error_counts_failure(tmp_path: Path):
+    cache = _cache(tmp_path, lambda r: _resp("x", status=500))
+
+    with pytest.raises(httpx.HTTPStatusError):
+        cache.get(_URL)
+    assert cache.stats["failures"] == 1
+    assert not cache._paths(_URL)[0].exists()
+
+
+def test_transport_error_counts_failure(tmp_path: Path):
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("boom")
+
+    cache = _cache(tmp_path, handler)
+
+    with pytest.raises(httpx.ConnectError):
+        cache.get(_URL)
+    assert cache.stats["network_requests"] == 1
+    assert cache.stats["failures"] == 1
+
+
+def test_invalid_fetched_at_is_expired_with_warning(tmp_path: Path, capsys):
+    cache = _cache(tmp_path, lambda r: _resp(_BODY), ttl_seconds=3600)
+    now = dt.datetime.now(dt.timezone.utc)
+
+    assert cache._is_ttl_ok({}, now) is False
+    assert cache._is_ttl_ok({"fetched_at": "not-a-date"}, now) is False
+    assert "invalid cache fetched_at" in capsys.readouterr().err
