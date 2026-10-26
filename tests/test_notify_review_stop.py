@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -10,7 +11,10 @@ from ms_data.gh.notify_review_stop import (
     build_notice,
     build_subject,
     finding_cards,
+    load_findings,
+    main,
     notify_review_stop,
+    parse_args,
     reason_label,
     summarize_finding,
 )
@@ -230,3 +234,85 @@ def test_notify_review_stop_returns_nonzero_on_mail_failure():
     )
 
     assert rc == 1
+
+
+def test_unsupported_stop_reason_is_rejected():
+    with pytest.raises(ValueError, match="unsupported stop_reason: bogus"):
+        reason_label("bogus")
+    with pytest.raises(ValueError, match="unsupported stop_reason: bogus"):
+        build_subject(stop_reason="bogus", pr_number=1)
+    with pytest.raises(ValueError, match="unsupported stop_reason: bogus"):
+        build_notice(
+            stop_reason="bogus", pr_url="u", report_date="20260724", run_url="r"
+        )
+    with pytest.raises(ValueError, match="unsupported stop_reason: bogus"):
+        notify_review_stop(
+            stop_reason="bogus",
+            pr_number=1,
+            pr_url="u",
+            report_date="20260724",
+            run_url="r",
+            mail_sender=lambda *_: None,
+        )
+
+
+def test_load_findings_validates_shape(tmp_path: Path):
+    assert load_findings(None) == []
+    path = tmp_path / "findings.json"
+    path.write_text(json.dumps({"path": "x.py"}), encoding="utf-8")
+    with pytest.raises(ValueError, match="must be a list"):
+        load_findings(path)
+    path.write_text(json.dumps(["not-an-object"]), encoding="utf-8")
+    with pytest.raises(ValueError, match="items must be objects"):
+        load_findings(path)
+    path.write_text(json.dumps([{"path": "x.py"}]), encoding="utf-8")
+    assert load_findings(path) == [{"path": "x.py"}]
+
+
+def test_build_notice_date_label_and_link_fallbacks():
+    notice = build_notice(
+        stop_reason="no_response",
+        pr_url="https://example.invalid/pr/1",
+        report_date="manual",
+        run_url="https://example.invalid/run/1",
+    )
+    assert notice.date == "manual"
+    assert notice.links[0] == ("PR", "https://example.invalid/pr/1")
+
+
+def test_parse_args_and_main_send_mail(monkeypatch: pytest.MonkeyPatch):
+    argv = [
+        "--stop-reason",
+        "no_response",
+        "--pr-number",
+        "5",
+        "--pr-url",
+        "https://example.invalid/pr/5",
+        "--report-date",
+        "20260724",
+        "--run-url",
+        "https://example.invalid/run/5",
+    ]
+    args = parse_args(argv)
+    assert (args.stop_reason, args.pr_number, args.findings_json) == (
+        "no_response",
+        5,
+        None,
+    )
+
+    calls: list[dict] = []
+    monkeypatch.setattr(
+        "ms_data.gh.notify_review_stop.notify_review_stop",
+        lambda **kwargs: calls.append(kwargs) or 0,
+    )
+    assert main(argv) == 0
+    assert calls == [
+        {
+            "stop_reason": "no_response",
+            "pr_number": 5,
+            "pr_url": "https://example.invalid/pr/5",
+            "report_date": "20260724",
+            "run_url": "https://example.invalid/run/5",
+            "findings_json": None,
+        }
+    ]
