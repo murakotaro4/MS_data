@@ -28,6 +28,11 @@ LABEL_SPECS: dict[str, LabelSpec] = {
         LabelSpec(
             "pipeline-failure", "Automatic pipeline failure notification", "B60205"
         ),
+        LabelSpec(
+            "daily-improve-merge",
+            "Merge daily improvement PR after re-checking the gate",
+            "0E8A16",
+        ),
     )
 }
 
