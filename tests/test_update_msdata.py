@@ -465,3 +465,154 @@ def test_update_main_does_not_swallow_base_programming_error(
                 "--no-official-overrides",
             ]
         )
+
+
+def test_load_index_url_map_normalizes_names_and_skips_invalid_entries(tmp_path):
+    path = tmp_path / "index.json"
+    path.write_text(
+        json.dumps(
+            [
+                {"name": "ザクII", "url": "https://example.com/zaku2"},
+                {"name": "名前のみ"},
+                {"url": "https://example.com/url-only"},
+                "dict ではない要素",
+            ],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    assert update_msdata.load_index_url_map(path) == {
+        "ザクⅡ": "https://example.com/zaku2"
+    }
+
+
+def test_load_index_url_map_returns_empty_for_missing_broken_or_non_list(tmp_path):
+    assert update_msdata.load_index_url_map(tmp_path / "missing.json") == {}
+
+    broken = tmp_path / "broken.json"
+    broken.write_text("{not json", encoding="utf-8")
+    assert update_msdata.load_index_url_map(broken) == {}
+
+    non_list = tmp_path / "non_list.json"
+    non_list.write_text('{"name": "x"}', encoding="utf-8")
+    assert update_msdata.load_index_url_map(non_list) == {}
+
+
+def test_normalize_record_keeps_existing_wiki_url_and_ignores_non_str_name(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        update_msdata, "INDEX_URL_MAP", {"ザクⅡ": "https://example.com/new"}
+    )
+    kept = update_msdata.normalize_record(
+        {"MS名": "ザクⅡ_LV1", "wiki_url": "https://example.com/old"}
+    )
+    assert kept["wiki_url"] == "https://example.com/old"
+
+    unnamed = update_msdata.normalize_record({"MS名": 123})
+    assert unnamed["MS名"] == 123
+    assert "wiki_url" not in unnamed
+
+
+def test_normalize_record_infers_deployment_from_turn_keys():
+    both = update_msdata.normalize_record(
+        {"旋回_地上_通常時": 40, "旋回_宇宙_通常時": 45}
+    )
+    assert (both["出撃_地上可"], both["出撃_宇宙可"]) == (True, True)
+
+    ground = update_msdata.normalize_record({"旋回_地上_通常時": 40})
+    assert (ground["出撃_地上可"], ground["出撃_宇宙可"]) == (True, False)
+
+    space = update_msdata.normalize_record({"旋回_宇宙_通常時": 45})
+    assert (space["出撃_地上可"], space["出撃_宇宙可"]) == (False, True)
+
+    none = update_msdata.normalize_record({})
+    assert "出撃_地上可" not in none and "出撃_宇宙可" not in none
+
+
+def test_normalize_record_does_not_override_explicit_deployment():
+    rec = update_msdata.normalize_record(
+        {"出撃_宇宙可": True, "旋回_地上_通常時": 40, "旋回_宇宙_通常時": 45}
+    )
+    assert "出撃_地上可" not in rec
+    assert rec["旋回_地上_通常時"] == 40
+
+
+def test_normalize_record_moves_turn_values_to_matching_side():
+    space_only = update_msdata.normalize_record(
+        {
+            "出撃_地上可": False,
+            "出撃_宇宙可": True,
+            "旋回_地上_通常時": 40,
+            "旋回_地上_変形時": 30,
+        }
+    )
+    assert space_only["旋回_宇宙_通常時"] == 40
+    assert space_only["旋回_宇宙_変形時"] == 30
+    assert "旋回_地上_通常時" not in space_only
+    assert "旋回_地上_変形時" not in space_only
+
+    ground_only = update_msdata.normalize_record(
+        {
+            "出撃_地上可": True,
+            "出撃_宇宙可": False,
+            "旋回_宇宙_通常時": 45,
+            "旋回_宇宙_変形時": 35,
+        }
+    )
+    assert ground_only["旋回_地上_通常時"] == 45
+    assert ground_only["旋回_地上_変形時"] == 35
+    assert "旋回_宇宙_通常時" not in ground_only
+
+
+def test_normalize_record_turn_fix_keeps_existing_correct_side_values():
+    rec = update_msdata.normalize_record(
+        {
+            "出撃_地上可": False,
+            "出撃_宇宙可": True,
+            "旋回_宇宙_通常時": 45,
+            "旋回_地上_通常時": 40,
+        }
+    )
+    assert rec["旋回_宇宙_通常時"] == 45
+    assert rec["旋回_地上_通常時"] == 40
+
+
+def test_normalize_record_drops_null_nullable_int_values():
+    key = next(iter(update_msdata.NULLABLE_INT_KEYS))
+    rec = update_msdata.normalize_record({key: None, "HP": 100})
+    assert key not in rec
+    assert rec["HP"] == 100
+
+
+def test_iter_records_from_files_handles_list_dict_and_rejects_scalar(tmp_path):
+    as_list = tmp_path / "list.json"
+    as_list.write_text(
+        json.dumps([{"MS名": "A_LV1"}, "skip"], ensure_ascii=False),
+        encoding="utf-8",
+    )
+    as_dict = tmp_path / "dict.json"
+    as_dict.write_text('{"MS名": "B_LV1"}', encoding="utf-8")
+
+    names = [
+        r["MS名"] for r in update_msdata.iter_records_from_files([as_list, as_dict])
+    ]
+    assert names == ["A_LV1", "B_LV1"]
+
+    scalar = tmp_path / "scalar.json"
+    scalar.write_text("123", encoding="utf-8")
+    with pytest.raises(ValueError, match="Unsupported JSON structure"):
+        list(update_msdata.iter_records_from_files([scalar]))
+
+
+def test_merge_by_msname_last_wins_and_skips_unnamed():
+    merged = update_msdata.merge_by_msname(
+        [
+            {"MS名": "A_LV1", "HP": 1},
+            {"HP": 2},
+            {"MS名": 5, "HP": 3},
+            {"MS名": "A_LV1", "HP": 4},
+        ]
+    )
+    assert merged == {"A_LV1": {"MS名": "A_LV1", "HP": 4}}
