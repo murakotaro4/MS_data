@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-10-30T15:30:19Z",
+  "report_date": "20261031",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "a42a3f1b35e0aa0c0a6496b0cf3291493ada7c33"
+  },
+  "github": {
+    "run_id": "41081230001",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "112d9cb5b451ecc8cae1127a7269154c02b43a731567496d5125293e244e8068",
+      "size_bytes": 147825,
+      "record_count": 601
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "853926a716c4b6caf549ca4e86cd6c985da57a13e334fdde256bb95c27e1043a",
+      "size_bytes": 16192,
+      "record_count": 14
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "034ff0982b76b9200387b60607ce58a433af8729cad08d5d608e35ad84b8e0a0",
+      "size_bytes": 21086,
+      "record_count": 14
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "688955b86ccbf8b3994c5a3a0d93bc67437b4fd8eeb1c05e549d0f97fc631031",
+      "file_count": 22,
+      "size_bytes": 3904406
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "318e03c5d6a9972a756ad9e30401f8df4ece3f7544a0d150537a0f00bb41cb31",
+      "size_bytes": 2674348,
+      "record_count": 1730
+    },
+    "diff_report": {
+      "path": "reports/2026/10/diff_msdata_20261031.md",
+      "sha256": "153224b9c22fdfa67503de41d17ea82fea39c94331135b5accddd4c893c72a05",
+      "size_bytes": 2085
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20261031-run-41081230001",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20261031-run-41081230001",
+    "asset_name": "raw_snapshot_20261031_run41081230001.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261031-run-41081230001"
+  }
+}
