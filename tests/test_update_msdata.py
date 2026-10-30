@@ -580,7 +580,9 @@ def test_normalize_record_turn_fix_keeps_existing_correct_side_values():
 
 
 def test_normalize_record_drops_null_nullable_int_values():
-    key = next(iter(update_msdata.NULLABLE_INT_KEYS))
+    # set の反復順はハッシュ依存で "HP" と衝突し得るため、キーを固定する
+    key = "スピード"
+    assert key in update_msdata.NULLABLE_INT_KEYS
     rec = update_msdata.normalize_record({key: None, "HP": 100})
     assert key not in rec
     assert rec["HP"] == 100
