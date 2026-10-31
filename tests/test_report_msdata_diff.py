@@ -7,6 +7,8 @@ import pytest
 from ms_data.reporting import report_msdata_diff as rmd
 from ms_data.reporting.report_msdata_diff import build_report_lines
 
+from helpers import write_json
+
 
 def test_build_report_lines_golden():
     old = [
@@ -267,18 +269,12 @@ def test_record_table_row_slots_and_fullst():
     assert rmd.record_ms_table_row("A_LV2", {})[0] == "LV2"
 
 
-def _write_json(path, data):
-    import json
-
-    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-
-
 def test_main_writes_report_and_prints_summary(tmp_path, capsys):
     old = tmp_path / "old.json"
     new = tmp_path / "new.json"
     out = tmp_path / "sub" / "diff.md"
-    _write_json(old, [{"MS名": "A_LV1", "HP": 100}])
-    _write_json(new, [{"MS名": "A_LV1", "HP": 120}])
+    write_json(old, [{"MS名": "A_LV1", "HP": 100}])
+    write_json(new, [{"MS名": "A_LV1", "HP": 120}])
 
     rc = rmd.main(
         ["--old", str(old), "--new", str(new), "--out", str(out), "--print-summary"]
@@ -294,8 +290,8 @@ def test_main_without_print_summary_is_silent(tmp_path, capsys):
     old = tmp_path / "old.json"
     new = tmp_path / "new.json"
     out = tmp_path / "diff.md"
-    _write_json(old, [])
-    _write_json(new, [])
+    write_json(old, [])
+    write_json(new, [])
 
     rc = rmd.main(["--old", str(old), "--new", str(new), "--out", str(out)])
 
@@ -306,8 +302,8 @@ def test_main_without_print_summary_is_silent(tmp_path, capsys):
 def test_main_returns_1_when_output_not_writable(tmp_path, capsys):
     old = tmp_path / "old.json"
     new = tmp_path / "new.json"
-    _write_json(old, [])
-    _write_json(new, [])
+    write_json(old, [])
+    write_json(new, [])
     blocker = tmp_path / "blocker"
     blocker.write_text("x", encoding="utf-8")
 
