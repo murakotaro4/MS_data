@@ -257,9 +257,63 @@ def test_append_counter_table_sorts_and_limits():
 
 
 def test_record_table_row_slots_and_fullst():
-    row = rmd.record_table_row("A_LV1", {"近スロット": 1, "中スロット": 2, "遠スロット": 3})
+    row = rmd.record_table_row(
+        "A_LV1", {"近スロット": 1, "中スロット": 2, "遠スロット": 3}
+    )
     assert row[0] == "A\\_LV1"
     assert row[-2] == "1/2/3"
     assert row[-1] == "0"
     assert rmd.record_table_row("A", {})[-2] == ""
     assert rmd.record_ms_table_row("A_LV2", {})[0] == "LV2"
+
+
+def _write_json(path, data):
+    import json
+
+    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+
+
+def test_main_writes_report_and_prints_summary(tmp_path, capsys):
+    old = tmp_path / "old.json"
+    new = tmp_path / "new.json"
+    out = tmp_path / "sub" / "diff.md"
+    _write_json(old, [{"MS名": "A_LV1", "HP": 100}])
+    _write_json(new, [{"MS名": "A_LV1", "HP": 120}])
+
+    rc = rmd.main(
+        ["--old", str(old), "--new", str(new), "--out", str(out), "--print-summary"]
+    )
+
+    assert rc == 0
+    assert out.exists()
+    assert "| LV1 | HP | 100 | 120 |" in out.read_text(encoding="utf-8")
+    assert capsys.readouterr().out.strip() != ""
+
+
+def test_main_without_print_summary_is_silent(tmp_path, capsys):
+    old = tmp_path / "old.json"
+    new = tmp_path / "new.json"
+    out = tmp_path / "diff.md"
+    _write_json(old, [])
+    _write_json(new, [])
+
+    rc = rmd.main(["--old", str(old), "--new", str(new), "--out", str(out)])
+
+    assert rc == 0
+    assert capsys.readouterr().out == ""
+
+
+def test_main_returns_1_when_output_not_writable(tmp_path, capsys):
+    old = tmp_path / "old.json"
+    new = tmp_path / "new.json"
+    _write_json(old, [])
+    _write_json(new, [])
+    blocker = tmp_path / "blocker"
+    blocker.write_text("x", encoding="utf-8")
+
+    rc = rmd.main(
+        ["--old", str(old), "--new", str(new), "--out", str(blocker / "diff.md")]
+    )
+
+    assert rc == 1
+    assert "書き込みに失敗" in capsys.readouterr().err
