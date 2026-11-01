@@ -310,3 +310,104 @@ def test_large_diff_warning_not_fired_for_fast_mode():
     )
 
     assert warnings == []
+
+
+def _write_minimal_inputs(tmp_path):
+    index = tmp_path / "index.json"
+    changed_index = tmp_path / "index_changed.json"
+    changed_meta = tmp_path / "index_changed_meta.json"
+    state = tmp_path / "state.json"
+    details_json = tmp_path / "details.json"
+    details_jsonl = tmp_path / "details.jsonl"
+    current = tmp_path / "current.json"
+    write_json(index, [{"name": "A", "url": "https://example.test/a"}])
+    write_json(changed_index, [{"name": "A", "url": "https://example.test/a"}])
+    write_json(
+        changed_meta,
+        {"candidate_count": 1, "fast_path": True, "reason_counts": {}},
+    )
+    write_json(state, {"items": {}})
+    write_json(details_json, [{"MS名": "A_LV1"}])
+    details_jsonl.write_text('{"MS名":"A_LV1"}\n', encoding="utf-8")
+    write_json(current, [{"MS名": "A_LV1", "HP": 100}])
+    return [
+        "--index", str(index),
+        "--changed-index", str(changed_index),
+        "--changed-meta", str(changed_meta),
+        "--detail-fetch-state", str(state),
+        "--details-json", str(details_json),
+        "--details-jsonl", str(details_jsonl),
+        "--current-msdata", str(current),
+        "--fetch-stats", str(tmp_path / "missing_stats.json"),
+        "--overrides-dir", str(tmp_path / "no_overrides"),
+    ]  # fmt: skip
+
+
+def test_main_writes_report_github_output_and_step_summary(tmp_path, capsys):
+    import json
+
+    from ms_data.reporting.build_atwiki_quality_report import main
+
+    out = tmp_path / "out/report.json"
+    gh_output = tmp_path / "gh_output.txt"
+    summary = tmp_path / "summary.md"
+    rc = main(
+        [
+            "--report-date", "20260531",
+            "--source-run-id", "1",
+            "--out", str(out),
+            "--github-output", str(gh_output),
+            "--step-summary", str(summary),
+            *_write_minimal_inputs(tmp_path),
+        ]
+    )  # fmt: skip
+
+    assert rc == 0
+    report = json.loads(out.read_text(encoding="utf-8"))
+    assert report["detail_fetch"]["attempted_url_count"] >= 0
+    output_lines = gh_output.read_text(encoding="utf-8").splitlines()
+    assert f"warning_count={len(report['warnings'])}" in output_lines
+    assert any(line.startswith("warning_summary=") for line in output_lines)
+    text = summary.read_text(encoding="utf-8")
+    assert "### atwiki 取得品質" in text
+    assert f"- warnings: {len(report['warnings'])}" in text
+    assert "msdata_diff:" in text
+    assert "atwiki quality report:" in capsys.readouterr().out
+
+
+def test_main_step_summary_includes_fetch_totals_and_warnings(tmp_path):
+    from ms_data.reporting.build_atwiki_quality_report import main
+
+    args = _write_minimal_inputs(tmp_path)
+    stats = tmp_path / "stats.json"
+    write_json(
+        stats,
+        {
+            "phases": {},
+            "totals": {
+                "network_requests": 3,
+                "status_200": 2,
+                "status_304": 1,
+                "failures": 0,
+                "body_bytes": 10,
+                "duration_seconds": 1.5,
+            },
+        },
+    )
+    args[args.index("--fetch-stats") + 1] = str(stats)
+    summary = tmp_path / "summary.md"
+    main(
+        [
+            "--report-date", "20260531",
+            "--source-run-id", "1",
+            "--out", str(tmp_path / "r.json"),
+            "--step-summary", str(summary),
+            "--full-diff-warning-count", "0",
+            "--full-update",
+            *args,
+        ]
+    )  # fmt: skip
+
+    text = summary.read_text(encoding="utf-8")
+    assert "- fetch: requests=" in text
+    assert "- warning[" in text
