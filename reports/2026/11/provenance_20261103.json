@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-11-02T19:07:26Z",
+  "report_date": "20261103",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "8de70b91ad91da6cabbb3d7703fc50571dee87ec"
+  },
+  "github": {
+    "run_id": "41506896241",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "c1b18f35b2c5910dc36bcb984a545ae6ad7959bbd1473b2e7aa4f8a740d246db",
+      "size_bytes": 147850,
+      "record_count": 601
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "6b3021eaf3403478fe276c4cc8f81d211fbadba3459e1122fac712c23fe30ebb",
+      "size_bytes": 23701,
+      "record_count": 20
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "f4104dbf78e1255234b4112e68e5b4fa996f09961f60ca72b92006c7aaf5cf56",
+      "size_bytes": 30797,
+      "record_count": 20
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "fd9af4bc7990a5cfe2b8df9a6de96fac1c393b54eb8d447dfee0b72b611482d0",
+      "file_count": 24,
+      "size_bytes": 4246077
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "b0d60dff85ad30bf82731f61766c714a8fe6f99df39e01ca7bd6ae12bc901a73",
+      "size_bytes": 2674350,
+      "record_count": 1730
+    },
+    "diff_report": {
+      "path": "reports/2026/11/diff_msdata_20261103.md",
+      "sha256": "c83f85573b0b8daf9582b76d9df8fe6b927f68bcc4f886df43a5fb89ddf178be",
+      "size_bytes": 2373
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20261103-run-41506896241",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20261103-run-41506896241",
+    "asset_name": "raw_snapshot_20261103_run41506896241.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261103-run-41506896241"
+  }
+}
