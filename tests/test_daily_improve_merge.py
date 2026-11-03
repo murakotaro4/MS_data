@@ -245,3 +245,46 @@ def test_merge_error_still_stops_with_comment_and_label_removal(tmp_path, fake_g
     assert deleted == [
         f"repos/{REPO}/issues/368/labels/{daily_improve_merge.MERGE_LABEL}"
     ]
+
+
+def test_label_is_removed_even_when_stop_comment_fails(tmp_path, fake_gh):
+    fake_gh.repo = REPO
+    fake_gh.responses[f"repos/{REPO}/pulls/368"] = make_pull(draft=True)
+    deleted: list[str] = []
+    original_api_json = fake_gh.api_json
+
+    def api_json(endpoint, *, method="GET", **kwargs):
+        if method == "POST":
+            raise subprocess.CalledProcessError(1, ["gh", "api", endpoint])
+        if method == "DELETE":
+            deleted.append(endpoint)
+            return []
+        return original_api_json(endpoint, method=method, **kwargs)
+
+    fake_gh.api_json = api_json
+    deps = replace(
+        ReviewDeps.default(),
+        client=lambda _repo: fake_gh,
+        collect_metrics=lambda **_kwargs: CLEAN,
+        run_url=lambda: "",
+    )
+    summary = tmp_path / "summary"
+    code = daily_improve_merge.main(
+        [
+            "--repo",
+            REPO,
+            "--pr-number",
+            "368",
+            "--github-output",
+            str(tmp_path / "output"),
+            "--step-summary",
+            str(summary),
+        ],
+        deps_factory=lambda: deps,
+    )
+
+    assert code == 1
+    assert deleted == [
+        f"repos/{REPO}/issues/368/labels/{daily_improve_merge.MERGE_LABEL}"
+    ]
+    assert "- stop_comment: failed" in summary.read_text(encoding="utf-8")

@@ -90,6 +90,7 @@ def _stop(
     write_github_output(args.github_output, {"merged": "false", "skip_reason": reason})
     summary = ["### Daily improve merge stopped", f"- reason: {reason}"]
     if reason not in {"not_open", "label_missing"}:
+        # コメント投稿とラベル削除は独立に試みる（投稿失敗でラベルが残ると再判定できない）。
         try:
             client.post_issue_comment(
                 args.pr_number,
@@ -97,13 +98,16 @@ def _stop(
                     reason=reason, head_sha=head_sha, run_url=deps.run_url()
                 ),
             )
+        except Exception as error:
+            summary.append(f"- stop_comment: failed ({error})")
+        try:
             client.api_json(
                 f"repos/{args.repo}/issues/{args.pr_number}/labels/"
                 f"{quote(MERGE_LABEL, safe='')}",
                 method="DELETE",
             )
         except Exception as error:
-            summary.append(f"- stop_comment: failed ({error})")
+            summary.append(f"- label_removal: failed ({error})")
     append_step_summary(summary, args.step_summary)
     return 1
 
