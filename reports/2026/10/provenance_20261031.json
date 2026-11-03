@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-10-31T14:59:24Z",
+  "report_date": "20261031",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "0e3db230b8c5137f1d443cff40e6e0f1a7685d75"
+  },
+  "github": {
+    "run_id": "41212617548",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "44efeceed420813c3bbfb38c7dc92937b6715c9c67783ca1b35adec8db0f1a52",
+      "size_bytes": 147842,
+      "record_count": 601
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "d29de994e179f7712ebf7b2f60ff26fc69b531a096a440e31d81e67b58cad768",
+      "size_bytes": 9617,
+      "record_count": 8
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "accc6c40f869d2a41c3dff0a6df84c3ca07be41231ff2eb0d34dd78ba8a51faf",
+      "size_bytes": 12381,
+      "record_count": 8
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "74031f21b52241a982be26ecc1fe4f6e4a3d6154b78369b15cdc9cf21be397be",
+      "file_count": 14,
+      "size_bytes": 2759724
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "c7791beb6b0aa3a2b06b51f66ae1b36051faa4a7ddf8612323461fafad9a2063",
+      "size_bytes": 2674348,
+      "record_count": 1730
+    },
+    "diff_report": {
+      "path": "reports/2026/10/diff_msdata_20261031.md",
+      "sha256": "045d1037f08ededffc268957245ee61c355a2ed9d9c737e70aa36d8118cd3792",
+      "size_bytes": 1586
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20261031-run-41212617548",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20261031-run-41212617548",
+    "asset_name": "raw_snapshot_20261031_run41212617548.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261031-run-41212617548"
+  }
+}

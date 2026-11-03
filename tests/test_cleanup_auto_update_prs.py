@@ -315,8 +315,7 @@ def test_fetch_branch_sha_404_is_already_deleted_and_continues(monkeypatch):
     )
     assert results[1].action == "deleted"
     assert any(
-        call[:2] == ["git", "push"] and remaining_branch in call[-1]
-        for call in calls
+        call[:2] == ["git", "push"] and remaining_branch in call[-1] for call in calls
     )
 
 
@@ -435,3 +434,116 @@ def test_push_origin_mismatch_skips_all_candidates_without_push(monkeypatch):
     assert calls.count(["git", "remote", "get-url", "origin"]) == 1
     assert calls.count(["git", "remote", "get-url", "--push", "origin"]) == 1
     assert not any(call[:2] == ["git", "push"] for call in calls)
+
+
+@pytest.mark.parametrize(
+    "func,args",
+    [
+        (cleanup_auto_update_prs.fetch_open_pulls, ("owner/repo",)),
+        (cleanup_auto_update_prs.fetch_all_pulls, ("owner/repo",)),
+        (cleanup_auto_update_prs.fetch_remote_branches, ("owner/repo",)),
+        (cleanup_auto_update_prs.fetch_default_branch, ("owner/repo",)),
+        (cleanup_auto_update_prs.fetch_branch_sha, ("owner/repo", "b")),
+    ],
+)
+def test_fetch_functions_reject_unexpected_response_shape(monkeypatch, func, args):
+    # list を期待する API には object、object を期待する API には list を返す
+    expects_list = func.__name__ in {
+        "fetch_open_pulls",
+        "fetch_all_pulls",
+        "fetch_remote_branches",
+    }
+    payload = {} if expects_list else []
+    monkeypatch.setattr(
+        cleanup_auto_update_prs.gh_json,
+        "gh_api_json",
+        lambda *a, **k: payload,
+    )
+    with pytest.raises(ValueError):
+        func(*args)
+
+
+def test_fetch_branch_sha_without_sha_raises(monkeypatch):
+    monkeypatch.setattr(
+        cleanup_auto_update_prs.gh_json,
+        "gh_api_json",
+        lambda *a, **k: {"object": {}},
+    )
+    with pytest.raises(ValueError, match="no SHA"):
+        cleanup_auto_update_prs.fetch_branch_sha("owner/repo", "b")
+
+
+def test_fetch_default_branch_falls_back_to_main(monkeypatch):
+    monkeypatch.setattr(
+        cleanup_auto_update_prs.gh_json, "gh_api_json", lambda *a, **k: {}
+    )
+    assert cleanup_auto_update_prs.fetch_default_branch("owner/repo") == "main"
+
+
+def test_close_pr_passes_comment_and_delete_branch(monkeypatch):
+    calls = []
+    monkeypatch.setattr(cleanup_auto_update_prs, "run_gh", calls.append)
+    action = cleanup_auto_update_prs.CleanupAction(
+        number=7,
+        head_ref="data/auto-update-20260101",
+        report_date="2026-01-01",
+        age_days=5,
+        action="close",
+        reason="stale_open_pr:5d",
+    )
+    cleanup_auto_update_prs.close_pr("owner/repo", action)
+    (cmd,) = calls
+    assert cmd[:4] == ["gh", "pr", "close", "7"]
+    assert "--delete-branch" in cmd
+    assert "stale_open_pr:5d" in cmd[cmd.index("--comment") + 1]
+
+
+@pytest.mark.parametrize("dry_run", [True, False])
+def test_main_closes_only_when_not_dry_run(monkeypatch, tmp_path, capsys, dry_run):
+    closed = []
+    monkeypatch.setattr(
+        cleanup_auto_update_prs,
+        "fetch_open_pulls",
+        lambda repo: [_pull(1, "data/auto-update-20260101")],
+    )
+    monkeypatch.setattr(
+        cleanup_auto_update_prs, "close_pr", lambda repo, a: closed.append(a.number)
+    )
+    monkeypatch.setattr(
+        cleanup_auto_update_prs, "cleanup_merged_branches", lambda *a, **k: []
+    )
+    summary = tmp_path / "summary.md"
+    argv = [
+        "--repo",
+        "owner/repo",
+        "--today",
+        "20260110",
+        "--step-summary",
+        str(summary),
+    ]
+    if dry_run:
+        argv.append("--dry-run")
+    assert cleanup_auto_update_prs.main(argv) == 0
+    out = capsys.readouterr().out
+    assert closed == ([] if dry_run else [1])
+    assert ("[dry-run] close PR #1" in out) is dry_run
+    assert "### Auto Update PR Cleanup" in summary.read_text(encoding="utf-8")
+
+
+def test_main_keeps_recent_pr(monkeypatch, capsys):
+    monkeypatch.setattr(
+        cleanup_auto_update_prs,
+        "fetch_open_pulls",
+        lambda repo: [_pull(2, "data/auto-update-20260109")],
+    )
+    monkeypatch.setattr(
+        cleanup_auto_update_prs, "close_pr", lambda *a: pytest.fail("must not close")
+    )
+    monkeypatch.setattr(
+        cleanup_auto_update_prs, "cleanup_merged_branches", lambda *a, **k: []
+    )
+    assert (
+        cleanup_auto_update_prs.main(["--repo", "owner/repo", "--today", "20260110"])
+        == 0
+    )
+    assert "keep PR #2" in capsys.readouterr().out
