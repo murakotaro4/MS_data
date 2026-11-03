@@ -14,7 +14,7 @@
     - `validation/`: スキーマ・契約検証（validate_* / verify_snapshot_restore）
     - `audit/`: 監査・巻き戻り検出（audit_* / detect_msdata_rollbacks）
     - `reporting/`: レポート生成・整理（report_msdata_diff / msdata_diff_model / rendering / build_atwiki_quality_report / build_source_excerpt / build_update_mail_body / prune_reports）
-    - `gh/`: GitHub 連携（auto_review_gate / auto_review_merge / cleanup_auto_update_prs / post_merge_assets / notify_failure / notify_override_due / issue_upsert / repo_labels / gh_json / outputs）
+    - `gh/`: GitHub 連携（auto_review_gate / auto_review_merge / daily_improve_merge / cleanup_auto_update_prs / post_merge_assets / notify_failure / notify_override_due / issue_upsert / repo_labels / gh_json / outputs）
     - `notify/`: メール送信（send_gmail）
     - `tasks.py`: 全ターゲットのディスパッチャ（ワークフロー・開発者の共通入口）
   - `tests/`: ユニットテスト
@@ -94,6 +94,17 @@
 - 完了判定は PR の merged / merge commit SHA、auto review run、post merge notify の Release 公開・メール送信処理まで確認する。メール送信成功と端末への配達確認は区別する。修正は Issue → PR → CI → レビューで進め、別件のデータ補正 PR と混在させない。
 - 2026-10-15 の実例: PR #327 の CI run 38746722160 は attempt 1 が action_required、attempt 2 が success。既存ゲート維持のまま auto review run 38746738277 の attempt 2 で復旧した。PR #329 は診断ログのみ追加したもので、承認待ち自体を自動解消する変更ではない。
 - 仕様確認先: [GITHUB_TOKEN](https://docs.github.com/en/actions/concepts/security/github_token)、[Bot-created pull requests can run workflows if approved](https://github.blog/changelog/2026-06-11-bot-created-pull-requests-can-run-workflows-if-approved/)。実際の状態は毎回 GitHub の最新情報を確認する。
+
+### 毎日の改善 PR のマージ（daily improve merge）
+- 背景: Claude の定期ルーティン「毎日の改善」は、Codex 指摘なし・CI 成功を確認したあと自分で `PUT .../pulls/{n}/merge` を実行していた。実行環境（Claude Code の auto mode）の安全分類器は、人間が承認していない PR のマージを「Merge Without Review」として拒否することがあり、2026-10-25 の PR #368 はゲートを満たしたまま手動マージ待ちで止まった。
+- 方針: ルーティンはマージせず、マージ前ゲートを満たした PR にラベル `daily-improve-merge` を付けるだけにする。マージは `daily improve merge`（`.github/workflows/daily_improve_merge.yml`）がゲートを再確認してから `github.token` で行う。
+- 起動: `pull_request_target`（`labeled`）。ラベル名が `daily-improve-merge` のときだけ動く。チェックアウトするのは main のコードだけで、PR 側のコードは実行しない。
+- ゲート（`ms_data/gh/daily_improve_merge.py`、すべて満たしたときだけマージ）:
+  - PR が open・非 Draft、base が `main`、head が同一リポジトリの `claude/` 始まりのブランチ（`data/auto-update-*` は対象外）、作成者がリポジトリ所有者。
+  - 現在の HEAD に対して Codex の終端シグナル（指摘なし受領コメントまたは HEAD 宛てレビュー）があり、未解決の有効な指摘が 0 件（`auto_review_gate.evaluate` と同じ基準。since は `resolve_review_since`）。
+  - 同一 HEAD・ブランチの最新 pull_request `ci.yml` が completed/success（`merge_pull_request` の共通 merge 経路。`--match-head-commit` で HEAD を固定し、マージ後に head ブランチを削除）。
+- 停止時: API・マージ処理の例外（`error_<例外名>`）を含め、停止理由を PR にコメントし、ラベルを外してジョブを失敗にする。ゲートを満たしたあとにラベルを付け直せば再判定する。
+- 影響範囲: `data/auto-update-*` の自動レビュー・マージ（`auto review merge` / `resume auto review`）には影響しない。`github.token` によるマージのため、main への push で `ci` は起動しない（PR 上の CI 成功をゲートにしている）。
 
 ## Review guidelines
 - 自動更新 PR（`data/auto-update-*`）の取得元照合は、PR 本文の「取得元抜粋」と `reports/YYYY/MM/source_excerpt_YYYYMMDD.md` を根拠に行う。atwiki はレビュー環境から直接閲覧できない前提とし、記憶や過去の値だけを根拠に「取得元と一致しない」と指摘しない。

@@ -1,0 +1,42 @@
+name: daily improve merge
+
+# 「毎日の改善」PR にラベルが付いたら、ゲートを再確認してから github.token でマージする。
+# pull_request_target は main 側のワークフローとコードで動く。PR 側のコードは実行しない。
+on:
+  pull_request_target:
+    types: [labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: read
+
+concurrency:
+  group: daily-improve-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    if: github.event.label.name == 'daily-improve-merge'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-uv-env
+
+      - name: Merge daily improvement PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python -m ms_data.gh.daily_improve_merge \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pr-number "${PR_NUMBER}" \
+            --github-output "$GITHUB_OUTPUT" \
+            --step-summary "$GITHUB_STEP_SUMMARY"
