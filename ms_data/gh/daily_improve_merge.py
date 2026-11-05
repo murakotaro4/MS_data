@@ -37,13 +37,18 @@ def _label_names(pull: dict[str, Any]) -> set[str]:
     }
 
 
-def eligibility_skip_reason(pull: dict[str, Any], *, repo: str) -> str:
-    """マージ対象の PR なら空文字、対象外なら停止理由を返す。"""
+def eligibility_skip_reason(
+    pull: dict[str, Any], *, repo: str, require_label: bool = True
+) -> str:
+    """マージ対象の PR なら空文字、対象外なら停止理由を返す。
+
+    自動判定（``require_label=False``）ではラベルを要求しない。
+    """
     if pull.get("state") != "open":
         return "not_open"
     if pull.get("draft") is True:
         return "draft"
-    if MERGE_LABEL not in _label_names(pull):
+    if require_label and MERGE_LABEL not in _label_names(pull):
         return "label_missing"
     if pr_payload.base_ref(pull) != BASE_REF:
         return "base_mismatch"
@@ -89,6 +94,11 @@ def _stop(
     print(f"Merge stopped: reason={reason}")
     write_github_output(args.github_output, {"merged": "false", "skip_reason": reason})
     summary = ["### Daily improve merge stopped", f"- reason: {reason}"]
+    if args.auto:
+        # 自動判定は Codex と CI の両シグナルで何度も起動するため、ゲート未達は
+        # 静かに終えて次のシグナルを待つ。例外だけをジョブ失敗として残す。
+        append_step_summary(summary, args.step_summary)
+        return 1 if reason.startswith("error_") else 0
     if reason not in {"not_open", "label_missing"}:
         # コメント投稿とラベル削除は独立に試みる（投稿失敗でラベルが残ると再判定できない）。
         try:
@@ -117,7 +127,7 @@ def _gate_and_merge(
 ) -> tuple[str, str]:
     """ゲートを判定してマージし、(停止理由, merge commit SHA) を返す。"""
     head_sha = pr_payload.head_sha(pull)
-    reason = eligibility_skip_reason(pull, repo=args.repo)
+    reason = eligibility_skip_reason(pull, repo=args.repo, require_label=not args.auto)
     if reason:
         return reason, ""
 
@@ -198,6 +208,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pr-number", required=True)
     parser.add_argument("--github-output", type=Path, required=True)
     parser.add_argument("--step-summary", type=Path, default=None)
+    parser.add_argument(
+        "--auto",
+        action="store_true",
+        help="Codex / CI 完了で起動する自動判定（ラベル不要、ゲート未達は成功終了）",
+    )
     return parser
 
 

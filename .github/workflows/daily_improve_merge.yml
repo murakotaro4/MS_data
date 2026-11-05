@@ -1,10 +1,19 @@
 name: daily improve merge
 
-# 「毎日の改善」PR にラベルが付いたら、ゲートを再確認してから github.token でマージする。
-# pull_request_target は main 側のワークフローとコードで動く。PR 側のコードは実行しない。
+# 「毎日の改善」PR を、ゲート（Codex 指摘なし・同一 HEAD の CI 成功など）を確認してから
+# github.token でマージする。Codex のコメントと CI 成功の両方で自動判定し、後に終わった
+# 方のシグナルでマージする。ラベル daily-improve-merge による手動起動も残す。
+# どのトリガーも main 側のワークフローとコードで動く。PR 側のコードは実行しない。
 on:
   pull_request_target:
     types: [labeled]
+  # Codex はレビュー完了時（指摘なし・レビュー提出のどちらでも）に自身のサマリーコメントを
+  # 編集するため、edited も購読する。pull_request_review は PR 側の workflow で動くため使わない。
+  issue_comment:
+    types: [created, edited]
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
 
 permissions:
   contents: write
@@ -13,12 +22,22 @@ permissions:
   actions: read
 
 concurrency:
-  group: daily-improve-merge-${{ github.event.pull_request.number }}
+  group: daily-improve-merge-${{ github.event.pull_request.number || github.event.issue.number || github.event.workflow_run.pull_requests[0].number || github.run_id }}
   cancel-in-progress: false
 
 jobs:
   merge:
-    if: github.event.label.name == 'daily-improve-merge'
+    if: >-
+      (github.event_name == 'pull_request_target'
+        && github.event.label.name == 'daily-improve-merge')
+      || (github.event_name == 'issue_comment'
+        && github.event.issue.pull_request
+        && github.event.comment.user.login == 'chatgpt-codex-connector[bot]')
+      || (github.event_name == 'workflow_run'
+        && github.event.workflow_run.event == 'pull_request'
+        && github.event.workflow_run.conclusion == 'success'
+        && startsWith(github.event.workflow_run.head_branch, 'claude/')
+        && github.event.workflow_run.pull_requests[0].number)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -31,12 +50,18 @@ jobs:
       - name: Merge daily improvement PR
         env:
           GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number || github.event.workflow_run.pull_requests[0].number }}
+          AUTO_MODE: ${{ github.event_name != 'pull_request_target' }}
         shell: bash
         run: |
           set -euo pipefail
+          auto_args=()
+          if [[ "${AUTO_MODE}" == "true" ]]; then
+            auto_args=(--auto)
+          fi
           uv run python -m ms_data.gh.daily_improve_merge \
             --repo "${GITHUB_REPOSITORY}" \
             --pr-number "${PR_NUMBER}" \
             --github-output "$GITHUB_OUTPUT" \
-            --step-summary "$GITHUB_STEP_SUMMARY"
+            --step-summary "$GITHUB_STEP_SUMMARY" \
+            "${auto_args[@]}"
