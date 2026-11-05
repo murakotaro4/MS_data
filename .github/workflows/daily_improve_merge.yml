@@ -7,8 +7,10 @@ name: daily improve merge
 on:
   pull_request_target:
     types: [labeled]
+  # Codex はレビュー完了時（指摘なし・レビュー提出のどちらでも）に自身のサマリーコメントを
+  # 編集するため、edited も購読する。pull_request_review は PR 側の workflow で動くため使わない。
   issue_comment:
-    types: [created]
+    types: [created, edited]
   workflow_run:
     workflows: [ci]
     types: [completed]

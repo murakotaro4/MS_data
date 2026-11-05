@@ -100,7 +100,7 @@
 - 2026-11-04: ルーティンによるラベル付与も、同じ安全分類器に拒否された（PR #386）。マージにつながる操作をルーティンにさせる限り止まり得るため、本人の方針（2026-11-05「人のレビューがなくてもマージする」）に従い、ルーティンは PR 作成と Codex 指摘対応までを行い、マージ判断は Actions 側で自動的に行う。
 - 方針: マージは `daily improve merge`（`.github/workflows/daily_improve_merge.yml`）がゲートを確認してから `github.token` で行う。ルーティンはマージもラベル付与もしない。
 - 起動（いずれも main 側のワークフローとコードで動き、PR 側のコードは実行しない）:
-  - 自動判定: Codex（`chatgpt-codex-connector[bot]`）が PR にコメントしたとき（`issue_comment`）と、`claude/` ブランチの pull_request `ci` が成功したとき（`workflow_run`）。Codex と CI のどちらが後に終わっても、その時点でゲートを判定する。ゲート未達（CI 未完了・Codex 未応答・指摘あり等）は何もせず成功終了し、次のシグナルを待つ。
+  - 自動判定: Codex（`chatgpt-codex-connector[bot]`）が PR にコメントを投稿・編集したとき（`issue_comment` の created / edited。Codex はレビュー完了時にサマリーコメントを編集するため、レビュー提出だけで終わった場合もここで拾う。PR 側の workflow で動く `pull_request_review` は使わない）と、`claude/` ブランチの pull_request `ci` が成功したとき（`workflow_run`）。Codex と CI のどちらが後に終わっても、その時点でゲートを判定する。ゲート未達（CI 未完了・Codex 未応答・指摘あり等）は何もせず成功終了し、次のシグナルを待つ。
   - 手動: ラベル `daily-improve-merge` の付与（`pull_request_target` の `labeled`）。停止時は理由を PR にコメントし、ラベルを外してジョブを失敗にする。ゲートを満たしたあとにラベルを付け直せば再判定する。
 - ゲート（`ms_data/gh/daily_improve_merge.py`、すべて満たしたときだけマージ）:
   - PR が open・非 Draft（手動起動ではラベル付き）、base が `main`、head が同一リポジトリの `claude/` 始まりのブランチ（`data/auto-update-*` は対象外）、作成者がリポジトリ所有者。

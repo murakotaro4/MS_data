@@ -206,6 +206,7 @@ def test_workflow_runs_only_on_label_from_base_branch():
         ],
     )
     assert "ref:" not in text
+    assert "\n  pull_request_review:" not in text
 
 
 def test_merge_error_still_stops_with_comment_and_label_removal(tmp_path, fake_gh):
@@ -380,6 +381,7 @@ def test_workflow_auto_triggers_are_limited_to_codex_and_claude_ci():
         text,
         [
             "issue_comment:",
+            "types: [created, edited]",
             "github.event.comment.user.login == 'chatgpt-codex-connector[bot]'",
             "workflow_run:",
             "workflows: [ci]",
