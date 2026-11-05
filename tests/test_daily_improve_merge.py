@@ -53,7 +53,7 @@ class FakeGh:
         raise AssertionError(f"unexpected gh call: {args}")
 
 
-def run(tmp_path, fake_gh, *, pull, gate, ci_payload=None):
+def run(tmp_path, fake_gh, *, pull, gate, ci_payload=None, auto=False):
     fake_gh.responses[f"repos/{REPO}/pulls/368"] = pull
     fake_gh.repo = REPO
     runner = FakeGh(ci_payload=ci_payload or successful_ci_runs(HEAD))
@@ -81,6 +81,7 @@ def run(tmp_path, fake_gh, *, pull, gate, ci_payload=None):
             str(output),
             "--step-summary",
             str(tmp_path / "summary"),
+            *(["--auto"] if auto else []),
         ],
         deps_factory=lambda: deps,
     )
@@ -288,3 +289,102 @@ def test_label_is_removed_even_when_stop_comment_fails(tmp_path, fake_gh):
         f"repos/{REPO}/issues/368/labels/{daily_improve_merge.MERGE_LABEL}"
     ]
     assert "- stop_comment: failed" in summary.read_text(encoding="utf-8")
+
+
+def test_auto_mode_merges_without_label(tmp_path, fake_gh):
+    code, output, runner, _collected = run(
+        tmp_path, fake_gh, pull=make_pull(labels=[]), gate=CLEAN, auto=True
+    )
+
+    assert code == 0
+    assert "merged=true" in output
+    assert any(call[1:3] == ["pr", "merge"] for call in runner.calls)
+
+
+@pytest.mark.parametrize(
+    ("pull_overrides", "gate", "ci_payload", "reason"),
+    [
+        ({}, metrics(stop_reason="no_response"), None, "codex_no_response"),
+        ({}, CLEAN, "[]", "ci_not_found"),
+        (
+            {
+                "head": {
+                    "ref": "data/auto-update-20261105",
+                    "sha": HEAD,
+                    "repo": {"full_name": REPO},
+                }
+            },
+            CLEAN,
+            None,
+            "head_ref_mismatch",
+        ),
+    ],
+)
+def test_auto_mode_waits_quietly_when_gate_not_met(
+    tmp_path, fake_gh, pull_overrides, gate, ci_payload, reason
+):
+    code, output, runner, _collected = run(
+        tmp_path,
+        fake_gh,
+        pull=make_pull(labels=[], **pull_overrides),
+        gate=gate,
+        ci_payload=ci_payload,
+        auto=True,
+    )
+
+    assert code == 0
+    assert f"skip_reason={reason}" in output
+    assert not any(call[1:3] == ["pr", "merge"] for call in runner.calls)
+    assert fake_gh.posted_comments == []
+
+
+def test_auto_mode_error_fails_job_without_comment(tmp_path, fake_gh):
+    fake_gh.repo = REPO
+    fake_gh.responses[f"repos/{REPO}/pulls/368"] = make_pull(labels=[])
+
+    def failing_gh(args, **_kwargs):
+        if args[1:3] == ["pr", "merge"]:
+            raise subprocess.CalledProcessError(1, args)
+        return FakeGh(ci_payload=successful_ci_runs(HEAD))(args)
+
+    deps = replace(
+        ReviewDeps.default(),
+        client=lambda _repo: fake_gh,
+        run_gh=failing_gh,
+        collect_metrics=lambda **_kwargs: CLEAN,
+        run_url=lambda: "",
+    )
+    output = tmp_path / "output"
+    code = daily_improve_merge.main(
+        [
+            "--repo",
+            REPO,
+            "--pr-number",
+            "368",
+            "--github-output",
+            str(output),
+            "--auto",
+        ],
+        deps_factory=lambda: deps,
+    )
+
+    assert code == 1
+    assert "skip_reason=error_CalledProcessError" in output.read_text(encoding="utf-8")
+    assert fake_gh.posted_comments == []
+
+
+def test_workflow_auto_triggers_are_limited_to_codex_and_claude_ci():
+    text = workflow_text("daily_improve_merge.yml")
+
+    assert_contains(
+        text,
+        [
+            "issue_comment:",
+            "github.event.comment.user.login == 'chatgpt-codex-connector[bot]'",
+            "workflow_run:",
+            "workflows: [ci]",
+            "github.event.workflow_run.conclusion == 'success'",
+            "startsWith(github.event.workflow_run.head_branch, 'claude/')",
+            "AUTO_MODE: ${{ github.event_name != 'pull_request_target' }}",
+        ],
+    )
