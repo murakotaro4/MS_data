@@ -145,3 +145,61 @@ def test_validate_generated_reports_rejects_incomplete_field_completeness_report
 
     assert any("- empty_value:" in message for message in messages)
     assert any("## expired" in message for message in messages)
+
+
+def test_validate_reports_returns_empty_when_reports_dir_missing(tmp_path: Path):
+    assert (
+        validate_generated_reports.validate_reports(
+            tmp_path / "none", Path("schema/reports")
+        )
+        == []
+    )
+
+
+def test_validate_reports_reports_missing_schema(tmp_path: Path):
+    reports = tmp_path / "reports"
+    reports.mkdir()
+
+    messages = validate_generated_reports.validate_reports(reports, tmp_path / "s")
+
+    assert any(message.startswith("schema not found:") for message in messages)
+
+
+def test_validate_reports_reports_invalid_json(tmp_path: Path):
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    (reports / "atwiki_quality_20260531.json").write_text("{bad", encoding="utf-8")
+
+    messages = validate_generated_reports.validate_reports(
+        reports, Path("schema/reports")
+    )
+
+    assert any("JSON validation failed" in message for message in messages)
+
+
+def test_validate_reports_rejects_incomplete_source_reports(tmp_path: Path):
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    (reports / "source_excerpt_20260531.md").write_text("# 取得元抜粋\n", encoding="utf-8")
+    (reports / "source_slot_audit_20260531.md").write_text(
+        "# 取得元スロット監査\n", encoding="utf-8"
+    )
+
+    messages = validate_generated_reports.validate_reports(
+        reports, Path("schema/reports")
+    )
+
+    assert any("- excerpt_rows:" in message for message in messages)
+    assert any("- held_record_count:" in message for message in messages)
+
+
+def test_main_returns_exit_code_by_result(tmp_path: Path, capsys):
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    args = ["--reports-dir", str(reports), "--schema-dir", "schema/reports"]
+    assert validate_generated_reports.main(args) == 0
+    assert "OK:" in capsys.readouterr().out
+
+    (reports / "rollback_guard_20260531.md").write_text("x", encoding="utf-8")
+    assert validate_generated_reports.main(args) == 1
+    assert "ERROR:" in capsys.readouterr().err
