@@ -92,3 +92,45 @@ def test_restore_snapshot_main_prints_entries(tmp_path, capsys):
 
 def test_verify_snapshot_restore_round_trip_with_current_contract():
     verify_snapshot_restore.verify(Path("."))
+
+
+@pytest.mark.parametrize("content", ["{}", "[]", "[1]"])
+def test_load_sample_record_rejects_invalid_msdata(tmp_path, content):
+    path = tmp_path / "msData.json"
+    path.write_text(content, encoding="utf-8")
+
+    with pytest.raises(ValueError, match="non-empty JSON array"):
+        verify_snapshot_restore._load_sample_record(path)
+
+
+def test_verify_detects_missing_restored_entries(monkeypatch):
+    monkeypatch.setattr(
+        verify_snapshot_restore, "restore_snapshot", lambda *_args: ["cache/index.json"]
+    )
+
+    with pytest.raises(ValueError, match="missing entries"):
+        verify_snapshot_restore.verify(Path("."))
+
+
+def test_verify_detects_invalid_restored_msdata(monkeypatch):
+    monkeypatch.setattr(
+        verify_snapshot_restore.validate_msdata, "main", lambda _argv: 1
+    )
+
+    with pytest.raises(ValueError, match="did not validate as msData"):
+        verify_snapshot_restore.verify(Path("."))
+
+
+def test_verify_detects_report_contract_failure(monkeypatch):
+    monkeypatch.setattr(
+        verify_snapshot_restore.validate_report_contract, "main", lambda _argv: 1
+    )
+
+    with pytest.raises(ValueError, match="report contract validation failed"):
+        verify_snapshot_restore.verify(Path("."))
+
+
+def test_verify_snapshot_restore_main_reports_ok(capsys):
+    assert verify_snapshot_restore.main(["--root", "."]) == 0
+
+    assert "OK: snapshot restore verification" in capsys.readouterr().out
