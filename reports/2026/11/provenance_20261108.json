@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-11-07T15:23:31Z",
+  "report_date": "20261108",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "633b0d69a9c99359b2ccfb33d68a545c84f26056"
+  },
+  "github": {
+    "run_id": "42386120931",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "fc9901921296197aab193a643b4c83e2de89f46c069ae34082b8c1d8e25e7db5",
+      "size_bytes": 148066,
+      "record_count": 602
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "b8eb1c1b7968f61e00c6135f6c55d1301ae81e1164031d0fc414534b98608e75",
+      "size_bytes": 10459,
+      "record_count": 9
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "cdd7e3a4dee002cd1881798d4b2074c98104c96697aaf12943bce36e222517ba",
+      "size_bytes": 13722,
+      "record_count": 9
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "81d7f6972e638b8b8410dc58edae293fe5dc96b57d9f27d595d8bd03fb419f07",
+      "file_count": 12,
+      "size_bytes": 2383821
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "215e4ffa0990e804f9937fde01f8443b5b7df3534c29718d9cb33847a8de4539",
+      "size_bytes": 2679883,
+      "record_count": 1733
+    },
+    "diff_report": {
+      "path": "reports/2026/11/diff_msdata_20261108.md",
+      "sha256": "be4a4e3a313addf2d195c390e32144e6ce1a65f605dcf64b4f0bf4314ecf0f6f",
+      "size_bytes": 1971
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20261108-run-42386120931",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20261108-run-42386120931",
+    "asset_name": "raw_snapshot_20261108_run42386120931.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261108-run-42386120931"
+  }
+}
