@@ -45,21 +45,21 @@ def test_parse_expands_rowspan_and_categories() -> None:
     records = cp.parse_custom_parts(_full_page())
     assert records[:2] == [
         {
-            "名称": "射撃強化プログラム",
-            "LV": 1,
-            "レア度": 1,
-            "系統": "攻撃系",
-            "出典URL": cp.CUSTOM_PARTS_URL,
+            "name": "射撃強化プログラム",
+            "level": 1,
+            "rarity": 1,
+            "category": "攻撃系",
+            "wiki_url": cp.CUSTOM_PARTS_URL,
         },
         {
-            "名称": "射撃強化プログラム",
-            "LV": 2,
-            "レア度": 2,
-            "系統": "攻撃系",
-            "出典URL": cp.CUSTOM_PARTS_URL,
+            "name": "射撃強化プログラム",
+            "level": 2,
+            "rarity": 2,
+            "category": "攻撃系",
+            "wiki_url": cp.CUSTOM_PARTS_URL,
         },
     ]
-    assert [r["系統"] for r in records] == [
+    assert [r["category"] for r in records] == [
         "攻撃系",
         "攻撃系",
         "防御系",
@@ -67,7 +67,7 @@ def test_parse_expands_rowspan_and_categories() -> None:
         "補助系",
         "特殊系",
     ]
-    assert records[-1]["レア度"] == 3
+    assert records[-1]["rarity"] == 3
 
 
 def test_parse_ignores_tables_without_name_header() -> None:
@@ -138,8 +138,8 @@ def test_parse_rejects_table_without_lv_header() -> None:
 
 
 def test_summarize_changes() -> None:
-    old = [{"名称": "A", "LV": 1, "レア度": 1}, {"名称": "B", "LV": 1, "レア度": 1}]
-    new = [{"名称": "A", "LV": 1, "レア度": 2}, {"名称": "C", "LV": 1, "レア度": 1}]
+    old = [{"name": "A", "level": 1, "rarity": 1}, {"name": "B", "level": 1, "rarity": 1}]
+    new = [{"name": "A", "level": 1, "rarity": 2}, {"name": "C", "level": 1, "rarity": 1}]
     assert cp.summarize_changes(old, new) == {
         "added": ["C LV1"],
         "removed": ["B LV1"],
@@ -173,7 +173,7 @@ def test_main_refuses_sharp_drop(tmp_path: Path) -> None:
     html = tmp_path / "263.html"
     html.write_text(_full_page(), encoding="utf-8")
     out = tmp_path / "custom_parts.json"
-    old = [{"名称": f"P{i}", "LV": 1} for i in range(20)]
+    old = [{"name": f"P{i}", "level": 1} for i in range(20)]
     out.write_text(json.dumps(old), encoding="utf-8")
     assert cp.main(["--html", str(html), "--out", str(out)]) == 1
     assert json.loads(out.read_text(encoding="utf-8")) == old
@@ -231,15 +231,15 @@ def test_validator_reports_schema_and_duplicates(tmp_path: Path) -> None:
         Path("schema/custom_parts.schema.json").read_text(encoding="utf-8")
     )
     rec = {
-        "名称": "A",
-        "LV": 1,
-        "レア度": 1,
-        "系統": "攻撃系",
-        "出典URL": cp.CUSTOM_PARTS_URL,
+        "name": "A",
+        "level": 1,
+        "rarity": 1,
+        "category": "攻撃系",
+        "wiki_url": cp.CUSTOM_PARTS_URL,
     }
-    messages = vcp.validate_custom_parts([rec, dict(rec), {**rec, "LV": 0}], schema)
+    messages = vcp.validate_custom_parts([rec, dict(rec), {**rec, "level": 0}], schema)
     assert any("重複" in m for m in messages)
-    assert any(m.startswith("2/LV") for m in messages)
+    assert any(m.startswith("2/level") for m in messages)
     path = tmp_path / "bad.json"
     path.write_text(json.dumps([rec, rec]), encoding="utf-8")
     assert vcp.main([str(path)]) == 1

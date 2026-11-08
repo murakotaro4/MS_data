@@ -54,7 +54,7 @@
   - `data update` では msData.json の差分がある日だけ `weapons` ステップで更新し、同じ PR に相乗りさせる（`continue-on-error`、失敗時は前回の一覧を維持）。msData.json の差分がない日に取得したページの兵装変化は持ち越されず、月1の全量取得（全ページ再読込）で追いつく。`auto_ci_approval.EXTRA_DATA_FILES` で msData.json と同時の場合のみ CI 自動承認の対象。検証は `validate-weapons`（`ci` に含む）。
 
 ## カスタムパーツ一覧（`data/custom_parts.json`、Issue #375）
-- 配布中の `msData.json` に未使用データを混ぜないため別ファイルで管理する（本人方針 2026-11-08）。1要素 = パーツ1種類の1LV で、`名称`・`LV`・`レア度`（☆の数）・`系統`（攻撃系/防御系/移動系/補助系/特殊系）・`出典URL` を持つ。スキーマは `schema/custom_parts.schema.json`。
+- 配布中の `msData.json` に未使用データを混ぜないため別ファイルで管理する（本人方針 2026-11-08）。1要素 = パーツ1種類の1LV で、`name`（名称）・`level`（LV）・`rarity`（レア度＝☆の数）・`category`（系統: 攻撃系/防御系/移動系/補助系/特殊系）・`wiki_url`（出典URL）を持つ。キー名は `data/weapons.json` と揃えて英語、値はページの表記のまま日本語。スキーマは `schema/custom_parts.schema.json`。
 - 取得元は atwiki pages/263（1ページに全系統）。`uv run python -m ms_data.tasks custom-parts`（`NO_NET` / `FORCE` / `TTL` 対応）で更新し、`validate-custom-parts` で検証する（`ci` にも含む）。
 - 解析は rowspan/colspan を展開して行い、系統見出しの欠落・LV/レア度の書式違い・名称+LV の重複・前回件数の80%未満への急減は、黙って捨てずに失敗として既存ファイルを維持する。
 - 自動更新: `data update` で msData.json に差分がある日だけ1ページ取得し、同じ自動更新 PR に相乗りさせる（パーツのみの差分では PR を作らない。次に msData の差分が出た日に反映される）。失敗は `continue-on-error` で msData 更新を止めず、PR 本文の「カスタムパーツ一覧」に件数・追加/削除/変更数を出す。CI 実行承認の許可ファイルは `ms_data/gh/auto_ci_approval.py` の `EXTRA_DATA_FILES`（msData.json と同時の場合のみ許可）。
