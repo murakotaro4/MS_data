@@ -114,11 +114,16 @@ def parse_custom_parts(
             ) from exc
         found_categories.add(category)
         for row in grid[1:]:
+            if not any(row):
+                continue  # セルのない空行
+            if row[0] == NAME_HEADER:
+                continue  # rowspan 展開後の2段目の見出し行（近/中/遠）
             if len(row) <= max(lv_idx, rarity_idx):
-                continue
+                # 必須セル（LV/レア度）の欠けたデータ行は黙って捨てない
+                raise CustomPartsParseError(
+                    f"{category}/{row[0]}: LV/レア度のセルが欠けた行があります"
+                )
             name, lv_text, rarity_text = row[0], row[lv_idx], row[rarity_idx]
-            if name == NAME_HEADER or lv_text in {"LV", "近", "中", "遠"}:
-                continue  # 2段目の見出し行
             if not name:
                 raise CustomPartsParseError(f"{category}: 名称が空の行があります")
             lv_match = LV_RE.match(lv_text)

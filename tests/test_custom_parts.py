@@ -111,6 +111,17 @@ def test_parse_rejects_unexpected_rows(override: dict[str, str], message: str) -
         cp.parse_custom_parts(_full_page(**override))
 
 
+def test_parse_rejects_row_missing_required_cells() -> None:
+    html = _full_page(特殊系="<tr><th>X</th><td>LV1</td></tr>")
+    with pytest.raises(cp.CustomPartsParseError, match="欠けた"):
+        cp.parse_custom_parts(html)
+
+
+def test_parse_skips_empty_rows() -> None:
+    rows = "<tr></tr><tr><th>X</th><td>LV1</td><td>☆</td><td>0</td><td>0</td><td>0</td><td>x</td></tr>"
+    assert len(cp.parse_custom_parts(_full_page(特殊系=rows))) == 6
+
+
 def test_parse_rejects_missing_category() -> None:
     html = _full_page().replace("<h3>特殊系</h3>", "<h3>その他</h3>")
     with pytest.raises(cp.CustomPartsParseError):
