@@ -374,3 +374,62 @@ def test_weapons_file_is_allowed_only_with_msdata():
         assert not _data_files_only([weapons], date)
     removed = {"filename": "data/weapons.json", "status": "removed"}
     assert not _data_files_only([msdata, removed], date)
+
+
+@pytest.mark.parametrize(
+    "kind,reason",
+    [
+        ("source_failed", "ci_approval_untrusted"),
+        ("source_unknown_status", "ci_approval_untrusted"),
+        ("ci_not_awaiting", "ci_incomplete"),
+        ("ci_changed_id_after_approve", "ci_target_mismatch"),
+    ],
+)
+def test_approve_rejects_unexpected_source_or_ci_state(fake_time, kind, reason):
+    data, deps, calls = scenario(fake_time)
+    if kind == "source_failed":
+        data["source"]["conclusion"] = "failure"
+    elif kind == "source_unknown_status":
+        data["source"]["status"] = "unknown"
+    elif kind == "ci_not_awaiting":
+        data["run"]["conclusion"] = "success"
+    elif kind == "ci_changed_id_after_approve":
+        # 承認後の再取得で別 run ID が返るケース（承認前の確認は通す）
+        original = deps.run_gh
+
+        def runner(args):
+            out = original(args)
+            if args[2].endswith("/approve"):
+                data["response_id"] = 789
+            return out
+
+        deps = replace(deps, run_gh=runner)
+    assert approve(data, deps) == reason
+
+
+def test_cli_returns_1_when_run_id_or_ref_is_invalid(fake_time):
+    data, deps, _ = scenario(fake_time)
+    data["response_id"] = 789
+    assert main(["--repo", REPO, "--run-id", "456"], deps=deps) == 1
+    data, deps, _ = scenario(fake_time)
+    data["run"]["head_branch"] = None
+    assert main(["--repo", REPO, "--run-id", "456"], deps=deps) == 1
+
+
+def test_cli_skips_non_bot_ci_and_ambiguous_pull(fake_time, capsys):
+    data, deps, _ = scenario(fake_time)
+    data["run"]["actor"]["login"] = "someone"
+    assert main(["--repo", REPO, "--run-id", "456"], deps=deps) == 0
+    assert "not a same-repository bot CI" in capsys.readouterr().out
+    data, deps, calls = scenario(fake_time)
+    data["pull"]["user"]["login"] = "someone"
+    assert main(["--repo", REPO, "--run-id", "456"], deps=deps) == 0
+    assert "no unique eligible data PR" in capsys.readouterr().out
+    assert not any(call[2].endswith("/approve") for call in calls)
+
+
+def test_cli_returns_1_on_malformed_api_response(fake_time, capsys):
+    _, deps, _ = scenario(fake_time)
+    deps = replace(deps, run_gh=lambda args: "[1]" if "/pulls?" in args[2] else "{")
+    assert main(["--repo", REPO, "--run-id", "456"], deps=deps) == 1
+    assert "could not validate" in capsys.readouterr().out
