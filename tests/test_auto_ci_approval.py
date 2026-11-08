@@ -358,3 +358,19 @@ def test_extra_data_file_is_allowed_only_with_msdata():
     assert not _data_files_only([msdata, removed], date)
     other = {"filename": "data/other.json", "status": "modified"}
     assert not _data_files_only([msdata, other], date)
+
+
+def test_weapons_file_is_allowed_only_with_msdata():
+    from ms_data.gh.auto_ci_approval import EXTRA_DATA_FILES, _data_files_only
+
+    assert "data/weapons.json" in EXTRA_DATA_FILES
+    date = "20261108"
+    msdata = {"filename": "msData.json", "status": "modified"}
+    parts = {"filename": "data/custom_parts.json", "status": "modified"}
+    for status in ("added", "modified"):
+        weapons = {"filename": "data/weapons.json", "status": status}
+        assert _data_files_only([msdata, weapons], date)
+        assert _data_files_only([msdata, parts, weapons], date)
+        assert not _data_files_only([weapons], date)
+    removed = {"filename": "data/weapons.json", "status": "removed"}
+    assert not _data_files_only([msdata, removed], date)

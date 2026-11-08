@@ -20,6 +20,16 @@ https://raw.githubusercontent.com/murakotaro4/MS_data/main/msData.json
 
 フィールド詳細は [docs/msdata_reference.md](docs/msdata_reference.md)、機械検証は [schema/msData.schema.json](schema/msData.schema.json)。`data/skills*.json` は 2026-08 に廃止しました。過去データは git 履歴を参照してください。
 
+兵装名の一覧（主兵装・副兵装。`msData.json` とは別ファイル）:
+
+```text
+https://raw.githubusercontent.com/murakotaro4/MS_data/main/data/weapons.json
+```
+
+- 形式: JSON 配列（1 行 1 兵装）
+- 1 要素 = 1 機体の 1 兵装。`ms_name`（装備できる機体名＝`MS名` の LV 抜き）・`kind`（主兵装／副兵装）・`category`（主兵装の射撃／格闘、判別できたときのみ）・`name`（ページの表記のまま）・`levels`（ページに載っている LV）・`wiki_url`（出典）
+- 機械検証は [schema/weapons.schema.json](schema/weapons.schema.json)。レア度はページに記載がないため含みません。
+
 Release（`raw-snapshot-*`）は取得時の生 HTML スナップショットと差分レポートの保存先です。`msData.json` 本体は上記 raw URL で取得してください（Release には含まれません）。
 
 ## 出典・免責

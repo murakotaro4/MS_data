@@ -43,6 +43,8 @@ DEFAULT_CHANGED_INDEX_OUT = paths.CHANGED_INDEX_JSON.as_posix()
 DEFAULT_CHANGED_META_OUT = paths.CHANGED_INDEX_META_JSON.as_posix()
 DEFAULT_DETAIL_FETCH_STATE = paths.DETAIL_FETCH_STATE_JSON.as_posix()
 DEFAULT_FIELD_COMPLETENESS_ALLOWLIST = paths.FIELD_COMPLETENESS_ALLOWLIST.as_posix()
+DEFAULT_WEAPONS = paths.WEAPONS_JSON.as_posix()  # WEAPONS
+DEFAULT_WEAPONS_SCHEMA = paths.WEAPONS_SCHEMA.as_posix()  # WEAPONS_SCHEMA
 
 
 # ---------------------------------------------------------------------------
@@ -183,6 +185,7 @@ CI_TARGETS: tuple[str, ...] = (
     "validate-report-contract",
     "validate-generated-reports",
     "validate-official-overrides-schema",
+    "validate-weapons",
     "verify-snapshot-restore",
     "validate-custom-parts",
     "lint",
@@ -233,6 +236,29 @@ def task_validate_custom_parts() -> int:
     return _run_python_module(
         "ms_data.validation.validate_custom_parts",
         _env("CUSTOM_PARTS", paths.CUSTOM_PARTS.as_posix()),
+    )
+
+
+def task_validate_weapons() -> int:
+    """data/weapons.json（兵装名の一覧）のスキーマ・意味検証。"""
+    return _run_python_module(
+        "ms_data.validation.validate_weapons",
+        _env("WEAPONS", DEFAULT_WEAPONS),
+        "--schema",
+        _env("WEAPONS_SCHEMA", DEFAULT_WEAPONS_SCHEMA),
+    )
+
+
+def task_update_weapons() -> int:
+    """取得済みの機体ページ HTML から data/weapons.json を更新する（追加取得なし）。"""
+    return _run_python_module(
+        "ms_data.pipeline.update_weapons",
+        "--index",
+        _env("INDEX_OUT", DEFAULT_INDEX_OUT),
+        "--html-dir",
+        _env("HTML_DIR", DEFAULT_HTML_DIR),
+        "--weapons",
+        _env("WEAPONS", DEFAULT_WEAPONS),
     )
 
 
@@ -851,6 +877,8 @@ TASKS: dict[str, Callable[[], int]] = {
     "audit-field-completeness": task_audit_field_completeness,
     "notify-override-due": task_notify_override_due,
     "validate-official-overrides-schema": task_validate_official_overrides_schema,
+    "validate-weapons": task_validate_weapons,
+    "update-weapons": task_update_weapons,
     "atwiki-quality-report": task_atwiki_quality_report,
     "validate-report-contract": task_validate_report_contract,
     "validate-generated-reports": task_validate_generated_reports,
