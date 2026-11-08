@@ -1,4 +1,4 @@
-"""data/custom_parts.json の構造（JSON Schema）と一意性（名称+LV）を検証する。"""
+"""data/custom_parts.json の構造（JSON Schema）と一意性（name+level）を検証する。"""
 
 from __future__ import annotations
 
@@ -25,9 +25,9 @@ def validate_custom_parts(data: Any, schema: dict[str, Any]) -> list[str]:
     for index, rec in enumerate(data):
         if not isinstance(rec, dict):
             continue
-        key = (rec.get("名称"), rec.get("LV"))
+        key = (rec.get("name"), rec.get("level"))
         if key in seen:
-            messages.append(f"{index}: 名称+LV が重複しています: {key[0]} LV{key[1]}")
+            messages.append(f"{index}: name+level が重複しています: {key[0]} LV{key[1]}")
         seen.add(key)
     return messages
 

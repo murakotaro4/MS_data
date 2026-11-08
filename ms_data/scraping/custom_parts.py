@@ -4,7 +4,8 @@
 取得は1リクエストのみ。各表の直前の h3 見出しを系統として扱う。
 
 出力は msData.json とは別ファイル（配布中の msData.json に未使用データを混ぜないため）。
-1件 = パーツ1種類の1LV で、名称・LV・レア度（☆の数）・系統・出典URLを持つ。
+1件 = パーツ1種類の1LV で、name（名称）・level（LV）・rarity（レア度＝☆の数）・
+category（系統）・wiki_url（出典URL）を持つ。キーは data/weapons.json と同じく英語。
 """
 
 from __future__ import annotations
@@ -142,11 +143,11 @@ def parse_custom_parts(
             seen.add(key)
             records.append(
                 {
-                    "名称": name,
-                    "LV": level,
-                    "レア度": len(rarity_text),
-                    "系統": category,
-                    "出典URL": source_url,
+                    "name": name,
+                    "level": level,
+                    "rarity": len(rarity_text),
+                    "category": category,
+                    "wiki_url": source_url,
                 }
             )
     missing = [c for c in CATEGORIES if c not in found_categories]
@@ -162,7 +163,7 @@ def summarize_changes(
 
     def index(items: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
         return {
-            f"{r.get('名称')} LV{r.get('LV')}": r for r in items if isinstance(r, dict)
+            f"{r.get('name')} LV{r.get('level')}": r for r in items if isinstance(r, dict)
         }
 
     before, after = index(old), index(new)
@@ -231,7 +232,7 @@ def main(argv: list[str] | None = None) -> int:
     out.write_text(
         json.dumps(records, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
-    kinds = len({r["名称"] for r in records})
+    kinds = len({r["name"] for r in records})
     print(
         f"[ok] custom parts: {kinds} 種類 / {len(records)} 件 -> {out} "
         f"(追加 {len(diff['added'])} / 削除 {len(diff['removed'])} / "

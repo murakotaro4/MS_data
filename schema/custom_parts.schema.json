@@ -7,14 +7,14 @@
   "minItems": 1,
   "items": {
     "type": "object",
-    "required": ["名称", "LV", "レア度", "系統", "出典URL"],
+    "required": ["name", "level", "rarity", "category", "wiki_url"],
     "additionalProperties": false,
     "properties": {
-      "名称": {"type": "string", "minLength": 1},
-      "LV": {"type": "integer", "minimum": 1},
-      "レア度": {"type": "integer", "minimum": 1, "maximum": 5, "description": "☆の数"},
-      "系統": {"enum": ["攻撃系", "防御系", "移動系", "補助系", "特殊系"]},
-      "出典URL": {"type": "string", "pattern": "^https://w\\.atwiki\\.jp/battle-operation2/pages/\\d+\\.html$"}
+      "name": {"description": "パーツ名（ページの表記のまま）", "type": "string", "minLength": 1},
+      "level": {"description": "パーツのLV", "type": "integer", "minimum": 1},
+      "rarity": {"description": "レア度（☆の数）", "type": "integer", "minimum": 1, "maximum": 5},
+      "category": {"description": "系統", "enum": ["攻撃系", "防御系", "移動系", "補助系", "特殊系"]},
+      "wiki_url": {"description": "出典ページ", "type": "string", "pattern": "^https://w\\.atwiki\\.jp/battle-operation2/pages/\\d+\\.html$"}
     }
   }
 }
