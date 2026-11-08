@@ -169,12 +169,12 @@ def test_custom_reports_dir_uses_manifest_logical_root(
     monkeypatch.chdir(tmp_path)
     manifest_data = _manifest()
     manifest_data["naming"]["reports_root"] = "logical_reports"
-    manifest_data["naming"][
-        "diff_pattern"
-    ] = "logical_reports/diff_msdata_{report_date}.md"
-    manifest_data["naming"][
-        "provenance_pattern"
-    ] = "logical_reports/provenance_{report_date}.json"
+    manifest_data["naming"]["diff_pattern"] = (
+        "logical_reports/diff_msdata_{report_date}.md"
+    )
+    manifest_data["naming"]["provenance_pattern"] = (
+        "logical_reports/provenance_{report_date}.json"
+    )
     manifest_data["entries"][0]["path_patterns"] = ["logical_reports/diff_msdata_*.md"]
     manifest = Path("reports_manifest.json")
     write_json(manifest, manifest_data)
@@ -327,3 +327,137 @@ def test_data_update_mode_rejects_parent_directory_in_report_pattern(
     )
 
     assert rc == 1
+
+
+def _run(tmp_path: Path, manifest: dict, *args: str) -> int:
+    path = tmp_path / "reports_manifest.json"
+    write_json(path, manifest)
+    return validate_report_contract.main(["--manifest", str(path), *args])
+
+
+def test_auto_review_mode_ok(tmp_path: Path) -> None:
+    rc = _run(
+        tmp_path,
+        _manifest(),
+        "--mode",
+        "auto-review",
+        "--report-date",
+        "20260320",
+        "--head-ref",
+        "data/auto-update-20260320",
+    )
+    assert rc == 0
+
+
+def test_auto_review_mode_requires_head_ref(tmp_path: Path, capsys) -> None:
+    rc = _run(
+        tmp_path, _manifest(), "--mode", "auto-review", "--report-date", "20260320"
+    )
+    assert rc == 1
+    assert "head_ref is required" in capsys.readouterr().err
+
+
+def test_auto_review_mode_rejects_head_ref_mismatch(tmp_path: Path, capsys) -> None:
+    rc = _run(
+        tmp_path,
+        _manifest(),
+        "--mode",
+        "auto-review",
+        "--report-date",
+        "20260320",
+        "--head-ref",
+        "data/auto-update-20260321",
+    )
+    assert rc == 1
+    assert "head_ref mismatch" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("report_date", "message"),
+    [("", "report_date is required"), ("2026-03-20", "must be YYYYMMDD")],
+)
+def test_data_update_mode_rejects_bad_report_date(
+    tmp_path: Path, capsys, report_date: str, message: str
+) -> None:
+    rc = _run(
+        tmp_path,
+        _manifest(),
+        "--mode",
+        "data-update",
+        "--report-date",
+        report_date,
+        "--source-run-id",
+        "1",
+    )
+    assert rc == 1
+    assert message in capsys.readouterr().err
+
+
+def test_data_update_mode_requires_source_run_id(tmp_path: Path, capsys) -> None:
+    rc = _run(
+        tmp_path, _manifest(), "--mode", "data-update", "--report-date", "20260320"
+    )
+    assert rc == 1
+    assert "source_run_id is required" in capsys.readouterr().err
+
+
+def test_data_update_mode_reports_missing_args(tmp_path: Path, capsys) -> None:
+    rc = _run(
+        tmp_path,
+        _manifest(),
+        "--mode",
+        "data-update",
+        "--report-date",
+        "20260320",
+        "--source-run-id",
+        "1",
+    )
+    err = capsys.readouterr().err
+    assert rc == 1
+    for key in (
+        "head_ref",
+        "diff",
+        "provenance",
+        "artifact",
+        "snapshot",
+        "release_tag",
+    ):
+        assert f"{key} is required" in err
+
+
+def test_manifest_shape_rejects_missing_keys_and_empty_entries(
+    tmp_path: Path, capsys
+) -> None:
+    rc = _run(tmp_path, {"entries": []}, "--mode", "ci")
+    err = capsys.readouterr().err
+    assert rc == 1
+    assert "manifest missing keys" in err
+    assert "manifest.entries must be a non-empty list" in err
+
+
+def test_manifest_shape_rejects_missing_and_duplicate_entry_id(
+    tmp_path: Path, capsys
+) -> None:
+    manifest = _manifest()
+    manifest["entries"] = [
+        {"type": "manual"},
+        {"id": "a", "type": "manual"},
+        {"id": "a", "type": "manual"},
+    ]
+    rc = _run(tmp_path, manifest, "--mode", "ci")
+    err = capsys.readouterr().err
+    assert rc == 1
+    assert "entry.id is required" in err
+    assert "entry.id duplicated: a" in err
+
+
+def test_ci_mode_passes_when_reports_dir_missing(tmp_path: Path) -> None:
+    rc = _run(
+        tmp_path,
+        _manifest(),
+        "--mode",
+        "ci",
+        "--reports-dir",
+        str(tmp_path / "nope"),
+    )
+    assert rc == 0
