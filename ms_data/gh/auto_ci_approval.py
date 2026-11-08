@@ -48,7 +48,9 @@ def _trusted_pull(pull: Any, repo: str, ref: str, sha: str) -> bool:
 
 # msData.json と同じ自動更新 PR に相乗りする、msData.json とは別配布のデータファイル。
 # msData.json の差分がある PR に限り、追加・変更を許可する（単独では承認対象にしない）。
-EXTRA_DATA_FILES: frozenset[str] = frozenset({"data/custom_parts.json"})
+EXTRA_DATA_FILES: frozenset[str] = frozenset(
+    {"data/custom_parts.json", "data/weapons.json"}
+)
 
 
 def _data_files_only(files: Any, date: str) -> bool:

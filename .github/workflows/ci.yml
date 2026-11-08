@@ -41,7 +41,7 @@ jobs:
                 case "$path" in
                   # tests/ 配下は fixture 含めコード変更として扱う
                   tests/*) code=true; break ;;
-                  reports/*|msData.json|data/custom_parts.json|*.md) ;;
+                  reports/*|msData.json|data/custom_parts.json|data/weapons.json|*.md) ;;
                   *) code=true; break ;;
                 esac
               done <<< "$changed_files"
@@ -59,6 +59,9 @@ jobs:
 
       - name: Validate custom parts
         run: uv run python -m ms_data.tasks validate-custom-parts
+
+      - name: Validate weapons list
+        run: uv run python -m ms_data.tasks validate-weapons
 
       - name: Validate generated reports
         run: |

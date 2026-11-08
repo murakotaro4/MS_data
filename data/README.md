@@ -8,6 +8,7 @@
 | --- | --- | --- | --- | --- |
 | `field_completeness_allowlist.json` | 手動 | フィールド完全性監査の許容リスト（SSOT） | — | — |
 | `custom_parts.json` | 生成 | カスタムパーツ一覧（名称・LV・レア度・系統・出典URL）。msData.json とは別配布 | `custom-parts` | `custom_parts.schema.json` |
+| `weapons.json` | 生成 | 機体ごとの兵装名（主兵装・副兵装）の一覧。`msData.json` とは別配布 | `update-weapons`（`data update` が自動実行） | `schema/weapons.schema.json` |
 
 ## official_overrides/
 

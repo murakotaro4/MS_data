@@ -16,6 +16,7 @@ SCHEMA_DIR = Path("schema")
 MSDATA_SCHEMA = SCHEMA_DIR / "msData.schema.json"
 OFFICIAL_OVERRIDES_SCHEMA = SCHEMA_DIR / "official_overrides.schema.json"
 CUSTOM_PARTS_SCHEMA = SCHEMA_DIR / "custom_parts.schema.json"
+WEAPONS_SCHEMA = SCHEMA_DIR / "weapons.schema.json"
 REPORT_SCHEMAS_DIR = SCHEMA_DIR / "reports"
 
 CACHE_DIR = Path("cache")
@@ -34,6 +35,8 @@ OFFICIAL_OVERRIDES_DIR = DATA_DIR / "official_overrides"
 FIELD_COMPLETENESS_ALLOWLIST = DATA_DIR / "field_completeness_allowlist.json"
 # カスタムパーツ一覧（msData.json とは別配布。atwiki pages/263 から生成）
 CUSTOM_PARTS = DATA_DIR / "custom_parts.json"
+# 兵装名の一覧（msData.json とは別配布。ms_data.pipeline.update_weapons が生成）
+WEAPONS_JSON = DATA_DIR / "weapons.json"
 
 REPORTS_DIR = Path("reports")
 REPORTS_MANIFEST = Path("reports_manifest.json")

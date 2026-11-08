@@ -278,6 +278,39 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           exit "$status"
 
+      - id: weapons
+        name: Update weapons list
+        # 今回取得した機体ページの HTML（cache/html）だけを読み直し、data/weapons.json の
+        # 該当機体の行を差し替える（atwiki への追加取得なし）。msData.json の差分がある日だけ
+        # 同じ PR に相乗りさせる。解析・検証の失敗は msData 更新を止めず、前回の一覧を維持する。
+        if: steps.changes.outputs.changed == 'true'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          log="$RUNNER_TEMP/weapons.log"
+          if uv run python -m ms_data.pipeline.update_weapons \
+              --index cache/index.json \
+              --html-dir cache/html \
+              --weapons data/weapons.json \
+              --step-summary "$GITHUB_STEP_SUMMARY" > "$log" 2>&1 \
+            && uv run python -m ms_data.tasks validate-weapons >> "$log" 2>&1; then
+            summary="$(grep -m1 '^weapons:' "$log" | sed 's/^weapons: //')"
+            echo "summary=${summary}" >> "$GITHUB_OUTPUT"
+            status=0
+          else
+            git checkout -- data/weapons.json
+            echo "summary=更新失敗（前回の一覧を維持）" >> "$GITHUB_OUTPUT"
+            status=1
+          fi
+          {
+            echo "### 兵装名一覧ログ"
+            echo '```text'
+            cat "$log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
       - id: source_excerpt
         name: Build source excerpt report
         if: steps.changes.outputs.changed == 'true' || steps.official_overrides_audit.outputs.due_count > 0 || steps.source_slots.outputs.finding_count > 0
@@ -497,6 +530,7 @@ jobs:
             - 取得元抜粋: ${{ env.SOURCE_EXCERPT_FILE }}（照合: 不一致 ${{ steps.source_excerpt.outputs.mismatch_count }} 件 / HTMLなし ${{ steps.source_excerpt.outputs.html_missing_count }} 件）
             - LV単位の部分保留件数: ${{ steps.source_slots.outputs.held_record_count }}（対象LV候補のみ不採用・他レコードは通常継続）
             - カスタムパーツ一覧: ${{ steps.custom_parts.outputs.summary || '未実行' }}
+            - 兵装名一覧: ${{ steps.weapons.outputs.summary || '未実行' }}
             - provenance: ${{ env.PROVENANCE_FILE }}
             - source_run_id: ${{ github.run_id }}
             - source_artifact: ${{ env.RAW_ARTIFACT_NAME }}
@@ -512,6 +546,7 @@ jobs:
           add-paths: |
             msData.json
             data/custom_parts.json
+            data/weapons.json
             ${{ env.DIFF_FILE }}
             ${{ env.PROVENANCE_FILE }}
             ${{ env.ROLLBACK_FILE }}

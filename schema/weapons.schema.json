@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/murakotaro4/MS_data/schema/weapons.schema.json",
+  "title": "MS_data weapons",
+  "description": "機体ごとの兵装名（主兵装・副兵装）の一覧。atwiki の機体個別ページから生成する。",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["ms_name", "kind", "name", "levels", "wiki_url"],
+    "additionalProperties": false,
+    "properties": {
+      "ms_name": {
+        "description": "装備できる機体名（msData.json の MS名 から LV を除いたもの。index 表記）",
+        "type": "string",
+        "minLength": 1
+      },
+      "kind": {
+        "description": "兵装の種類",
+        "enum": ["主兵装", "副兵装"]
+      },
+      "category": {
+        "description": "主兵装の区分（ページから判別できたときのみ）",
+        "enum": ["射撃", "格闘"]
+      },
+      "name": {
+        "description": "兵装の表示名（ページの表記のまま）",
+        "type": "string",
+        "minLength": 1
+      },
+      "levels": {
+        "description": "ページに載っている兵装の LV（昇順）",
+        "type": "array",
+        "items": {"type": "integer", "minimum": 1},
+        "uniqueItems": true
+      },
+      "wiki_url": {
+        "description": "出典の機体ページ URL",
+        "type": "string",
+        "pattern": "^https://w\\.atwiki\\.jp/battle-operation2/pages/[0-9]+\\.html$"
+      }
+    }
+  }
+}

@@ -49,6 +49,9 @@
   - fullst（強化リスト）: `[{name, level, points?}]`。「MSレベル毎必要強化値」に数値がある行のみ採用。高Lv未掲載は直前Lvで補完（`points: null`）。「強行出撃」は `-`/空欄でも `points: null` で生成。
   - MS名の正規化: `[]`→`［］`、`II/III`→`Ⅱ/Ⅲ`、`Z/ZZ`→`Ζ/ΖΖ`（ガンダム直前のみ）、`Ｖ`→`V`。
 - PC版のみの機体（index未収載）は例外として維持（監査では msData のみとして残る想定）。
+- 兵装名の一覧（`data/weapons.json`、Issue #374）: `msData.json` とは別配布（受け手が使わないデータを `msData.json` に混ぜないため）。`ms_data/scraping/weapons.py` が機体ページの HTML から主兵装（include された「武器名 | LV | …」表の行見出し）と副兵装（「LV | …」表またはシールドの「（空） | LV1 | …」表が続く見出し）を、見出しの文言ではなく表の形で判別して抜き出す（「主兵装」「副兵装」の h2 が欠けるページがあるため）。範囲は `#pagetitle` 以降、h2「スキル情報」「強化リスト情報」「備考」の手前まで。キーは `ms_name`（index の `name`）/ `kind` / `category`（射撃・格闘、判別時のみ）/ `name`（ページ表記のまま）/ `levels` / `wiki_url`。レア度はページに無いため持たない。
+  - 更新: `ms_data/pipeline/update_weapons.py`（`update-weapons`）が `cache/html` にある機体ページだけを読み直して該当機体の行を差し替え、HTML が無い機体は既存の行を残す（atwiki への追加取得なし）。兵装を1件も読めなかったページ・200 以外のページは既存の行を維持。index から消えた機体は削除するが、既存機体数の 5%（最低5件）を超える場合は解析欠けとみなして削除を見送る。
+  - `data update` では msData.json の差分がある日だけ `weapons` ステップで更新し、同じ PR に相乗りさせる（`continue-on-error`、失敗時は前回の一覧を維持）。msData.json の差分がない日に取得したページの兵装変化は持ち越されず、月1の全量取得（全ページ再読込）で追いつく。`auto_ci_approval.EXTRA_DATA_FILES` で msData.json と同時の場合のみ CI 自動承認の対象。検証は `validate-weapons`（`ci` に含む）。
 
 ## カスタムパーツ一覧（`data/custom_parts.json`、Issue #375）
 - 配布中の `msData.json` に未使用データを混ぜないため別ファイルで管理する（本人方針 2026-11-08）。1要素 = パーツ1種類の1LV で、`名称`・`LV`・`レア度`（☆の数）・`系統`（攻撃系/防御系/移動系/補助系/特殊系）・`出典URL` を持つ。スキーマは `schema/custom_parts.schema.json`。
