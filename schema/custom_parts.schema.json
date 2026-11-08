@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/murakotaro4/MS_data/schema/custom_parts.schema.json",
+  "title": "MS_data custom_parts",
+  "description": "atwiki カスタムパーツ一覧（pages/263）から生成するパーツ一覧。1要素 = パーツ1種類の1LV。",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "required": ["名称", "LV", "レア度", "系統", "出典URL"],
+    "additionalProperties": false,
+    "properties": {
+      "名称": {"type": "string", "minLength": 1},
+      "LV": {"type": "integer", "minimum": 1},
+      "レア度": {"type": "integer", "minimum": 1, "maximum": 5, "description": "☆の数"},
+      "系統": {"enum": ["攻撃系", "防御系", "移動系", "補助系", "特殊系"]},
+      "出典URL": {"type": "string", "pattern": "^https://w\\.atwiki\\.jp/battle-operation2/pages/\\d+\\.html$"}
+    }
+  }
+}

@@ -6,6 +6,7 @@ JSON Schema とレポート契約スキーマの置き場です。検証は `uv 
 | --- | --- | --- |
 | `msData.schema.json` | `msData.json` | `validate` / `validate-strict` |
 | `official_overrides.schema.json` | `data/official_overrides/*.json` | `validate-official-overrides-schema` |
+| `custom_parts.schema.json` | `data/custom_parts.json` | `validate-custom-parts`（名称+LV の重複も検査） |
 | `reports_manifest.schema.json` | `reports_manifest.json` | `validate-report-contract`（JSON Schema を直接使用せず手書き検証） |
 | `reports/atwiki_quality.schema.json` | `reports/atwiki_quality_*.json` | `validate-generated-reports` |
 | `reports/provenance.schema.json` | `reports/provenance_*.json` | `validate-generated-reports` |
