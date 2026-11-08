@@ -184,6 +184,7 @@ CI_TARGETS: tuple[str, ...] = (
     "validate-generated-reports",
     "validate-official-overrides-schema",
     "verify-snapshot-restore",
+    "validate-custom-parts",
     "lint",
     "test-cov",
     "validate-strict",
@@ -225,6 +226,13 @@ def task_validate_official_overrides_schema() -> int:
         _env("OFFICIAL_OVERRIDES_DIR", DEFAULT_OVERRIDES_DIR),
         "--schema",
         _env("OFFICIAL_OVERRIDES_SCHEMA", DEFAULT_OFFICIAL_OVERRIDES_SCHEMA),
+    )
+
+
+def task_validate_custom_parts() -> int:
+    return _run_python_module(
+        "ms_data.validation.validate_custom_parts",
+        _env("CUSTOM_PARTS", paths.CUSTOM_PARTS.as_posix()),
     )
 
 
@@ -340,6 +348,18 @@ def task_scrape_details() -> int:
             ttl=_env("TTL", DEFAULT_TTL),
             changed_only=_env_flag("CHANGED_ONLY"),
         )
+    )
+
+
+def task_custom_parts() -> int:
+    """カスタムパーツ一覧（1ページ）を取得し data/custom_parts.json を更新する。"""
+    return _run_python_module(
+        "ms_data.scraping.custom_parts",
+        "--out",
+        _env("CUSTOM_PARTS", paths.CUSTOM_PARTS.as_posix()),
+        "--ttl",
+        _env("TTL", DEFAULT_TTL),
+        *_network_flags(),
     )
 
 
@@ -813,6 +833,8 @@ TASKS: dict[str, Callable[[], int]] = {
     "scrape-index": task_scrape_index,
     "scrape-details": task_scrape_details,
     "scrape-all": task_scrape_all,
+    "custom-parts": task_custom_parts,
+    "validate-custom-parts": task_validate_custom_parts,
     "detect-changed": task_detect_changed,
     "update-fast": task_update_fast,
     "import-details": task_import_details,

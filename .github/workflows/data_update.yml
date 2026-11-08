@@ -250,6 +250,34 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - id: custom_parts
+        name: Update custom parts list
+        # msData.json の差分がある日だけ1ページ取得し、同じ PR に相乗りさせる。
+        # 取得・解析・検証の失敗は msData 更新を止めず、前回の一覧を維持する。
+        if: steps.changes.outputs.changed == 'true'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          log="$RUNNER_TEMP/custom_parts.log"
+          if uv run python -m ms_data.tasks custom-parts > "$log" 2>&1 \
+            && uv run python -m ms_data.tasks validate-custom-parts >> "$log" 2>&1; then
+            summary="$(grep -m1 '^\[ok\] custom parts:' "$log" | sed 's/^\[ok\] custom parts: //; s/ -> [^ ]* / /')"
+            echo "summary=${summary}" >> "$GITHUB_OUTPUT"
+            status=0
+          else
+            git checkout -- data/custom_parts.json
+            echo "summary=取得失敗（前回の一覧を維持）" >> "$GITHUB_OUTPUT"
+            status=1
+          fi
+          {
+            echo "### カスタムパーツ一覧"
+            echo '```text'
+            cat "$log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
       - id: source_excerpt
         name: Build source excerpt report
         if: steps.changes.outputs.changed == 'true' || steps.official_overrides_audit.outputs.due_count > 0 || steps.source_slots.outputs.finding_count > 0
@@ -468,6 +496,7 @@ jobs:
             - 取得元スロット監査: ${{ env.SOURCE_SLOT_REPORT_OUT }}
             - 取得元抜粋: ${{ env.SOURCE_EXCERPT_FILE }}（照合: 不一致 ${{ steps.source_excerpt.outputs.mismatch_count }} 件 / HTMLなし ${{ steps.source_excerpt.outputs.html_missing_count }} 件）
             - LV単位の部分保留件数: ${{ steps.source_slots.outputs.held_record_count }}（対象LV候補のみ不採用・他レコードは通常継続）
+            - カスタムパーツ一覧: ${{ steps.custom_parts.outputs.summary || '未実行' }}
             - provenance: ${{ env.PROVENANCE_FILE }}
             - source_run_id: ${{ github.run_id }}
             - source_artifact: ${{ env.RAW_ARTIFACT_NAME }}
@@ -482,6 +511,7 @@ jobs:
             atwiki-quality
           add-paths: |
             msData.json
+            data/custom_parts.json
             ${{ env.DIFF_FILE }}
             ${{ env.PROVENANCE_FILE }}
             ${{ env.ROLLBACK_FILE }}

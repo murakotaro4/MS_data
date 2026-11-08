@@ -46,6 +46,11 @@ def _trusted_pull(pull: Any, repo: str, ref: str, sha: str) -> bool:
     )
 
 
+# msData.json と同じ自動更新 PR に相乗りする、msData.json とは別配布のデータファイル。
+# msData.json の差分がある PR に限り、追加・変更を許可する（単独では承認対象にしない）。
+EXTRA_DATA_FILES: frozenset[str] = frozenset({"data/custom_parts.json"})
+
+
 def _data_files_only(files: Any, date: str) -> bool:
     if not isinstance(files, list) or not files:
         return False
@@ -60,9 +65,14 @@ def _data_files_only(files: Any, date: str) -> bool:
         "source_slot_audit": "md",
         "source_excerpt": "md",
     }
-    allowed = {"msData.json"} | {
-        f"{prefix}{stem}_{date}.{extension}" for stem, extension in extensions.items()
-    }
+    allowed = (
+        {"msData.json"}
+        | EXTRA_DATA_FILES
+        | {
+            f"{prefix}{stem}_{date}.{extension}"
+            for stem, extension in extensions.items()
+        }
+    )
     has_data = any(
         (isinstance(f, dict) and f.get("filename") == "msData.json" for f in files)
     )

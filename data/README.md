@@ -7,6 +7,7 @@
 | ファイル | 生成 or 手動 | 役割 | 生成ターゲット | 対応スキーマ |
 | --- | --- | --- | --- | --- |
 | `field_completeness_allowlist.json` | 手動 | フィールド完全性監査の許容リスト（SSOT） | — | — |
+| `custom_parts.json` | 生成 | カスタムパーツ一覧（名称・LV・レア度・系統・出典URL）。msData.json とは別配布 | `custom-parts` | `custom_parts.schema.json` |
 
 ## official_overrides/
 

@@ -342,3 +342,19 @@ def test_no_merge_when_approval_or_ci_does_not_succeed(
     assert outcome.skip_reason == reason
     assert sum((call[2].endswith("/approve") for call in calls)) == 1
     assert not any((call[1:3] == ["pr", "merge"] for call in calls))
+
+
+def test_extra_data_file_is_allowed_only_with_msdata():
+    from ms_data.gh.auto_ci_approval import EXTRA_DATA_FILES, _data_files_only
+
+    assert "data/custom_parts.json" in EXTRA_DATA_FILES
+    date = "20261108"
+    msdata = {"filename": "msData.json", "status": "modified"}
+    for status in ("added", "modified"):
+        parts = {"filename": "data/custom_parts.json", "status": status}
+        assert _data_files_only([msdata, parts], date)
+        assert not _data_files_only([parts], date)
+    removed = {"filename": "data/custom_parts.json", "status": "removed"}
+    assert not _data_files_only([msdata, removed], date)
+    other = {"filename": "data/other.json", "status": "modified"}
+    assert not _data_files_only([msdata, other], date)
