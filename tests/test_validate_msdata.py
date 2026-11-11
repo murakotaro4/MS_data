@@ -226,3 +226,105 @@ def test_validate_msdata_main_fails_on_invalid_fullst_points(tmp_path):
         ],
     )
     assert vm.main([str(path)]) == 1
+
+
+def test_validate_msdata_main_rejects_non_array_top_level(tmp_path, capsys):
+    path = tmp_path / "msData.json"
+    write_json(path, {"MS名": "テスト機_LV1"})
+
+    assert vm.main([str(path)]) == 2
+    assert "top-level must be an array" in capsys.readouterr().err
+
+
+def test_validate_msdata_main_reports_duplicate_ms_names(tmp_path, capsys):
+    path = tmp_path / "msData.json"
+    write_json(
+        path,
+        [make_record("重複機_LV1"), make_record("重複機_LV1"), make_record("別機_LV1")],
+    )
+
+    assert vm.main([str(path)]) == 1
+    captured = capsys.readouterr()
+    assert "Duplicate MS名 detected:" in captured.err
+    assert "  - 重複機_LV1: 2" in captured.err
+    assert "別機_LV1" not in captured.err
+    assert "OK: validated" not in captured.out
+
+
+def test_find_duplicate_names_ignores_non_string_names():
+    records = [{"MS名": 1}, {"MS名": 1}, {}, {}, {"MS名": "A_LV1"}]
+    assert vm.find_duplicate_names(records) == {}
+
+
+def test_find_typos_counts_alias_keys_per_record():
+    records = [
+        {"射撃補則": 1, "旋回_通常時_地上": 60},
+        {"射撃補則": 2},
+        {"射撃補正": 3},
+    ]
+    assert vm.find_typos(records) == {"射撃補則": 2, "旋回_通常時_地上": 1}
+
+
+def _write_schema_allowing(tmp_path, key):
+    """指定キーを許容キーに加えたスキーマを書き出す（別名検出だけを切り分ける用）。"""
+    schema = vm.load_json(vm.SCHEMA_PATH)
+    schema["items"]["properties"][key] = {}
+    schema_path = tmp_path / "schema.json"
+    write_json(schema_path, schema)
+    return schema_path
+
+
+def test_validate_msdata_main_warns_on_alias_key_without_failing(tmp_path, capsys):
+    schema_path = _write_schema_allowing(tmp_path, "射撃補則")
+    path = tmp_path / "msData.json"
+    write_json(path, [make_record(射撃補則=10)])
+
+    assert vm.main([str(path), "--schema", str(schema_path)]) == 0
+    captured = capsys.readouterr()
+    assert "Alias keys (typos) found:" in captured.err
+    assert "  - 射撃補則 -> 射撃補正: 1" in captured.err
+    assert "OK: validated 1 records" in captured.out
+
+
+def test_validate_msdata_main_fails_on_alias_key_with_fail_on_typo(tmp_path, capsys):
+    schema_path = _write_schema_allowing(tmp_path, "射撃補則")
+    path = tmp_path / "msData.json"
+    write_json(path, [make_record(射撃補則=10)])
+
+    argv = [str(path), "--schema", str(schema_path), "--fail-on-typo"]
+    assert vm.main(argv) == 1
+    captured = capsys.readouterr()
+    assert "  - 射撃補則 -> 射撃補正: 1" in captured.err
+    assert "OK: validated" not in captured.out
+
+
+def test_find_semantic_errors_skips_non_dict_fullst_items():
+    errors = vm.find_semantic_errors(
+        [
+            make_record(
+                fullst=[
+                    "broken",
+                    {"name": "AD-PA", "level": 1, "points": 100},
+                    None,
+                    {"name": "AD-PA", "level": 1, "points": 100},
+                ]
+            )
+        ]
+    )
+    assert errors == [
+        "テスト機_LV1: duplicated fullst entry detected (AD-PA, level=1, points=100)"
+    ]
+
+
+def test_find_semantic_errors_detects_space_sortie_turn_contradiction():
+    errors = vm.find_semantic_errors(
+        [
+            make_record(
+                出撃_地上可=True,
+                出撃_宇宙可=False,
+                旋回_地上_通常時=75,
+                旋回_宇宙_変形時=70,
+            )
+        ]
+    )
+    assert errors == ["テスト機_LV1: space sortie is false but space turn values exist"]
