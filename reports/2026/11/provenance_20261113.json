@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-11-12T17:19:36Z",
+  "report_date": "20261113",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "39f62646349b6cf6e43cc650a7842851ccc95ae0"
+  },
+  "github": {
+    "run_id": "43268120511",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "437abccf1e892187e5e3ae88f80cfaeafa929f0a8892df4b982e0522bdfbd6fc",
+      "size_bytes": 148319,
+      "record_count": 603
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "1d53b745d97a2d4db444c49834839acbcc7295d758e921e0339a2a5cdc98fadf",
+      "size_bytes": 29920,
+      "record_count": 26
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "5e7ddcc30c24071bb5e677ace00eeb132038c1a767b8ed46c202d76f4e8138f5",
+      "size_bytes": 39284,
+      "record_count": 26
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "689f217254123d152cf3a81230b52ae57e4457155105005cde1833c1b46a000c",
+      "file_count": 26,
+      "size_bytes": 4527030
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "c3d2604720e2c8b675fb3a191c8b8ffee0e07eca303ddb4c11636447a8492c0d",
+      "size_bytes": 2684572,
+      "record_count": 1736
+    },
+    "diff_report": {
+      "path": "reports/2026/11/diff_msdata_20261113.md",
+      "sha256": "0c33e7acdb4f1efda2762626cbb0572a4bdecb52a3a3ae13fe9ee858c0d5d8ed",
+      "size_bytes": 2774
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20261113-run-43268120511",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20261113-run-43268120511",
+    "asset_name": "raw_snapshot_20261113_run43268120511.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261113-run-43268120511"
+  }
+}
