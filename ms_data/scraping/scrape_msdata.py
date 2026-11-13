@@ -65,7 +65,13 @@ from ms_data.scraping.change_detection import (
     load_msdata_base_index,
     select_changed_index_items,
 )
-from ms_data.scraping.defaults import DEFAULT_CLI_RATE, DEFAULT_TTL, INDEX_URL
+from ms_data.scraping.defaults import (
+    DEFAULT_CLI_RATE,
+    DEFAULT_TTL,
+    INDEX_FETCH_RETRIES,
+    INDEX_RETRY_WAIT_SECONDS,
+    INDEX_URL,
+)
 from ms_data.scraping.detail_page import (
     extract_row_labels,
     filter_complete_records,
@@ -121,7 +127,11 @@ def cmd_index(args: argparse.Namespace) -> int:
     cache = _build_cache(args)
     started_at = datetime.now(timezone.utc)
     t_start = time.monotonic()
-    text, _meta = cache.get(url)
+    text, _meta = cache.get(
+        url,
+        retries=INDEX_FETCH_RETRIES,
+        retry_wait_seconds=INDEX_RETRY_WAIT_SECONDS,
+    )
     items = parse_index(text)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -289,7 +299,11 @@ def cmd_all(args: argparse.Namespace) -> int:
     cache = _build_cache(args)
     started_at = datetime.now(timezone.utc)
     t_start = time.monotonic()
-    text, _meta = cache.get(INDEX_URL)
+    text, _meta = cache.get(
+        INDEX_URL,
+        retries=INDEX_FETCH_RETRIES,
+        retry_wait_seconds=INDEX_RETRY_WAIT_SECONDS,
+    )
     items = parse_index(text)
     tmp_index.write_text(
         json.dumps(items, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"

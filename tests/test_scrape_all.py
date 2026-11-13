@@ -13,7 +13,10 @@ class _FakeCacheHTTP:
         self.client = client
         self.config = config
 
-    def get(self, url: str):
+    get_kwargs: dict = {}
+
+    def get(self, url: str, **kwargs):
+        type(self).get_kwargs = kwargs
         return "<html></html>", {"semantic_changed": True}
 
 
@@ -54,6 +57,11 @@ def test_cmd_all_forwards_detail_options(monkeypatch, tmp_path):
     )
 
     assert rc == 0
+    # 一覧取得は一過性の失敗に備えて再試行付きで呼ぶ（Issue #402）
+    assert _FakeCacheHTTP.get_kwargs == {
+        "retries": sm.INDEX_FETCH_RETRIES,
+        "retry_wait_seconds": sm.INDEX_RETRY_WAIT_SECONDS,
+    }
     assert captured == {
         "input": str(Path("cache/index.json")),
         "out": str(out_path),

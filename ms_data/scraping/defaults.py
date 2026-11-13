@@ -16,3 +16,9 @@ DEFAULT_RATE = 2.0
 
 # 直接CLIの既定は従来の1 req/secを維持（tasksは2 req/sec）。
 DEFAULT_CLI_RATE = 1.0
+
+# 一覧ページ取得の再試行。一覧は実行全体の起点で、一過性の 403（Cloudflare）や
+# 5xx の 1 回で自動更新全体が失敗するため、少数回だけ間隔を空けて再試行する。
+# 詳細ページは件数が多く負荷が増えるため再試行しない（失敗は品質レポートで監視）。
+INDEX_FETCH_RETRIES = 2
+INDEX_RETRY_WAIT_SECONDS = 10.0

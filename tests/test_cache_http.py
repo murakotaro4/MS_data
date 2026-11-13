@@ -315,6 +315,86 @@ def test_transport_error_counts_failure(tmp_path: Path):
     assert cache.stats["failures"] == 1
 
 
+def _no_sleep(monkeypatch) -> list[float]:
+    waits: list[float] = []
+    monkeypatch.setattr("ms_data.net.cache_http.time.sleep", waits.append)
+    return waits
+
+
+def test_retry_recovers_from_transient_403(tmp_path: Path, monkeypatch, capsys):
+    """Issue #402: 一過性の 403 は再試行で回復し、失敗した試行は failures に数える。"""
+    waits = _no_sleep(monkeypatch)
+    statuses = iter([403, 503, 200])
+    cache = _cache(tmp_path, lambda r: _resp(_BODY, status=next(statuses)))
+
+    text, meta = cache.get(_URL, retries=2, retry_wait_seconds=10.0)
+
+    assert text == _BODY
+    assert meta["http_status"] == 200
+    assert cache.stats["network_requests"] == 3
+    assert cache.stats["failures"] == 2
+    assert cache.stats["status_200"] == 1
+    assert waits == [10.0, 20.0]
+    err = capsys.readouterr().err
+    assert "HTTP 403" in err and "retry 2/2" in err
+
+
+def test_retry_recovers_from_transport_error(tmp_path: Path, monkeypatch):
+    _no_sleep(monkeypatch)
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise httpx.ConnectError("boom")
+        return _resp(_BODY)
+
+    cache = _cache(tmp_path, handler)
+
+    text, _meta = cache.get(_URL, retries=1)
+
+    assert text == _BODY
+    assert cache.stats["network_requests"] == 2
+    assert cache.stats["failures"] == 1
+
+
+def test_retry_exhausted_raises_last_error(tmp_path: Path, monkeypatch):
+    waits = _no_sleep(monkeypatch)
+    cache = _cache(tmp_path, lambda r: _resp("x", status=403))
+
+    with pytest.raises(httpx.HTTPStatusError):
+        cache.get(_URL, retries=2, retry_wait_seconds=1.0)
+    assert cache.stats["network_requests"] == 3
+    assert cache.stats["failures"] == 3
+    assert waits == [1.0, 2.0]
+    assert not cache._paths(_URL)[0].exists()
+
+
+def test_retry_exhausted_transport_error_raises(tmp_path: Path, monkeypatch):
+    _no_sleep(monkeypatch)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("boom")
+
+    cache = _cache(tmp_path, handler)
+
+    with pytest.raises(httpx.ConnectError):
+        cache.get(_URL, retries=1)
+    assert cache.stats["network_requests"] == 2
+    assert cache.stats["failures"] == 2
+
+
+def test_non_retryable_status_is_not_retried(tmp_path: Path, monkeypatch):
+    waits = _no_sleep(monkeypatch)
+    cache = _cache(tmp_path, lambda r: _resp("x", status=404))
+
+    with pytest.raises(httpx.HTTPStatusError):
+        cache.get(_URL, retries=2, retry_wait_seconds=1.0)
+    assert cache.stats["network_requests"] == 1
+    assert cache.stats["failures"] == 1
+    assert waits == []
+
+
 def test_invalid_fetched_at_is_expired_with_warning(tmp_path: Path, capsys):
     cache = _cache(tmp_path, lambda r: _resp(_BODY), ttl_seconds=3600)
     now = dt.datetime.now(dt.timezone.utc)
