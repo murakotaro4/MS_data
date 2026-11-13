@@ -39,6 +39,7 @@
 - SSOT: index（`cache/index.json`）の `name` を真実のソースとし、詳細抽出の `MS名` も index 表記で固定（LVは `_LVn` を付与）。読み込み・マージ時にも index 準拠へ正規化します。
 - キャッシュ: `ms_data/net/cache_http.py`（TTL・If-None-Match/If-Modified-Since 対応）。保存先 `cache/html/<slug>.html` + `*.meta.json`。注意: atwiki は ETag/Last-Modified を返さない（2026-06 実測）ため 304 は期待できず、負荷軽減は取得対象の絞り込み（`detect-changed` / `REVALIDATE`）で行う。
 - レート制限: tasks 既定 2.0 req/sec（`ms_data/scraping/defaults.py` の `DEFAULT_RATE`）、直接CLIは既定1.0 req/sec（`DEFAULT_CLI_RATE`）。atwiki への負荷を考慮し過度な緩和は避ける。待機は実際のネットワーク取得時のみ（キャッシュヒットは待機しない）。2回目以降は `NO_NET=1` でキャッシュのみ利用可。
+- 再試行: 一覧ページ（index）の取得だけ、一過性の失敗（通信例外・HTTP 403/429/5xx）を最大 2 回、10 秒・20 秒空けて再試行する（`defaults.py` の `INDEX_FETCH_RETRIES` / `INDEX_RETRY_WAIT_SECONDS`、実装は `CacheHTTP.get(retries=...)`）。一覧は実行の起点で、Cloudflare の一過性 403 の 1 回で `data update` 全体が失敗したため（2026-11-13、Issue #402）。詳細ページは件数が多く負荷が増えるため再試行しない。失敗した試行は `failures` に数える。
 - 取得計測: 実行ごとに `cache/fetch_stats.json` へフェーズ別（index/details）のリクエスト数・200/304件数・失敗数・受信バイト数・所要秒数を記録。`reports/YYYY/MM/atwiki_quality_YYYYMMDD.json` の `fetch` セクションに転記され、負荷削減の検証に使う。`body_bytes` は Content-Encoding 展開後のボディ長（実転送量は圧縮分小さい。実行間の相対比較には影響なし）。index フェーズ書き込み時に前回実行分をリセットする。
 - データ構造: 配列（各要素=MSの1レベル）。主キー相当は `MS名`（例: `XXX_LV1`）。
 - 必須項目: `MS名`, `属性`（汎用/強襲/支援）, `コスト`, `HP`, `スピード`, `スラスター`, `高速移動`, `射撃補正`, `格闘補正`, `耐ビーム補正`, `耐実弾補正`, `耐格闘補正`, `近/中/遠スロット`。旋回は anyOf（`旋回_地上_通常時` または `旋回_宇宙_通常時`）で宇宙専用機を許容。

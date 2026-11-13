@@ -40,6 +40,11 @@ class CacheConfig:
     min_interval_seconds: float = 0.0
 
 
+# 一過性とみなして再試行する HTTP ステータス。
+# 403 は Cloudflare のチャレンジ応答（恒久的な拒否でなく時間をおけば通ることがある）。
+RETRYABLE_STATUS = frozenset({403, 429, 500, 502, 503, 504})
+
+
 def new_fetch_stats() -> dict[str, int]:
     return {
         "network_requests": 0,
@@ -96,6 +101,43 @@ class CacheHTTP:
         except Exception:
             self.stats["failures"] += 1
             raise
+
+    def _request_with_retry(
+        self,
+        url: str,
+        headers: dict[str, str],
+        retries: int,
+        retry_wait_seconds: float,
+    ) -> httpx.Response:
+        """一過性の失敗（通信例外・RETRYABLE_STATUS）を最大 retries 回まで再試行する。
+
+        待機は試行ごとに retry_wait_seconds × 試行回数（線形バックオフ）。
+        失敗した試行は都度 stats["failures"] に数える。再試行を使い切った場合、
+        通信例外はそのまま送出し、ステータス異常は最後の応答を返す
+        （呼び出し側の raise_for_status に委ねる）。
+        """
+        attempt = 0
+        while True:
+            try:
+                r = self._request(url, headers)
+            except Exception as exc:
+                if attempt >= retries:
+                    raise
+                reason = type(exc).__name__
+            else:
+                if r.status_code not in RETRYABLE_STATUS or attempt >= retries:
+                    return r
+                self.stats["failures"] += 1
+                reason = f"HTTP {r.status_code}"
+            attempt += 1
+            wait = retry_wait_seconds * attempt
+            print(
+                f"warning: fetch failed ({reason}); retry {attempt}/{retries} "
+                f"in {wait:g}s: {url}",
+                file=sys.stderr,
+            )
+            if wait > 0:
+                time.sleep(wait)
 
     def _paths(self, url: str) -> tuple[Path, Path]:
         slug = url_to_slug(url)
@@ -250,8 +292,13 @@ class CacheHTTP:
         self._write_meta(meta_path, meta_new)
         return text, meta_new
 
-    def get(self, url: str) -> tuple[str, dict]:
+    def get(
+        self, url: str, *, retries: int = 0, retry_wait_seconds: float = 0.0
+    ) -> tuple[str, dict]:
         """キャッシュ対応のGET。戻り値は (text, meta)。
+
+        retries > 0 のとき、一過性の失敗（通信例外・RETRYABLE_STATUS）を
+        その回数まで再試行する（既定 0 = 再試行なし）。
 
         経路は3つ:
         1. キャッシュ供給（オフライン or TTL内）: _serve_from_cache
@@ -286,7 +333,7 @@ class CacheHTTP:
             if lm := meta.get("last_modified"):
                 headers["If-Modified-Since"] = lm
 
-        r = self._request(url, headers)
+        r = self._request_with_retry(url, headers, retries, retry_wait_seconds)
         if r.status_code == 304 and not html_path.exists():
             # requests 系クライアントは 3xx で raise_for_status が例外を出さないため、
             # 空ボディを 200 としてキャッシュしてしまう前に明示的に失敗させる
