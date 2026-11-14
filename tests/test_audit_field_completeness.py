@@ -256,3 +256,166 @@ def test_report_contains_required_headings(tmp_path: Path):
         assert f"- {category}: 0" in text
         assert f"## {category}" in text
         assert "| なし |" in text
+
+
+def _run_raw_allowlist(tmp_path: Path, allowlist_text: str) -> tuple[int, Path]:
+    msdata = tmp_path / "msData.json"
+    allowlist = tmp_path / "allowlist.json"
+    report = tmp_path / "report.md"
+    write_json(msdata, [_record()])
+    allowlist.write_text(allowlist_text, encoding="utf-8")
+    code = audit_field_completeness.main(
+        ["--msdata", str(msdata), "--allowlist", str(allowlist), "--out", str(report)]
+    )
+    return code, report
+
+
+@pytest.mark.parametrize(
+    ("allowlist_text", "message"),
+    [
+        ("{", "allowlist を読み込めません"),
+        ("[]", "version と entries のみ"),
+        ('{"version": 1, "entries": [], "extra": 1}', "version と entries のみ"),
+        ('{"version": 2, "entries": []}', "整数 1 が必要"),
+        ('{"version": true, "entries": []}', "整数 1 が必要"),
+        ('{"version": 1, "entries": {}}', "entries は配列が必要"),
+        ('{"version": 1, "entries": ["x"]}', "entries[0]: "),
+        ('{"version": 1, "entries": [{"MS名": "a"}]}', "entries[0]: "),
+    ],
+)
+def test_malformed_allowlist_returns_two(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    allowlist_text: str,
+    message: str,
+):
+    code, report = _run_raw_allowlist(tmp_path, allowlist_text)
+
+    assert code == 2
+    assert not report.exists()
+    assert message in capsys.readouterr().err
+
+
+def test_missing_allowlist_file_returns_two(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
+    msdata = tmp_path / "msData.json"
+    write_json(msdata, [_record()])
+    code = audit_field_completeness.main(
+        [
+            "--msdata",
+            str(msdata),
+            "--allowlist",
+            str(tmp_path / "missing.json"),
+            "--out",
+            str(tmp_path / "report.md"),
+        ]
+    )
+
+    assert code == 2
+    assert "allowlist を読み込めません" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("override", "message"),
+    [
+        ({"reason": "  "}, "entries[0].reason: 非空文字列が必要"),
+        ({"field": 1}, "entries[0].field: 非空文字列が必要"),
+        ({"review_after": 20261016}, "entries[0].review_after: YYYY-MM-DD"),
+        ({"review_after": "2026/10/16"}, "entries[0].review_after: YYYY-MM-DD"),
+    ],
+)
+def test_invalid_allowlist_entry_value_returns_two(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    override: dict[str, object],
+    message: str,
+):
+    entry: dict[str, object] = {**_entry(), **override}
+    code, report = _run(tmp_path, [_record()], entries=[entry])
+
+    assert code == 2
+    assert not report.exists()
+    assert message in capsys.readouterr().err
+
+
+def test_today_accepts_compact_date_and_rejects_invalid_value(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
+    # review_after 当日は期限切れ扱い（review_date <= today）。
+    entries = [_entry(review_after="2026-07-18")]
+    compact = tmp_path / "compact"
+    compact.mkdir()
+    code, report = _run(
+        compact, [_record()], entries=entries, extra_args=["--today", "20260718"]
+    )
+    assert code == 0
+    assert "- expired: 1" in report.read_text(encoding="utf-8")
+
+    before = tmp_path / "before"
+    before.mkdir()
+    code, report = _run(
+        before, [_record()], entries=entries, extra_args=["--today", "20260717"]
+    )
+    assert code == 0
+    assert "- expired: 0" in report.read_text(encoding="utf-8")
+
+    invalid = tmp_path / "invalid"
+    invalid.mkdir()
+    code, report = _run(
+        invalid, [_record()], entries=entries, extra_args=["--today", "20261332"]
+    )
+    assert code == 2
+    assert not report.exists()
+    assert "today: 不正な日付です: 20261332" in capsys.readouterr().err
+
+
+def test_today_defaults_to_current_jst_date(tmp_path: Path):
+    # --today 省略時は実行日（JST）で判定する。遠い未来・過去の期限で固定する。
+    entries = [
+        _entry(field="レアリティ", review_after="2999-01-01"),
+        _entry(field="カウンター", review_after="2000-01-01"),
+    ]
+    msdata = tmp_path / "msData.json"
+    allowlist = tmp_path / "allowlist.json"
+    report = tmp_path / "report.md"
+    write_json(msdata, [_record()])
+    write_json(allowlist, {"version": 1, "entries": entries})
+
+    code = audit_field_completeness.main(
+        ["--msdata", str(msdata), "--allowlist", str(allowlist), "--out", str(report)]
+    )
+
+    assert code == 0
+    text = report.read_text(encoding="utf-8")
+    assert "- expired: 1" in text
+    assert "| テスト機_LV1 | カウンター | expired |" in text
+
+
+def test_expired_entry_with_current_finding_is_reported_once(tmp_path: Path):
+    record = _record()
+    record["レアリティ"] = ""
+    code, report = _run(
+        tmp_path,
+        [record],
+        entries=[_entry(review_after="2026-07-01")],
+        extra_args=["--fail-on-findings"],
+    )
+
+    text = report.read_text(encoding="utf-8")
+    assert code == 0
+    assert "- expired: 1" in text
+    assert "- suppressed: 0" in text
+    assert "- empty_value: 0" in text
+    assert text.count("| テスト機_LV1 | レアリティ | expired |") == 1
+
+
+def test_fail_on_findings_returns_one_and_still_writes_report(tmp_path: Path):
+    record = _record()
+    record["カウンター"] = []
+    code, report = _run(tmp_path, [record], extra_args=["--fail-on-findings"])
+
+    assert code == 1
+    text = report.read_text(encoding="utf-8")
+    assert "- empty_value: 1" in text
+    assert "| テスト機_LV1 | カウンター | empty_value |" in text
