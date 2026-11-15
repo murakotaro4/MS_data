@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-11-15T14:56:48Z",
+  "report_date": "20261115",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "4962894bff72314bfddc0f08584ca4812688c202"
+  },
+  "github": {
+    "run_id": "43727049198",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "workflow_dispatch"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "5dea2a06c7172ae517421e6ab2d426f4167e236742475380e914925743968d18",
+      "size_bytes": 148325,
+      "record_count": 603
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "436be6c82dd2c9ae6bd0148a4a0d3ec3603bf1ec355266bf952435371499b179",
+      "size_bytes": 42204,
+      "record_count": 36
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "3cd432fe7d3ecb80545508bf93f5544e03e37acc19ef40711e87e9268d1f944a",
+      "size_bytes": 55226,
+      "record_count": 36
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "1c5bd2c20dcd2bbc352b51f4e7c5409f3980285c7bdf833e32aa2d6a0aab426f",
+      "file_count": 30,
+      "size_bytes": 5219582
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "97c7084bd1bdba560b76e89eb39adbe055c2b747e7705f14f1de74845c7ce211",
+      "size_bytes": 2686309,
+      "record_count": 1737
+    },
+    "diff_report": {
+      "path": "reports/2026/11/diff_msdata_20261115.md",
+      "sha256": "c6b11ed03fad942647e4522e5f800373e736046bbcd1521764e01e4ebdd29499",
+      "size_bytes": 2377
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20261115-run-43727049198",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20261115-run-43727049198",
+    "asset_name": "raw_snapshot_20261115_run43727049198.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261115-run-43727049198"
+  }
+}
