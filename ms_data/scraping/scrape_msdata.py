@@ -56,6 +56,7 @@ from ms_data.core.dates import JST
 from ms_data.core.labels import apply_key_aliases, clean_text, normalize_row_label
 from ms_data.core.ms_names import normalize_ms_base_name, normalize_ms_name
 from ms_data.core.paths import OFFICIAL_OVERRIDES_DIR
+from ms_data.net import browser_rendering
 from ms_data.net.cache_http import CacheConfig, CacheHTTP
 from ms_data.net.client import get_scraper_client
 from ms_data.pipeline import update_msdata
@@ -113,7 +114,9 @@ def _build_cache(args: argparse.Namespace, *, rate: float | None = None) -> Cach
         # レート制限は実際のネットワーク取得時のみ適用（キャッシュヒットは待機しない）
         min_interval_seconds=(1.0 / max(rate, 0.1)) if rate is not None else 0.0,
     )
-    return CacheHTTP(get_client(), cfg)
+    # 直接取得が 403 で終わったときだけ Browser Rendering で取り直す（認証情報が
+    # 環境変数に揃っているときのみ有効。未設定なら従来どおり失敗する）
+    return CacheHTTP(get_client(), cfg, fallback=browser_rendering.from_env())
 
 
 # ===============

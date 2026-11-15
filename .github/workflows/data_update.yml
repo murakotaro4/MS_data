@@ -120,6 +120,11 @@ jobs:
           fi
 
       - name: Fetch and import
+        env:
+          # 直接取得が 403（Cloudflare チャレンジ）で終わったときだけ Browser Rendering で
+          # 取り直すための認証情報。secrets 経由のみ（ログには出さない・echo しない）。
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           cp msData.json msData.before.json
           mkdir -p "${REPORTS_MONTH_DIR}"
@@ -257,6 +262,9 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         continue-on-error: true
         shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
           log="$RUNNER_TEMP/custom_parts.log"
