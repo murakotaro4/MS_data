@@ -14,6 +14,7 @@ atwiki は GitHub Actions からの直接取得に Cloudflare の bot チャレ�
 
 from __future__ import annotations
 
+import math
 import os
 import sys
 import time
@@ -91,10 +92,15 @@ class BrowserRenderingFetcher:
             ) from None
 
     def _retry_after(self, r: httpx.Response) -> float:
+        """429 の待機秒数。Retry-After が有限の数値でなければ既定の待機を使う。"""
         try:
-            return max(float(r.headers.get("Retry-After", "")), 0.0)
+            wait = float(r.headers.get("Retry-After", ""))
         except ValueError:
             return self.rate_limit_wait_seconds
+        # inf は time.sleep が OverflowError、nan は待機なしの即時再試行になる。
+        if not math.isfinite(wait):
+            return self.rate_limit_wait_seconds
+        return max(wait, 0.0)
 
     def fetch(self, url: str) -> str:
         """URL を描画して HTML を返す。失敗時は BrowserRenderingError。"""
@@ -140,10 +146,14 @@ def _env_number(name: str, default: float) -> float:
     if not raw:
         return default
     try:
-        return float(raw)
+        value = float(raw)
     except ValueError:
+        value = math.nan
+    # inf / nan は int() 変換や time.sleep で例外になるため、不正値として扱う。
+    if not math.isfinite(value):
         print(f"warning: invalid {name}={raw!r}; using {default:g}", file=sys.stderr)
         return default
+    return value
 
 
 def from_env() -> BrowserRenderingFetcher | None:
