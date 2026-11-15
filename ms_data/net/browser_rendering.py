@@ -88,7 +88,7 @@ class BrowserRenderingFetcher:
         except httpx.HTTPError as exc:
             raise BrowserRenderingError(
                 f"browser rendering request failed ({type(exc).__name__}): {url}"
-            ) from exc
+            ) from None
 
     def _retry_after(self, r: httpx.Response) -> float:
         try:
@@ -119,10 +119,10 @@ class BrowserRenderingFetcher:
             )
         try:
             payload = r.json()
-        except ValueError as exc:
+        except ValueError:
             raise BrowserRenderingError(
                 f"browser rendering returned non-JSON: {url}"
-            ) from exc
+            ) from None
         html = payload.get("result") if isinstance(payload, dict) else None
         if not (isinstance(payload, dict) and payload.get("success")) or not (
             isinstance(html, str) and html.strip()

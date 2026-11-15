@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import traceback
 from pathlib import Path
 
 import httpx
@@ -85,8 +86,14 @@ def test_fetch_wraps_transport_errors_without_secrets():
     with pytest.raises(BrowserRenderingError) as exc_info:
         fetcher.fetch(URL)
     assert "ConnectError" in str(exc_info.value)
-    assert ACCOUNT not in str(exc_info.value)
-    assert TOKEN not in str(exc_info.value)
+    # 例外連鎖を切り、整形済みトレースバックにも API URL・認証情報を出さない
+    assert exc_info.value.__cause__ is None
+    assert exc_info.value.__suppress_context__ is True
+    formatted = "".join(traceback.format_exception(exc_info.value))
+    assert "ConnectError" in formatted
+    assert ACCOUNT not in formatted
+    assert TOKEN not in formatted
+    assert "api.cloudflare.com" not in formatted
 
 
 def test_fetch_retries_once_after_rate_limit():
