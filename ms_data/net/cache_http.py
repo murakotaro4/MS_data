@@ -23,6 +23,7 @@ import time
 import urllib.parse
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
 import httpx
 from bs4 import BeautifulSoup, Comment
@@ -43,6 +44,16 @@ class CacheConfig:
 # 一過性とみなして再試行する HTTP ステータス。
 # 403 は Cloudflare のチャレンジ応答（恒久的な拒否でなく時間をおけば通ることがある）。
 RETRYABLE_STATUS = frozenset({403, 429, 500, 502, 503, 504})
+
+
+# 直接取得がこのステータスで終わったときだけ代替経路（Browser Rendering）を使う。
+FALLBACK_STATUS = frozenset({403})
+
+
+class HtmlFallback(Protocol):
+    """直接取得が拒否された URL の HTML を別経路で取得する（失敗時は例外）。"""
+
+    def fetch(self, url: str) -> str: ...
 
 
 def new_fetch_stats() -> dict[str, int]:
@@ -76,9 +87,17 @@ def _now_utc() -> dt.datetime:
 
 
 class CacheHTTP:
-    def __init__(self, client: httpx.Client, config: CacheConfig | None = None) -> None:
+    def __init__(
+        self,
+        client: httpx.Client,
+        config: CacheConfig | None = None,
+        *,
+        fallback: HtmlFallback | None = None,
+    ) -> None:
         self.client = client
         self.cfg = config or CacheConfig()
+        # 直接取得が FALLBACK_STATUS で終わったときに使う代替経路（None なら無効）
+        self.fallback = fallback
         self.cfg.root.mkdir(parents=True, exist_ok=True)
         self.stats = new_fetch_stats()
         self._last_request_monotonic: float | None = None
@@ -266,18 +285,44 @@ class CacheHTTP:
         now: dt.datetime,
     ) -> tuple[str, dict]:
         """200 応答: 取得本文を保存し、メタ情報を作り直して返す。"""
-        self.stats["status_200"] += 1
         self.stats["body_bytes"] += len(r.content)
-        text = r.text
+        return self._store_text(
+            url,
+            r.text,
+            html_path,
+            meta_path,
+            meta,
+            now,
+            http_status=r.status_code,
+            etag=r.headers.get("ETag"),
+            last_modified=r.headers.get("Last-Modified"),
+        )
+
+    def _store_text(
+        self,
+        url: str,
+        text: str,
+        html_path: Path,
+        meta_path: Path,
+        meta: dict,
+        now: dt.datetime,
+        *,
+        http_status: int,
+        etag: str | None,
+        last_modified: str | None,
+        fetched_via: str | None = None,
+    ) -> tuple[str, dict]:
+        """取得本文を保存し、メタ情報を作り直して返す（status_200 として数える）。"""
+        self.stats["status_200"] += 1
         cur_sem = _semantic_sha256(text)
         prev_sem = meta.get("semantic_sha256")
         semantic_changed = prev_sem != cur_sem
         meta_new = {
             "url": url,
             "fetched_at": now.isoformat(),
-            "http_status": r.status_code,
-            "etag": r.headers.get("ETag"),
-            "last_modified": r.headers.get("Last-Modified"),
+            "http_status": http_status,
+            "etag": etag,
+            "last_modified": last_modified,
             "content_sha256": self._sha256_text(text),
             "size": len(text.encode("utf-8")),
             "semantic_sha256": cur_sem,
@@ -288,6 +333,8 @@ class CacheHTTP:
                 else meta.get("last_semantic_change_at")
             ),
         }
+        if fetched_via:
+            meta_new["fetched_via"] = fetched_via
         html_path.write_text(text, encoding="utf-8")
         self._write_meta(meta_path, meta_new)
         return text, meta_new
@@ -342,12 +389,54 @@ class CacheHTTP:
         if r.status_code == 304 and html_path.exists():
             return self._serve_not_modified(url, html_path, meta_path, meta, now)
 
+        if r.status_code in FALLBACK_STATUS and self.fallback is not None:
+            return self._fetch_via_fallback(
+                url, r.status_code, html_path, meta_path, meta, now
+            )
+
         try:
             r.raise_for_status()
         except Exception:
             self.stats["failures"] += 1
             raise
         return self._store_response(url, r, html_path, meta_path, meta, now)
+
+    def _fetch_via_fallback(
+        self,
+        url: str,
+        direct_status: int,
+        html_path: Path,
+        meta_path: Path,
+        meta: dict,
+        now: dt.datetime,
+    ) -> tuple[str, dict]:
+        """直接取得が拒否された URL を代替経路で取り直す。
+
+        直接取得の失敗は failures に数え、代替取得の成功は status_200 として
+        数える（本文は直接取得と同じく cache/html に保存）。代替取得も失敗した
+        場合は例外を送出する（例外メッセージに認証情報は含めない）。
+        """
+        assert self.fallback is not None
+        self.stats["failures"] += 1
+        print(
+            f"warning: direct fetch returned HTTP {direct_status}; "
+            f"retrying via browser rendering: {url}",
+            file=sys.stderr,
+        )
+        text = self.fallback.fetch(url)
+        self.stats["body_bytes"] += len(text.encode("utf-8"))
+        return self._store_text(
+            url,
+            text,
+            html_path,
+            meta_path,
+            meta,
+            now,
+            http_status=200,
+            etag=None,
+            last_modified=None,
+            fetched_via="browser_rendering",
+        )
 
 
 # ==========================

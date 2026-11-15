@@ -163,7 +163,9 @@ def summarize_changes(
 
     def index(items: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
         return {
-            f"{r.get('name')} LV{r.get('level')}": r for r in items if isinstance(r, dict)
+            f"{r.get('name')} LV{r.get('level')}": r
+            for r in items
+            if isinstance(r, dict)
         }
 
     before, after = index(old), index(new)
@@ -176,12 +178,14 @@ def summarize_changes(
 
 def fetch_html(url: str, *, ttl: str, no_network: bool, force: bool) -> str:
     """キャッシュ（cache/html）経由で一覧ページを取得する。取得は1リクエストのみ。"""
+    from ms_data.net import browser_rendering
     from ms_data.net.cache_http import CacheConfig, CacheHTTP
     from ms_data.net.client import get_scraper_client
     from ms_data.scraping.text_values import parse_ttl
 
     cfg = CacheConfig(ttl_seconds=parse_ttl(ttl), no_network=no_network, force=force)
-    text, _meta = CacheHTTP(get_scraper_client(), cfg).get(url)
+    cache = CacheHTTP(get_scraper_client(), cfg, fallback=browser_rendering.from_env())
+    text, _meta = cache.get(url)
     return text
 
 

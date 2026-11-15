@@ -9,9 +9,10 @@ class _FakeClient:
 
 
 class _FakeCacheHTTP:
-    def __init__(self, client, config):
+    def __init__(self, client, config, *, fallback=None):
         self.client = client
         self.config = config
+        self.fallback = fallback
 
     get_kwargs: dict = {}
 

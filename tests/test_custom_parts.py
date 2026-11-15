@@ -138,8 +138,14 @@ def test_parse_rejects_table_without_lv_header() -> None:
 
 
 def test_summarize_changes() -> None:
-    old = [{"name": "A", "level": 1, "rarity": 1}, {"name": "B", "level": 1, "rarity": 1}]
-    new = [{"name": "A", "level": 1, "rarity": 2}, {"name": "C", "level": 1, "rarity": 1}]
+    old = [
+        {"name": "A", "level": 1, "rarity": 1},
+        {"name": "B", "level": 1, "rarity": 1},
+    ]
+    new = [
+        {"name": "A", "level": 1, "rarity": 2},
+        {"name": "C", "level": 1, "rarity": 1},
+    ]
     assert cp.summarize_changes(old, new) == {
         "added": ["C LV1"],
         "removed": ["B LV1"],
@@ -203,8 +209,11 @@ def test_fetch_html_uses_cache_http(monkeypatch: pytest.MonkeyPatch) -> None:
     seen: dict[str, object] = {}
 
     class FakeCache:
-        def __init__(self, _client: object, cfg: object) -> None:
+        def __init__(
+            self, _client: object, cfg: object, *, fallback: object = None
+        ) -> None:
             seen["cfg"] = cfg
+            seen["fallback"] = fallback
 
         def get(self, url: str) -> tuple[str, dict]:
             seen["url"] = url
@@ -212,10 +221,14 @@ def test_fetch_html_uses_cache_http(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(cache_http, "CacheHTTP", FakeCache)
     monkeypatch.setattr(client, "get_scraper_client", lambda: object())
+    monkeypatch.delenv("CLOUDFLARE_API_TOKEN", raising=False)
+    monkeypatch.delenv("CLOUDFLARE_ACCOUNT_ID", raising=False)
     assert cp.fetch_html("u", ttl="2d", no_network=True, force=True) == "<html/>"
     cfg = seen["cfg"]
     assert seen["url"] == "u"
     assert (cfg.ttl_seconds, cfg.no_network, cfg.force) == (172800, True, True)
+    # 認証情報が無ければ代替取得は無効
+    assert seen["fallback"] is None
 
 
 def test_repository_custom_parts_json_is_valid() -> None:
