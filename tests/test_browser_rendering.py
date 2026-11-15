@@ -111,6 +111,19 @@ def test_fetch_gives_up_after_second_rate_limit():
         fetcher.fetch(URL)
 
 
+@pytest.mark.parametrize("retry_after", ["inf", "-inf", "nan", "1e999"])
+def test_fetch_uses_default_wait_for_non_finite_retry_after(
+    monkeypatch: pytest.MonkeyPatch, retry_after: str
+):
+    # 非有限の Retry-After は time.sleep の OverflowError や待機なしの再試行になる
+    sleeps: list[float] = []
+    monkeypatch.setattr(br.time, "sleep", sleeps.append)
+    responses = [httpx.Response(429, headers={"Retry-After": retry_after}), _ok()]
+    fetcher = _fetcher(lambda _req: responses.pop(0), rate_limit_wait_seconds=7.0)
+    assert fetcher.fetch(URL) == PAGE
+    assert sleeps == [7.0]
+
+
 def test_fetch_stops_at_page_budget():
     calls = {"n": 0}
 
@@ -161,6 +174,24 @@ def test_from_env_reads_limits(monkeypatch: pytest.MonkeyPatch, capsys):
     err = capsys.readouterr().err
     assert "MSDATA_BROWSER_RENDERING_MIN_INTERVAL" in err
     assert TOKEN not in err
+
+
+@pytest.mark.parametrize("raw", ["inf", "-inf", "nan", "1e999"])
+def test_from_env_ignores_non_finite_limits(
+    monkeypatch: pytest.MonkeyPatch, capsys, raw: str
+):
+    # int(float("inf")) の OverflowError 等で取得処理ごと落ちないこと
+    monkeypatch.setenv("CLOUDFLARE_ACCOUNT_ID", ACCOUNT)
+    monkeypatch.setenv("CLOUDFLARE_API_TOKEN", TOKEN)
+    monkeypatch.setenv("MSDATA_BROWSER_RENDERING_MAX_PAGES", raw)
+    monkeypatch.setenv("MSDATA_BROWSER_RENDERING_MIN_INTERVAL", raw)
+    fetcher = br.from_env()
+    assert fetcher is not None
+    assert fetcher.max_pages == br.DEFAULT_MAX_PAGES
+    assert fetcher.min_interval_seconds == br.DEFAULT_MIN_INTERVAL_SECONDS
+    err = capsys.readouterr().err
+    assert "MSDATA_BROWSER_RENDERING_MAX_PAGES" in err
+    assert "MSDATA_BROWSER_RENDERING_MIN_INTERVAL" in err
 
 
 # ---------------------------------------------------------------------------
