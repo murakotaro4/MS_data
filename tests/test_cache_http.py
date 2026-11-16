@@ -74,6 +74,35 @@ def test_read_meta_invalid_utf8_warns_and_falls_back(tmp_path: Path, capsys):
     assert "warning: failed to read cache metadata" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize("payload", ["null", "[]", '"text"', "123"])
+def test_read_meta_non_object_json_warns_and_falls_back(
+    tmp_path: Path, capsys, payload: str
+):
+    broken = tmp_path / "broken.meta.json"
+    broken.write_text(payload, encoding="utf-8")
+
+    assert CacheHTTP._read_meta(broken) == {}
+    assert "warning: cache metadata is not an object" in capsys.readouterr().err
+
+
+def test_get_recovers_from_non_object_meta(tmp_path: Path):
+    """メタが dict でない JSON（null 等）でも落ちず、取り直してメタを作り直す。"""
+    url = "https://example.test/page"
+    client = httpx.Client(
+        transport=httpx.MockTransport(lambda request: _resp("<html>new</html>"))
+    )
+    cache = CacheHTTP(client, CacheConfig(root=tmp_path, ttl_seconds=3600))
+    html_path, meta_path = cache._paths(url)
+    html_path.write_text("<html>old</html>", encoding="utf-8")
+    meta_path.write_text("null", encoding="utf-8")
+
+    text, meta = cache.get(url)
+
+    assert text == "<html>new</html>"
+    assert meta["http_status"] == 200
+    assert CacheHTTP._read_meta(meta_path)["url"] == url
+
+
 _STATUS_HTML = """<html><head><title>テストMS</title></head><body>
 <div id="table_hanyou"><table><tr><th>機体HP</th><td>10000</td></tr></table></div>
 {noise}</body></html>"""
