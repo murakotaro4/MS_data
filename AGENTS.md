@@ -37,7 +37,7 @@
 
 ## スクレイピングとデータ仕様
 - SSOT: index（`cache/index.json`）の `name` を真実のソースとし、詳細抽出の `MS名` も index 表記で固定（LVは `_LVn` を付与）。読み込み・マージ時にも index 準拠へ正規化します。
-- キャッシュ: `ms_data/net/cache_http.py`（TTL・If-None-Match/If-Modified-Since 対応）。保存先 `cache/html/<slug>.html` + `*.meta.json`。注意: atwiki は ETag/Last-Modified を返さない（2026-06 実測）ため 304 は期待できず、負荷軽減は取得対象の絞り込み（`detect-changed` / `REVALIDATE`）で行う。
+- キャッシュ: `ms_data/net/cache_http.py`（TTL・If-None-Match/If-Modified-Since 対応）。保存先 `cache/html/<slug>.html` + `*.meta.json`。メタが読めない・JSON オブジェクトでない（`null`・配列等）場合は警告を出してキャッシュミスとして扱い、取り直してメタを作り直す。注意: atwiki は ETag/Last-Modified を返さない（2026-06 実測）ため 304 は期待できず、負荷軽減は取得対象の絞り込み（`detect-changed` / `REVALIDATE`）で行う。
 - レート制限: tasks 既定 2.0 req/sec（`ms_data/scraping/defaults.py` の `DEFAULT_RATE`）、直接CLIは既定1.0 req/sec（`DEFAULT_CLI_RATE`）。atwiki への負荷を考慮し過度な緩和は避ける。待機は実際のネットワーク取得時のみ（キャッシュヒットは待機しない）。2回目以降は `NO_NET=1` でキャッシュのみ利用可。
 - 再試行: 一覧ページ（index）の取得だけ、一過性の失敗（通信例外・HTTP 403/429/5xx）を最大 2 回、10 秒・20 秒空けて再試行する（`defaults.py` の `INDEX_FETCH_RETRIES` / `INDEX_RETRY_WAIT_SECONDS`、実装は `CacheHTTP.get(retries=...)`）。一覧は実行の起点で、Cloudflare の一過性 403 の 1 回で `data update` 全体が失敗したため（2026-11-13、Issue #402）。詳細ページは件数が多く負荷が増えるため再試行しない。失敗した試行は `failures` に数える。
 - 403 時の代替取得（Browser Rendering）: 直接取得（cloudscraper）が HTTP 403（Cloudflare チャレンジ）で終わった URL だけ、Cloudflare Browser Rendering の REST API（`/browser-rendering/content`）で描画後の HTML を取り直す（実装 `ms_data/net/browser_rendering.py`、`CacheHTTP(fallback=...)`）。まず通常取得を試し、一覧は上記の再試行を使い切ってから切り替える。403 以外の失敗には使わない。対象は `scrape_msdata`（一覧・詳細）とカスタムパーツ一覧の取得。atwiki が Actions からの取得を 403 で拒否し続けたため（2026-11-13〜、Issue #405）。

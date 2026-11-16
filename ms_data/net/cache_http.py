@@ -173,13 +173,23 @@ class CacheHTTP:
         if not p.exists():
             return {}
         try:
-            return json.loads(p.read_text(encoding="utf-8"))
+            meta = json.loads(p.read_text(encoding="utf-8"))
         except FileNotFoundError:
             # exists() 後に削除された場合も通常のキャッシュミスとして扱う。
             return {}
         except Exception as exc:
             print(f"warning: failed to read cache metadata {p}: {exc}", file=sys.stderr)
             return {}
+        if not isinstance(meta, dict):
+            # null / 配列など、JSON としては読めてもメタ情報の形でない場合。
+            # 呼び出し側は dict 前提（meta.get）のため、キャッシュミスに倒す。
+            print(
+                f"warning: cache metadata is not an object {p}: "
+                f"{type(meta).__name__}",
+                file=sys.stderr,
+            )
+            return {}
+        return meta
 
     @staticmethod
     def _write_meta(p: Path, meta: dict) -> None:
