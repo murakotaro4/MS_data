@@ -231,27 +231,46 @@ def merge_pull_request(
     return MergeResult(True, merge_commit_sha, head_ref, "", state)
 
 
+def _list_ci_runs(*, repo: str, query: str, paginate: bool, deps: ReviewDeps) -> Any:
+    """ci.yml の run 一覧（`.workflow_runs`）を取得する。"""
+    command = ["gh", "api", f"repos/{repo}/actions/workflows/ci.yml/runs?{query}"]
+    if paginate:
+        command.append("--paginate")
+    command += ["--jq", ".workflow_runs"]
+    output = gh_json._run_gh_get_with_runner(
+        command, runner=deps.run_gh, sleeper=deps.clock.sleep
+    )
+    return gh_json.parse_json_stream(output)
+
+
 def _latest_head_ci_skip_reason(
     *, repo: str, head_ref: str, head_sha: str, deps: ReviewDeps, pr_number: str = ""
 ) -> str:
     """対象 HEAD の最新 CI が成功した場合だけ空文字を返す。"""
     query = urlencode({"head_sha": head_sha, "event": "pull_request", "per_page": 100})
     try:
-        output = gh_json._run_gh_get_with_runner(
-            [
-                "gh",
-                "api",
-                f"repos/{repo}/actions/workflows/ci.yml/runs?{query}",
-                "--paginate",
-                "--jq",
-                ".workflow_runs",
-            ],
-            runner=deps.run_gh,
-            sleeper=deps.clock.sleep,
-        )
-        runs = gh_json.parse_json_stream(output)
+        runs = _list_ci_runs(repo=repo, query=query, paginate=True, deps=deps)
         if not isinstance(runs, list):
             return "ci_unavailable"
+        if not runs:
+            # 実行承認待ち（action_required）の run が、絞り込み付き一覧にだけ
+            # 出ないことがある（2026-11-17、PR #410）。絞り込みなしの最新一覧から
+            # 同じ HEAD・event の run を探す。以降の検証は同じ。
+            recent = _list_ci_runs(
+                repo=repo,
+                query=urlencode({"per_page": 100}),
+                paginate=False,
+                deps=deps,
+            )
+            if not isinstance(recent, list):
+                return "ci_unavailable"
+            runs = [
+                run
+                for run in recent
+                if isinstance(run, dict)
+                and run.get("head_sha") == head_sha
+                and run.get("event") == "pull_request"
+            ]
         if not runs:
             return "ci_not_found"
         if any(

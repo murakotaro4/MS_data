@@ -157,6 +157,88 @@ def test_merge_success_writes_outputs_then_dispatches(
     ]
 
 
+FILTERED_CI = "runs?head_sha=head-sha&event=pull_request&per_page=100"
+UNFILTERED_CI = "runs?per_page=100"
+
+
+def _ci_run(**overrides) -> dict:
+    run = json.loads(successful_ci_runs("head-sha"))[0]
+    run.update(overrides)
+    return run
+
+
+def _fallback_deps(fake_time, unfiltered: str, calls: list):
+    """絞り込み付き一覧が空を返し、絞り込みなし一覧だけが run を返す gh。"""
+
+    def run_gh(command):
+        calls.append(command)
+        if command[1:2] == ["api"]:
+            return "[]" if command[2].endswith(FILTERED_CI) else unfiltered
+        return ""
+
+    return replace(ReviewDeps.default(), clock=fake_time, run_gh=run_gh)
+
+
+def _fallback_reason(fake_time, unfiltered: str, calls: list | None = None) -> str:
+    return auto_review_merge._latest_head_ci_skip_reason(
+        repo="owner/repo",
+        head_ref="data/auto-update-20260531",
+        head_sha="head-sha",
+        deps=_fallback_deps(fake_time, unfiltered, [] if calls is None else calls),
+    )
+
+
+def test_ci_missing_from_filtered_list_is_found_in_unfiltered_list(fake_time):
+    # 2026-11-17 PR #410: 承認待ち run が head_sha 絞り込みの一覧にだけ出なかった。
+    calls: list = []
+    unfiltered = json.dumps(
+        [
+            _ci_run(id=3, head_sha="other-head", conclusion="failure"),
+            _ci_run(id=2, event="push", conclusion="failure"),
+            _ci_run(id=1),
+        ]
+    )
+
+    assert _fallback_reason(fake_time, unfiltered, calls) == ""
+
+    assert [call[2].rsplit("/", 1)[1] for call in calls] == [
+        FILTERED_CI,
+        UNFILTERED_CI,
+    ]
+    assert "--paginate" in calls[0]
+    assert "--paginate" not in calls[1]
+
+
+@pytest.mark.parametrize(
+    ("unfiltered", "reason"),
+    [
+        ("[]", "ci_not_found"),
+        (json.dumps([_ci_run(head_sha="other-head")]), "ci_not_found"),
+        (json.dumps([_ci_run(event="push")]), "ci_not_found"),
+        (json.dumps([None, "run"]), "ci_not_found"),
+        ('{"workflow_runs": []}', "ci_unavailable"),
+        (json.dumps([_ci_run(conclusion="failure")]), "ci_not_success"),
+        (json.dumps([_ci_run(status="in_progress")]), "ci_incomplete"),
+        (json.dumps([_ci_run(head_branch="other")]), "ci_target_mismatch"),
+        (json.dumps([_ci_run(id=None)]), "ci_unavailable"),
+    ],
+)
+def test_ci_fallback_keeps_the_same_gate(fake_time, unfiltered, reason):
+    assert _fallback_reason(fake_time, unfiltered) == reason
+
+
+def test_ci_fallback_uses_latest_run_of_the_head(fake_time):
+    # 古い成功 run へ戻らず、同一 HEAD の最新 run で判定する。
+    unfiltered = json.dumps(
+        [
+            _ci_run(id=1, created_at="2026-10-09T00:00:00Z"),
+            _ci_run(id=2, conclusion="failure"),
+        ]
+    )
+
+    assert _fallback_reason(fake_time, unfiltered) == "ci_not_success"
+
+
 def test_merge_already_merged_dispatches_and_posts_recovered_comment(
     fake_time, tmp_path, read_github_output
 ):
