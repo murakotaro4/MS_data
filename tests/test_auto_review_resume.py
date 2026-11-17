@@ -680,7 +680,8 @@ def test_resume_with_successful_review_still_requires_latest_head_ci(
     assert "### Auto Review Resume" in summary
     assert "- failed: #97" in summary
     assert f"reason={reason}" in summary
-    assert len(calls) == 2
+    # CI が見つからないときだけ、絞り込みなしの一覧をもう1回確認する。
+    assert len(calls) == (3 if ci_changes is None else 2)
     assert not any(
         call[1:3] in (["pr", "merge"], ["workflow", "run"]) for call in calls
     )
