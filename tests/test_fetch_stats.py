@@ -222,6 +222,31 @@ def test_write_fetch_stats_reset_discards_previous_run(tmp_path: Path):
     assert data["totals"]["body_bytes"] == 200
 
 
+@pytest.mark.parametrize("broken", [None, 1, "x", [1]])
+def test_write_fetch_stats_drops_non_dict_phase_entries(tmp_path: Path, broken):
+    from datetime import datetime, timezone
+
+    # 壊れた既存ファイル（フェーズ値が dict でない）でも落ちずに記録を続ける。
+    path = tmp_path / "fetch_stats.json"
+    path.write_text(
+        json.dumps({"phases": {"index": broken, "labels": {"network_requests": 2}}}),
+        encoding="utf-8",
+    )
+
+    sm.write_fetch_stats(
+        path,
+        "details",
+        {"network_requests": 10},
+        started_at=datetime(2026, 6, 11, 9, 0, tzinfo=timezone.utc),
+        duration_seconds=3.0,
+    )
+
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert set(data["phases"]) == {"labels", "details"}
+    assert data["totals"]["network_requests"] == 12
+    assert data["totals"]["duration_seconds"] == pytest.approx(3.0)
+
+
 def test_304_without_cached_html_raises_and_counts_failure(tmp_path: Path):
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(status_code=304)
