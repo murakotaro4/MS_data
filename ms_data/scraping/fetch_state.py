@@ -125,12 +125,19 @@ def write_fetch_stats(
     （実転送量は圧縮分だけ小さい。実行間の相対比較には影響しない）。
     reset=True で前回実行のフェーズを破棄する（実行の先頭フェーズで指定し、
     走らなかったフェーズの前回値が totals に混入するのを防ぐ）。
+    既存ファイルのフェーズ値が dict でない場合（壊れたファイル）は、そのフェーズを
+    破棄して計測の記録を続ける。
     """
     payload: dict[str, Any] = {"phases": {}}
     if not reset and path.exists():
         existing = load_json_or_default(path, {})
         if isinstance(existing, dict) and isinstance(existing.get("phases"), dict):
-            payload["phases"] = existing["phases"]
+            # 壊れたファイルの非 dict フェーズは捨てる（totals 集計で落ちるため）。
+            payload["phases"] = {
+                name: entry
+                for name, entry in existing["phases"].items()
+                if isinstance(entry, dict)
+            }
 
     payload["phases"][phase] = {
         **stats,
