@@ -50,6 +50,23 @@ def _parse_datetime(value: Any) -> datetime | None:
         return None
 
 
+def _candidate_count(value: Any, fallback: int) -> int:
+    """検出メタの candidate_count を整数にする（読めない値は fallback）。
+
+    壊れた検出メタ（null・数値でない文字列・非有限値）で品質レポートの生成ごと
+    落とさないため。整数として読める値の扱いは変えない。
+    """
+    try:
+        return int(value)
+    except (TypeError, ValueError, OverflowError):
+        return fallback
+
+
+def _dict_or_empty(value: Any) -> dict[str, Any]:
+    """dict ならそのまま、それ以外（壊れたファイルの null・配列等）は空 dict。"""
+    return value if isinstance(value, dict) else {}
+
+
 def _is_current_attempt(entry: dict[str, Any], run_started_at: datetime | None) -> bool:
     if run_started_at is None:
         return True
@@ -225,7 +242,9 @@ def build_report(
 
     candidate_urls = {_url(item) for item in changed_index if isinstance(item, dict)}
     candidate_urls.discard("")
-    candidate_count = int(changed_meta.get("candidate_count", len(candidate_urls)))
+    candidate_count = _candidate_count(
+        changed_meta.get("candidate_count", len(candidate_urls)), len(candidate_urls)
+    )
     attempted_url_count = len(candidate_urls) if candidate_urls else candidate_count
 
     if candidate_urls:
@@ -299,8 +318,10 @@ def build_report(
             "min_age_coverage": changed_meta.get("min_age_coverage"),
         },
         "fetch": {
-            "totals": fetch_stats.get("totals", {}),
-            "phases": fetch_stats.get("phases", {}),
+            # 壊れた fetch_stats.json の非 dict 値は空にする（Step Summary や
+            # 通知メールが dict 前提で読むため）。
+            "totals": _dict_or_empty(fetch_stats.get("totals")),
+            "phases": _dict_or_empty(fetch_stats.get("phases")),
         },
         "detail_fetch": {
             "attempted_url_count": attempted_url_count,
