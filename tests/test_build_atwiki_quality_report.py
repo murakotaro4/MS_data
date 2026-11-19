@@ -1,3 +1,5 @@
+import pytest
+
 from ms_data.reporting.build_atwiki_quality_report import build_report
 
 from helpers import write_json
@@ -411,3 +413,85 @@ def test_main_step_summary_includes_fetch_totals_and_warnings(tmp_path):
     text = summary.read_text(encoding="utf-8")
     assert "- fetch: requests=" in text
     assert "- warning[" in text
+
+
+def test_main_survives_broken_fetch_stats_totals_and_phases(tmp_path):
+    """fetch_stats.json の totals / phases が dict でなくても落ちない。"""
+    import json
+
+    from ms_data.reporting.build_atwiki_quality_report import main
+
+    args = _write_minimal_inputs(tmp_path)
+    stats = tmp_path / "stats.json"
+    write_json(stats, {"phases": None, "totals": [1, 2]})
+    args[args.index("--fetch-stats") + 1] = str(stats)
+    out = tmp_path / "r.json"
+    summary = tmp_path / "summary.md"
+
+    rc = main(
+        [
+            "--report-date", "20260531",
+            "--source-run-id", "1",
+            "--out", str(out),
+            "--step-summary", str(summary),
+            *args,
+        ]
+    )  # fmt: skip
+
+    assert rc == 0
+    report = json.loads(out.read_text(encoding="utf-8"))
+    assert report["fetch"] == {"totals": {}, "phases": {}}
+    assert "- fetch:" not in summary.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("broken", [None, "abc", [], {}, float("inf")])
+def test_build_report_falls_back_on_unreadable_candidate_count(tmp_path, broken):
+    """candidate_count が整数として読めないときは候補 URL 数で代替する。"""
+    index = tmp_path / "index.json"
+    changed_index = tmp_path / "index_changed.json"
+    changed_meta = tmp_path / "index_changed_meta.json"
+    write_json(index, [{"name": "A", "url": "https://example.test/a"}])
+    write_json(changed_index, [{"name": "A", "url": "https://example.test/a"}])
+    write_json(changed_meta, {"candidate_count": broken})
+
+    report = build_report(
+        report_date="20260611",
+        source_run_id="12345",
+        index_path=index,
+        changed_index_path=changed_index,
+        changed_meta_path=changed_meta,
+        detail_fetch_state_path=tmp_path / "missing_state.json",
+        details_json_path=tmp_path / "missing_details.json",
+        details_jsonl_path=tmp_path / "missing_details.jsonl",
+        before_msdata_path=None,
+        current_msdata_path=None,
+        overrides_dir=tmp_path / "no_overrides",
+    )
+
+    assert report["index"]["candidate_count"] == 1
+    assert report["detail_fetch"]["attempted_url_count"] == 1
+
+
+def test_build_report_keeps_readable_candidate_count(tmp_path):
+    """整数として読める candidate_count（数字文字列を含む）は従来どおり使う。"""
+    index = tmp_path / "index.json"
+    changed_meta = tmp_path / "index_changed_meta.json"
+    write_json(index, [])
+    write_json(changed_meta, {"candidate_count": "3"})
+
+    report = build_report(
+        report_date="20260611",
+        source_run_id="12345",
+        index_path=index,
+        changed_index_path=tmp_path / "missing_changed.json",
+        changed_meta_path=changed_meta,
+        detail_fetch_state_path=tmp_path / "missing_state.json",
+        details_json_path=tmp_path / "missing_details.json",
+        details_jsonl_path=tmp_path / "missing_details.jsonl",
+        before_msdata_path=None,
+        current_msdata_path=None,
+        overrides_dir=tmp_path / "no_overrides",
+    )
+
+    assert report["index"]["candidate_count"] == 3
+    assert report["detail_fetch"]["attempted_url_count"] == 3
