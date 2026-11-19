@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-11-19T18:00:37Z",
+  "report_date": "20261120",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "c22b7a47007e632074c0a8367dec5a646a3f89b5"
+  },
+  "github": {
+    "run_id": "44582502856",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "a3929eec885170489b5fe8fa38abce68b4265b45337094b6ae5c5295c9f3edb9",
+      "size_bytes": 148654,
+      "record_count": 604
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "524fd6465345f1cd01041976115ae6f3bd506253acead4226a84f5f39c667e55",
+      "size_bytes": 26228,
+      "record_count": 23
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "20e595e848b454f581d8906fc53d52f6beed6d246a4832eb2438481bd0807b16",
+      "size_bytes": 34497,
+      "record_count": 23
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "db8a79be8b677f436430f00e30e57141268beba6d77c0c63f8cae4caeb6fa788",
+      "file_count": 28,
+      "size_bytes": 4869834
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "c415ea3e175f0f0194d8635e5e9726b27c58471dbceca2bd5f986e6bcb8762dc",
+      "size_bytes": 2688125,
+      "record_count": 1738
+    },
+    "diff_report": {
+      "path": "reports/2026/11/diff_msdata_20261120.md",
+      "sha256": "706215cf28a7584db0c57f0686fb3a54fdf64e33536fe806cc35195b39f06eb4",
+      "size_bytes": 4025
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20261120-run-44582502856",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20261120-run-44582502856",
+    "asset_name": "raw_snapshot_20261120_run44582502856.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261120-run-44582502856"
+  }
+}
