@@ -6,6 +6,9 @@ on:
       - data update
     types:
       - completed
+  schedule:
+    - cron: "0 0 * * *" # JST 09:00 (resume stopped auto reviews)
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -21,7 +24,8 @@ jobs:
       group: msdata-auto-review-merge
       cancel-in-progress: false
     if: >
-      github.event.workflow_run.conclusion == 'success'
+      github.event_name == 'workflow_run'
+      && github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
@@ -267,3 +271,53 @@ jobs:
           retention-days: 30
           if-no-files-found: ignore
           path: reports/auto_review_${{ steps.resolve.outputs.report_date }}.json
+
+  resume:
+    if: >
+      github.event_name == 'schedule'
+      || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: write
+    concurrency:
+      group: msdata-auto-review-merge
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/setup-uv-env
+
+      - id: pat
+        name: Resolve Codex trigger PAT
+        uses: ./.github/actions/resolve-codex-pat
+        with:
+          pat: ${{ secrets.CODEX_TRIGGER_PAT }}
+
+      - name: Resume stopped auto reviews
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CODEX_TRIGGER_PAT: ${{ secrets.CODEX_TRIGGER_PAT }}
+          PAT_AVAILABLE: ${{ steps.pat.outputs.pat_available }}
+          PAT_LOGIN: ${{ steps.pat.outputs.pat_login }}
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GMAIL_TO: ${{ secrets.GMAIL_ADDRESS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${PAT_AVAILABLE}" == "true" ]]; then
+            export CODEX_TRIGGER_TOKEN="${CODEX_TRIGGER_PAT}"
+          fi
+          uv run python -m ms_data.gh.auto_review_merge resume \
+            --repo "${GITHUB_REPOSITORY}" \
+            --run-id "${GITHUB_RUN_ID}" \
+            --pat-available "${PAT_AVAILABLE}" \
+            --pat-login "${PAT_LOGIN}" \
+            --max-candidates 3 \
+            --retry-wait-seconds 300 \
+            --github-output "$GITHUB_OUTPUT" \
+            --step-summary "$GITHUB_STEP_SUMMARY"

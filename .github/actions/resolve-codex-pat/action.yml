@@ -2,7 +2,7 @@ name: Resolve Codex trigger PAT
 description: >-
   CODEX_TRIGGER_PAT が有効ならログイン名を解決して pat_available=true を返す。
   未設定・解決失敗時は警告のみで pat_available=false にフォールバックする
-  （auto review merge / resume auto review 共用）。
+  （auto review merge の review-and-merge / resume ジョブで共用）。
 
 inputs:
   pat:
