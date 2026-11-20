@@ -22,6 +22,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from bs4 import BeautifulSoup
+
 from ms_data.core import json_io, paths
 from ms_data.core.labels import clean_text
 from ms_data.core.ms_names import MS_NAME_WITH_LEVEL
@@ -35,6 +37,7 @@ from ms_data.reporting.msdata_diff_model import (
 from ms_data.reporting.rendering import append_table
 from ms_data.reporting.report_msdata_diff import format_field_value, format_value
 from ms_data.scraping.detail_page import _TEXT_FIELDS, extract_source_rows
+from ms_data.scraping.fullst import parse_fullst_by_ms_level, public_fullst_entries
 from ms_data.scraping.text_values import to_int
 
 REPORT_TITLE = "# 取得元抜粋"
@@ -79,6 +82,8 @@ class SourcePage:
     content_sha256: str = ""
     levels: list[int] = field(default_factory=list)
     rows: dict[str, tuple[str, list[str | None]]] = field(default_factory=dict)
+
+    fullst_by_level: dict[int, list[dict[str, Any]]] = field(default_factory=dict)
 
     def cell(self, key: str, level: int) -> str | None:
         row = self.rows.get(key)
@@ -137,7 +142,16 @@ def load_source_page(url: str, html_dir: Path) -> SourcePage:
     if not html_path.is_file():
         return page
     page.html_found = True
-    page.levels, page.rows = extract_source_rows(html_path.read_text(encoding="utf-8"))
+    html = html_path.read_text(encoding="utf-8")
+    page.levels, page.rows = extract_source_rows(html)
+    # 直接記載だけを照合し、前LV補完を取得元の記載として扱わない。
+    page.fullst_by_level = {
+        lv: public_fullst_entries(items)
+        for lv, items in parse_fullst_by_ms_level(
+            BeautifulSoup(html, "lxml"), page.levels
+        ).items()
+        if public_fullst_entries(items)
+    }
     return page
 
 
@@ -169,6 +183,21 @@ def _excerpt_row(
         status = STATUS_NO_URL
     elif not page.html_found:
         status = STATUS_NO_HTML
+    elif field_name == "fullst":
+        direct = page.fullst_by_level.get(level) if level is not None else None
+        if direct is None:
+            status = STATUS_NO_ROW
+        else:
+            source_text = json.dumps(direct, ensure_ascii=False)
+            row_text = "強化リスト情報: " + " / ".join(
+                f"LV{lv}={json.dumps(items, ensure_ascii=False)}"
+                for lv, items in page.fullst_by_level.items()
+            )
+            status = (
+                STATUS_REMOVED
+                if op == "removed"
+                else STATUS_MATCH if direct == new_val else STATUS_MISMATCH
+            )
     elif field_name not in page.rows:
         status = STATUS_NO_ROW
     else:
