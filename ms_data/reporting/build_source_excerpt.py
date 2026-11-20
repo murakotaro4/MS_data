@@ -22,6 +22,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from bs4 import BeautifulSoup
+
 from ms_data.core import json_io, paths
 from ms_data.core.labels import clean_text
 from ms_data.core.ms_names import MS_NAME_WITH_LEVEL
@@ -35,6 +37,7 @@ from ms_data.reporting.msdata_diff_model import (
 from ms_data.reporting.rendering import append_table
 from ms_data.reporting.report_msdata_diff import format_field_value, format_value
 from ms_data.scraping.detail_page import _TEXT_FIELDS, extract_source_rows
+from ms_data.scraping.fullst import parse_fullst_by_ms_level, public_fullst_entries
 from ms_data.scraping.text_values import to_int
 
 REPORT_TITLE = "# 取得元抜粋"
@@ -80,6 +83,8 @@ class SourcePage:
     levels: list[int] = field(default_factory=list)
     rows: dict[str, tuple[str, list[str | None]]] = field(default_factory=dict)
 
+    fullst_by_level: dict[int, list[dict[str, Any]]] = field(default_factory=dict)
+
     def cell(self, key: str, level: int) -> str | None:
         row = self.rows.get(key)
         if row is None or level not in self.levels:
@@ -111,15 +116,17 @@ class ExcerptRow:
     row_text: str
 
     def cells(self) -> list[str]:
+        cell_limit = sys.maxsize if self.field_name == "fullst" else _CELL_MAX_LEN
+        row_limit = sys.maxsize if self.field_name == "fullst" else _ROW_MAX_LEN
         return [
             format_value(self.name),
             self.level,
             format_value(self.field_name),
             self.old_text,
             self.new_text,
-            format_value(self.source_text, _CELL_MAX_LEN),
+            format_value(self.source_text, cell_limit),
             self.status,
-            format_value(self.row_text, _ROW_MAX_LEN),
+            format_value(self.row_text, row_limit),
         ]
 
 
@@ -137,7 +144,16 @@ def load_source_page(url: str, html_dir: Path) -> SourcePage:
     if not html_path.is_file():
         return page
     page.html_found = True
-    page.levels, page.rows = extract_source_rows(html_path.read_text(encoding="utf-8"))
+    html = html_path.read_text(encoding="utf-8")
+    page.levels, page.rows = extract_source_rows(html)
+    # 直接記載だけを照合し、前LV補完を取得元の記載として扱わない。
+    page.fullst_by_level = {
+        lv: public_fullst_entries(items)
+        for lv, items in parse_fullst_by_ms_level(
+            BeautifulSoup(html, "lxml"), page.levels
+        ).items()
+        if public_fullst_entries(items)
+    }
     return page
 
 
@@ -151,6 +167,12 @@ def _matches(field_name: str, source: str | None, value: Any) -> bool:
     return to_int(source) == value
 
 
+def _excerpt_value(field_name: str, value: Any) -> str:
+    if field_name == "fullst":
+        return format_value(value, sys.maxsize)
+    return format_field_value(field_name, value)
+
+
 def _excerpt_row(
     name: str,
     op: str,
@@ -161,14 +183,29 @@ def _excerpt_row(
 ) -> ExcerptRow:
     match = MS_NAME_WITH_LEVEL.match(name)
     level = int(match.group("level")) if match else None
-    old_text = "" if op == "added" else format_field_value(field_name, old_val)
-    new_text = "" if op == "removed" else format_field_value(field_name, new_val)
+    old_text = "" if op == "added" else _excerpt_value(field_name, old_val)
+    new_text = "" if op == "removed" else _excerpt_value(field_name, new_val)
     source_text = ""
     row_text = ""
     if page is None:
         status = STATUS_NO_URL
     elif not page.html_found:
         status = STATUS_NO_HTML
+    elif field_name == "fullst":
+        direct = page.fullst_by_level.get(level) if level is not None else None
+        if direct is None:
+            status = STATUS_NO_ROW
+        else:
+            source_text = json.dumps(direct, ensure_ascii=False)
+            row_text = "強化リスト情報: " + " / ".join(
+                f"LV{lv}={json.dumps(items, ensure_ascii=False)}"
+                for lv, items in page.fullst_by_level.items()
+            )
+            status = (
+                STATUS_REMOVED
+                if op == "removed"
+                else STATUS_MATCH if direct == new_val else STATUS_MISMATCH
+            )
     elif field_name not in page.rows:
         status = STATUS_NO_ROW
     else:
