@@ -126,20 +126,40 @@ def _workflow(name: str) -> str:
     )
 
 
-@pytest.mark.parametrize(
-    "workflow", ("auto_review_merge.yml", "resume_auto_review.yml")
-)
-def test_pat_resolution_uses_composite_action(workflow: str):
-    text = _workflow(workflow)
-    start = text.index("      - id: pat\n")
-    end = text.index("\n      - ", start + 1)
-    block = text[start:end]
+def test_pat_resolution_uses_composite_action():
+    text = _workflow("auto_review_merge.yml")
+    marker = "      - id: pat\n"
+    positions = []
+    pos = 0
+    while True:
+        idx = text.find(marker, pos)
+        if idx == -1:
+            break
+        positions.append(idx)
+        pos = idx + len(marker)
 
-    assert "uses: ./.github/actions/resolve-codex-pat" in block
-    assert "pat: ${{ secrets.CODEX_TRIGGER_PAT }}" in block
-    assert "gh api user" not in block
+    assert len(positions) == 2
+    for start in positions:
+        end = text.index("\n      - ", start + 1)
+        block = text[start:end]
+        assert "uses: ./.github/actions/resolve-codex-pat" in block
+        assert "pat: ${{ secrets.CODEX_TRIGGER_PAT }}" in block
+        assert "gh api user" not in block
+
     assert "steps.pat.outputs.pat_available" in text
     assert "steps.pat.outputs.pat_login" in text
+
+
+def test_auto_review_merge_workflow_integrates_resume_job():
+    text = _workflow("auto_review_merge.yml")
+    assert 'cron: "0 0 * * *"' in text
+    assert "workflow_dispatch:" in text
+    assert "github.event_name == 'workflow_run'" in text
+    assert "github.event_name == 'schedule'" in text
+    assert "ms_data.gh.auto_review_merge resume" in text
+    workflows_dir = Path(__file__).resolve().parents[1] / ".github/workflows"
+    assert not (workflows_dir / "resume_auto_review.yml").exists()
+    assert not (workflows_dir / "approve_data_ci.yml").exists()
 
 
 def test_resolve_codex_pat_action_declares_outputs():
