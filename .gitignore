@@ -3,6 +3,7 @@ __pycache__/
 .venv/
 .env
 .pytest_cache/
+.hypothesis/
 .coverage
 htmlcov/
 .ruff_cache/
