@@ -38,7 +38,7 @@ Release（`raw-snapshot-*`）は取得時の生 HTML スナップショットと
 
 ## 自動更新の仕組み
 
-毎日 18:00 JST に GitHub Actions が atwiki を取得し、差分があれば PR 作成 → Codex 自動レビュー → 自動マージ → Release 保存・メール通知を行います。失敗時は `notify failure` がメールと Issue で通知します。詳細は [AGENTS.md](AGENTS.md)。
+毎日 18:00 JST に GitHub Actions が atwiki を取得し、差分があれば PR 作成 → Codex 自動レビュー → 自動マージ → Release 保存・メール通知を行います。失敗時は `notify failure` がメールと Issue で通知します。全体マップは [docs/automation_overview.md](docs/automation_overview.md)、詳細仕様は [AGENTS.md](AGENTS.md) を参照してください。
 
 更新通知は、結果と対応要否 → 更新・保留対象と理由 → 登録補正の維持・期限 → 技術情報の順に表示する HTML メールです。機体ごとのカードに LV 別の変更前・変更後と数値の増減量を載せ、追加・削除レコードの主要ステータスと強化項目の明細も掲載します。強化項目は名称・強化Lv／必要強化値の変更前／変更後を左右比較し、機体LVと強化Lvを区別します。順序変更・追加削除も表示し、値なし（数値記録なし）・未設定・項目なしを区別します。正常な0件は短くまとめ、要確認時は対象と次の対応を明示します。テキスト版も同じ情報順と意味で併記し、マージ後の `msData.json` 添付も維持します。
 
