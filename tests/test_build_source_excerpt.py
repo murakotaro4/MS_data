@@ -290,4 +290,12 @@ def test_fullst_excerpt_compares_only_direct_rows(
         assert "_section" not in row.source_text
         assert "_skip_fallback" not in row.source_text
         assert pages[URL].fullst_by_level[level] == direct
-        assert row.cells()[5].count("\\|") > 0 or scenario == "forced_sortie"
+        cells = row.cells()
+        assert cells[5].count("\\|") > 0 or scenario == "forced_sortie"
+        assert "…" not in "".join(cells)
+        assert json.dumps(direct[-1]["points"]) in cells[5]
+        assert "LV4=" in cells[7]
+        if scenario == "wrong_points":
+            assert str(adopted[-1]["points"]) in cells[4]
+        if scenario == "removed":
+            assert str(adopted[-1]["points"]) in cells[3]

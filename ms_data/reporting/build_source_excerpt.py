@@ -116,15 +116,17 @@ class ExcerptRow:
     row_text: str
 
     def cells(self) -> list[str]:
+        cell_limit = sys.maxsize if self.field_name == "fullst" else _CELL_MAX_LEN
+        row_limit = sys.maxsize if self.field_name == "fullst" else _ROW_MAX_LEN
         return [
             format_value(self.name),
             self.level,
             format_value(self.field_name),
             self.old_text,
             self.new_text,
-            format_value(self.source_text, _CELL_MAX_LEN),
+            format_value(self.source_text, cell_limit),
             self.status,
-            format_value(self.row_text, _ROW_MAX_LEN),
+            format_value(self.row_text, row_limit),
         ]
 
 
@@ -165,6 +167,12 @@ def _matches(field_name: str, source: str | None, value: Any) -> bool:
     return to_int(source) == value
 
 
+def _excerpt_value(field_name: str, value: Any) -> str:
+    if field_name == "fullst":
+        return format_value(value, sys.maxsize)
+    return format_field_value(field_name, value)
+
+
 def _excerpt_row(
     name: str,
     op: str,
@@ -175,8 +183,8 @@ def _excerpt_row(
 ) -> ExcerptRow:
     match = MS_NAME_WITH_LEVEL.match(name)
     level = int(match.group("level")) if match else None
-    old_text = "" if op == "added" else format_field_value(field_name, old_val)
-    new_text = "" if op == "removed" else format_field_value(field_name, new_val)
+    old_text = "" if op == "added" else _excerpt_value(field_name, old_val)
+    new_text = "" if op == "removed" else _excerpt_value(field_name, new_val)
     source_text = ""
     row_text = ""
     if page is None:
