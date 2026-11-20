@@ -3,6 +3,11 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from hypothesis import settings
+
+# CI 環境（特に Windows ランナー）での実行時間ぶれによる誤失敗を防ぐ
+settings.register_profile("msdata", deadline=None)
+settings.load_profile("msdata")
 
 # Ensure project root is on sys.path for `import ms_data.*`
 ROOT = Path(__file__).resolve().parents[1]

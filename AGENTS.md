@@ -142,6 +142,7 @@
 - Python: インデント4スペース、型ヒント必須（`str | None` 形式を推奨）。命名はファイル/関数 lower_snake_case、クラス CapWords。
 - ツール: `black`（88列）/ `ruff` / `pytest` を uv で管理。
 - テスト: `tests/test_*.py`。変換/検証ロジックは目安80%以上をカバーし、エッジケースと不正入力を含める。
+- 不変条件（プロパティベース）テスト: 中核ロジック（正規化・パース、レビュー/CI承認ゲート、巻き戻りガード/公式オーバーライド、差分モデル）の仕様・安全条件は `Hypothesis` を用いた `tests/test_invariants_*.py` で検証する（個別ケースの羅列より「全入力で成り立つべき不変条件」を優先）。
 - テスト共有ヘルパー: `tests/helpers.py`（MS レコード factory `make_ms_record` / `make_minimal_ms_record`、`write_json`）、`tests/workflow_contract.py`（ワークフローのステップ切り出しと必須/禁止部分文字列アサート）、`tests/auto_review_helpers.py`（auto_review cmd_* 用スタブ）。`from helpers import ...` のように素の名前で import する（`__init__.py` は置かない）。
 - 共通処理は `ms_data/core` 等の既存ユーティリティを再利用し、コピペ実装を作らない。
 - 既定パスは `ms_data/core/paths.py` を SSOT とし、各 CLI の argparse `default=` はそこを参照する（`tests/test_path_defaults_sync.py` が直書きの再発を検出する）。
