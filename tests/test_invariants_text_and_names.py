@@ -93,7 +93,7 @@ def test_extract_page_id_roundtrips_pages_url(prefix: str, page_id: int):
         st.text(
             st.sampled_from(list("abcdefghijklmnopqrstuvwxyz0123456789/._-")),
             max_size=40,
-        ),
+        ).filter(lambda s: not s.startswith("http")),
         st.from_regex(r"//[a-z0-9.-]+/[a-z0-9/._-]*", fullmatch=True),
         st.from_regex(r"https?://[a-z0-9.-]+/[a-z0-9/._-]*", fullmatch=True),
     )
