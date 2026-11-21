@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 from datetime import date, timedelta
 
-from hypothesis import given
+from hypothesis import example, given
 from hypothesis import strategies as st
 
 from ms_data.audit.detect_msdata_rollbacks import (
@@ -62,6 +62,14 @@ def _override_spec_st(today: date):
         max_size=4,
     ),
 )
+@example(
+    records={"ザクⅢ改_LV1": {"MS名": "ザクⅢ改_LV1", "HP": 23500, "スピード": 145}},
+    overrides={"ザクⅢ改_LV1": {"HP": {"value": 27000, "stale_value": 23500}}},
+)
+@example(
+    records={"ザクⅢ改_LV1": {"MS名": "ザクⅢ改_LV1", "HP": 28000}},
+    overrides={"ザクⅢ改_LV1": {"HP": {"value": 27000, "stale_value": 23500}}},
+)
 def test_apply_official_overrides_is_idempotent_and_respects_guards(records, overrides):
     today = date(2026, 11, 20)
     before = copy.deepcopy(records)
@@ -74,9 +82,9 @@ def test_apply_official_overrides_is_idempotent_and_respects_guards(records, ove
     # 冪等性: 2回目の適用は必ず変更 0 件・レコード不変
     assert second_changed == 0
     assert working == after_first
-    assert first_changed >= 0
 
     # 各項目の安全条件を全件検証
+    expected_changed = 0
     for name, orig_rec in before.items():
         new_rec = after_first[name]
         name_overrides = overrides.get(name, {})
@@ -97,6 +105,9 @@ def test_apply_official_overrides_is_idempotent_and_respects_guards(records, ove
             else:
                 # 有効期限内かつ stale_value 一致なら必ず公式値になる
                 assert new_rec[field] == spec["value"]
+                expected_changed += int(orig_val != spec["value"])
+
+    assert first_changed == expected_changed
 
 
 @given(

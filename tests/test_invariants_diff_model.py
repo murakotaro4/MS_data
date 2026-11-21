@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import Counter
 
-from hypothesis import given
+from hypothesis import example, given
 from hypothesis import strategies as st
 
 from ms_data.reporting.msdata_diff_model import (
@@ -51,12 +51,15 @@ def test_diff_summary_conservation_reflexivity_and_symmetry(old, new):
 
 
 @given(old=_RECORD_MAP, new=_RECORD_MAP)
+@example(old={"A_LV1": {"HP": 1}}, new={"A_LV1": {"HP": 1}})
 def test_changed_records_detail_agrees_with_summary_and_field_counts(old, new):
     _, _, _, _, changed_count = diff_summary(old, new)
     details = get_changed_records_detail(old, new)
     changed_fields, added_fields, removed_fields = diff_field_counts(old, new)
 
     assert len(details) == changed_count
+    if old == new:
+        assert details == []
 
     agg_changed: Counter[str] = Counter()
     agg_added: Counter[str] = Counter()

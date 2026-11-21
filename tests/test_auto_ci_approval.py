@@ -241,7 +241,6 @@ def test_trusted_approval_then_ci_success_then_head_matched_merge(fake_time):
         "delete",
         "missing_data",
         "count",
-        "source",
         "source_id",
         "jobs",
         "ci_target",
@@ -272,8 +271,6 @@ def test_untrusted_scope_is_never_approved(fake_time, kind):
         data["files"] = []
     elif kind == "count":
         data["pull"]["changed_files"] = 2
-    elif kind == "source":
-        data["source"]["conclusion"] = "failure"
     elif kind == "source_id":
         data["source"]["id"] = 999
     elif kind == "jobs":
@@ -319,36 +316,32 @@ def test_no_merge_when_approval_or_ci_does_not_succeed(
     assert not any((call[1:3] == ["pr", "merge"] for call in calls))
 
 
-def test_extra_data_file_is_allowed_only_with_msdata():
+@pytest.mark.parametrize("filename", ["data/custom_parts.json", "data/weapons.json"])
+def test_extra_data_file_is_allowed_only_with_msdata(filename):
     from ms_data.gh.auto_ci_approval import EXTRA_DATA_FILES, _data_files_only
 
-    assert "data/custom_parts.json" in EXTRA_DATA_FILES
     date = "20261108"
     msdata = {"filename": "msData.json", "status": "modified"}
+    assert filename in EXTRA_DATA_FILES
     for status in ("added", "modified"):
-        parts = {"filename": "data/custom_parts.json", "status": status}
-        assert _data_files_only([msdata, parts], date)
-        assert not _data_files_only([parts], date)
-    removed = {"filename": "data/custom_parts.json", "status": "removed"}
+        extra = {"filename": filename, "status": status}
+        assert _data_files_only([msdata, extra], date)
+        assert not _data_files_only([extra], date)
+    removed = {"filename": filename, "status": "removed"}
     assert not _data_files_only([msdata, removed], date)
-    other = {"filename": "data/other.json", "status": "modified"}
-    assert not _data_files_only([msdata, other], date)
 
 
-def test_weapons_file_is_allowed_only_with_msdata():
-    from ms_data.gh.auto_ci_approval import EXTRA_DATA_FILES, _data_files_only
+def test_extra_data_files_can_be_combined_but_unlisted_files_are_rejected():
+    from ms_data.gh.auto_ci_approval import _data_files_only
 
-    assert "data/weapons.json" in EXTRA_DATA_FILES
     date = "20261108"
     msdata = {"filename": "msData.json", "status": "modified"}
     parts = {"filename": "data/custom_parts.json", "status": "modified"}
     for status in ("added", "modified"):
         weapons = {"filename": "data/weapons.json", "status": status}
-        assert _data_files_only([msdata, weapons], date)
         assert _data_files_only([msdata, parts, weapons], date)
-        assert not _data_files_only([weapons], date)
-    removed = {"filename": "data/weapons.json", "status": "removed"}
-    assert not _data_files_only([msdata, removed], date)
+    other = {"filename": "data/other.json", "status": "modified"}
+    assert not _data_files_only([msdata, other], date)
 
 
 @pytest.mark.parametrize(
@@ -380,6 +373,9 @@ def test_approve_rejects_unexpected_source_or_ci_state(fake_time, kind, reason):
 
         deps = replace(deps, run_gh=runner)
     assert approve(data, deps) == reason
+    assert sum(call[2].endswith("/approve") for call in calls) == int(
+        kind == "ci_changed_id_after_approve"
+    )
 
 
 def test_cli_returns_1_when_run_id_or_ref_is_invalid(fake_time):

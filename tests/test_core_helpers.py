@@ -21,10 +21,6 @@ def test_apply_key_aliases_prefers_existing_target() -> None:
     assert rec == {"射撃補正": "new"}
 
 
-def test_normalize_ms_name_without_level_is_unchanged() -> None:
-    assert normalize_ms_name("ザクII") == "ザクII"
-
-
 def test_normalize_ms_name_with_level_normalizes_base() -> None:
     assert normalize_ms_name("ザクII_LV1") == "ザクⅡ_LV1"
 

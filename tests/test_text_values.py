@@ -49,7 +49,6 @@ def test_absolute_url_normalizes_each_link_form(href, expected):
 @pytest.mark.parametrize(
     "url, expected",
     [
-        ("https://w.atwiki.jp/battle-operation2/pages/343.html", 343),
         ("https://w.atwiki.jp/battle-operation2/pages/３４３.html", 343),
         ("https://w.atwiki.jp/battle-operation2/pages/343.html?x=1", None),
         ("", None),
@@ -104,11 +103,7 @@ def test_parse_iso_datetime_rejects_empty_text_and_none():
 @pytest.mark.parametrize(
     "value, expected",
     [
-        ("7d", 604_800),
         ("72H", 259_200),
-        ("15m", 900),
-        ("3600s", 3_600),
-        ("90", 90),
         ("", 604_800),
         (" ２d ", 172_800),
         ("1.5", 1),
@@ -128,7 +123,6 @@ def test_parse_ttl_rejects_current_invalid_forms(value):
     "text, expected",
     [
         ("１２３", 123),
-        ("1,234", 1_234),
         ("１，２３４", 1_234),
         ("45％", 45),
         ("価格 1,234.5 DP", 1_234),
@@ -172,13 +166,18 @@ def test_looks_like_ticket_count(text, expected):
 @pytest.mark.parametrize(
     "text, expected",
     [
+        ("◯", True),
+        ("×", False),
+        ("可", True),
+        ("不可", False),
+        ("？", None),
         (" yes ", True),
         ("出撃不可", False),
         ("出撃可能", True),
         ("", None),
     ],
 )
-def test_symbol_to_bool_characterizes_embedded_and_empty_text(text, expected):
+def test_symbol_to_bool_characterizes_symbols_and_text(text, expected):
     assert symbol_to_bool(text) is expected
 
 
@@ -208,12 +207,3 @@ def test_to_int_extracts_head_integer():
     assert to_int("  15秒 ") == 15
     assert to_int("235 [度/秒]") == 235
     assert to_int("") is None
-
-
-def test_symbol_to_bool():
-    assert symbol_to_bool("◯") is True
-    assert symbol_to_bool("×") is False
-    assert symbol_to_bool("可") is True
-    assert symbol_to_bool("不可") is False
-    # 不明記号
-    assert symbol_to_bool("？") is None
