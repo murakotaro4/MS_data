@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from hypothesis import given
+from hypothesis import example, given
 from hypothesis import strategies as st
 
 from ms_data.core.ms_names import (
@@ -51,6 +51,7 @@ def test_normalize_ms_name_preserves_level_and_is_idempotent(base: str, level: i
 
 
 @given(text=_ANY_TEXT)
+@example(text="ザクII")
 def test_normalize_ms_name_leaves_non_level_strings_unchanged(text: str):
     if extract_ms_base_name(text) is None:
         assert normalize_ms_name(text) == text
@@ -67,6 +68,7 @@ def test_normalize_symbol_text_is_idempotent_and_removes_fullwidth_symbols(text:
 
 
 @given(n=st.integers(min_value=-(10**9), max_value=10**9))
+@example(n=1234)
 def test_to_int_roundtrips_plain_and_comma_formatted_integers(n: int):
     assert to_int(str(n)) == n
     if n >= 0:
@@ -83,6 +85,7 @@ def test_to_int_never_raises_on_arbitrary_text(text: str):
     prefix=st.sampled_from(["https://w.atwiki.jp/battle-operation2", "", "/wiki"]),
     page_id=st.integers(min_value=1, max_value=999999),
 )
+@example(prefix="https://w.atwiki.jp/battle-operation2", page_id=343)
 def test_extract_page_id_roundtrips_pages_url(prefix: str, page_id: int):
     url = f"{prefix}/pages/{page_id}.html"
     assert extract_page_id(url) == page_id
@@ -110,6 +113,10 @@ def test_absolute_url_is_idempotent_and_has_http_scheme(href: str):
     val=st.integers(min_value=0, max_value=10000),
     unit=st.sampled_from(["", "s", "m", "h", "d"]),
 )
+@example(val=7, unit="d")
+@example(val=15, unit="m")
+@example(val=3600, unit="s")
+@example(val=90, unit="")
 def test_parse_ttl_matches_exact_unit_seconds(val: int, unit: str):
     factors = {"": 1, "s": 1, "m": 60, "h": 3600, "d": 86400}
     assert parse_ttl(f"{val}{unit}") == val * factors[unit]

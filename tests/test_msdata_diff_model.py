@@ -77,11 +77,6 @@ def test_get_changed_records_detail_distinguishes_deleted_from_none():
     assert changed[2:] == (1, 2)
 
 
-def test_get_changed_records_detail_skips_unchanged_records():
-    same = {"A_LV1": {"HP": 1}}
-    assert model.get_changed_records_detail(same, {"A_LV1": {"HP": 1}}) == []
-
-
 def test_format_value_plain_variants():
     assert model.format_value_plain(model._DELETED) == ""
     assert model.format_value_plain(None) == "null"

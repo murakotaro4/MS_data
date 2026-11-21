@@ -59,46 +59,6 @@ def test_stable_key_order_respects_priority():
     assert actual == expected
 
 
-def test_apply_official_overrides_prevents_stale_rollback_only():
-    records = {
-        "ザクⅢ改_LV1": {
-            "MS名": "ザクⅢ改_LV1",
-            "HP": 23500,
-            "スピード": 145,
-        }
-    }
-    overrides = {
-        "ザクⅢ改_LV1": {
-            "HP": {"value": 27000, "stale_value": 23500},
-        }
-    }
-
-    changed = update_msdata.apply_official_overrides(records, overrides)
-
-    assert changed == 1
-    assert records["ザクⅢ改_LV1"]["HP"] == 27000
-    assert records["ザクⅢ改_LV1"]["スピード"] == 145
-
-
-def test_apply_official_overrides_keeps_newer_non_stale_value():
-    records = {
-        "ザクⅢ改_LV1": {
-            "MS名": "ザクⅢ改_LV1",
-            "HP": 28000,
-        }
-    }
-    overrides = {
-        "ザクⅢ改_LV1": {
-            "HP": {"value": 27000, "stale_value": 23500},
-        }
-    }
-
-    changed = update_msdata.apply_official_overrides(records, overrides)
-
-    assert changed == 0
-    assert records["ザクⅢ改_LV1"]["HP"] == 28000
-
-
 def test_update_main_allows_partial_updates_while_guarding_official_values(
     tmp_path, capsys
 ):

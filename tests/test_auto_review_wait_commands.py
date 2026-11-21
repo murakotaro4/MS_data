@@ -1,5 +1,7 @@
 """wait-for-review サブコマンドのテスト（PAT 有無・タイムアウト・settle）。"""
 
+import pytest
+
 from ms_data.gh import auto_review_merge
 from ms_data.gh.auto_review_merge import (
     retry_marker,
@@ -81,10 +83,22 @@ def test_cmd_wait_for_review_posts_review_marker_and_responds_on_attempt_1(
     assert "- responded: true" in summary.read_text(encoding="utf-8")
 
 
-def test_cmd_wait_for_review_pat_posts_from_attempt_1(
-    fake_gh, fake_time, read_github_output, tmp_path, capsys
+@pytest.mark.parametrize(
+    ("pat_available", "pat_login", "sender"),
+    [("true", PAT_LOGIN, "PAT"), ("false", "", "bot")],
+    ids=["pat", "bot"],
+)
+def test_cmd_wait_for_review_posts_from_attempt_1(
+    fake_gh,
+    fake_time,
+    read_github_output,
+    tmp_path,
+    capsys,
+    pat_available,
+    pat_login,
+    sender,
 ):
-    """PAT ありなら attempt 1 から人間名義で投稿し、応答が遅ければ retry も投稿する。"""
+    """PAT の有無に応じた名義で初回の依頼と再試行を投稿する。"""
     calls, collect = script_metrics(
         [
             metrics(),
@@ -102,7 +116,13 @@ def test_cmd_wait_for_review_pat_posts_from_attempt_1(
         return real_ensure(**kwargs)
 
     rc = run_main(
-        _wait_argv(out, summary, max_attempts="3"),
+        _wait_argv(
+            out,
+            summary,
+            max_attempts="3",
+            pat_available=pat_available,
+            pat_login=pat_login,
+        ),
         fake_gh,
         fake_time,
         collect_metrics=collect,
@@ -118,53 +138,14 @@ def test_cmd_wait_for_review_pat_posts_from_attempt_1(
     assert len(fake_gh.posted_comments) == 2
     assert review_marker(HEAD_SHA) in fake_gh.posted_comments[0][1]
     assert retry_marker(2, HEAD_SHA) in fake_gh.posted_comments[1][1]
-    assert len(ensure_calls) == 2
-    assert PAT_LOGIN in ensure_calls[0]["allowed_logins"]
-    assert "(PAT)" in capsys.readouterr().out
-    assert len(calls) == 3
-
-
-def test_cmd_wait_for_review_without_pat_posts_bot_comment_from_attempt_1(
-    fake_gh, fake_time, read_github_output, tmp_path, capsys
-):
-    """PAT 不在でも attempt 1 から bot 名義で @codex review を投稿する。"""
-    calls, collect = script_metrics(
-        [
-            metrics(),
-            metrics(),
-            metrics(review_complete=True, terminal_count=1),
-        ],
-    )
-    out = tmp_path / "out.txt"
-    summary = tmp_path / "summary.md"
-    ensure_calls: list[dict] = []
-    real_ensure = auto_review_merge.ensure_review_comment
-
-    def tracking_ensure(**kwargs):
-        ensure_calls.append(kwargs)
-        return real_ensure(**kwargs)
-
-    rc = run_main(
-        _wait_argv(out, summary, max_attempts="3", pat_available="false", pat_login=""),
-        fake_gh,
-        fake_time,
-        collect_metrics=collect,
-        ensure_comment=tracking_ensure,
-    )
-
-    assert rc == 0
-    outputs = read_github_output(out)
-    assert outputs["responded"] == "true"
-    assert outputs["response_attempt"] == "2"
-    assert outputs["trigger_comment_ids"] == "1000,1001"
-    assert len(fake_gh.posted_comments) == 2
-    assert review_marker(HEAD_SHA) in fake_gh.posted_comments[0][1]
-    assert retry_marker(2, HEAD_SHA) in fake_gh.posted_comments[1][1]
     assert "@codex review" in fake_gh.posted_comments[0][1]
     assert len(ensure_calls) == 2
-    assert "allowed_logins" not in ensure_calls[0]
-    assert "use_trigger_token" not in ensure_calls[0]
-    assert "(bot)" in capsys.readouterr().out
+    if pat_login:
+        assert pat_login in ensure_calls[0]["allowed_logins"]
+    else:
+        assert "allowed_logins" not in ensure_calls[0]
+        assert "use_trigger_token" not in ensure_calls[0]
+    assert f"({sender})" in capsys.readouterr().out
     assert len(calls) == 3
 
 

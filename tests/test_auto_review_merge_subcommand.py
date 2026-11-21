@@ -221,22 +221,21 @@ def test_ci_missing_from_filtered_list_is_found_in_unfiltered_list(fake_time):
         (json.dumps([_ci_run(status="in_progress")]), "ci_incomplete"),
         (json.dumps([_ci_run(head_branch="other")]), "ci_target_mismatch"),
         (json.dumps([_ci_run(id=None)]), "ci_unavailable"),
+        # 同一 HEAD の最新 run が失敗していれば、古い成功 run へ戻らない。
+        pytest.param(
+            json.dumps(
+                [
+                    _ci_run(id=1, created_at="2026-10-09T00:00:00Z"),
+                    _ci_run(id=2, conclusion="failure"),
+                ]
+            ),
+            "ci_not_success",
+            id="latest-run-wins",
+        ),
     ],
 )
 def test_ci_fallback_keeps_the_same_gate(fake_time, unfiltered, reason):
     assert _fallback_reason(fake_time, unfiltered) == reason
-
-
-def test_ci_fallback_uses_latest_run_of_the_head(fake_time):
-    # 古い成功 run へ戻らず、同一 HEAD の最新 run で判定する。
-    unfiltered = json.dumps(
-        [
-            _ci_run(id=1, created_at="2026-10-09T00:00:00Z"),
-            _ci_run(id=2, conclusion="failure"),
-        ]
-    )
-
-    assert _fallback_reason(fake_time, unfiltered) == "ci_not_success"
 
 
 def test_merge_already_merged_dispatches_and_posts_recovered_comment(

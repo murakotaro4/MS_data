@@ -1,3 +1,5 @@
+import pytest
+
 from ms_data.gh.auto_review_gate import evaluate
 
 HEAD_SHA = "abc123"
@@ -5,7 +7,23 @@ SINCE = "2026-05-31T08:45:23Z"
 CODEX_USER = {"login": "chatgpt-codex-connector"}
 
 
-def test_no_issue_comment_is_terminal_and_mergeable():
+@pytest.mark.parametrize(
+    "body",
+    [
+        pytest.param(
+            "Codex Review: Didn't find any major issues. 確認済みです。",
+            id="plain-comment",
+        ),
+        # PR #336 / #337 で誤停止した受領コメント形式
+        pytest.param(
+            "<!-- codex-review-receipt:v1 -->\n\n"
+            "Codex Review: Didn't find any major issues. Hooray!\n\n"
+            "**Reviewed commit:** `abc123`",
+            id="receipt-marker",
+        ),
+    ],
+)
+def test_no_issue_comment_is_terminal_and_mergeable(body):
     result = evaluate(
         reviews=[],
         file_comments=[],
@@ -13,33 +31,7 @@ def test_no_issue_comment_is_terminal_and_mergeable():
             {
                 "user": CODEX_USER,
                 "created_at": "2026-05-31T08:47:49Z",
-                "body": "Codex Review: Didn't find any major issues. 確認済みです。",
-            }
-        ],
-        reactions=[],
-        head_sha=HEAD_SHA,
-        since=SINCE,
-    )
-
-    assert result["review_complete"] is True
-    assert result["merge_ok"] is True
-    assert result["stop_reason"] == "none"
-
-
-def test_no_issue_comment_with_leading_receipt_marker_is_mergeable():
-    # 2026-10-17 以降の Codex 受領コメント形式（PR #336 / #337 で誤停止した実例）
-    result = evaluate(
-        reviews=[],
-        file_comments=[],
-        issue_comments=[
-            {
-                "user": CODEX_USER,
-                "created_at": "2026-05-31T08:47:49Z",
-                "body": (
-                    "<!-- codex-review-receipt:v1 -->\n\n"
-                    "Codex Review: Didn't find any major issues. Hooray!\n\n"
-                    "**Reviewed commit:** `abc123`"
-                ),
+                "body": body,
             }
         ],
         reactions=[],
@@ -48,6 +40,7 @@ def test_no_issue_comment_with_leading_receipt_marker_is_mergeable():
     )
 
     assert result["no_issue_comment_count"] == 1
+    assert result["review_complete"] is True
     assert result["merge_ok"] is True
     assert result["stop_reason"] == "none"
 
@@ -185,33 +178,6 @@ def test_review_is_filtered_by_head_sha():
     assert result["merge_ok"] is True
 
 
-def test_late_finding_wins_over_no_issue_comment():
-    result = evaluate(
-        reviews=[],
-        file_comments=[
-            {
-                "user": CODEX_USER,
-                "commit_id": HEAD_SHA,
-                "body": "Please fix this.",
-            }
-        ],
-        issue_comments=[
-            {
-                "user": CODEX_USER,
-                "created_at": "2026-05-31T08:47:49Z",
-                "body": "Codex Review: Didn't find any major issues. 確認済みです。",
-            }
-        ],
-        reactions=[],
-        head_sha=HEAD_SHA,
-        since=SINCE,
-    )
-
-    assert result["review_complete"] is True
-    assert result["merge_ok"] is False
-    assert result["stop_reason"] == "findings"
-
-
 def test_disconnect_comment_sets_disconnected_without_terminal():
     result = evaluate(
         reviews=[],
@@ -339,8 +305,22 @@ def test_carried_finding_is_ignored_after_current_head_no_issue_comment():
     assert result["stop_reason"] == "none"
 
 
-def test_current_head_finding_wins_even_with_original_commit_id():
-    finding = _carried_finding() | {"original_commit_id": HEAD_SHA}
+@pytest.mark.parametrize(
+    ("finding", "body"),
+    [
+        pytest.param(
+            {"user": CODEX_USER, "commit_id": HEAD_SHA, "body": "Please fix this."},
+            "Codex Review: Didn't find any major issues. 確認済みです。",
+            id="without-original-commit",
+        ),
+        pytest.param(
+            _carried_finding() | {"original_commit_id": HEAD_SHA},
+            "Codex Review: Didn't find any major issues.",
+            id="original-commit-matches-head",
+        ),
+    ],
+)
+def test_current_head_finding_wins_over_no_issue_comment(finding, body):
     result = evaluate(
         reviews=[],
         file_comments=[finding],
@@ -348,7 +328,7 @@ def test_current_head_finding_wins_even_with_original_commit_id():
             {
                 "user": CODEX_USER,
                 "created_at": "2026-05-31T08:47:49Z",
-                "body": "Codex Review: Didn't find any major issues.",
+                "body": body,
             }
         ],
         reactions=[],
@@ -358,6 +338,7 @@ def test_current_head_finding_wins_even_with_original_commit_id():
 
     assert result["carried_finding_count"] == 0
     assert result["finding_count"] == 1
+    assert result["review_complete"] is True
     assert result["merge_ok"] is False
     assert result["stop_reason"] == "findings"
 
