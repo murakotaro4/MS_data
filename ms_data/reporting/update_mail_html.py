@@ -9,14 +9,16 @@ from pathlib import Path
 from string import Template
 from urllib.parse import urlsplit
 
+from ms_data.reporting.update_mail_audit import MailCard
+from ms_data.reporting.update_mail_markdown import (
+    ENHANCEMENT_HEADERS,
+    _cells,
+    _plain,
+)
 from ms_data.reporting.update_mail_model import (
     DETAIL_LABELS,
-    ENHANCEMENT_HEADERS,
-    MailCard,
     MailView,
-    _cells,
     _mail_line,
-    _plain,
     build_mail_view,
     change_statement,
 )
