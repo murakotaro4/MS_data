@@ -6,13 +6,12 @@ from collections.abc import Callable
 from dataclasses import replace
 from urllib.parse import urlsplit
 
-from ms_data.reporting.update_mail_model import (
+from ms_data.reporting.update_mail_audit import (
     _STATUS_ACTIONS,
     _STATUS_LABELS,
-    DETAIL_LABELS,
     MailCard,
-    MailView,
 )
+from ms_data.reporting.update_mail_model import DETAIL_LABELS, MailView
 
 MAX_HTML_BYTES = 80 * 1024
 MAX_LINK_BYTES = 2048
