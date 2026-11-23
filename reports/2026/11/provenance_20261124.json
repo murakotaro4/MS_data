@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-11-23T20:51:39Z",
+  "report_date": "20261124",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "02a464152ecdb87bf54ce29fa5677197975f4e5e"
+  },
+  "github": {
+    "run_id": "45263477854",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "6b09c693d0d2f7a70184c032f7ea701952d7df2fbb0cca9ffcb0494edf1177e3",
+      "size_bytes": 148649,
+      "record_count": 604
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "0486b1227a08afe335e72d102e71956e736713d0a291f67177499996a8b64f2b",
+      "size_bytes": 21242,
+      "record_count": 18
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "6cf0412ad405fc726c9fdb7b905b7d6e0690afe181833bb1e67d83661f6495f4",
+      "size_bytes": 27790,
+      "record_count": 18
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "e875cd0e1432e2ba34534460cbf726d7a097ce7e4d607a745f926dc4b88d9cc6",
+      "file_count": 22,
+      "size_bytes": 4019434
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "6aa374913d1cc2dbd3f8c611b75d20e47674d988016b4b36037a724b72db026e",
+      "size_bytes": 2689844,
+      "record_count": 1739
+    },
+    "diff_report": {
+      "path": "reports/2026/11/diff_msdata_20261124.md",
+      "sha256": "5ccb3cc1cdf2c67ba4ba81aec38a9b4d3f5f1559ce08645916229ae346e2e902",
+      "size_bytes": 1874
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20261124-run-45263477854",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20261124-run-45263477854",
+    "asset_name": "raw_snapshot_20261124_run45263477854.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261124-run-45263477854"
+  }
+}
