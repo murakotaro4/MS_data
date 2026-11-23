@@ -100055,7 +100055,7 @@
     "レアリティ": "☆☆☆",
     "必要階級": "二等兵01",
     "必要DP": 25800,
-    "必要リサイクルチケット": 465,
+    "必要リサイクルチケット": 85,
     "fullst": [
       {
         "name": "AD-FCS",
@@ -101997,32 +101997,32 @@
       {
         "name": "プロペラントタンク",
         "level": 1,
-        "points": null
+        "points": 570
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 1150
       },
       {
         "name": "耐実弾装甲補強",
         "level": 1,
-        "points": null
+        "points": 1730
       },
       {
         "name": "AD-PA",
         "level": 1,
-        "points": null
+        "points": 2310
       },
       {
         "name": "耐実弾装甲補強",
         "level": 3,
-        "points": null
+        "points": 4620
       },
       {
         "name": "AD-PA",
         "level": 3,
-        "points": null
+        "points": 6930
       }
     ]
   },
