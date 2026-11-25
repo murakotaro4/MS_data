@@ -83,7 +83,7 @@ def _fullst_order_key(points: Any) -> int | None:
         return None
     try:
         return int(points)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return None
 
 

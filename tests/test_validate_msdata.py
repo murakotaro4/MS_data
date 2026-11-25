@@ -12,6 +12,26 @@ def test_validate_msdata_main_accepts_valid_minimal_data(tmp_path):
     assert vm.main([str(path)]) == 0
 
 
+@pytest.mark.parametrize("points_json", ["1e999", "-1e999"])
+def test_validate_msdata_reports_overflowed_points_and_continues(
+    tmp_path, capsys, points_json
+):
+    invalid = {"name": "AD-PA", "level": 1, "points": "OVERFLOW_POINTS"}
+    duplicate = {"name": "AD-FCS", "level": 1, "points": 200}
+    path = tmp_path / "msData.json"
+    write_json(path, [make_record(fullst=[invalid, duplicate, duplicate])])
+    path.write_text(
+        path.read_text(encoding="utf-8").replace('"OVERFLOW_POINTS"', points_json),
+        encoding="utf-8",
+    )
+
+    assert vm.main([str(path)]) == 1
+    stderr = capsys.readouterr().err
+    assert "Schema errors" in stderr
+    assert "fullst points must be an integer or null (index=0" in stderr
+    assert "duplicated fullst entry detected" in stderr
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     [("name", []), ("name", {}), ("level", []), ("level", {})],
