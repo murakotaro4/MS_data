@@ -69573,32 +69573,32 @@
       {
         "name": "シールド構造強化",
         "level": 1,
-        "points": null
+        "points": 440
       },
       {
         "name": "複合拡張パーツスロット",
         "level": 1,
-        "points": null
+        "points": 880
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 1330
       },
       {
         "name": "AD-FCS",
         "level": 1,
-        "points": null
+        "points": 2220
       },
       {
         "name": "緊急出撃",
         "level": 1,
-        "points": null
+        "points": 4440
       },
       {
         "name": "AD-FCS",
         "level": 3,
-        "points": null
+        "points": 6660
       }
     ]
   },
@@ -83061,33 +83061,33 @@
     "fullst": [
       {
         "name": "シールド構造強化",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 330
       },
       {
         "name": "複合拡張パーツスロット",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 670
       },
       {
         "name": "耐ビーム装甲補強",
         "level": 1,
-        "points": null
+        "points": 1010
       },
       {
         "name": "AD-FCS",
-        "level": 1,
-        "points": null
+        "level": 2,
+        "points": 1690
       },
       {
         "name": "緊急出撃",
         "level": 1,
-        "points": null
+        "points": 3380
       },
       {
         "name": "AD-FCS",
         "level": 3,
-        "points": null
+        "points": 5070
       }
     ]
   },
