@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-11-26T18:51:09Z",
+  "report_date": "20261127",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "7320f7a30e9aa340a0c7186c2b49b63c5e587d37"
+  },
+  "github": {
+    "run_id": "45878741513",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "7297c54f916ca7e382625807d26b257894bfed0ae80567098ec64b3de7a9e9ed",
+      "size_bytes": 148867,
+      "record_count": 605
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "95a043c3155bf78099488f3461885cdc65ca3c5dc080101d5159550b72329dc7",
+      "size_bytes": 28687,
+      "record_count": 24
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "1ac463336f0c266f0895266060e3515ced186e2e8dd0cd35963b5dd72e8c67df",
+      "size_bytes": 37421,
+      "record_count": 24
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "cb6386097a3c28ff96ad0cbb12e0d4ebbc418e2e4dcd5d1ce48275480276f474",
+      "file_count": 22,
+      "size_bytes": 4224556
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "867b1faa9521f227c8ef66958cfa6d9b4d316bbdb287a4f8690e28d1972eed6e",
+      "size_bytes": 2689845,
+      "record_count": 1739
+    },
+    "diff_report": {
+      "path": "reports/2026/11/diff_msdata_20261127.md",
+      "sha256": "34ef69b3c240cadd1ebe8ebc5802649730be1f71ae348c4e00d339742fc95f61",
+      "size_bytes": 2802
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20261127-run-45878741513",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20261127-run-45878741513",
+    "asset_name": "raw_snapshot_20261127_run45878741513.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261127-run-45878741513"
+  }
+}
