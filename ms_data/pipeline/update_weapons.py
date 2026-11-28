@@ -9,6 +9,9 @@ atwiki への追加取得はしない。`cache/html` にある機体ページだ
 - index に無くなった機体の行は削除する。
 - HTML から兵装を 1 件も読めなかった機体は、取得失敗や一時的なページ崩れの
   可能性があるため既存の行を残す（件数を出力に記録する）。
+- msData.json に無い機体は読み直さない。index に名前だけ載った新規ページは
+  雛形のままのことがあり、雛形の表（「副兵装1」「シールド名」など）を実データとして
+  取り込まないため。機体が msData.json に入った回から兵装も入る。
 """
 
 from __future__ import annotations
@@ -21,6 +24,7 @@ from typing import Any
 
 from ms_data.core import paths
 from ms_data.core.json_io import load_json, load_json_or_default
+from ms_data.core.ms_names import extract_ms_base_name
 from ms_data.net.cache_http import url_to_slug
 from ms_data.scraping.weapons import extract_weapons
 
@@ -62,13 +66,28 @@ def _record(ms_name: str, wiki_url: str, weapon: dict[str, Any]) -> dict[str, An
     return {k: rec[k] for k in RECORD_KEYS if rec.get(k) is not None}
 
 
+def msdata_ms_names(msdata: list[dict[str, Any]]) -> set[str]:
+    """msData.json のレコードから機体名（`MS名` の LV 抜き）の集合を返す。"""
+    names: set[str] = set()
+    for rec in msdata:
+        ms_name = rec.get("MS名") if isinstance(rec, dict) else None
+        base = extract_ms_base_name(ms_name) if isinstance(ms_name, str) else None
+        if base:
+            names.add(base)
+    return names
+
+
 def update_weapons(
     *,
     index: list[dict[str, Any]],
     html_dir: Path,
     existing: list[dict[str, Any]],
+    known_ms: set[str],
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    """兵装一覧を更新し、(新しい一覧, 集計) を返す。"""
+    """兵装一覧を更新し、(新しい一覧, 集計) を返す。
+
+    `known_ms`（msData.json にある機体名）に無い機体は HTML があっても読み直さない。
+    """
     by_ms: dict[str, list[dict[str, Any]]] = {}
     for rec in existing:
         name = rec.get("ms_name")
@@ -81,6 +100,7 @@ def update_weapons(
         "refreshed_count": 0,
         "kept_count": 0,
         "empty_kept": [],
+        "not_in_msdata": [],
         "removed_ms": [],
         "removal_skipped": [],
     }
@@ -94,6 +114,9 @@ def update_weapons(
         seen.add(name)
         stats["index_count"] += 1
         html = _html_for(html_dir, url)
+        if html is not None and name not in known_ms:
+            stats["not_in_msdata"].append(name)
+            html = None
         weapons = extract_weapons(html) if html is not None else []
         if html is not None:
             stats["html_count"] += 1
@@ -148,6 +171,12 @@ def _write_step_summary(path: str, stats: dict[str, Any], changed: bool) -> None
         lines.append(
             f"- 兵装を読めず既存の行を残した機体: {len(stats['empty_kept'])} 件（{names}）"
         )
+    if stats["not_in_msdata"]:
+        names = "、".join(stats["not_in_msdata"][:20])
+        lines.append(
+            "- msData.json に無いため読み直さなかった機体: "
+            f"{len(stats['not_in_msdata'])} 件（{names}）"
+        )
     if stats["removed_ms"]:
         names = "、".join(stats["removed_ms"][:20])
         lines.append(
@@ -167,6 +196,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--index", default=paths.INDEX_JSON.as_posix())
     ap.add_argument("--html-dir", default=paths.HTML_CACHE_DIR.as_posix())
     ap.add_argument("--weapons", default=paths.WEAPONS_JSON.as_posix())
+    ap.add_argument("--msdata", default=paths.MSDATA.as_posix())
     ap.add_argument("--out", default=None, help="出力先（既定は --weapons を上書き）")
     ap.add_argument("--github-output", default=None)
     ap.add_argument("--step-summary", default=None)
@@ -187,8 +217,17 @@ def main(argv: list[str] | None = None) -> int:
         print(f"weapons file is not a list: {weapons_path}", file=sys.stderr)
         return 2
 
+    msdata_path = Path(args.msdata)
+    msdata = load_json_or_default(msdata_path, None)
+    if not isinstance(msdata, list) or not msdata:
+        print(f"msData is missing or invalid: {msdata_path}", file=sys.stderr)
+        return 2
+
     records, stats = update_weapons(
-        index=index, html_dir=Path(args.html_dir), existing=existing
+        index=index,
+        html_dir=Path(args.html_dir),
+        existing=existing,
+        known_ms=msdata_ms_names(msdata),
     )
     text = dump_weapons(records)
     out_path = Path(args.out) if args.out else weapons_path
@@ -202,7 +241,9 @@ def main(argv: list[str] | None = None) -> int:
         "weapons: "
         f"ms={stats['ms_count']} records={stats['record_count']} "
         f"refreshed={stats['refreshed_count']} kept={stats['kept_count']} "
-        f"empty_kept={len(stats['empty_kept'])} removed={len(stats['removed_ms'])} "
+        f"empty_kept={len(stats['empty_kept'])} "
+        f"not_in_msdata={len(stats['not_in_msdata'])} "
+        f"removed={len(stats['removed_ms'])} "
         f"changed={changed}"
     )
     if args.github_output:
