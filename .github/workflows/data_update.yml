@@ -289,7 +289,8 @@ jobs:
       - id: weapons
         name: Update weapons list
         # 今回取得した機体ページの HTML（cache/html）だけを読み直し、data/weapons.json の
-        # 該当機体の行を差し替える（atwiki への追加取得なし）。msData.json の差分がある日だけ
+        # 該当機体の行を差し替える（atwiki への追加取得なし）。更新後の msData.json に無い機体
+        # （index に名前だけ載った雛形ページなど）は取り込まない。msData.json の差分がある日だけ
         # 同じ PR に相乗りさせる。解析・検証の失敗は msData 更新を止めず、前回の一覧を維持する。
         if: steps.changes.outputs.changed == 'true'
         continue-on-error: true
@@ -301,6 +302,7 @@ jobs:
               --index cache/index.json \
               --html-dir cache/html \
               --weapons data/weapons.json \
+              --msdata msData.json \
               --step-summary "$GITHUB_STEP_SUMMARY" > "$log" 2>&1 \
             && uv run python -m ms_data.tasks validate-weapons >> "$log" 2>&1; then
             summary="$(grep -m1 '^weapons:' "$log" | sed 's/^weapons: //')"

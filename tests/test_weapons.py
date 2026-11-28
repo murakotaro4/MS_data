@@ -32,6 +32,18 @@ def _put_html(html_dir: Path, url: str, html: str, status: int | None = 200) -> 
         write_json(html_dir / f"{slug}.meta.json", {"url": url, "http_status": status})
 
 
+def _known(index: list[dict]) -> set[str]:
+    """index の機体をすべて msData.json にある機体として扱う。"""
+    return {i["name"] for i in index if isinstance(i.get("name"), str)}
+
+
+def _msdata(tmp_path: Path, *names: str) -> str:
+    """指定した機体の LV1 だけを持つ msData.json を作り、パスを返す。"""
+    path = tmp_path / "msData.json"
+    write_json(path, [{"MS名": f"{name}_LV1"} for name in names])
+    return str(path)
+
+
 def _rec(ms: str, name: str, url: str, kind: str = "副兵装") -> dict:
     return {"ms_name": ms, "kind": kind, "name": name, "levels": [1], "wiki_url": url}
 
@@ -115,7 +127,7 @@ def test_update_replaces_only_ms_with_html(tmp_path):
         _rec("ザクⅡ", "ザク・マシンガン", URL_B, kind="主兵装"),
     ]
     records, stats = uw.update_weapons(
-        index=index, html_dir=html_dir, existing=existing
+        index=index, html_dir=html_dir, existing=existing, known_ms=_known(index)
     )
 
     by_ms: dict[str, list[str]] = {}
@@ -141,18 +153,73 @@ def test_update_keeps_existing_when_page_has_no_weapons_or_bad_status(tmp_path):
     index = [{"name": "A", "url": URL_A}, {"name": "B", "url": URL_B}]
     existing = [_rec("A", "a1", URL_A), _rec("B", "b1", URL_B)]
     records, stats = uw.update_weapons(
-        index=index, html_dir=html_dir, existing=existing
+        index=index, html_dir=html_dir, existing=existing, known_ms=_known(index)
     )
     assert records == existing
     assert stats["empty_kept"] == ["A"]
     assert stats["html_count"] == 1
 
 
+def test_update_skips_ms_not_in_msdata(tmp_path):
+    # index に名前だけ載った新規ページ（雛形のまま）は、兵装が読めても取り込まない
+    html_dir = tmp_path / "html"
+    _put_html(html_dir, URL_A, _fixture_html())
+    _put_html(html_dir, URL_B, _fixture_html())
+    index = [{"name": "既存機", "url": URL_A}, {"name": "新規機", "url": URL_B}]
+    existing = [_rec("既存機", "古い兵装", URL_A)]
+    records, stats = uw.update_weapons(
+        index=index, html_dir=html_dir, existing=existing, known_ms={"既存機"}
+    )
+    assert {r["ms_name"] for r in records} == {"既存機"}
+    assert "古い兵装" not in [r["name"] for r in records]
+    assert stats["not_in_msdata"] == ["新規機"]
+    assert stats["refreshed_count"] == 1
+    assert stats["html_count"] == 1
+
+    # msData.json に入った回からは取り込む
+    records, stats = uw.update_weapons(
+        index=index,
+        html_dir=html_dir,
+        existing=records,
+        known_ms={"既存機", "新規機"},
+    )
+    assert {r["ms_name"] for r in records} == {"既存機", "新規機"}
+    assert stats["not_in_msdata"] == []
+
+
+def test_update_keeps_existing_rows_of_ms_not_in_msdata(tmp_path):
+    html_dir = tmp_path / "html"
+    _put_html(html_dir, URL_A, _fixture_html())
+    index = [{"name": "A", "url": URL_A}]
+    existing = [_rec("A", "a1", URL_A)]
+    records, stats = uw.update_weapons(
+        index=index, html_dir=html_dir, existing=existing, known_ms=set()
+    )
+    assert records == existing
+    assert stats["not_in_msdata"] == ["A"]
+    assert stats["kept_count"] == 1
+
+
+def test_msdata_ms_names_strips_level_and_ignores_broken_records():
+    msdata = [
+        {"MS名": "ザクⅡ_LV1"},
+        {"MS名": "ザクⅡ_LV2"},
+        {"MS名": "LVなし"},
+        {"MS名": 1},
+        {},
+        "x",
+    ]
+    assert uw.msdata_ms_names(msdata) == {"ザクⅡ"}
+
+
 def test_update_meta_without_status_or_missing_meta_is_used(tmp_path):
     html_dir = tmp_path / "html"
     _put_html(html_dir, URL_A, _fixture_html(), status=None)
     records, _ = uw.update_weapons(
-        index=[{"name": "A", "url": URL_A}], html_dir=html_dir, existing=[]
+        index=[{"name": "A", "url": URL_A}],
+        html_dir=html_dir,
+        existing=[],
+        known_ms={"A"},
     )
     assert records and all(r["ms_name"] == "A" for r in records)
 
@@ -162,7 +229,10 @@ def test_update_ignores_broken_meta(tmp_path):
     _put_html(html_dir, URL_A, _fixture_html())
     (html_dir / f"{url_to_slug(URL_A)}.meta.json").write_text("{", encoding="utf-8")
     records, stats = uw.update_weapons(
-        index=[{"name": "A", "url": URL_A}], html_dir=html_dir, existing=[]
+        index=[{"name": "A", "url": URL_A}],
+        html_dir=html_dir,
+        existing=[],
+        known_ms={"A"},
     )
     assert records == [] and stats["html_count"] == 0
 
@@ -171,7 +241,7 @@ def test_update_removes_ms_missing_from_index(tmp_path):
     index = [{"name": "A", "url": URL_A}, {"name": "A", "url": URL_B}, {"name": 1}]
     existing = [_rec("A", "a1", URL_A), _rec("消えた機体", "x", URL_B)]
     records, stats = uw.update_weapons(
-        index=index, html_dir=tmp_path, existing=existing
+        index=index, html_dir=tmp_path, existing=existing, known_ms=_known(index)
     )
     assert records == [_rec("A", "a1", URL_A)]
     assert stats["removed_ms"] == ["消えた機体"]
@@ -182,7 +252,7 @@ def test_update_skips_mass_removal(tmp_path):
     existing = [_rec(f"機体{i:02d}", "w", URL_A) for i in range(20)]
     index = [{"name": "機体00", "url": URL_A}]
     records, stats = uw.update_weapons(
-        index=index, html_dir=tmp_path, existing=existing
+        index=index, html_dir=tmp_path, existing=existing, known_ms=_known(index)
     )
     assert records == existing
     assert stats["removed_ms"] == []
@@ -213,6 +283,8 @@ def test_main_writes_file_outputs_and_summary(tmp_path, capsys):
         str(html_dir),
         "--weapons",
         str(weapons_path),
+        "--msdata",
+        _msdata(tmp_path, "メッサーF01型"),
         "--github-output",
         str(gh_out),
         "--step-summary",
@@ -243,10 +315,40 @@ def test_main_summary_lists_kept_and_removed(tmp_path):
     summary = tmp_path / "summary.md"
     argv = ["--index", str(index_path), "--html-dir", str(html_dir)]
     argv += ["--weapons", str(weapons_path), "--step-summary", str(summary)]
+    argv += ["--msdata", _msdata(tmp_path, "A")]
     assert uw.main(argv) == 0
     text = summary.read_text(encoding="utf-8")
     assert "既存の行を残した機体: 1 件（A）" in text
     assert "削除した機体: 1 件（Z）" in text
+
+
+def test_main_summary_lists_ms_not_in_msdata(tmp_path, capsys):
+    html_dir = tmp_path / "html"
+    _put_html(html_dir, URL_A, _fixture_html())
+    index_path = tmp_path / "index.json"
+    write_json(index_path, [{"name": "新規機", "url": URL_A}])
+    weapons_path = tmp_path / "weapons.json"
+    summary = tmp_path / "summary.md"
+    argv = ["--index", str(index_path), "--html-dir", str(html_dir)]
+    argv += ["--weapons", str(weapons_path), "--step-summary", str(summary)]
+    argv += ["--msdata", _msdata(tmp_path, "別の機体")]
+    assert uw.main(argv) == 0
+    assert json.loads(weapons_path.read_text(encoding="utf-8")) == []
+    assert "msData.json に無いため読み直さなかった機体: 1 件（新規機）" in (
+        summary.read_text(encoding="utf-8")
+    )
+    assert "not_in_msdata=1" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("content", [None, [], {"a": 1}])
+def test_main_rejects_missing_or_invalid_msdata(tmp_path, content):
+    index_path = tmp_path / "index.json"
+    write_json(index_path, [{"name": "A", "url": URL_A}])
+    msdata_path = tmp_path / "msData.json"
+    if content is not None:
+        write_json(msdata_path, content)
+    argv = ["--index", str(index_path), "--weapons", str(tmp_path / "w.json")]
+    assert uw.main(argv + ["--msdata", str(msdata_path)]) == 2
 
 
 def test_main_summary_reports_skipped_removal(tmp_path):
@@ -258,6 +360,7 @@ def test_main_summary_reports_skipped_removal(tmp_path):
     summary = tmp_path / "summary.md"
     argv = ["--index", str(index_path), "--html-dir", str(tmp_path / "none")]
     argv += ["--weapons", str(weapons_path), "--step-summary", str(summary)]
+    argv += ["--msdata", _msdata(tmp_path, "機体00")]
     assert uw.main(argv) == 0
     assert "削除を見送り: 19 件" in summary.read_text(encoding="utf-8")
 
