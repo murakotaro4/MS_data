@@ -1,0 +1,69 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-11-27T18:43:13Z",
+  "report_date": "20261128",
+  "git": {
+    "repo": "murakotaro4/MS_data",
+    "branch": "main",
+    "head_sha": "7320f7a30e9aa340a0c7186c2b49b63c5e587d37"
+  },
+  "github": {
+    "run_id": "46051115971",
+    "run_attempt": "1",
+    "workflow": "data update",
+    "event_name": "schedule"
+  },
+  "params": {
+    "ttl": "1h",
+    "rate": "2.0",
+    "limit": "0"
+  },
+  "inputs": {
+    "index": {
+      "path": "cache/index.json",
+      "sha256": "b6b6aad08ca5352efe68a939bbd18117deb0c5c85f503cb4589a8ee0b7158f59",
+      "size_bytes": 148873,
+      "record_count": 605
+    },
+    "details_jsonl": {
+      "path": "cache/details.jsonl",
+      "sha256": "a5f06e789b52ef56d41d052c8ac43013d5d1cb61d21852638430d1c790a379c9",
+      "size_bytes": 28570,
+      "record_count": 24
+    },
+    "details_json": {
+      "path": "cache/details.json",
+      "sha256": "17cff0431092cf1c419023bbd9d41ec7ef756e3a643f8abb3a1a79d7fe0f4bf3",
+      "size_bytes": 37320,
+      "record_count": 24
+    },
+    "html_cache": {
+      "path": "cache/html",
+      "sha256": "6ca08c1ccdc8a506008caf2844c324825d5dd9fcf1a52e466b04969f8b09fa46",
+      "file_count": 22,
+      "size_bytes": 4268682
+    }
+  },
+  "outputs": {
+    "msdata_json": {
+      "path": "msData.json",
+      "sha256": "d8c29a95806e9fd628e5c1e8bbe95f3c647da432147253c0d539ccdc4798ee7c",
+      "size_bytes": 2689940,
+      "record_count": 1739
+    },
+    "diff_report": {
+      "path": "reports/2026/11/diff_msdata_20261128.md",
+      "sha256": "12aced192de27936d23a9e81cb4f1352d31fec95a0294ddae6ba6bf93bbd9f43",
+      "size_bytes": 5303
+    }
+  },
+  "artifact": {
+    "name": "raw-snapshot-20261128-run-46051115971",
+    "retention_days": 90
+  },
+  "release": {
+    "tag": "raw-snapshot-20261128-run-46051115971",
+    "asset_name": "raw_snapshot_20261128_run46051115971.tar.xz",
+    "url": "https://github.com/murakotaro4/MS_data/releases/tag/raw-snapshot-20261128-run-46051115971"
+  }
+}
